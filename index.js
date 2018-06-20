@@ -2,7 +2,7 @@ const R = require('ramda')
 const express = require('express')
 const axios = require('axios')
 const app = express()
-const port = 3500
+const port = process.env.PORT || 3500
 const newGames =
   'https://store.playstation.com/valkyrie-api/en/FI/19/container/STORE-MSF75508-GAMELATEST?sort=release_date&direction=desc&platform=ps4&game_content_type=games&size=100&bucket=games&start=0'
 const comingSoon =
