@@ -1,0 +1,27 @@
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+    visibility: visible;
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner {
+  animation: spin 1.5s infinite linear;
+  animation-delay: 300ms;
+  display: inline-block;
+  visibility: hidden;
+  content: '';
+  border-radius: 50%;
+  transform: translateZ(0);
+  box-sizing: border-box;
+  background: none;
+  width: 50px;
+  height: 50px;
+  border: 3px solid rgba(0, 0, 0, 0.3);
+  border-left-color: #363738;
+  margin: auto;
+  border-width: 5px;
+}

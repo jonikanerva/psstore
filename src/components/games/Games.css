@@ -1,0 +1,30 @@
+table {
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-spacing: 0;
+  border-collapse: collapse;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+tr {
+  text-align: left;
+  vertical-align: top;
+}
+
+.gamerow:hover {
+  background: #f0f0f0;
+}
+
+.name,
+.date {
+  padding-left: 5px;
+}
+
+.name {
+  width: 250px;
+}

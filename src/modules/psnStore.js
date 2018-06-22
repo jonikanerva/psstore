@@ -1,0 +1,18 @@
+import * as R from 'ramda'
+import axios from 'axios'
+
+const parseGames = R.compose(
+  R.map(game => ({
+    name: R.prop('name', game),
+    date: R.prop('release-date', game),
+    url: R.prop('thumbnail-url-base', game),
+    id: R.prop('id', game)
+  })),
+  R.map(R.pick(['name', 'release-date', 'thumbnail-url-base', 'id'])),
+  R.map(R.prop('attributes')),
+  R.map(data => R.assocPath(['attributes', 'id'], R.prop('id', data), data)),
+  R.filter(R.propEq('type', 'game')),
+  R.pathOr([], ['data', 'included'])
+)
+
+export const fetchGames = url => axios.get(url).then(parseGames)
