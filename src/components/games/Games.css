@@ -6,7 +6,6 @@
 
 .gamerow {
   height: 65px;
-  margin-bottom: 5px;
   border-radius: 2px;
 }
 
@@ -22,6 +21,12 @@
 .gamecell a {
   color: inherit;
   text-decoration: none;
+}
+
+.separator {
+  padding: 3px;
+
+  border-bottom: 1px solid #f8f8f8;
 }
 
 .image img {
