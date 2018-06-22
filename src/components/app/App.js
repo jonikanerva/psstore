@@ -1,7 +1,12 @@
 import React, { Component } from 'react'
-import NewGames from '../games/NewGames'
-import UpcomingGames from '../games/UpcomingGames'
+import Games from '../games/Games'
 import './App.css'
+
+const newGamesUrl =
+  'https://store.playstation.com/valkyrie-api/en/FI/19/container/STORE-MSF75508-GAMELATEST?sort=release_date&direction=desc&platform=ps4&game_content_type=games&size=100&bucket=games&start=0'
+
+const upcomingGamesUrl =
+  'https://store.playstation.com/valkyrie-api/en/FI/19/container/STORE-MSF75508-COMINGSOON?sort=release_date&direction=desc&size=100&bucket=games&start=0'
 
 class App extends Component {
   render() {
@@ -9,12 +14,12 @@ class App extends Component {
       <div className="parent">
         <div className="list">
           <div className="header">New</div>
-          <NewGames />
+          <Games url={newGamesUrl} sort="desc" />
         </div>
 
         <div className="list">
           <div className="header">Upcoming</div>
-          <UpcomingGames />
+          <Games url={upcomingGamesUrl} sort="asc" />
         </div>
       </div>
     )
