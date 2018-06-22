@@ -6,9 +6,12 @@ const parseGames = R.compose(
     name: R.prop('name', game),
     date: R.prop('release-date', game),
     url: R.prop('thumbnail-url-base', game),
-    id: R.prop('id', game)
+    id: R.prop('id', game),
+    price: R.path(
+      ['prices', 'non-plus-user', 'actual-price', 'display'],
+      R.head(R.propOr([], 'skus', game))
+    )
   })),
-  R.map(R.pick(['name', 'release-date', 'thumbnail-url-base', 'id'])),
   R.map(R.prop('attributes')),
   R.map(data => R.assocPath(['attributes', 'id'], R.prop('id', data), data)),
   R.filter(R.propEq('type', 'game')),

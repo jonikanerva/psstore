@@ -32,3 +32,12 @@ tr {
 .name {
   width: 250px;
 }
+
+.date {
+  text-align: right;
+}
+
+.price {
+  padding-top: 5px;
+  text-align: right;
+}

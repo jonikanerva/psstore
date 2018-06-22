@@ -17,7 +17,7 @@ const sortGames = sort =>
     : R.sort(R.ascend(R.prop('date')))
 
 const Rows = props =>
-  props.games.map(({ name, date, url, id }) => (
+  props.games.map(({ name, date, url, id, price }) => (
     <tr key={id} className="gamerow">
       <td className="image">
         <img height="65px" src={url} alt={name} />
@@ -25,7 +25,10 @@ const Rows = props =>
       <td className="name">
         <a href={storeUrl(id)}>{name}</a>
       </td>
-      <td className="date">{dateFormat(date)}</td>
+      <td className="date">
+        {dateFormat(date)}
+        <div className="price">{price}</div>
+      </td>
     </tr>
   ))
 
