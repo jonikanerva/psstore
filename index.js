@@ -19,7 +19,7 @@ const sortAsc = R.sort(R.ascend(R.prop('release-date')))
 const renderRows = R.compose(
   R.join(''),
   R.map(
-    ({ name, 'release-date': date, 'thumbnail-url-base': url, id }) => `
+    ({ name, date, url, id }) => `
     <tr class="gamerow">
       <td><img height="65px" src="${url}"></td>
       <td class="name"><a href="${storeUrl(id)}">${name}</a></td>
@@ -89,16 +89,16 @@ const render = (newGames, upcomingGames) => `
   </div>
   </html>`
 
-const addId = data => {
-  const id = R.prop('id', data)
-  return R.assocPath(['attributes', 'id'], id, data)
-}
-
 const parseGames = R.compose(
+  R.map(game => ({
+    name: R.prop('name', game),
+    date: R.prop('release-date', game),
+    url: R.prop('thumbnail-url-base', game),
+    id: R.prop('id', game)
+  })),
   R.map(R.pick(['name', 'release-date', 'thumbnail-url-base', 'id'])),
-  R.tap(console.log),
   R.map(R.prop('attributes')),
-  R.map(addId),
+  R.map(data => R.assocPath(['attributes', 'id'], R.prop('id', data), data)),
   R.filter(R.propEq('type', 'game')),
   R.pathOr([], ['data', 'included'])
 )
