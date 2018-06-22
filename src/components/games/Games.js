@@ -19,7 +19,7 @@ const sortGames = sort =>
 const Rows = props =>
   props.games.map(({ name, date, url, id }) => (
     <tr key={id} className="gamerow">
-      <td>
+      <td className="image">
         <img height="65px" src={url} alt={name} />
       </td>
       <td className="name">
@@ -31,7 +31,9 @@ const Rows = props =>
 
 const Table = props => (
   <table>
-    <Rows games={props.games} />
+    <tbody>
+      <Rows games={props.games} />
+    </tbody>
   </table>
 )
 

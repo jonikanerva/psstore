@@ -20,6 +20,10 @@ tr {
   background: #f0f0f0;
 }
 
+.image {
+  width: 65px;
+}
+
 .name,
 .date {
   padding-left: 5px;
