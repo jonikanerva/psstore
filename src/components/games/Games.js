@@ -18,27 +18,21 @@ const sortGames = sort =>
 
 const Rows = props =>
   props.games.map(({ name, date, url, id, price }) => (
-    <tr key={id} className="gamerow">
-      <td className="image">
-        <img height="65px" src={url} alt={name} />
-      </td>
-      <td className="name">
+    <div key={id} className="gamerow">
+      <div className="gamecell image">
+        <img src={url} alt={name} />
+      </div>
+
+      <div className="gamecell name">
         <a href={storeUrl(id)}>{name}</a>
-      </td>
-      <td className="date">
+      </div>
+
+      <div className="gamecell date">
         {dateFormat(date)}
         <div className="price">{price}</div>
-      </td>
-    </tr>
+      </div>
+    </div>
   ))
-
-const Table = props => (
-  <table>
-    <tbody>
-      <Rows games={props.games} />
-    </tbody>
-  </table>
-)
 
 class Games extends React.Component {
   constructor(props) {
@@ -63,10 +57,10 @@ class Games extends React.Component {
     const showGames = !this.state.loading && !this.state.error
 
     return (
-      <div>
+      <div className="gametable">
         <Error error={this.state.error} />
         <Loading loading={this.state.loading} />
-        {showGames && <Table games={this.state.games} />}
+        {showGames && <Rows games={this.state.games} />}
       </div>
     )
   }
