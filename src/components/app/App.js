@@ -13,12 +13,20 @@ class App extends Component {
     return (
       <div className="parent">
         <div className="list">
-          <div className="header">New</div>
+          <div className="header">
+            <a name="new" href="#upcoming">
+              New
+            </a>
+          </div>
           <Games url={newGamesUrl} sort="desc" />
         </div>
 
         <div className="list">
-          <div className="header">Upcoming</div>
+          <div className="header">
+            <a name="upcoming" href="#new">
+              Upcoming
+            </a>
+          </div>
           <Games url={upcomingGamesUrl} sort="asc" />
         </div>
       </div>

@@ -17,3 +17,8 @@
   padding-bottom: 20px;
   padding-top: 20px;
 }
+
+.header a {
+  color: inherit;
+  text-decoration: none;
+}
