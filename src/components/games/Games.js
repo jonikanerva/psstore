@@ -19,20 +19,20 @@ const sortGames = sort =>
 const Rows = props =>
   props.games.map(({ name, date, url, id, price }) => (
     <div key={id} className="separator">
-      <div className="gamerow">
-        <div className="gamecell image">
-          <img src={url} alt={name} />
-        </div>
+      <a href={storeUrl(id)}>
+        <div className="gamerow">
+          <div className="gamecell image">
+            <img src={url} alt={name} />
+          </div>
 
-        <div className="gamecell name">
-          <a href={storeUrl(id)}>{name}</a>
-        </div>
+          <div className="gamecell name">{name}</div>
 
-        <div className="gamecell date">
-          {dateFormat(date)}
-          <div className="price">{price}</div>
+          <div className="gamecell date">
+            {dateFormat(date)}
+            <div className="price">{price}</div>
+          </div>
         </div>
-      </div>
+      </a>
     </div>
   ))
 
