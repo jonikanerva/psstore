@@ -7,7 +7,7 @@
 .list {
   padding-left: 15px;
   padding-right: 15px;
-  width: 450px;
+  width: 425px;
 }
 
 .header {
@@ -18,7 +18,6 @@
   padding-top: 20px;
 }
 
-.header a {
-  color: inherit;
+.list a {
   text-decoration: none;
 }
