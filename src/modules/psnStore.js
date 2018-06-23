@@ -8,7 +8,7 @@ const parseGames = R.compose(
     url: R.prop('thumbnail-url-base', game),
     id: R.prop('id', game),
     price: R.path(
-      ['prices', 'non-plus-user', 'actual-price', 'display'],
+      ['prices', 'plus-user', 'actual-price', 'display'],
       R.head(R.propOr([], 'skus', game))
     )
   })),
