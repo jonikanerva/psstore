@@ -33,7 +33,7 @@ class App extends Component {
           <a name="discounted" href="#new">
             <div className="header">Discounted</div>
           </a>
-          <Games url={discountGamesUrl} sort="desc" />
+          <Games url={discountGamesUrl} sort="discount" />
         </div>
       </div>
     )

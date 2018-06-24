@@ -11,10 +11,19 @@ const dateFormat = dateString => {
 
   return `${date.getDate()}.${date.getMonth() + 1}.${date.getFullYear()}`
 }
-const sortGames = sort =>
-  sort === 'desc'
-    ? R.sort(R.descend(R.prop('date')))
-    : R.sort(R.ascend(R.prop('date')))
+const sortGames = sort => {
+  switch (sort) {
+    case 'desc':
+      return R.sort(R.descend(R.prop('date')))
+    case 'discount':
+      return R.sortWith([
+        R.descend(R.prop('discountDate')),
+        R.descend(R.prop('date'))
+      ])
+    default:
+      return R.sort(R.ascend(R.prop('date')))
+  }
+}
 
 const Rows = props =>
   props.games.map(({ name, date, url, id, price }) => (
