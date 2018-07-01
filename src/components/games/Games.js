@@ -26,7 +26,7 @@ const sortGames = sort => {
 }
 
 const Rows = props =>
-  props.games.map(({ name, date, url, id, price }) => (
+  props.games.map(({ name, date, discountDate, url, id, price }) => (
     <div key={id} className="separator">
       <a href={storeUrl(id)}>
         <div className="gamerow">
@@ -37,7 +37,12 @@ const Rows = props =>
           <div className="gamecell name">{name}</div>
 
           <div className="gamecell date">
-            {dateFormat(date)}
+            {props.sort === 'discount'
+              ? dateFormat(discountDate)
+              : dateFormat(date)}
+            {props.sort === 'discount' && (
+              <div className="price">{dateFormat(date)}</div>
+            )}
             <div className="price">{price}</div>
           </div>
         </div>
@@ -71,7 +76,7 @@ class Games extends React.Component {
       <div className="gametable">
         <Error error={this.state.error} />
         <Loading loading={this.state.loading} />
-        {showGames && <Rows games={this.state.games} />}
+        {showGames && <Rows games={this.state.games} sort={this.state.sort} />}
       </div>
     )
   }
