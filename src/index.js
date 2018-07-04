@@ -1,9 +1,9 @@
 import React from 'react'
 import ReactDOM from 'react-dom'
 import App from './components/app/App'
-import { unregister } from './modules/registerServiceWorker'
+import registerServiceWorker from './modules/registerServiceWorker'
 import './index.css'
 
 ReactDOM.render(<App />, document.getElementById('root'))
 
-unregister()
+registerServiceWorker()
