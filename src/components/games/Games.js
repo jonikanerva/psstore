@@ -30,23 +30,25 @@ const Rows = props =>
   props.games.map(
     ({ name, date, discountDate, url, id, price, screenShots }) => (
       <div key={id} className="separator">
-        <div className="gamerow">
-          <div className="gamecell image">
-            <Image url={url} name={name} screenshots={screenShots} />
-          </div>
+        <a href={storeUrl(id)}>
+          <div className="gamerow">
+            <div className="gamecell image">
+              <Image url={url} name={name} screenshots={screenShots} />
+            </div>
 
-          <div className="gamecell name">{name}</div>
+            <div className="gamecell name">{name}</div>
 
-          <div className="gamecell date">
-            {props.sort === 'discount'
-              ? dateFormat(discountDate)
-              : dateFormat(date)}
-            {props.sort === 'discount' && (
-              <div className="price">{dateFormat(date)}</div>
-            )}
-            <div className="price">{price}</div>
+            <div className="gamecell date">
+              {props.sort === 'discount'
+                ? dateFormat(discountDate)
+                : dateFormat(date)}
+              {props.sort === 'discount' && (
+                <div className="price">{dateFormat(date)}</div>
+              )}
+              <div className="price">{price}</div>
+            </div>
           </div>
-        </div>
+        </a>
       </div>
     )
   )
