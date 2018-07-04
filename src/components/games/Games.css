@@ -29,12 +29,6 @@
   border-bottom: 1px solid #f8f8f8;
 }
 
-.image img {
-  width: 65px;
-  height: 65px;
-  border-radius: 2px;
-}
-
 .name,
 .date {
   padding-top: 3px;

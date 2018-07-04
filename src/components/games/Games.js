@@ -1,9 +1,9 @@
 import React from 'react'
 import * as R from 'ramda'
+import Image from '../image/Image'
 import { Error } from '../error/Error'
 import { Loading } from '../spinner/Spinner'
 import { fetchGames } from '../../modules/psnStore'
-import TrackVisibility from 'react-on-screen'
 import './Games.css'
 
 const storeUrl = id => `https://store.playstation.com/en-fi/product/${id}`
@@ -25,18 +25,13 @@ const sortGames = sort => {
       return R.sort(R.ascend(R.prop('date')))
   }
 }
-const Image = props => (
-  <img src={props.isVisible ? props.url : ''} alt={props.name} />
-)
 
 const Rows = props =>
   props.games.map(({ name, date, discountDate, url, id, price }) => (
     <div key={id} className="separator">
       <a href={storeUrl(id)}>
         <div className="gamerow">
-          <TrackVisibility once={true} offset={200} className="gamecell image">
-            <Image url={url} name={name} />
-          </TrackVisibility>
+          <Image url={url} name={name} />
 
           <div className="gamecell name">{name}</div>
 
