@@ -31,7 +31,9 @@ const Rows = props =>
     <div key={id} className="separator">
       <a href={storeUrl(id)}>
         <div className="gamerow">
-          <Image url={url} name={name} />
+          <div className="gamecell image">
+            <Image url={url} name={name} />
+          </div>
 
           <div className="gamecell name">{name}</div>
 

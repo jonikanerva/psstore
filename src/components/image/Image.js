@@ -7,7 +7,7 @@ const ImageSrc = props => (
 )
 
 export const Image = props => (
-  <TrackVisibility once={true} offset={200} className="gamecell image">
+  <TrackVisibility once={true} offset={200} className="image">
     <ImageSrc url={props.url} name={props.name} />
   </TrackVisibility>
 )

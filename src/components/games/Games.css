@@ -16,6 +16,11 @@
 .gamecell {
   display: table-cell;
   vertical-align: top;
+  height: 100%;
+}
+
+.gamecell .image {
+  width: 65px;
 }
 
 .separator a {
