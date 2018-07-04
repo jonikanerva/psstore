@@ -27,12 +27,12 @@ const sortGames = sort => {
 }
 
 const Rows = props =>
-  props.games.map(({ name, date, discountDate, url, id, price }) => (
-    <div key={id} className="separator">
-      <a href={storeUrl(id)}>
+  props.games.map(
+    ({ name, date, discountDate, url, id, price, screenShots }) => (
+      <div key={id} className="separator">
         <div className="gamerow">
           <div className="gamecell image">
-            <Image url={url} name={name} />
+            <Image url={url} name={name} screenshots={screenShots} />
           </div>
 
           <div className="gamecell name">{name}</div>
@@ -47,9 +47,9 @@ const Rows = props =>
             <div className="price">{price}</div>
           </div>
         </div>
-      </a>
-    </div>
-  ))
+      </div>
+    )
+  )
 
 class Games extends React.Component {
   constructor(props) {
