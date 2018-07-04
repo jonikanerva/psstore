@@ -1,4 +1,4 @@
-.screenshot--backdrop {
+.screenshots-backdrop {
   position: fixed;
   top: 0;
   bottom: 0;
@@ -6,7 +6,7 @@
   right: 0;
 }
 
-.screenshot--modal {
+.screenshots-modal {
   margin: 0 auto;
   padding: 10px;
   background-color: #fff;

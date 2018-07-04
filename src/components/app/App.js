@@ -14,24 +14,24 @@ const discountGamesUrl =
 class App extends Component {
   render() {
     return (
-      <div className="parent">
-        <div className="list">
+      <div className="app-parent">
+        <div className="app-list">
           <a name="new" href="#discounted">
-            <div className="header">New</div>
+            <div className="app-header">New</div>
           </a>
           <Games url={newGamesUrl} sort="desc" />
         </div>
 
-        <div className="list">
+        <div className="app-list">
           <a name="discounted" href="#upcoming">
-            <div className="header">Discounted</div>
+            <div className="app-header">Discounted</div>
           </a>
           <Games url={discountGamesUrl} sort="discount" />
         </div>
 
-        <div className="list">
+        <div className="app-list">
           <a name="upcoming" href="#new">
-            <div className="header">Upcoming</div>
+            <div className="app-header">Upcoming</div>
           </a>
           <Games url={upcomingGamesUrl} sort="asc" />
         </div>

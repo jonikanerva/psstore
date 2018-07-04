@@ -1,14 +1,14 @@
 import React from 'react'
 import './Screenshots.css'
 
-export const Screenshots = props => {
+const Screenshots = props => {
   if (!props.show) {
     return null
   }
 
   return (
-    <div className="screenshot--backdrop">
-      <div className="screenshot--modal">
+    <div className="screenshots-backdrop">
+      <div className="screenshots-modal">
         {props.screenshots.map(screenshot => (
           <div>
             <img src={screenshot} alt={props.name} />
