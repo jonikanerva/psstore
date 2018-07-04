@@ -9,8 +9,8 @@ const Screenshots = props => {
   return (
     <div className="screenshots-backdrop">
       <div className="screenshots-modal">
-        {props.screenshots.map(screenshot => (
-          <div>
+        {props.screenshots.map((screenshot, i) => (
+          <div key={i}>
             <img src={screenshot} alt={props.name} />
           </div>
         ))}
