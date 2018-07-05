@@ -7,11 +7,10 @@
 }
 
 .screenshots-modal {
-  margin: 0 auto;
-  padding: 10px;
   background-color: #fff;
+  padding: 10px;
   width: 100%;
   height: 100%;
-  overflow-y: auto;
+  overflow-y: scroll;
   -webkit-overflow-scrolling: touch;
 }
