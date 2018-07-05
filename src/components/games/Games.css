@@ -9,8 +9,11 @@
   border-radius: 2px;
 }
 
-.gamerow:hover {
-  background: #f0f0f0;
+@media (hover: hover) {
+  /* Mouse devices */
+  .gamerow:hover {
+    background: #f0f0f0;
+  }
 }
 
 .gamecell {
