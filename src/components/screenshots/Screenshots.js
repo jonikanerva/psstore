@@ -1,22 +1,28 @@
-import React from 'react'
+import React, { Component } from 'react'
 import './Screenshots.css'
 
-const Screenshots = props => {
-  if (!props.show) {
-    return null
+class Screenshots extends Component {
+  constructor(props) {
+    super(props)
+
+    this.state = {
+      name: props.name,
+      onClose: props.onClose,
+      screenshots: props.screenshots
+    }
   }
 
-  return (
-    <div className="screenshots-backdrop">
+  render() {
+    const { name, screenshots } = this.state
+
+    return !this.props.show ? null : (
       <div className="screenshots-modal">
-        {props.screenshots.map((screenshot, i) => (
-          <div key={i}>
-            <img src={screenshot} alt={props.name} />
-          </div>
+        {screenshots.map((screenshot, i) => (
+          <img src={screenshot} alt={name} key={i} />
         ))}
       </div>
-    </div>
-  )
+    )
+  }
 }
 
 export default Screenshots
