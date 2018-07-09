@@ -28,13 +28,30 @@ const createGameObject = game => {
   }
 }
 
+const sortGames = sort => {
+  switch (sort) {
+    case 'desc':
+      return R.sort(R.descend(R.prop('date')))
+    case 'discount':
+      return R.sortWith([
+        R.descend(R.prop('discountDate')),
+        R.descend(R.prop('date'))
+      ])
+    default:
+      return R.sort(R.ascend(R.prop('date')))
+  }
+}
+
 const parseGames = R.compose(
   R.map(createGameObject),
   R.filter(R.propEq('type', 'game')),
   R.propOr([], 'included')
 )
 
-export const fetchGames = url =>
+const fetchGames = (url, sort) =>
   fetch(url)
     .then(res => res.json())
     .then(parseGames)
+    .then(sortGames(sort))
+
+export default fetchGames
