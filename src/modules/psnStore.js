@@ -3,6 +3,7 @@ import * as R from 'ramda'
 const createGameObject = game => {
   const skus = R.head(R.pathOr([], ['attributes', 'skus'], game))
   const images = R.pathOr([], ['attributes', 'media-list', 'screenshots'], game)
+  const videos = R.pathOr([], ['attributes', 'media-list', 'preview'], game)
 
   return {
     name: R.pathOr('', ['attributes', 'name'], game),
@@ -19,7 +20,11 @@ const createGameObject = game => {
       ['prices', 'plus-user', 'availability', 'start-date'],
       skus
     ),
-    screenShots: R.map(R.prop('url'), images)
+    screenShots: R.map(R.prop('url'), images),
+    videos: R.map(R.prop('url'), videos),
+    genres: R.join(', ', R.pathOr([], ['attributes', 'genres'], game)),
+    description: R.pathOr('', ['attributes', 'long-description'], game),
+    studio: R.pathOr('', ['attributes', 'provider-name'], game)
   }
 }
 
