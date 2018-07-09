@@ -8,6 +8,23 @@ const dateFormat = dateString => {
   return `${date.getDate()}.${date.getMonth() + 1}.${date.getFullYear()}`
 }
 
+const Price = props => {
+  const { sort, date, discountDate, price } = props
+
+  return sort === 'discount' ? (
+    <div className="gamecell date">
+      {dateFormat(discountDate)}
+      <div className="price">{dateFormat(date)}</div>
+      <div className="price">{price}</div>
+    </div>
+  ) : (
+    <div className="gamecell date">
+      {dateFormat(date)}
+      <div className="price">{price}</div>
+    </div>
+  )
+}
+
 const Game = props => {
   const {
     date,
@@ -41,13 +58,12 @@ const Game = props => {
 
         <div className="gamecell name">{name}</div>
 
-        <div className="gamecell date">
-          {sort === 'discount' ? dateFormat(discountDate) : dateFormat(date)}
-          {sort === 'discount' && (
-            <div className="price">{dateFormat(date)}</div>
-          )}
-          <div className="price">{price}</div>
-        </div>
+        <Price
+          date={date}
+          discountDate={discountDate}
+          price={price}
+          sort={sort}
+        />
       </div>
     </a>
   )
