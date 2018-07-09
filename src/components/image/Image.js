@@ -12,10 +12,7 @@ class Image extends Component {
     super(props)
 
     this.state = {
-      name: props.name,
-      screenshots: props.screenshots,
-      showScreenshots: false,
-      url: props.url
+      showScreenshots: false
     }
   }
 
@@ -34,7 +31,16 @@ class Image extends Component {
   }
 
   render() {
-    const { url, name, showScreenshots, screenshots } = this.state
+    const { showScreenshots } = this.state
+    const {
+      description,
+      genres,
+      name,
+      screenshots,
+      studio,
+      url,
+      videos
+    } = this.props
 
     return (
       <div onClick={this.toggleScreenshots}>
@@ -42,8 +48,13 @@ class Image extends Component {
           <ImageSrc url={url} name={name} />
         </TrackVisibility>
         <Screenshots
-          show={showScreenshots}
+          description={description}
+          genres={genres}
+          name={name}
           screenshots={screenshots}
+          show={showScreenshots}
+          studio={studio}
+          videos={videos}
           onClose={this.toggleScreenshots}
         />
       </div>

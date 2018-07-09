@@ -28,12 +28,34 @@ const sortGames = sort => {
 
 const Rows = props =>
   props.games.map(
-    ({ name, date, discountDate, url, id, price, screenShots }) => (
+    ({
+      date,
+      description,
+      discountDate,
+      genres,
+      id,
+      name,
+      price,
+      screenShots,
+      studio,
+      showScreenshots,
+      url,
+      videos
+    }) => (
       <div key={id} className="separator">
         <a href={storeUrl(id)}>
           <div className="gamerow">
             <div className="gamecell image">
-              <Image url={url} name={name} screenshots={screenShots} />
+              <Image
+                description={description}
+                genres={genres}
+                name={name}
+                screenshots={screenShots}
+                show={showScreenshots}
+                studio={studio}
+                url={url}
+                videos={videos}
+              />
             </div>
 
             <div className="gamecell name">{name}</div>
