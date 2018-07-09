@@ -1,46 +1,35 @@
-import React, { Component } from 'react'
+import React from 'react'
 import './Screenshots.css'
 
-class Screenshots extends Component {
-  render() {
-    const {
-      description,
-      genres,
-      name,
-      screenshots,
-      studio,
-      videos
-    } = this.props
+const Images = props =>
+  props.screenshots.map((screenshot, i) => (
+    <img src={screenshot} alt={props.name} key={i} />
+  ))
 
-    return !this.props.show ? null : (
-      <div className="screenshots-modal">
-        <div className="screenshots-name">{name}</div>
-        <div className="screenshots-byline">
-          {genres} by {studio}
-        </div>
+const Videos = props =>
+  props.videos.map((video, i) => (
+    <video preload="metadata" controls muted width="100%" src={video} key={i} />
+  ))
 
-        {screenshots.map((screenshot, i) => (
-          <img src={screenshot} alt={name} key={i} />
-        ))}
+const Screenshots = props => {
+  const { description, genres, name, screenshots, show, studio, videos } = props
 
-        {videos.map((video, i) => (
-          <video
-            preload="metadata"
-            controls
-            muted
-            width="100%"
-            src={video}
-            key={i}
-          />
-        ))}
-
-        <div
-          className="screenshots-description"
-          dangerouslySetInnerHTML={{ __html: description }}
-        />
+  return !show ? null : (
+    <div className="screenshots-modal">
+      <div className="screenshots-name">{name}</div>
+      <div className="screenshots-byline">
+        {genres} by {studio}
       </div>
-    )
-  }
+
+      <Images screenshots={screenshots} name={name} />
+      <Videos videos={videos} />
+
+      <div
+        className="screenshots-description"
+        dangerouslySetInnerHTML={{ __html: description }}
+      />
+    </div>
+  )
 }
 
 export default Screenshots
