@@ -81,27 +81,29 @@ class Games extends React.Component {
 
     this.state = {
       error: false,
-      loading: true,
-      sort: props.sort,
-      url: props.url
+      loading: true
     }
   }
 
   componentDidMount() {
-    fetchGames(this.state.url)
-      .then(sortGames(this.state.sort))
+    const { url, sort } = this.props
+
+    fetchGames(url)
+      .then(sortGames(sort))
       .then(games => this.setState({ games, loading: false }))
       .catch(() => this.setState({ error: true }))
   }
 
   render() {
-    const showGames = !this.state.loading && !this.state.error
+    const { games, loading, error } = this.state
+    const { sort } = this.props
+    const showGames = !loading && !error
 
     return (
       <div className="gametable">
-        <Error error={this.state.error} />
-        <Loading loading={this.state.loading} />
-        {showGames && <Rows games={this.state.games} sort={this.state.sort} />}
+        <Error error={error} />
+        <Loading loading={loading} />
+        {showGames && <Rows games={games} sort={sort} />}
       </div>
     )
   }
