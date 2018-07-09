@@ -20,7 +20,7 @@ const createGameObject = game => {
       ['prices', 'plus-user', 'availability', 'start-date'],
       skus
     ),
-    screenShots: R.map(R.prop('url'), images),
+    screenshots: R.map(R.prop('url'), images),
     videos: R.map(R.prop('url'), videos),
     genres: R.join(', ', R.pathOr([], ['attributes', 'genres'], game)),
     description: R.pathOr('', ['attributes', 'long-description'], game),
