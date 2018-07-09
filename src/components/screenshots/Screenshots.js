@@ -12,10 +12,11 @@ const Videos = props =>
   ))
 
 const Screenshots = props => {
-  const { description, genres, name, screenshots, show, studio, videos } = props
+  const { description, genres, name, screenshots, studio, videos } = props.game
+  const { show, onClose } = props
 
   return !show ? null : (
-    <div className="screenshots-modal">
+    <div className="screenshots-modal" onClick={onClose}>
       <div className="screenshots-name">{name}</div>
       <div className="screenshots-byline">
         {genres} by {studio}
