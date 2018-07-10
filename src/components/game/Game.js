@@ -50,13 +50,13 @@ class Game extends React.Component {
   }
 
   render() {
-    const { date, discountDate, id, name, price, url } = this.props.game
-    const { sort } = this.props
+    const { sort, game } = this.props
+    const { date, discountDate, id, name, price, url } = game
 
     return (
       <div className="game-separator">
         <Screenshots
-          game={this.props.game}
+          game={game}
           show={this.state.showScreenshots}
           onClose={this.toggleScreenshots}
         />
