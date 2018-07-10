@@ -9,6 +9,10 @@
   -webkit-overflow-scrolling: touch;
 }
 
+.screenshots-modal img {
+  width: 100%;
+}
+
 .screenshots-name {
   color: #fff;
   font-size: 36px;
@@ -16,12 +20,14 @@
 }
 
 .screenshots-byline {
-  color: #555;
+  color: #aaa;
   padding-bottom: 20px;
+  font-size: 20px;
 }
 
 .screenshots-description {
   color: #aaa;
   padding-top: 20px;
   max-width: 425px;
+  font-size: 20px;
 }
