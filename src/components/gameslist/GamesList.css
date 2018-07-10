@@ -1,0 +1,23 @@
+.gameslist-parent {
+  justify-content: center;
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.gameslist-list {
+  padding-left: 15px;
+  padding-right: 15px;
+  width: 425px;
+}
+
+.gameslist-header {
+  color: red;
+  font-weight: bold;
+  font-size: 24px;
+  padding-bottom: 20px;
+  padding-top: 20px;
+}
+
+.gameslist-list a {
+  text-decoration: none;
+}
