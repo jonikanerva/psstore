@@ -1,16 +1,12 @@
 import React from 'react'
-import Game from './Game'
+import Game from '../game/Game'
 import Error from '../error/Error'
 import Loading from '../spinner/Spinner'
 import fetchGames from '../../modules/psnStore'
 import './Games.css'
 
-const Rows = props =>
-  props.games.map((game, id) => (
-    <div key={id} className="separator">
-      <Game game={game} sort={props.sort} />
-    </div>
-  ))
+const GameRows = props =>
+  props.games.map((game, id) => <Game game={game} sort={props.sort} key={id} />)
 
 class Games extends React.Component {
   constructor(props) {
@@ -36,10 +32,10 @@ class Games extends React.Component {
     const showGames = !loading && !error
 
     return (
-      <div className="gametable">
+      <div className="games-table">
         <Error error={error} />
         <Loading loading={loading} />
-        {showGames && <Rows games={games} sort={sort} />}
+        {showGames && <GameRows games={games} sort={sort} />}
       </div>
     )
   }

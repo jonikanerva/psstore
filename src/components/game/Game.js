@@ -1,6 +1,7 @@
 import React from 'react'
 import Image from '../image/Image'
 import Screenshots from '../screenshots/Screenshots'
+import './Game.css'
 
 const storeUrl = id => `https://store.playstation.com/en-fi/product/${id}`
 const dateFormat = dateString => {
@@ -13,15 +14,15 @@ const Price = props => {
   const { sort, date, discountDate, price } = props
 
   return sort === 'discount' ? (
-    <div className="gamecell date">
+    <div className="game-cell game-date">
       {dateFormat(discountDate)}
-      <div className="price">{dateFormat(date)}</div>
-      <div className="price">{price}</div>
+      <div className="game-price">{dateFormat(date)}</div>
+      <div className="game-price">{price}</div>
     </div>
   ) : (
-    <div className="gamecell date">
+    <div className="game-cell game-date">
       {dateFormat(date)}
-      <div className="price">{price}</div>
+      <div className="game-price">{price}</div>
     </div>
   )
 }
@@ -53,7 +54,7 @@ class Game extends React.Component {
     const { sort } = this.props
 
     return (
-      <div>
+      <div className="game-separator">
         <Screenshots
           game={this.props.game}
           show={this.state.showScreenshots}
@@ -61,12 +62,15 @@ class Game extends React.Component {
         />
 
         <a href={storeUrl(id)}>
-          <div className="gamerow">
-            <div className="gamecell image" onClick={this.toggleScreenshots}>
+          <div className="game-row">
+            <div
+              className="game-cell game-image"
+              onClick={this.toggleScreenshots}
+            >
               <Image name={name} url={url} />
             </div>
 
-            <div className="gamecell name">{name}</div>
+            <div className="game-cell game-name">{name}</div>
 
             <Price
               date={date}
