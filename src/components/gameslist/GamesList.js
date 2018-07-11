@@ -1,6 +1,7 @@
 import React from 'react'
 import Games from '../games/Games'
 import Loading from '../spinner/Spinner'
+import ScrollToTopOnMount from '../../modules/ScrollToTopOnMount'
 
 import './GamesList.css'
 
@@ -17,6 +18,7 @@ const Header = ({ label, linkto, loading }) => (
 
 const GamesLists = ({ newGames, upcomingGames, discountedGames, loading }) => (
   <div className="gameslist-parent">
+    <ScrollToTopOnMount />
     <div className="gameslist-list">
       <Header label="new" linkto="discounted" loading={loading} />
       <Games label="new" games={newGames} />
