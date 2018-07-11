@@ -1,4 +1,5 @@
 import React from 'react'
+import { Link } from 'react-router-dom'
 import './Screenshots.css'
 
 const Name = props => <div className="screenshots-name">{props.name}</div>
@@ -31,13 +32,15 @@ const Screenshots = props => {
   const { show, onClose } = props
 
   return !show ? null : (
-    <div className="screenshots-modal" onClick={onClose}>
-      <Name name={name} />
-      <ByLine genres={genres} studio={studio} />
-      <Images screenshots={screenshots} name={name} />
-      <Videos videos={videos} />
-      <Description description={description} />
-    </div>
+    <Link to={'/'}>
+      <div className="screenshots-modal">
+        <Name name={name} />
+        <ByLine genres={genres} studio={studio} />
+        <Images screenshots={screenshots} name={name} />
+        <Videos videos={videos} />
+        <Description description={description} />
+      </div>
+    </Link>
   )
 }
 

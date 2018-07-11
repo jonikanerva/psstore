@@ -1,9 +1,8 @@
 import React from 'react'
+import { Link } from 'react-router-dom'
 import Image from '../image/Image'
-import Screenshots from '../screenshots/Screenshots'
 import './Game.css'
 
-const storeUrl = id => `https://store.playstation.com/en-fi/product/${id}`
 const dateFormat = dateString => {
   const date = new Date(dateString)
 
@@ -55,18 +54,9 @@ class Game extends React.Component {
 
     return (
       <div className="game-separator">
-        <Screenshots
-          game={game}
-          show={this.state.showScreenshots}
-          onClose={this.toggleScreenshots}
-        />
-
-        <a href={storeUrl(id)}>
+        <Link to={`/g/${id}`}>
           <div className="game-row">
-            <div
-              className="game-cell game-image"
-              onClick={this.toggleScreenshots}
-            >
+            <div className="game-cell game-image">
               <Image name={name} url={url} />
             </div>
 
@@ -79,7 +69,7 @@ class Game extends React.Component {
               sort={sort}
             />
           </div>
-        </a>
+        </Link>
       </div>
     )
   }
