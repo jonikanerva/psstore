@@ -3,6 +3,7 @@ import Game from '../game/Game'
 import Error from '../error/Error'
 import Loading from '../spinner/Spinner'
 import fetchGames from '../../modules/psnStore'
+import localStorage from '../../modules/localStorage'
 import './Games.css'
 
 const GameRows = props =>
@@ -14,7 +15,8 @@ class Games extends React.Component {
 
     this.state = {
       error: false,
-      loading: true
+      loading: true,
+      games: localStorage.getItem('games')
     }
   }
 
@@ -22,14 +24,17 @@ class Games extends React.Component {
     const { url, sort } = this.props
 
     fetchGames(url, sort)
-      .then(games => this.setState({ games, loading: false }))
+      .then(games => {
+        this.setState({ games, loading: false })
+        localStorage.setItem('games', games)
+      })
       .catch(() => this.setState({ error: true }))
   }
 
   render() {
     const { games, loading, error } = this.state
     const { sort } = this.props
-    const showGames = !loading && !error
+    const showGames = !!games && !error
 
     return (
       <div className="games-table">
