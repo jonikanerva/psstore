@@ -18,10 +18,10 @@
   transform: translateZ(0);
   box-sizing: border-box;
   background: none;
-  width: 50px;
-  height: 50px;
+  width: 20px;
+  height: 20px;
   border: 3px solid rgba(0, 0, 0, 0.3);
   border-left-color: #363738;
   margin: auto;
-  border-width: 5px;
+  border-width: 3px;
 }
