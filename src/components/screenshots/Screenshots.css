@@ -1,16 +1,19 @@
 .screenshots-modal {
-  position: fixed;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  right: 0;
   background-color: #000;
-  overflow-y: scroll;
-  -webkit-overflow-scrolling: touch;
 }
 
 .screenshots-modal img {
   width: 100%;
+}
+
+.screenshots-buy {
+  background-color: blue;
+  color: white;
+  font-size: 26px;
+  font-weight: bold;
+  text-decoration: none;
+  padding: 5px 10px;
+  box-shadow: 2px 2px #333;
 }
 
 .screenshots-name {
@@ -30,4 +33,15 @@
   padding-top: 20px;
   max-width: 425px;
   font-size: 20px;
+}
+
+.screenshots-top {
+  width: 100%;
+  display: flex;
+}
+
+.screenshots-top-right {
+  margin: 20px;
+  text-align: right;
+  flex-grow: 1;
 }

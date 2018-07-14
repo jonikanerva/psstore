@@ -1,9 +1,8 @@
 import React from 'react'
+import { Link } from 'react-router-dom'
 import Image from '../image/Image'
-import Screenshots from '../screenshots/Screenshots'
 import './Game.css'
 
-const storeUrl = id => `https://store.playstation.com/en-fi/product/${id}`
 const dateFormat = dateString => {
   const date = new Date(dateString)
 
@@ -11,78 +10,48 @@ const dateFormat = dateString => {
 }
 
 const Price = props => {
-  const { sort, date, discountDate, price } = props
+  const { label, date, discountDate, price } = props
 
-  return sort === 'discount' ? (
-    <div className="game-cell game-date">
+  return label === 'discounted' ? (
+    <React.Fragment>
       {dateFormat(discountDate)}
       <div className="game-price">{dateFormat(date)}</div>
       <div className="game-price">{price}</div>
-    </div>
+    </React.Fragment>
   ) : (
-    <div className="game-cell game-date">
+    <React.Fragment>
       {dateFormat(date)}
       <div className="game-price">{price}</div>
-    </div>
+    </React.Fragment>
   )
 }
 
-class Game extends React.Component {
-  constructor(props) {
-    super(props)
+const Game = props => {
+  const { label, game } = props
+  const { date, discountDate, id, name, price, url } = game
 
-    this.state = {
-      showScreenshots: false
-    }
-  }
+  return (
+    <div className="game-separator">
+      <Link to={`/g/${id}`}>
+        <div className="game-row">
+          <div className="game-cell game-image">
+            <Image name={name} url={url} />
+          </div>
 
-  toggleScreenshots = e => {
-    this.setState({
-      showScreenshots: !this.state.showScreenshots
-    })
+          <div className="game-cell game-name">{name}</div>
 
-    // prevent scrolling on body when the screenshots are visible
-    document.body.style.overflow = this.state.showScreenshots
-      ? 'visible'
-      : 'hidden'
-
-    e.preventDefault()
-  }
-
-  render() {
-    const { sort, game } = this.props
-    const { date, discountDate, id, name, price, url } = game
-
-    return (
-      <div className="game-separator">
-        <Screenshots
-          game={game}
-          show={this.state.showScreenshots}
-          onClose={this.toggleScreenshots}
-        />
-
-        <a href={storeUrl(id)}>
-          <div className="game-row">
-            <div
-              className="game-cell game-image"
-              onClick={this.toggleScreenshots}
-            >
-              <Image name={name} url={url} />
-            </div>
-
-            <div className="game-cell game-name">{name}</div>
-
+          <div className="game-cell game-date">
             <Price
               date={date}
               discountDate={discountDate}
               price={price}
-              sort={sort}
+              label={label}
             />
           </div>
-        </a>
-      </div>
-    )
-  }
+        </div>
+      </Link>
+    </div>
+  )
 }
 
 export default Game

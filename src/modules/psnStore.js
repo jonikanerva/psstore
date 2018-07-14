@@ -1,5 +1,14 @@
 import * as R from 'ramda'
 
+export const newGamesUrl =
+  'https://store.playstation.com/valkyrie-api/en/FI/19/container/STORE-MSF75508-GAMENEWTHISMONTH?sort=release_date&direction=desc&platform=ps4&game_content_type=games%2Cbundles&size=100&bucket=games&start=0'
+
+export const upcomingGamesUrl =
+  'https://store.playstation.com/valkyrie-api/en/FI/19/container/STORE-MSF75508-COMINGSOON?sort=release_date&direction=desc&size=100&bucket=games&start=0'
+
+export const discountGamesUrl =
+  'https://store.playstation.com/valkyrie-api/en/FI/19/container/STORE-MSF75508-PRICEDROPSCHI?sort=release_date&direction=desc&platform=ps4&game_content_type=games%2Cbundles&size=80&bucket=games&start=0'
+
 const createGameObject = game => {
   const skus = R.head(R.pathOr([], ['attributes', 'skus'], game))
   const images = R.pathOr([], ['attributes', 'media-list', 'screenshots'], game)
@@ -32,7 +41,7 @@ const sortGames = sort => {
   switch (sort) {
     case 'desc':
       return R.sort(R.descend(R.prop('date')))
-    case 'discount':
+    case 'discounted':
       return R.sortWith([
         R.descend(R.prop('discountDate')),
         R.descend(R.prop('date'))
@@ -48,10 +57,16 @@ const parseGames = R.compose(
   R.propOr([], 'included')
 )
 
-const fetchGames = (url, sort) =>
+const fetchGames = (url, label) =>
   fetch(url)
     .then(res => res.json())
     .then(parseGames)
-    .then(sortGames(sort))
 
-export default fetchGames
+export const fetchNewGames = () =>
+  fetchGames(newGamesUrl).then(sortGames('desc'))
+
+export const fetchUpcomingGames = () =>
+  fetchGames(upcomingGamesUrl).then(sortGames('asc'))
+
+export const fetchDiscountedGames = () =>
+  fetchGames(discountGamesUrl).then(sortGames('discounted'))
