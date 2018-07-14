@@ -7,7 +7,7 @@ import localStorage from '../../modules/localStorage'
 import './Games.css'
 
 const GameRows = props =>
-  props.games.map((game, id) => <Game game={game} sort={props.sort} key={id} />)
+  props.games.map(game => <Game game={game} sort={props.sort} key={game.id} />)
 
 class Games extends React.Component {
   constructor(props) {
