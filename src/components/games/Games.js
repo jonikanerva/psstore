@@ -7,7 +7,9 @@ import localStorage from '../../modules/localStorage'
 import './Games.css'
 
 const GameRows = props =>
-  props.games.map(game => <Game game={game} sort={props.sort} key={game.id} />)
+  props.games.map(game => (
+    <Game game={game} label={props.label} key={game.id} />
+  ))
 
 class Games extends React.Component {
   constructor(props) {
@@ -21,9 +23,9 @@ class Games extends React.Component {
   }
 
   componentDidMount() {
-    const { url, sort, label } = this.props
+    const { url, label } = this.props
 
-    fetchGames(url, sort)
+    fetchGames(url, label)
       .then(games => {
         this.setState({ games, loading: false })
         localStorage.setItem(label, games)
@@ -33,14 +35,14 @@ class Games extends React.Component {
 
   render() {
     const { games, loading, error } = this.state
-    const { sort } = this.props
+    const { label } = this.props
     const showGames = !!games && !error
 
     return (
       <div className="games-table">
         <Error error={error} />
         <Loading loading={loading} />
-        {showGames && <GameRows games={games} sort={sort} />}
+        {showGames && <GameRows games={games} label={label} />}
       </div>
     )
   }

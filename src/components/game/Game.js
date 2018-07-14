@@ -10,9 +10,9 @@ const dateFormat = dateString => {
 }
 
 const Price = props => {
-  const { sort, date, discountDate, price } = props
+  const { label, date, discountDate, price } = props
 
-  return sort === 'discount' ? (
+  return label === 'discounted' ? (
     <React.Fragment>
       {dateFormat(discountDate)}
       <div className="game-price">{dateFormat(date)}</div>
@@ -27,7 +27,7 @@ const Price = props => {
 }
 
 const Game = props => {
-  const { sort, game } = props
+  const { label, game } = props
   const { date, discountDate, id, name, price, url } = game
 
   return (
@@ -45,7 +45,7 @@ const Game = props => {
               date={date}
               discountDate={discountDate}
               price={price}
-              sort={sort}
+              label={label}
             />
           </div>
         </div>

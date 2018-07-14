@@ -28,11 +28,11 @@ const createGameObject = game => {
   }
 }
 
-const sortGames = sort => {
-  switch (sort) {
-    case 'desc':
+const sortGames = label => {
+  switch (label) {
+    case 'new':
       return R.sort(R.descend(R.prop('date')))
-    case 'discount':
+    case 'discounted':
       return R.sortWith([
         R.descend(R.prop('discountDate')),
         R.descend(R.prop('date'))
@@ -48,10 +48,10 @@ const parseGames = R.compose(
   R.propOr([], 'included')
 )
 
-const fetchGames = (url, sort) =>
+const fetchGames = (url, label) =>
   fetch(url)
     .then(res => res.json())
     .then(parseGames)
-    .then(sortGames(sort))
+    .then(sortGames(label))
 
 export default fetchGames
