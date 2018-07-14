@@ -1,5 +1,6 @@
 import React from 'react'
 import ScrollToTopOnMount from '../../modules/ScrollToTopOnMount'
+import { Link } from 'react-router-dom'
 
 import './Screenshots.css'
 
@@ -21,7 +22,9 @@ const Buy = props => (
 
 const Images = props =>
   props.screenshots.map((screenshot, i) => (
-    <img src={screenshot} alt={props.name} key={i} />
+    <Link to="/">
+      <img src={screenshot} alt={props.name} key={i} />
+    </Link>
   ))
 
 const Videos = props =>

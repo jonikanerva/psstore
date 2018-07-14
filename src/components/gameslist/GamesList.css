@@ -17,6 +17,12 @@
   padding-bottom: 20px;
   padding-top: 20px;
   text-transform: capitalize;
+  display: flex;
+}
+
+.gameslist-header-loading {
+  align-self: flex-end;
+  margin-left: 10px;
 }
 
 .gameslist-list a {
