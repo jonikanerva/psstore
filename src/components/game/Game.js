@@ -13,55 +13,34 @@ const Price = props => {
   const { sort, date, discountDate, price } = props
 
   return sort === 'discount' ? (
-    <div className="game-cell game-date">
+    <React.Fragment>
       {dateFormat(discountDate)}
       <div className="game-price">{dateFormat(date)}</div>
       <div className="game-price">{price}</div>
-    </div>
+    </React.Fragment>
   ) : (
-    <div className="game-cell game-date">
+    <React.Fragment>
       {dateFormat(date)}
       <div className="game-price">{price}</div>
-    </div>
+    </React.Fragment>
   )
 }
 
-class Game extends React.Component {
-  constructor(props) {
-    super(props)
+const Game = props => {
+  const { sort, game } = props
+  const { date, discountDate, id, name, price, url } = game
 
-    this.state = {
-      showScreenshots: false
-    }
-  }
+  return (
+    <div className="game-separator">
+      <Link to={`/g/${id}`}>
+        <div className="game-row">
+          <div className="game-cell game-image">
+            <Image name={name} url={url} />
+          </div>
 
-  toggleScreenshots = e => {
-    this.setState({
-      showScreenshots: !this.state.showScreenshots
-    })
+          <div className="game-cell game-name">{name}</div>
 
-    // prevent scrolling on body when the screenshots are visible
-    document.body.style.overflow = this.state.showScreenshots
-      ? 'visible'
-      : 'hidden'
-
-    e.preventDefault()
-  }
-
-  render() {
-    const { sort, game } = this.props
-    const { date, discountDate, id, name, price, url } = game
-
-    return (
-      <div className="game-separator">
-        <Link to={`/g/${id}`}>
-          <div className="game-row">
-            <div className="game-cell game-image">
-              <Image name={name} url={url} />
-            </div>
-
-            <div className="game-cell game-name">{name}</div>
-
+          <div className="game-cell game-date">
             <Price
               date={date}
               discountDate={discountDate}
@@ -69,10 +48,10 @@ class Game extends React.Component {
               sort={sort}
             />
           </div>
-        </Link>
-      </div>
-    )
-  }
+        </div>
+      </Link>
+    </div>
+  )
 }
 
 export default Game
