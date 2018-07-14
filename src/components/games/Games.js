@@ -16,17 +16,17 @@ class Games extends React.Component {
     this.state = {
       error: false,
       loading: true,
-      games: localStorage.getItem('games')
+      games: localStorage.getItem(props.label)
     }
   }
 
   componentDidMount() {
-    const { url, sort } = this.props
+    const { url, sort, label } = this.props
 
     fetchGames(url, sort)
       .then(games => {
         this.setState({ games, loading: false })
-        localStorage.setItem('games', games)
+        localStorage.setItem(label, games)
       })
       .catch(() => this.setState({ error: true }))
   }

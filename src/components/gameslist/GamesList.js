@@ -17,21 +17,21 @@ const GamesLists = props => (
       <a name="new" href="#discounted">
         <div className="gameslist-header">New</div>
       </a>
-      <Games url={newGamesUrl} sort="desc" />
+      <Games label="new" url={newGamesUrl} sort="desc" />
     </div>
 
     <div className="gameslist-list">
       <a name="discounted" href="#upcoming">
         <div className="gameslist-header">Discounted</div>
       </a>
-      <Games url={discountGamesUrl} sort="discount" />
+      <Games label="discounted" url={discountGamesUrl} sort="discount" />
     </div>
 
     <div className="gameslist-list">
       <a name="upcoming" href="#new">
         <div className="gameslist-header">Upcoming</div>
       </a>
-      <Games url={upcomingGamesUrl} sort="asc" />
+      <Games label="upcoming" url={upcomingGamesUrl} sort="asc" />
     </div>
   </div>
 )
