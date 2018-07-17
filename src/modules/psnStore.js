@@ -57,16 +57,28 @@ const parseGames = R.compose(
   R.propOr([], 'included')
 )
 
-const fetchGames = (url, label) =>
+const fetchUrl = (url, label) =>
   fetch(url)
     .then(res => res.json())
     .then(parseGames)
 
-export const fetchNewGames = () =>
-  fetchGames(newGamesUrl).then(sortGames('desc'))
+const fetchNewGames = () => fetchUrl(newGamesUrl).then(sortGames('desc'))
 
-export const fetchUpcomingGames = () =>
-  fetchGames(upcomingGamesUrl).then(sortGames('asc'))
+const fetchUpcomingGames = () =>
+  fetchUrl(upcomingGamesUrl).then(sortGames('asc'))
 
-export const fetchDiscountedGames = () =>
-  fetchGames(discountGamesUrl).then(sortGames('discounted'))
+const fetchDiscountedGames = () =>
+  fetchUrl(discountGamesUrl).then(sortGames('discounted'))
+
+const fetchGames = () =>
+  Promise.all([
+    fetchNewGames(),
+    fetchDiscountedGames(),
+    fetchUpcomingGames()
+  ]).then(([newGames, discountedGames, upcomingGames]) => ({
+    newGames,
+    discountedGames,
+    upcomingGames
+  }))
+
+export default fetchGames

@@ -1,11 +1,7 @@
 import React, { Component } from 'react'
 import { BrowserRouter as Router, Route } from 'react-router-dom'
 import * as R from 'ramda'
-import {
-  fetchNewGames,
-  fetchUpcomingGames,
-  fetchDiscountedGames
-} from '../../modules/psnStore'
+import fetchGames from '../../modules/psnStore'
 import localStorage from '../../modules/localStorage'
 import GamesList from '../gameslist/GamesList'
 import Screenshots from '../screenshots/Screenshots'
@@ -26,8 +22,8 @@ class App extends Component {
   }
 
   componentDidMount() {
-    Promise.all([fetchNewGames(), fetchDiscountedGames(), fetchUpcomingGames()])
-      .then(([newGames, discountedGames, upcomingGames]) => {
+    fetchGames()
+      .then(({ newGames, discountedGames, upcomingGames }) => {
         this.setState({
           loading: false,
           newGames,
