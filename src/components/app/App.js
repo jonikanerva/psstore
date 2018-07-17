@@ -41,7 +41,7 @@ class App extends Component {
       .catch(() => this.setState({ error: true }))
   }
 
-  findGameAndRenderScreenshots = ({ match }) => {
+  renderScreenshots = ({ match }) => {
     const gameId = match.params.gameId
     const { loading, newGames, discountedGames, upcomingGames } = this.state
 
@@ -58,33 +58,29 @@ class App extends Component {
     return game ? <Screenshots game={game} /> : <Error />
   }
 
-  render() {
-    const {
-      newGames,
-      upcomingGames,
-      discountedGames,
-      error,
-      loading
-    } = this.state
+  renderGameList = () => {
+    const { newGames, upcomingGames, discountedGames, loading } = this.state
 
-    return error ? (
-      <Error />
-    ) : (
+    return (
+      <GamesList
+        loading={loading}
+        newGames={newGames}
+        upcomingGames={upcomingGames}
+        discountedGames={discountedGames}
+      />
+    )
+  }
+
+  render() {
+    if (this.state.error) {
+      return <Error />
+    }
+
+    return (
       <Router>
         <React.Fragment>
-          <Route
-            exact={true}
-            path="/"
-            render={() => (
-              <GamesList
-                loading={loading}
-                newGames={newGames}
-                upcomingGames={upcomingGames}
-                discountedGames={discountedGames}
-              />
-            )}
-          />
-          <Route path="/g/:gameId" render={this.findGameAndRenderScreenshots} />
+          <Route exact={true} path="/" render={this.renderGameList} />
+          <Route path="/g/:gameId" render={this.renderScreenshots} />
         </React.Fragment>
       </Router>
     )
