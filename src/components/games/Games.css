@@ -1,5 +1,4 @@
-.games-table {
-  display: table;
-  table-layout: auto;
-  width: 100%;
+
+.games-list__items {
+  list-style-type: none;
 }
