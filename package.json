@@ -5,12 +5,10 @@
   "dependencies": {
     "ramda": "^0.25.0",
     "react": "^16.4.2",
-    "react-dom": "^16.4.1",
+    "react-dom": "^16.4.2",
     "react-on-screen": "^2.0.4",
     "react-router-dom": "^4.3.1",
-    "react-scripts": "1.1.4",
-    "react-swipe": "^5.1.1",
-    "swipe-js-iso": "^2.0.4"
+    "react-scripts": "1.1.5"
   },
   "scripts": {
     "s": "yarn start",
