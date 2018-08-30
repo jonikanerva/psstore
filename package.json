@@ -2,6 +2,9 @@
   "name": "psstore",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=10"
+  },
   "dependencies": {
     "ramda": "^0.25.0",
     "react": "^16.4.2",
@@ -11,6 +14,10 @@
     "react-scripts": "1.1.5"
   },
   "devDependencies": {
+    "eslint": "^5.4.0",
+    "eslint-plugin-node": "^7.0.1",
+    "eslint-plugin-prettier": "^2.6.2",
+    "eslint-plugin-react": "^7.11.1",
     "prettier": "^1.14.2"
   },
   "prettier": {
@@ -22,6 +29,7 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "format": "prettier --config package.json 'src/**/*.{js,css}' --write",
+    "lint": "eslint 'src/**/*.js'",
     "test": "react-scripts test --env=jsdom",
     "eject": "react-scripts eject"
   }
