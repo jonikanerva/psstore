@@ -22,8 +22,8 @@ const Buy = props => (
 
 const Images = props =>
   props.screenshots.map((screenshot, i) => (
-    <Link to="/">
-      <img src={screenshot} alt={props.name} key={i} />
+    <Link to="/" key={i}>
+      <img src={screenshot} alt={props.name} />
     </Link>
   ))
 

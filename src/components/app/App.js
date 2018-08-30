@@ -19,6 +19,9 @@ class App extends Component {
       discountedGames: localStorage.getItem('discountedGames'),
       upcomingGames: localStorage.getItem('upcomingGames')
     }
+
+    this.renderScreenshots = this.renderScreenshots.bind(this)
+    this.renderGameList = this.renderGameList.bind(this)
   }
 
   componentDidMount() {
@@ -37,7 +40,7 @@ class App extends Component {
       .catch(() => this.setState({ error: true }))
   }
 
-  renderScreenshots = ({ match }) => {
+  renderScreenshots({ match }) {
     const gameId = match.params.gameId
     const { loading, newGames, discountedGames, upcomingGames } = this.state
 
@@ -54,7 +57,7 @@ class App extends Component {
     return game ? <Screenshots game={game} /> : <Error />
   }
 
-  renderGameList = () => {
+  renderGameList() {
     const { newGames, upcomingGames, discountedGames, loading } = this.state
 
     return (

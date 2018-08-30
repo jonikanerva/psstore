@@ -57,7 +57,7 @@ const parseGames = R.compose(
   R.propOr([], 'included')
 )
 
-const fetchUrl = (url, label) =>
+const fetchUrl = url =>
   fetch(url)
     .then(res => res.json())
     .then(parseGames)
