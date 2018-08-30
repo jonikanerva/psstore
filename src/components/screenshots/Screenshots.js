@@ -6,49 +6,41 @@ import './Screenshots.css'
 
 const storeUrl = id => `https://store.playstation.com/en-fi/product/${id}`
 
-const Name = props => <div className="screenshots-name">{props.name}</div>
+const Name = ({ name }) => <div className="screenshots-name">{name}</div>
 
-const ByLine = props => (
+const ByLine = ({ genres, studio }) => (
   <div className="screenshots-byline">
-    {props.genres} by {props.studio}
+    {genres} by {studio}
   </div>
 )
 
-const Buy = props => (
-  <a className="screenshots-buy" href={storeUrl(props.id)}>
+const Buy = ({ id }) => (
+  <a className="screenshots-buy" href={storeUrl(id)}>
     BUY
   </a>
 )
 
-const Images = props =>
-  props.screenshots.map((screenshot, i) => (
+const Images = ({ screenshots, name }) =>
+  screenshots.map((screenshot, i) => (
     <Link to="/" key={i}>
-      <img src={screenshot} alt={props.name} />
+      <img src={screenshot} alt={name} />
     </Link>
   ))
 
-const Videos = props =>
-  props.videos.map((video, i) => (
+const Videos = ({ videos }) =>
+  videos.map((video, i) => (
     <video preload="metadata" controls muted width="100%" src={video} key={i} />
   ))
 
-const Description = props => (
+const Description = ({ description }) => (
   <div
     className="screenshots-description"
-    dangerouslySetInnerHTML={{ __html: props.description }}
+    dangerouslySetInnerHTML={{ __html: description }}
   />
 )
 
-const Screenshots = props => {
-  const {
-    id,
-    description,
-    genres,
-    name,
-    screenshots,
-    studio,
-    videos
-  } = props.game
+const Screenshots = ({ game }) => {
+  const { id, description, genres, name, screenshots, studio, videos } = game
 
   return (
     <div className="screenshots-modal">

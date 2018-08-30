@@ -2,10 +2,8 @@ import React from 'react'
 import Game from '../game/Game'
 import './Games.css'
 
-const GameRows = props =>
-  props.games.map(game => (
-    <Game game={game} label={props.label} key={game.id} />
-  ))
+const GameRows = ({ games, label }) =>
+  games.map(game => <Game game={game} label={label} key={game.id} />)
 
 const Games = ({ label, games }) =>
   !games ? null : (
