@@ -1,7 +1,7 @@
 import React from 'react'
 import Games from '../games/Games'
 import Loading from '../spinner/Spinner'
-import ScrollToTopOnMount from '../../modules/ScrollToTopOnMount'
+import ScrollToTopOnMount from '../scroll/ScrollToTopOnMount'
 
 import './GamesList.css'
 

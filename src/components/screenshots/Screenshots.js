@@ -1,5 +1,5 @@
 import React from 'react'
-import ScrollToTopOnMount from '../../modules/ScrollToTopOnMount'
+import ScrollToTopOnMount from '../scroll/ScrollToTopOnMount'
 import { Link } from 'react-router-dom'
 
 import './Screenshots.css'
