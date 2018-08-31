@@ -18,9 +18,9 @@ const Header = ({ label, linkto, loading }) => (
   </a>
 )
 
-const GameRows = ({ games, label }) => {
+const GameRows = ({ games, label, loading }) => {
   if (!games) {
-    return null
+    return loading ? null : <Error message="No games found" />
   }
 
   return games.map(game => <Game game={game} label={label} key={game.id} />)
@@ -57,7 +57,7 @@ class Games extends Component {
         <Header label={label} linkto={linkto} loading={loading} />
 
         <div className="games-table">
-          <GameRows games={games} label={label} />
+          <GameRows games={games} label={label} loading={loading} />
         </div>
       </div>
     )
