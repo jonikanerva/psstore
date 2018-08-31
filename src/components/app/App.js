@@ -10,7 +10,7 @@ const App = () => (
     <React.Fragment>
       <Route exact={true} path="/" component={GamesList} />
       <Route path="/g/:gameId" component={Screenshots} />
-      <Route path="/s/:search" component={SearchResults} />
+      <Route path="/search" component={SearchResults} />
     </React.Fragment>
   </Router>
 )
