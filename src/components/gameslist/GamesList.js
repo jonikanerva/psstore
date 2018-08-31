@@ -14,8 +14,8 @@ const GamesLists = () => (
     <ScrollToTopOnMount />
     <Games label="new" linkto="discounted" fetch={fetchNewGames} />
     <Games label="discounted" linkto="upcoming" fetch={fetchDiscountedGames} />
-    <Games label="upcoming" linkto="new" fetch={fetchUpcomingGames} />
-    <SearchField />
+    <Games label="upcoming" linkto="search" fetch={fetchUpcomingGames} />
+    <SearchField label="search" linkto="new" />
   </div>
 )
 

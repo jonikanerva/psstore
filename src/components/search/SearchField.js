@@ -1,12 +1,15 @@
 import React from 'react'
 import './SearchField.css'
 
-const SearchField = () => (
+const SearchField = ({ label, linkto }) => (
   <div className="searchfield-box">
     <form method="GET" action="/search">
       <input type="text" name="q" />
       <input type="submit" value="Search" />
     </form>
+    <a name={label} href={`#${linkto}`}>
+      top
+    </a>
   </div>
 )
 
