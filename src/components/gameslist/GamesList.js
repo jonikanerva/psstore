@@ -1,6 +1,7 @@
 import React from 'react'
 import Games from '../games/Games'
 import ScrollToTopOnMount from '../scroll/ScrollToTopOnMount'
+import SearchField from '../search/SearchField'
 import {
   fetchNewGames,
   fetchDiscountedGames,
@@ -14,6 +15,7 @@ const GamesLists = () => (
     <Games label="new" linkto="discounted" fetch={fetchNewGames} />
     <Games label="discounted" linkto="upcoming" fetch={fetchDiscountedGames} />
     <Games label="upcoming" linkto="new" fetch={fetchUpcomingGames} />
+    <SearchField />
   </div>
 )
 

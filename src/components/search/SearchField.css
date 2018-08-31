@@ -1,0 +1,19 @@
+.searchfield-box {
+  padding: 15px;
+  width: 425px;
+  text-align: center;
+}
+
+.searchfield-box input[type='text'] {
+  width: 300px;
+  height: 35px;
+  font-size: 20px;
+  font-weight: 300;
+  padding: 5px;
+}
+
+.searchfield-box input[type='submit'] {
+  font-size: 20px;
+  margin: 5px;
+  vertical-align: middle;
+}
