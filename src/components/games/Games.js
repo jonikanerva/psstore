@@ -1,5 +1,6 @@
 import React, { Component } from 'react'
 import { connect } from 'react-redux'
+import * as R from 'ramda'
 import Game from '../game/Game'
 import Loading from '../spinner/Spinner'
 import Error from '../error/Error'
@@ -19,7 +20,7 @@ const Header = ({ label, linkto, loading }) => (
 )
 
 const GameRows = ({ games, label, loading }) => {
-  if (!games) {
+  if (!games || R.isEmpty(games)) {
     return loading ? null : <Error message="No games found" />
   }
 
