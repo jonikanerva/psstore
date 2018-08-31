@@ -2,6 +2,7 @@ import React from 'react'
 import { BrowserRouter as Router, Route } from 'react-router-dom'
 import GamesList from '../gameslist/GamesList'
 import Screenshots from '../screenshots/Screenshots'
+import Search from '../search/Search'
 import './App.css'
 
 const App = () => (
@@ -9,6 +10,7 @@ const App = () => (
     <React.Fragment>
       <Route exact={true} path="/" component={GamesList} />
       <Route path="/g/:gameId" component={Screenshots} />
+      <Route path="/s/:search" component={Search} />
     </React.Fragment>
   </Router>
 )

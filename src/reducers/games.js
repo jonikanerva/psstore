@@ -15,6 +15,8 @@ const gamesReducer = (partialState = initialState, action = {}) => {
       return assoc('discountedGames', action.value, partialState)
     case 'STORE_UPCOMING_GAMES':
       return assoc('upcomingGames', action.value, partialState)
+    case 'STORE_SEARCH_GAMES':
+      return assoc('searchGames', action.value, partialState)
     default:
       return partialState
   }

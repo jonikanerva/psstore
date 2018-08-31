@@ -1,13 +1,18 @@
 import * as R from 'ramda'
 
-export const newGamesUrl =
+const newGamesUrl =
   'https://store.playstation.com/valkyrie-api/en/FI/19/container/STORE-MSF75508-GAMENEWTHISMONTH?sort=release_date&direction=desc&platform=ps4&game_content_type=games%2Cbundles&size=200&bucket=games&start=0'
 
-export const upcomingGamesUrl =
+const upcomingGamesUrl =
   'https://store.playstation.com/valkyrie-api/en/FI/19/container/STORE-MSF75508-COMINGSOON?sort=release_date&direction=desc&size=200&bucket=games&start=0'
 
-export const discountGamesUrl =
+const discountGamesUrl =
   'https://store.playstation.com/valkyrie-api/en/FI/19/container/STORE-MSF75508-PRICEDROPSCHI?sort=release_date&direction=desc&platform=ps4&game_content_type=games%2Cbundles&size=300&bucket=games&start=0'
+
+const searchGamesUrl = string =>
+  `https://store.playstation.com/valkyrie-api/en/FI/999/bucket-search/${encodeURIComponent(
+    string
+  )}?size=50&bucket=games`
 
 const createGameObject = game => {
   const skus = R.head(R.pathOr([], ['attributes', 'skus'], game))
@@ -69,3 +74,6 @@ export const fetchUpcomingGames = () =>
 
 export const fetchDiscountedGames = () =>
   fetchUrl(discountGamesUrl).then(sortGames('discounted'))
+
+export const searchGames = searchString =>
+  fetchUrl(searchGamesUrl(searchString)).then(sortGames('desc'))
