@@ -3,3 +3,28 @@
   table-layout: auto;
   width: 100%;
 }
+
+.games-list {
+  padding-left: 15px;
+  padding-right: 15px;
+  width: 425px;
+}
+
+.games-list a {
+  text-decoration: none;
+}
+
+.games-header {
+  color: red;
+  font-weight: bold;
+  font-size: 24px;
+  padding-bottom: 20px;
+  padding-top: 20px;
+  text-transform: capitalize;
+  display: flex;
+}
+
+.games-header-loading {
+  align-self: flex-end;
+  margin-left: 10px;
+}
