@@ -2,7 +2,7 @@ import React from 'react'
 import Games from '../games/Games'
 import { searchGames } from '../../modules/psnStore'
 
-const Search = props => (
+const SearchResults = props => (
   <Games
     label="search"
     linkto=""
@@ -10,4 +10,4 @@ const Search = props => (
   />
 )
 
-export default Search
+export default SearchResults
