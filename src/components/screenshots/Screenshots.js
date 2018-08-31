@@ -1,6 +1,9 @@
 import React from 'react'
-import ScrollToTopOnMount from '../scroll/ScrollToTopOnMount'
+import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
+import * as R from 'ramda'
+import ScrollToTopOnMount from '../scroll/ScrollToTopOnMount'
+import Error from '../error/Error'
 
 import './Screenshots.css'
 
@@ -39,7 +42,23 @@ const Description = ({ description }) => (
   />
 )
 
-const Screenshots = ({ game }) => {
+const findGame = (gameId, games) =>
+  R.compose(
+    R.find(R.propEq('id', gameId)),
+    R.reject(R.isNil),
+    R.flatten,
+    R.props(['newGames', 'discountedGames', 'upcomingGames'])
+  )(games)
+
+const Screenshots = props => {
+  const gameId = props.match.params.gameId
+  const games = props.games
+  const game = findGame(gameId, games)
+
+  if (!game) {
+    return <Error />
+  }
+
   const { id, description, genres, name, screenshots, studio, videos } = game
 
   return (
@@ -61,4 +80,4 @@ const Screenshots = ({ game }) => {
   )
 }
 
-export default Screenshots
+export default connect(R.pick(['games']))(Screenshots)
