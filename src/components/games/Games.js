@@ -10,9 +10,9 @@ import './Games.css'
 
 const Header = ({ label, linkto, loading }) => (
   <a name={label} href={`#${linkto}`}>
-    <div className="games-header">
+    <div className="games--header">
       <div>{label}</div>
-      <div className="games-header-loading">
+      <div className="games--header-loading">
         <Loading loading={loading} />
       </div>
     </div>
@@ -54,10 +54,10 @@ class Games extends Component {
     }
 
     return (
-      <div className="games-list">
+      <div className="games--list">
         <Header label={label} linkto={linkto} loading={loading} />
 
-        <div className="games-table">
+        <div className="games--table">
           <GameRows games={games} label={label} loading={loading} />
         </div>
       </div>

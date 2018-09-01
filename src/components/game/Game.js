@@ -12,15 +12,15 @@ const dateFormat = dateString => {
 const DiscountedPrice = ({ date, discountDate, price }) => (
   <React.Fragment>
     {dateFormat(discountDate)}
-    <div className="game-price">{dateFormat(date)}</div>
-    <div className="game-price">{price}</div>
+    <div className="game--price">{dateFormat(date)}</div>
+    <div className="game--price">{price}</div>
   </React.Fragment>
 )
 
 const Price = ({ date, price }) => (
   <React.Fragment>
     {dateFormat(date)}
-    <div className="game-price">{price}</div>
+    <div className="game--price">{price}</div>
   </React.Fragment>
 )
 
@@ -28,18 +28,18 @@ const Game = ({ label, game }) => {
   const { date, discountDate, id, name, price, url } = game
 
   return (
-    <div className="game-separator">
+    <div className="game--separator">
       <Link to={`/g/${id}`}>
-        <div className="game-row">
-          <div className="game-cell">
-            <div className="game-image">
+        <div className="game--row">
+          <div className="game--cell">
+            <div className="game--image">
               <Image name={name} url={url} />
             </div>
           </div>
 
-          <div className="game-cell game-name">{name}</div>
+          <div className="game--cell game--name">{name}</div>
 
-          <div className="game-cell game-date">
+          <div className="game--cell game--date">
             {label === 'discounted' ? (
               <DiscountedPrice
                 date={date}

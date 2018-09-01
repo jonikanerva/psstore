@@ -1,20 +1,20 @@
-.games-table {
+.games--table {
   display: table;
   table-layout: auto;
   width: 100%;
 }
 
-.games-list {
+.games--list {
   padding-left: 15px;
   padding-right: 15px;
   width: 425px;
 }
 
-.games-list a {
+.games--list a {
   text-decoration: none;
 }
 
-.games-header {
+.games--header {
   color: red;
   font-weight: bold;
   font-size: 24px;
@@ -24,7 +24,7 @@
   display: flex;
 }
 
-.games-header-loading {
+.games--header-loading {
   align-self: flex-end;
   margin-left: 10px;
 }

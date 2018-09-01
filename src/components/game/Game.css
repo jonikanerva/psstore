@@ -1,53 +1,53 @@
-.game-row {
+.game--row {
   height: 65px;
   border-radius: 2px;
 }
 
 @media (hover: hover) {
   /* Mouse devices */
-  .game-row:hover {
+  .game--row:hover {
     background: #f0f0f0;
   }
 }
 
-.game-cell {
+.game--cell {
   display: table-cell;
   vertical-align: top;
   height: 100%;
 }
 
-.game-image {
+.game--image {
   width: 65px;
 }
 
-.game-separator a {
+.game--separator a {
   color: inherit;
   text-decoration: none;
 }
 
-.game-separator {
+.game--separator {
   padding: 3px;
 
   border-bottom: 1px solid #f8f8f8;
 }
 
-.game-name,
-.game-date {
+.game--name,
+.game--date {
   padding-top: 3px;
   padding-right: 3px;
   line-height: 1.3;
 }
 
-.game-name {
+.game--name {
   width: 100%;
   padding-left: 8px;
 }
 
-.game-date {
+.game--date {
   width: 100px;
   text-align: right;
 }
 
-.game-price {
+.game--price {
   color: #d0d0d0;
 }

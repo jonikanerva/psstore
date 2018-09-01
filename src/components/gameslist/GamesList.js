@@ -10,7 +10,7 @@ import {
 import './GamesList.css'
 
 const GamesLists = () => (
-  <div className="gameslist-container">
+  <div className="gameslists">
     <ScrollToTopOnMount />
     <Games label="new" linkto="discounted" fetch={fetchNewGames} />
     <Games label="discounted" linkto="upcoming" fetch={fetchDiscountedGames} />
