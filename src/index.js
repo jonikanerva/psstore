@@ -5,7 +5,6 @@ import { Provider } from 'react-redux'
 import App from './components/app/App'
 import registerServiceWorker from './modules/registerServiceWorker'
 import gamesReducer from './reducers/games'
-import './index.css'
 
 const reducer = combineReducers({ games: gamesReducer })
 const store = createStore(reducer)
