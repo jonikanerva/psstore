@@ -12,7 +12,7 @@ yarn s
 
 ## Code Style
 
-Use Prettier for style, ESlint for JS linting, and Stylelint for CSS liting. Run them manually from CLI:
+Use Prettier for style, ESlint for JS linting, and Stylelint for CSS linting. Run them manually from CLI:
 
 ```bash
 # format code/styles
