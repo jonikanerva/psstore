@@ -4,7 +4,7 @@ import * as R from 'ramda'
 import Game from '../game/Game'
 import Loading from '../spinner/Spinner'
 import Error from '../error/Error'
-import { saveGameToState, getGameFromState } from '../../reducers/games'
+import { saveGamesToState, getGamesFromState } from '../../reducers/games'
 
 import './Games.css'
 
@@ -66,11 +66,11 @@ class Games extends Component {
 }
 
 const mapStateToProps = (state, ownProps) => ({
-  games: getGameFromState(ownProps.label, state)
+  games: getGamesFromState(ownProps.label, state)
 })
 
 const mapDispatchToProps = (dispatch, ownProps) => ({
-  saveToState: value => saveGameToState(ownProps.label, value, dispatch)
+  saveToState: value => saveGamesToState(ownProps.label, value, dispatch)
 })
 
 export default connect(

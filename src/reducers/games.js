@@ -22,10 +22,10 @@ const gamesReducer = (partialState = initialState, action = {}) => {
   }
 }
 
-export const getGameFromState = (label, state) =>
+export const getGamesFromState = (label, state) =>
   path(['games', `${label}Games`], state)
 
-export const saveGameToState = (label, value, dispatch) => {
+export const saveGamesToState = (label, value, dispatch) => {
   dispatch({ type: `STORE_${toUpper(label)}_GAMES`, value })
 
   localStorage.setItem(`${label}Games`, value)
