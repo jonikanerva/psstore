@@ -1,13 +1,9 @@
-# PS Store
-
-New, discounted, and upcoming games in PlayStation Store Finland.
-
 ## Developing
 
 Install dependencies and start app from CLI:
 
 ```bash
-# istall deps
+# install deps
 yarn
 
 # start app
