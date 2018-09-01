@@ -9,16 +9,16 @@ import './Screenshots.css'
 
 const storeUrl = id => `https://store.playstation.com/en-fi/product/${id}`
 
-const Name = ({ name }) => <div className="screenshots-name">{name}</div>
+const Name = ({ name }) => <div className="screenshots--name">{name}</div>
 
 const ByLine = ({ genres, studio }) => (
-  <div className="screenshots-byline">
+  <div className="screenshots--byline">
     {genres} by {studio}
   </div>
 )
 
 const Buy = ({ id }) => (
-  <a className="screenshots-buy" href={storeUrl(id)}>
+  <a className="screenshots--buy" href={storeUrl(id)}>
     BUY
   </a>
 )
@@ -37,7 +37,7 @@ const Videos = ({ videos }) =>
 
 const Description = ({ description }) => (
   <div
-    className="screenshots-description"
+    className="screenshots--description"
     dangerouslySetInnerHTML={{ __html: description }}
   />
 )
@@ -62,14 +62,14 @@ const Screenshots = props => {
   const { id, description, genres, name, screenshots, studio, videos } = game
 
   return (
-    <div className="screenshots-modal">
+    <div className="screenshots">
       <ScrollToTopOnMount />
-      <div className="screenshots-top">
-        <div className="screenshots-top-left">
+      <div className="screenshots__top">
+        <div className="screenshots__top-left">
           <Name name={name} />
           <ByLine genres={genres} studio={studio} />
         </div>
-        <div className="screenshots-top-right">
+        <div className="screenshots__top-right">
           <Buy id={id} />
         </div>
       </div>

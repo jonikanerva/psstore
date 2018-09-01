@@ -1,12 +1,23 @@
-.screenshots-modal {
+.screenshots {
   background-color: #000;
 }
 
-.screenshots-modal img {
+.screenshots img {
   width: 100%;
 }
 
-.screenshots-buy {
+.screenshots__top {
+  width: 100%;
+  display: flex;
+}
+
+.screenshots__top-right {
+  margin: 20px;
+  text-align: right;
+  flex-grow: 1;
+}
+
+.screenshots--buy {
   background-color: blue;
   color: white;
   font-size: 26px;
@@ -17,32 +28,21 @@
   border-radius: 5px;
 }
 
-.screenshots-name {
+.screenshots--name {
   color: #fff;
   font-size: 36px;
   font-weight: bold;
 }
 
-.screenshots-byline {
+.screenshots--byline {
   color: #aaa;
   padding-bottom: 20px;
   font-size: 20px;
 }
 
-.screenshots-description {
+.screenshots--description {
   color: #aaa;
   padding-top: 20px;
   max-width: 425px;
   font-size: 20px;
-}
-
-.screenshots-top {
-  width: 100%;
-  display: flex;
-}
-
-.screenshots-top-right {
-  margin: 20px;
-  text-align: right;
-  flex-grow: 1;
 }
