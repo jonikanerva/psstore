@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": ">=10.9.0"
+    "node": ">=10.9.0",
+    "yarn": ">=1.9.4"
   },
   "dependencies": {
     "ramda": "^0.25.0",
