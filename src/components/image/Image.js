@@ -3,11 +3,11 @@ import TrackVisibility from 'react-on-screen'
 import './Image.css'
 
 const ImageSrc = ({ isVisible, url, name }) => (
-  <img src={isVisible ? url : ''} alt={name} />
+  <img src={isVisible ? url : ''} alt={name} className="image" />
 )
 
 const Image = ({ url, name }) => (
-  <TrackVisibility once={true} offset={200} className="image">
+  <TrackVisibility once={true} offset={200}>
     <ImageSrc url={url} name={name} />
   </TrackVisibility>
 )

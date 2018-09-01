@@ -10,12 +10,12 @@
   width: 425px;
 }
 
-.games--list a {
+.games--list__link {
   text-decoration: none;
 }
 
 .games--header {
-  color: red;
+  color: rgb(255, 0, 0);
   font-weight: bold;
   font-size: 24px;
   padding-bottom: 20px;

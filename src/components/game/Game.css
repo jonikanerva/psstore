@@ -20,7 +20,7 @@
   width: 65px;
 }
 
-.game--separator a {
+.game--separator__link {
   color: inherit;
   text-decoration: none;
 }

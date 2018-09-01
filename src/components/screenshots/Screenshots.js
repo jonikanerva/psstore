@@ -26,7 +26,7 @@ const Buy = ({ id }) => (
 const Images = ({ screenshots, name }) =>
   screenshots.map((screenshot, i) => (
     <Link to="/" key={i}>
-      <img src={screenshot} alt={name} />
+      <img src={screenshot} alt={name} className="screenshots__image" />
     </Link>
   ))
 

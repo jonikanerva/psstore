@@ -29,7 +29,7 @@ const Game = ({ label, game }) => {
 
   return (
     <div className="game--separator">
-      <Link to={`/g/${id}`}>
+      <Link to={`/g/${id}`} className="game--separator__link">
         <div className="game--row">
           <div className="game--cell">
             <div className="game--image">

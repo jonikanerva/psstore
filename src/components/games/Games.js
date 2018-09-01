@@ -11,7 +11,7 @@ import './Games.css'
 const isEmpty = R.either(R.isEmpty, R.isNil)
 
 const Header = ({ label, linkto, loading }) => (
-  <a name={label} href={`#${linkto}`}>
+  <a name={label} href={`#${linkto}`} className="games--list__link">
     <div className="games--header">
       {label}
       <div className="games--header-loading">
