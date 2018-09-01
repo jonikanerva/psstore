@@ -2,7 +2,7 @@ import React from 'react'
 import { BrowserRouter as Router, Route } from 'react-router-dom'
 import GamesList from '../gameslist/GamesList'
 import Screenshots from '../screenshots/Screenshots'
-import SearchResults from '../search/SearchResults'
+import SearchResults from '../searchresults/SearchResults'
 import './App.css'
 
 const App = () => (

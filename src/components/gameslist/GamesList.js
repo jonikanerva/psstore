@@ -1,7 +1,7 @@
 import React from 'react'
 import Games from '../games/Games'
 import ScrollToTopOnMount from '../scroll/ScrollToTopOnMount'
-import SearchField from '../search/SearchField'
+import SearchField from '../searchfield/SearchField'
 import {
   fetchNewGames,
   fetchDiscountedGames,

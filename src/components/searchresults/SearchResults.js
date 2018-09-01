@@ -2,7 +2,7 @@ import React from 'react'
 import queryString from 'query-string'
 import * as R from 'ramda'
 import Games from '../games/Games'
-import SearchField from './SearchField'
+import SearchField from '../searchfield/SearchField'
 import { searchGames } from '../../modules/psnStore'
 import './SearchResults.css'
 
