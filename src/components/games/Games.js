@@ -8,10 +8,12 @@ import { setGamesToState, getGamesFromState } from '../../reducers/games'
 
 import './Games.css'
 
+const isEmpty = R.either(R.isEmpty, R.isNil)
+
 const Header = ({ label, linkto, loading }) => (
   <a name={label} href={`#${linkto}`}>
     <div className="games--header">
-      <div>{label}</div>
+      {label}
       <div className="games--header-loading">
         <Loading loading={loading} />
       </div>
@@ -20,7 +22,7 @@ const Header = ({ label, linkto, loading }) => (
 )
 
 const GameRows = ({ games, label, loading }) => {
-  if (!games || R.isEmpty(games)) {
+  if (isEmpty(games)) {
     return loading ? null : <Error message="No games found" />
   }
 
