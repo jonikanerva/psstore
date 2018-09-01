@@ -15,30 +15,24 @@ const searchGamesUrl = string =>
   )}?size=50&bucket=games`
 
 const createGameObject = game => {
-  const skus = R.head(R.pathOr([], ['attributes', 'skus'], game))
-  const images = R.pathOr([], ['attributes', 'media-list', 'screenshots'], game)
-  const videos = R.pathOr([], ['attributes', 'media-list', 'preview'], game)
+  const attributes = R.propOr({}, 'attributes', game)
+  const prices = R.pathOr({}, ['skus', 0, 'prices', 'plus-user'], attributes)
+  const images = R.pathOr([], ['media-list', 'screenshots'], attributes)
+  const videos = R.pathOr([], ['media-list', 'preview'], attributes)
+  const defaultTime = '1975-01-01T00:00:00Z'
 
   return {
-    name: R.pathOr('', ['attributes', 'name'], game),
-    date: R.pathOr('', ['attributes', 'release-date'], game),
-    url: R.pathOr('', ['attributes', 'thumbnail-url-base'], game),
+    name: R.propOr('', 'name', attributes),
+    date: R.propOr('', 'release-date', attributes),
+    url: R.propOr('', 'thumbnail-url-base', attributes),
     id: R.propOr('', 'id', game),
-    price: R.pathOr(
-      '',
-      ['prices', 'plus-user', 'actual-price', 'display'],
-      skus
-    ),
-    discountDate: R.pathOr(
-      '1975-01-01T00:00:00Z',
-      ['prices', 'plus-user', 'availability', 'start-date'],
-      skus
-    ),
+    price: R.pathOr('', ['actual-price', 'display'], prices),
+    discountDate: R.pathOr(defaultTime, ['availability', 'start-date'], prices),
     screenshots: R.map(R.prop('url'), images),
     videos: R.map(R.prop('url'), videos),
-    genres: R.join(', ', R.pathOr([], ['attributes', 'genres'], game)),
-    description: R.pathOr('', ['attributes', 'long-description'], game),
-    studio: R.pathOr('', ['attributes', 'provider-name'], game)
+    genres: R.join(', ', R.propOr([], 'genres', attributes)),
+    description: R.propOr('', 'long-description', attributes),
+    studio: R.propOr('', 'provider-name', attributes)
   }
 }
 
