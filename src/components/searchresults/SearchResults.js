@@ -9,7 +9,7 @@ import './SearchResults.css'
 const parseQ = props => R.prop('q', queryString.parse(props.location.search))
 
 const SearchResults = props => (
-  <div className="searchresults-container">
+  <div className="searchresults">
     <Games
       label="search"
       linkto="field"

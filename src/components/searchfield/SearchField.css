@@ -1,10 +1,10 @@
-.searchfield-box {
+.searchfield {
   padding: 15px;
   width: 425px;
   text-align: center;
 }
 
-.searchfield-box input[type='text'] {
+.searchfield input[type='text'] {
   width: 100%;
   height: 35px;
   font-size: 20px;
@@ -12,13 +12,13 @@
   padding: 5px;
 }
 
-.searchfield-box input[type='submit'] {
+.searchfield input[type='submit'] {
   font-size: 20px;
   margin: 15px;
   vertical-align: middle;
 }
 
-.searchfield-box a {
+.searchfield a {
   display: block;
   margin-top: 10px;
   padding: 10px;
