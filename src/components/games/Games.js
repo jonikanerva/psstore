@@ -4,7 +4,7 @@ import * as R from 'ramda'
 import Game from '../game/Game'
 import Loading from '../spinner/Spinner'
 import Error from '../error/Error'
-import { saveGamesToState, getGamesFromState } from '../../reducers/games'
+import { setGamesToState, getGamesFromState } from '../../reducers/games'
 
 import './Games.css'
 
@@ -38,10 +38,8 @@ class Games extends Component {
     const { fetch, saveToState } = this.props
 
     fetch()
-      .then(games => {
-        saveToState(games)
-        this.setState({ loading: false })
-      })
+      .then(saveToState)
+      .then(() => this.setState({ loading: false }))
       .catch(() => this.setState({ error: true }))
   }
 
@@ -70,7 +68,7 @@ const mapStateToProps = (state, ownProps) => ({
 })
 
 const mapDispatchToProps = (dispatch, ownProps) => ({
-  saveToState: value => saveGamesToState(ownProps.label, value, dispatch)
+  saveToState: value => setGamesToState(ownProps.label, value, dispatch)
 })
 
 export default connect(
