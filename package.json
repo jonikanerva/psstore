@@ -3,26 +3,26 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": ">=10.9.0",
-    "yarn": ">=1.9.4"
+    "node": ">=11.1.0",
+    "yarn": ">=1.12.3"
   },
   "dependencies": {
+    "query-string": "^6.2.0",
     "ramda": "^0.25.0",
-    "react": "^16.4.2",
-    "react-dom": "^16.4.2",
-    "react-on-screen": "^2.0.4",
-    "react-redux": "^5.0.7",
+    "react": "^16.6.3",
+    "react-dom": "^16.6.3",
+    "react-on-screen": "^2.1.0",
+    "react-redux": "^5.1.1",
     "react-router-dom": "^4.3.1",
-    "react-scripts": "1.1.5",
-    "redux": "^4.0.0"
+    "react-scripts": "2.1.1",
+    "redux": "^4.0.1"
   },
   "devDependencies": {
-    "eslint": "^5.5.0",
-    "eslint-plugin-node": "^7.0.1",
-    "eslint-plugin-prettier": "^2.6.2",
+    "eslint-plugin-node": "^8.0.0",
+    "eslint-plugin-prettier": "^3.0.0",
     "eslint-plugin-react": "^7.11.1",
-    "prettier": "^1.14.2",
-    "stylelint": "^9.5.0"
+    "prettier": "^1.15.2",
+    "stylelint": "^9.8.0"
   },
   "prettier": {
     "semi": false,
@@ -36,5 +36,11 @@
     "lint": "eslint 'src/**/*.js' && stylelint 'src/**/*.css'",
     "test": "react-scripts test --env=jsdom",
     "eject": "react-scripts eject"
-  }
+  },
+  "browserslist": [
+    ">0.2%",
+    "not dead",
+    "not ie <= 11",
+    "not op_mini all"
+  ]
 }
