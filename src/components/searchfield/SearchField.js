@@ -4,7 +4,7 @@ import './SearchField.css'
 const SearchField = ({ label, linkto }) => (
   <div className="searchfield">
     <a name={label} href={`#${linkto}`} className="searchfield__link">
-      <div className="games--header">{label}</div>
+      <div className="games--header">Search</div>
     </a>
     <form method="GET" action="/search">
       <input type="text" name="q" className="searchfield__text" />
