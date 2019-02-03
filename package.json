@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": ">=11.1.0",
-    "yarn": ">=1.12.3"
+    "node": "^11.9.0",
+    "yarn": "^1.13.0"
   },
   "dependencies": {
     "query-string": "^6.2.0",
