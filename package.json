@@ -3,26 +3,26 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": "^11.9.0",
+    "node": "^11.13.0",
     "yarn": "^1.13.0"
   },
   "dependencies": {
-    "query-string": "^6.2.0",
-    "ramda": "^0.25.0",
-    "react": "^16.6.3",
-    "react-dom": "^16.6.3",
-    "react-on-screen": "^2.1.0",
-    "react-redux": "^5.1.1",
-    "react-router-dom": "^4.3.1",
-    "react-scripts": "2.1.1",
+    "query-string": "^6.4.2",
+    "ramda": "^0.26.1",
+    "react": "^16.8.6",
+    "react-dom": "^16.8.6",
+    "react-on-screen": "^2.1.1",
+    "react-redux": "^7.0.1",
+    "react-router-dom": "^5.0.0",
+    "react-scripts": "2.1.8",
     "redux": "^4.0.1"
   },
   "devDependencies": {
-    "eslint-plugin-node": "^8.0.0",
-    "eslint-plugin-prettier": "^3.0.0",
-    "eslint-plugin-react": "^7.11.1",
-    "prettier": "^1.15.2",
-    "stylelint": "^9.8.0"
+    "eslint-plugin-node": "^8.0.1",
+    "eslint-plugin-prettier": "^3.0.1",
+    "eslint-plugin-react": "^7.12.4",
+    "prettier": "^1.16.4",
+    "stylelint": "^9.10.1"
   },
   "prettier": {
     "semi": false,
