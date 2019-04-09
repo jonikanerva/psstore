@@ -4,7 +4,7 @@
   "private": true,
   "engines": {
     "node": "^11.13.0",
-    "yarn": "^1.13.0"
+    "yarn": "^1.15.2"
   },
   "dependencies": {
     "query-string": "^6.4.2",
