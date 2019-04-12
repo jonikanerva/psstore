@@ -21,3 +21,11 @@ yarn format
 # lint code/styles
 yarn lint
 ```
+
+# Build
+
+```
+yarn build
+docker build -t registry.gitlab.com/jonikanerva/dok/psstore:latest .
+docker push registry.gitlab.com/jonikanerva/dok/psstore:latest
+```
