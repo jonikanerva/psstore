@@ -1,12 +1,12 @@
 import React from 'react'
-import Games from '../games/Games'
-import ScrollToTopOnMount from '../scroll/ScrollToTopOnMount'
-import SearchField from '../searchfield/SearchField'
+import Games from './Games'
+import ScrollToTopOnMount from './ScrollToTopOnMount'
+import SearchField from './SearchField'
 import {
   fetchNewGames,
   fetchDiscountedGames,
   fetchUpcomingGames
-} from '../../modules/psnStore'
+} from '../modules/psnStore'
 import './GamesList.css'
 
 const GamesLists = () => (

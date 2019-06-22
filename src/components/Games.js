@@ -1,10 +1,10 @@
 import React, { Component } from 'react'
 import { connect } from 'react-redux'
 import * as R from 'ramda'
-import Game from '../game/Game'
-import Loading from '../spinner/Spinner'
-import Error from '../error/Error'
-import { setGamesToState, getGamesFromState } from '../../reducers/games'
+import Game from './Game'
+import Loading from './Spinner'
+import Error from './Error'
+import { setGamesToState, getGamesFromState } from '../reducers/games'
 
 import './Games.css'
 

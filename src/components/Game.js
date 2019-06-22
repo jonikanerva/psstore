@@ -1,6 +1,6 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
-import Image from '../image/Image'
+import Image from './Image'
 import './Game.css'
 
 const dateFormat = dateString => {

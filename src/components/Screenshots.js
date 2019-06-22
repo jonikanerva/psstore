@@ -2,8 +2,8 @@ import React from 'react'
 import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
 import * as R from 'ramda'
-import ScrollToTopOnMount from '../scroll/ScrollToTopOnMount'
-import Error from '../error/Error'
+import ScrollToTopOnMount from './ScrollToTopOnMount'
+import Error from './Error'
 
 import './Screenshots.css'
 

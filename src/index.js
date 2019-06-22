@@ -2,7 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom'
 import { createStore, combineReducers } from 'redux'
 import { Provider } from 'react-redux'
-import App from './components/app/App'
+import App from './components/App'
 import gamesReducer from './reducers/games'
 
 const reducer = combineReducers({ games: gamesReducer })

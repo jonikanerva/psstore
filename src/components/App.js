@@ -1,8 +1,8 @@
 import React from 'react'
 import { BrowserRouter as Router, Route } from 'react-router-dom'
-import GamesList from '../gameslist/GamesList'
-import Screenshots from '../screenshots/Screenshots'
-import SearchResults from '../searchresults/SearchResults'
+import GamesList from './GamesList'
+import Screenshots from './Screenshots'
+import SearchResults from './SearchResults'
 import './App.css'
 
 const App = () => (

@@ -1,9 +1,9 @@
 import React from 'react'
 import queryString from 'query-string'
 import * as R from 'ramda'
-import Games from '../games/Games'
-import SearchField from '../searchfield/SearchField'
-import { searchGames } from '../../modules/psnStore'
+import Games from './Games'
+import SearchField from './SearchField'
+import { searchGames } from '../modules/psnStore'
 import './SearchResults.css'
 
 const parseQ = props => R.prop('q', queryString.parse(props.location.search))
