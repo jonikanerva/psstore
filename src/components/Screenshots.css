@@ -1,25 +1,15 @@
 .screenshots {
-  background-color: #000;
+  padding: 15px;
 }
 
-.screenshots__image {
-  width: 100%;
-}
-
-.screenshots__top {
-  width: 100%;
+.screenshots--top {
   display: flex;
-}
-
-.screenshots__top-right {
-  margin: 20px;
-  text-align: right;
-  flex-grow: 1;
 }
 
 .screenshots--buy {
   background-color: rgb(0, 0, 255);
   color: rgb(255, 255, 255);
+  height: 40px;
   font-size: 26px;
   font-weight: bold;
   text-decoration: none;
@@ -28,21 +18,40 @@
   border-radius: 5px;
 }
 
-.screenshots--name {
-  color: #fff;
-  font-size: 36px;
-  font-weight: bold;
+.screenshots--header {
+  color: rgb(0, 0, 0);
+  padding-bottom: 10px;
+  font-size: 30px;
+  flex-grow: 1;
 }
 
-.screenshots--byline {
+.screenshots--subheader {
   color: #aaa;
-  padding-bottom: 20px;
+  padding-bottom: 5px;
+  font-size: 20px;
+}
+
+.screenshots--price {
+  color: rgb(60, 60, 60);
+  padding: 5px 0;
   font-size: 20px;
 }
 
 .screenshots--description {
-  color: #aaa;
+  color: rgb(79, 79, 79);
   padding-top: 20px;
-  max-width: 425px;
   font-size: 20px;
+}
+
+.screenshots--images {
+  padding-top: 15px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: left;
+  width: 100%;
+}
+
+.screenshots--tile {
+  width: 600px;
+  flex-grow: 1;
 }
