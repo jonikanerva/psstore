@@ -1,9 +1,8 @@
-.games--list {
+.games--content {
+  padding-top: 65px;
   padding-left: 15px;
   padding-right: 15px;
-}
-
-.games--content {
+  padding-bottom: 35px;
   display: flex;
   flex-wrap: wrap;
   justify-content: left;

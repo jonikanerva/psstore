@@ -1,0 +1,25 @@
+.navigation {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 50px;
+  width: 100%;
+  border-bottom: 1px solid rgb(216, 216, 216);
+  background: rgba(255, 255, 255, 0.95);
+  display: flex;
+  flex-flow: row nowrap;
+}
+
+.navigation--link {
+  color: rgb(0, 0, 0);
+  font-size: 22px;
+  text-decoration: none;
+  flex-grow: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.navigation--active {
+  color: rgb(255, 0, 0);
+}

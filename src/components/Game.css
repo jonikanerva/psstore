@@ -4,6 +4,10 @@
   padding: 5px;
 }
 
+.game--date:first-child {
+  padding: 5px 0 5px 5px;
+}
+
 .game--date {
   break-before: always;
   width: 100%;

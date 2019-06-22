@@ -1,22 +1,16 @@
+import * as R from 'ramda'
 import React, { Component } from 'react'
 import { connect } from 'react-redux'
-import * as R from 'ramda'
-import Game from './Game'
 import Error from './Error'
-import Header from './Header'
+import Game from './Game'
+import ScrollToTopOnMount from './ScrollToTopOnMount'
+import Loading from './Spinner'
+import Navigation from './Navigation'
 import { setGamesToState, getGamesFromState } from '../reducers/games'
 
 import './Games.css'
 
 const isEmpty = R.either(R.isEmpty, R.isNil)
-
-const GameRows = ({ games, label, loading }) => {
-  if (isEmpty(games)) {
-    return loading ? null : <Error message="No games found" />
-  }
-
-  return games.map(game => <Game game={game} label={label} key={game.id} />)
-}
 
 class Games extends Component {
   constructor(props) {
@@ -35,21 +29,29 @@ class Games extends Component {
   }
 
   render() {
-    const { label, linkto, games } = this.props
+    const { games } = this.props
     const { loading, error } = this.state
 
     if (error) {
       return <Error />
     }
 
-    return (
-      <div className="games--list">
-        <Header label={label} linkto={linkto} loading={loading} />
+    if (!loading && isEmpty(games)) {
+      return <Error message="No games found" />
+    }
 
+    return (
+      <React.Fragment>
+        <ScrollToTopOnMount />
+        <Navigation />
         <div className="games--content">
-          <GameRows games={games} label={label} loading={loading} />
+          {loading && isEmpty(games) ? (
+            <Loading loading={true} />
+          ) : (
+            games.map((game, i) => <Game game={game} key={i} />)
+          )}
         </div>
-      </div>
+      </React.Fragment>
     )
   }
 }

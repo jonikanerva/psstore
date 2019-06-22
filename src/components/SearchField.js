@@ -1,12 +1,9 @@
 import React from 'react'
-import Header from './Header'
 
 import './SearchField.css'
 
-const SearchField = ({ label, linkto }) => (
+const SearchField = () => (
   <div className="searchfield">
-    <Header label={label} linkto={linkto} loading={false} />
-
     <div className="searchfield--form">
       <form method="GET" action="/search">
         <input type="text" name="q" className="searchfield--text" />
