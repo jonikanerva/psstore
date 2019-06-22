@@ -7,16 +7,15 @@ import {
   fetchDiscountedGames,
   fetchUpcomingGames
 } from '../modules/psnStore'
-import './GamesList.css'
 
 const GamesLists = () => (
-  <div className="gameslists">
+  <React.Fragment>
     <ScrollToTopOnMount />
     <Games label="new" linkto="discounted" fetch={fetchNewGames} />
     <Games label="discounted" linkto="upcoming" fetch={fetchDiscountedGames} />
     <Games label="upcoming" linkto="search" fetch={fetchUpcomingGames} />
     <SearchField label="search" linkto="new" />
-  </div>
+  </React.Fragment>
 )
 
 export default GamesLists

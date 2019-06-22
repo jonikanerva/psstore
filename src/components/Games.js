@@ -2,24 +2,13 @@ import React, { Component } from 'react'
 import { connect } from 'react-redux'
 import * as R from 'ramda'
 import Game from './Game'
-import Loading from './Spinner'
 import Error from './Error'
+import Header from './Header'
 import { setGamesToState, getGamesFromState } from '../reducers/games'
 
 import './Games.css'
 
 const isEmpty = R.either(R.isEmpty, R.isNil)
-
-const Header = ({ label, linkto, loading }) => (
-  <a name={label} href={`#${linkto}`} className="games--list__link">
-    <div className="games--header">
-      {label}
-      <div className="games--header-loading">
-        <Loading loading={loading} />
-      </div>
-    </div>
-  </a>
-)
 
 const GameRows = ({ games, label, loading }) => {
   if (isEmpty(games)) {
@@ -57,7 +46,7 @@ class Games extends Component {
       <div className="games--list">
         <Header label={label} linkto={linkto} loading={loading} />
 
-        <div className="games--table">
+        <div className="games--content">
           <GameRows games={games} label={label} loading={loading} />
         </div>
       </div>

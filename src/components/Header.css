@@ -1,0 +1,16 @@
+.header--list__link {
+  text-decoration: none;
+}
+
+.header--header {
+  color: rgb(255, 0, 0);
+  font-size: 35px;
+  padding-top: 20px;
+  text-transform: capitalize;
+  display: flex;
+}
+
+.header--header-loading {
+  align-self: flex-end;
+  margin-left: 10px;
+}

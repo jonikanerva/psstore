@@ -1,58 +1,37 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
+import { DateTime } from 'luxon'
 import Image from './Image'
 import './Game.css'
 
-const dateFormat = dateString => {
-  const date = new Date(dateString)
+let lastDay = ''
 
-  return `${date.getDate()}.${date.getMonth() + 1}.${date.getFullYear()}`
-}
+const DateHeader = ({ date }) => <div className="game--date">{date}</div>
 
-const DiscountedPrice = ({ date, discountDate, price }) => (
-  <React.Fragment>
-    {dateFormat(discountDate)}
-    <div className="game--price">{dateFormat(date)}</div>
-    <div className="game--price">{price}</div>
-  </React.Fragment>
-)
+const Game = ({ game }) => {
+  const { id, name, url, date } = game
 
-const Price = ({ date, price }) => (
-  <React.Fragment>
-    {dateFormat(date)}
-    <div className="game--price">{price}</div>
-  </React.Fragment>
-)
+  const dateTime = DateTime.fromISO(date)
+  const day = dateTime.toLocaleString({
+    weekday: 'long',
+    month: 'numeric',
+    day: '2-digit',
+    year: 'numeric'
+  })
+  const drawHeader = lastDay !== day
 
-const Game = ({ label, game }) => {
-  const { date, discountDate, id, name, price, url } = game
+  lastDay = day
 
   return (
-    <div className="game--separator">
-      <Link to={`/g/${id}`} className="game--separator__link">
-        <div className="game--row">
-          <div className="game--cell">
-            <div className="game--image">
-              <Image name={name} url={url} />
-            </div>
-          </div>
+    <React.Fragment>
+      {drawHeader && <DateHeader date={day} />}
 
-          <div className="game--cell game--name">{name}</div>
-
-          <div className="game--cell game--date">
-            {label === 'discounted' ? (
-              <DiscountedPrice
-                date={date}
-                discountDate={discountDate}
-                price={price}
-              />
-            ) : (
-              <Price date={date} price={price} />
-            )}
-          </div>
-        </div>
-      </Link>
-    </div>
+      <div className="game--tile">
+        <Link to={`/g/${id}`}>
+          <Image url={url} name={name} />
+        </Link>
+      </div>
+    </React.Fragment>
   )
 }
 
