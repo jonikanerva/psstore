@@ -7,7 +7,7 @@ const ImageSrc = ({ isVisible, url, name }) => (
 )
 
 const Image = ({ url, name }) => (
-  <TrackVisibility once={true} offset={200}>
+  <TrackVisibility once={true} offset={1000}>
     <ImageSrc url={url} name={name} />
   </TrackVisibility>
 )
