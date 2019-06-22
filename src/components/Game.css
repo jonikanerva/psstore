@@ -1,7 +1,12 @@
 .game--tile {
-  width: 172px;
-  height: 172px;
+  width: 45vw;
   padding: 5px;
+}
+
+@media (min-width: 800px) {
+  .game--tile {
+    width: 230px;
+  }
 }
 
 .game--date:first-child {
