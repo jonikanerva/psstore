@@ -15,7 +15,7 @@ const Game = ({ game }) => {
   const day = dateTime.toLocaleString({
     weekday: 'long',
     month: 'numeric',
-    day: '2-digit',
+    day: 'numeric',
     year: 'numeric'
   })
   const drawHeader = lastDay !== day
