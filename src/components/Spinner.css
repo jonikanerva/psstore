@@ -19,10 +19,9 @@
   transform: translateZ(0);
   box-sizing: border-box;
   background: none;
-  width: 20px;
-  height: 20px;
+  width: 60px;
+  height: 60px;
   border: 3px solid rgba(0, 0, 0, 0.3);
   border-left-color: #363738;
-  margin: auto;
   border-width: 3px;
 }
