@@ -1,5 +1,10 @@
 import React from 'react'
-import { BrowserRouter as Router, Route, Redirect } from 'react-router-dom'
+import {
+  BrowserRouter as Router,
+  Route,
+  Redirect,
+  Switch
+} from 'react-router-dom'
 import Games from './Games'
 import Screenshots from './Screenshots'
 import SearchResults from './SearchResults'
@@ -22,14 +27,14 @@ const UpcomintGames = () => (
 
 const App = () => (
   <Router>
-    <React.Fragment>
-      <Route exact={true} path="/" component={RedirectNew} />
-      <Route exact={true} path="/new" component={NewGames} />
-      <Route exact={true} path="/discounted" component={DiscountedGames} />
-      <Route exact={true} path="/upcoming" component={UpcomintGames} />
+    <Switch>
+      <Route path="/new" component={NewGames} />
+      <Route path="/discounted" component={DiscountedGames} />
+      <Route path="/upcoming" component={UpcomintGames} />
       <Route path="/g/:gameId" component={Screenshots} />
       <Route path="/search" component={SearchResults} />
-    </React.Fragment>
+      <Route component={RedirectNew} />
+    </Switch>
   </Router>
 )
 
