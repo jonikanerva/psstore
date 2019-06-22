@@ -7,6 +7,7 @@
     "yarn": "^1.15.2"
   },
   "dependencies": {
+    "luxon": "^1.16.0",
     "query-string": "^6.8.1",
     "ramda": "^0.26.1",
     "react": "^16.8.6",
