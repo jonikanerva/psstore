@@ -53,5 +53,6 @@
 
 .screenshots--tile {
   width: 600px;
+  padding: 1px 2px;
   flex-grow: 1;
 }
