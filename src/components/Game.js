@@ -8,11 +8,11 @@ let lastDay = ''
 
 const DateHeader = ({ date }) => <div className="game--date">{date}</div>
 
-const Game = ({ game }) => {
-  const { id, name, url, date } = game
+const Game = ({ game, label }) => {
+  const { id, name, url, date, discountDate } = game
 
-  const dateTime = DateTime.fromISO(date)
-  const day = dateTime.toLocaleString({
+  const dateTime = label === 'discounted' ? discountDate : date
+  const day = DateTime.fromISO(dateTime).toLocaleString({
     weekday: 'long',
     month: 'numeric',
     day: 'numeric',

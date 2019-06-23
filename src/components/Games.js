@@ -29,7 +29,7 @@ class Games extends Component {
   }
 
   render() {
-    const { games } = this.props
+    const { games, label } = this.props
     const { loading, error } = this.state
 
     if (error) {
@@ -48,7 +48,7 @@ class Games extends Component {
           {loading && isEmpty(games) ? (
             <Loading loading={true} />
           ) : (
-            games.map((game, i) => <Game game={game} key={i} />)
+            games.map((game, i) => <Game label={label} game={game} key={i} />)
           )}
         </div>
       </React.Fragment>
