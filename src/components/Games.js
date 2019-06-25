@@ -31,12 +31,13 @@ class Games extends Component {
   render() {
     const { games, label } = this.props
     const { loading, error } = this.state
+    const hasGames = !isEmpty(games)
 
     if (error) {
       return <Error />
     }
 
-    if (!loading && isEmpty(games)) {
+    if (!loading && !hasGames) {
       return <Error message="No games found" />
     }
 
@@ -44,12 +45,10 @@ class Games extends Component {
       <React.Fragment>
         <ScrollToTopOnMount />
         <Navigation />
+        <Loading loading={loading} />
         <div className="games--content">
-          {loading && isEmpty(games) ? (
-            <Loading loading={true} />
-          ) : (
-            games.map((game, i) => <Game label={label} game={game} key={i} />)
-          )}
+          {hasGames &&
+            games.map(game => <Game label={label} game={game} key={game.id} />)}
         </div>
       </React.Fragment>
     )
