@@ -1,3 +1,12 @@
+.spinner--modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  z-index: 50;
+}
+
 @keyframes spin {
   from {
     transform: rotate(0deg);
@@ -24,4 +33,9 @@
   border: 3px solid rgba(0, 0, 0, 0.3);
   border-left-color: #363738;
   border-width: 3px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  margin-top: -30px;
+  margin-left: -30px;
 }
