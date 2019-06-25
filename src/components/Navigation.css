@@ -8,6 +8,7 @@
   background: rgba(255, 255, 255, 0.95);
   display: flex;
   flex-flow: row nowrap;
+  z-index: 100;
 }
 
 .navigation--link {
