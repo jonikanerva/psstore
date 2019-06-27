@@ -4,7 +4,8 @@ import localStorage from '../modules/localStorage'
 const initialState = {
   newGames: localStorage.getItem('newGames'),
   discountedGames: localStorage.getItem('discountedGames'),
-  upcomingGames: localStorage.getItem('upcomingGames')
+  upcomingGames: localStorage.getItem('upcomingGames'),
+  plusGames: localStorage.getItem('plusGames')
 }
 
 const gamesReducer = (partialState = initialState, action = {}) => {
@@ -15,6 +16,8 @@ const gamesReducer = (partialState = initialState, action = {}) => {
       return assoc('discountedGames', action.value, partialState)
     case 'STORE_UPCOMING_GAMES':
       return assoc('upcomingGames', action.value, partialState)
+    case 'STORE_PLUS_GAMES':
+      return assoc('plusGames', action.value, partialState)
     case 'STORE_SEARCH_GAMES':
       return assoc('searchGames', action.value, partialState)
     default:

@@ -35,7 +35,13 @@ const findGame = (gameId, games) =>
     R.find(R.propEq('id', gameId)),
     R.reject(R.isNil),
     R.flatten,
-    R.props(['newGames', 'discountedGames', 'upcomingGames', 'searchGames'])
+    R.props([
+      'newGames',
+      'discountedGames',
+      'upcomingGames',
+      'searchGames',
+      'plusGames'
+    ])
   )(games)
 
 const Screenshots = props => {

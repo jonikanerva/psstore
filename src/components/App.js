@@ -11,7 +11,8 @@ import SearchResults from './SearchResults'
 import {
   fetchNewGames,
   fetchDiscountedGames,
-  fetchUpcomingGames
+  fetchUpcomingGames,
+  fetchPlusGames
 } from '../modules/psnStore'
 
 import './App.css'
@@ -24,6 +25,7 @@ const DiscountedGames = () => (
 const UpcomintGames = () => (
   <Games label="upcoming" fetch={fetchUpcomingGames} />
 )
+const PlusGames = () => <Games label="plus" fetch={fetchPlusGames} />
 
 const App = () => (
   <Router>
@@ -31,6 +33,7 @@ const App = () => (
       <Route path="/new" component={NewGames} />
       <Route path="/discounted" component={DiscountedGames} />
       <Route path="/upcoming" component={UpcomintGames} />
+      <Route path="/plus" component={PlusGames} />
       <Route path="/g/:gameId" component={Screenshots} />
       <Route path="/search" component={SearchResults} />
       <Route component={RedirectNew} />

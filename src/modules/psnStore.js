@@ -9,6 +9,9 @@ const upcomingGamesUrl =
 const discountGamesUrl =
   'https://store.playstation.com/valkyrie-api/en/FI/19/container/STORE-MSF75508-PRICEDROPSCHI?sort=release_date&direction=desc&platform=ps4&game_content_type=games%2Cbundles&size=300&bucket=games&start=0'
 
+const plusGamesUrl =
+  'https://store.playstation.com/valkyrie-api/en/FI/19/container/STORE-MSF75508-PLUSINSTANTGAME?size=30&bucket=games&start=0'
+
 const searchGamesUrl = string =>
   `https://store.playstation.com/valkyrie-api/en/FI/999/bucket-search/${encodeURIComponent(
     string
@@ -21,7 +24,7 @@ const createGameObject = game => {
   const videos = R.pathOr([], ['media-list', 'preview'], attributes)
   const defaultTime = '1975-01-01T00:00:00Z'
 
-  return {
+  const ob = {
     name: R.propOr('', 'name', attributes),
     date: R.propOr('', 'release-date', attributes),
     url: R.propOr('', 'thumbnail-url-base', attributes),
@@ -34,6 +37,9 @@ const createGameObject = game => {
     description: R.propOr('', 'long-description', attributes),
     studio: R.propOr('', 'provider-name', attributes)
   }
+  console.log('tehtiin', ob)
+
+  return ob
 }
 
 const sortGames = sort => {
@@ -68,6 +74,9 @@ export const fetchUpcomingGames = () =>
 
 export const fetchDiscountedGames = () =>
   fetchUrl(discountGamesUrl).then(sortGames('discounted'))
+
+export const fetchPlusGames = () =>
+  fetchUrl(plusGamesUrl).then(sortGames('desc'))
 
 export const searchGames = searchString =>
   fetchUrl(searchGamesUrl(searchString)).then(sortGames('desc'))

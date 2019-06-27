@@ -26,6 +26,13 @@ const Navigation = () => (
     >
       Discounted
     </NavLink>
+    <NavLink
+      to="/plus"
+      className="navigation--link"
+      activeClassName="navigation--active"
+    >
+      Plus
+    </NavLink>
   </div>
 )
 
