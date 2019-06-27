@@ -22,10 +22,8 @@ yarn format
 yarn lint
 ```
 
-# Build
+# Build & Push Image
 
 ```
-yarn build
-docker build -t registry.gitlab.com/jonikanerva/dok/psstore:latest .
-docker push registry.gitlab.com/jonikanerva/dok/psstore:latest
+yarn deploy
 ```
