@@ -45,11 +45,15 @@ class Games extends Component {
       <React.Fragment>
         <ScrollToTopOnMount />
         <Navigation />
-        <Loading loading={loading} />
-        <div className="games--content">
-          {hasGames &&
-            games.map(game => <Game label={label} game={game} key={game.id} />)}
-        </div>
+        {loading ? (
+          <Loading loading={loading} />
+        ) : (
+          <div className="games--content">
+            {games.map(game => (
+              <Game label={label} game={game} key={game.id} />
+            ))}
+          </div>
+        )}
       </React.Fragment>
     )
   }
