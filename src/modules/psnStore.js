@@ -17,6 +17,11 @@ const searchGamesUrl = string =>
     string
   )}?size=50&bucket=games`
 
+export const searchLink = string =>
+  `https://www.metacritic.com/search/game/${encodeURI(
+    string
+  )}/results?plats%5B72496%5D=1&search_type=advanced&sort=recent`
+
 const createGameObject = game => {
   const attributes = R.propOr({}, 'attributes', game)
   const prices = R.pathOr({}, ['skus', 0, 'prices', 'plus-user'], attributes)

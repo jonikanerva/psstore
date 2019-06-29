@@ -7,6 +7,7 @@ import Error from './Error'
 import Image from './Image'
 
 import './Screenshots.css'
+import { searchLink } from '../modules/psnStore'
 
 const storeUrl = id => `https://store.playstation.com/en-fi/product/${id}`
 const dateFormat = date =>
@@ -66,6 +67,7 @@ const Screenshots = props => {
     videos
   } = game
   const discounted = discountDate !== '1975-01-01T00:00:00Z'
+  const search = searchLink(name)
 
   return (
     <div className="screenshots">
@@ -91,6 +93,10 @@ const Screenshots = props => {
       <div className="screenshots--images">
         <Images screenshots={screenshots} name={name} />
         <Videos videos={videos} />
+      </div>
+
+      <div className="screenshots--subheader">
+        <a href={search}>Metacritic Review</a>
       </div>
 
       <div
