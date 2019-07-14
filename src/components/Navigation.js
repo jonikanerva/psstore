@@ -33,6 +33,13 @@ const Navigation = () => (
     >
       Plus
     </NavLink>
+    <NavLink
+      to="/search"
+      className="navigation--link"
+      activeClassName="navigation--active"
+    >
+      Search
+    </NavLink>
   </div>
 )
 
