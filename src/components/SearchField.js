@@ -12,6 +12,7 @@ const SearchField = ({ searchString }) => {
       <div className="searchfield--form">
         <form method="GET" action="/search">
           <input
+            autoFocus
             type="text"
             value={value}
             name="q"
