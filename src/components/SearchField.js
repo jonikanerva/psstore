@@ -5,7 +5,7 @@ import './SearchField.css'
 const SearchField = ({ searchString }) => {
   const [value, setValue] = useState()
 
-  useEffect(() => setValue(searchString), [])
+  useEffect(() => setValue(searchString), [searchString])
 
   return (
     <div className="searchfield">
