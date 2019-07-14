@@ -42,7 +42,6 @@ const createGameObject = game => {
     description: R.propOr('', 'long-description', attributes),
     studio: R.propOr('', 'provider-name', attributes)
   }
-  console.log('tehtiin', ob)
 
   return ob
 }
