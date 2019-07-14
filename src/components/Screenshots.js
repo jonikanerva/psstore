@@ -46,7 +46,7 @@ const findGame = (gameId, games) =>
   )(games)
 
 const Screenshots = props => {
-  const gameId = props.match.params.gameId
+  const gameId = props.gameId
   const games = props.games
   const game = findGame(gameId, games)
 

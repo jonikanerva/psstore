@@ -6,7 +6,7 @@ import {
   Switch
 } from 'react-router-dom'
 import Games from './Games'
-import Screenshots from './Screenshots'
+import Details from './Details'
 import SearchResults from './SearchResults'
 import {
   fetchNewGames,
@@ -34,7 +34,7 @@ const App = () => (
       <Route path="/discounted" component={DiscountedGames} />
       <Route path="/upcoming" component={UpcomintGames} />
       <Route path="/plus" component={PlusGames} />
-      <Route path="/g/:gameId" component={Screenshots} />
+      <Route path="/g/:gameId" component={Details} />
       <Route path="/search" component={SearchResults} />
       <Route component={RedirectNew} />
     </Switch>
