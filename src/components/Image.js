@@ -11,11 +11,11 @@ const ImageSrc = ({ url, name }) => {
     <img src={isVisible ? url : ''} alt={name} title={name} className="image" />
   )
 }
-const Image = ({ url, name }) => {
-  return (
-    <VisibilityObserver>
-      <ImageSrc url={url} name={name} />
-    </VisibilityObserver>
-  )
-}
+
+const Image = ({ url, name }) => (
+  <VisibilityObserver rootMargin="200px 200px 200px 200px">
+    <ImageSrc url={url} name={name} />
+  </VisibilityObserver>
+)
+
 export default Image
