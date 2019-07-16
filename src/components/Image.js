@@ -13,7 +13,7 @@ const ImageSrc = ({ url, name }) => {
 }
 
 const Image = ({ url, name }) => (
-  <VisibilityObserver rootMargin="200px 200px 200px 200px">
+  <VisibilityObserver rootMargin="200px 200px 200px 200px" triggerOnce={true}>
     <ImageSrc url={url} name={name} />
   </VisibilityObserver>
 )
