@@ -1,73 +1,69 @@
 import * as R from 'ramda'
-import React, { Component } from 'react'
-import { connect } from 'react-redux'
+import React, { useEffect, useState } from 'react'
 import Error from './Error'
 import Game from './Game'
 import ScrollToTopOnMount from './ScrollToTopOnMount'
 import Loading from './Spinner'
 import Navigation from './Navigation'
-import { setGamesToState, getGamesFromState } from '../reducers/games'
 
 import './Games.css'
 
 const isEmpty = R.either(R.isEmpty, R.isNil)
 
-class Games extends Component {
-  constructor(props) {
-    super(props)
+const Games = ({ label, fetch }) => {
+  const [games, setGames] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
+  const hasGames = !isEmpty(games)
 
-    this.state = { error: false, loading: true }
-  }
-
-  componentDidMount() {
-    const { fetch, saveToState } = this.props
-
+  useEffect(() => {
     fetch()
-      .then(saveToState)
-      .then(() => this.setState({ loading: false }))
-      .catch(() => this.setState({ error: true }))
-  }
+      .then(setGames)
+      .then(() => setLoading(false))
+      .catch(() => {
+        setError(true)
+        setLoading(false)
+      })
+  }, [fetch])
 
-  render() {
-    const { games, label } = this.props
-    const { loading, error } = this.state
-    const hasGames = !isEmpty(games)
-
-    if (error) {
-      return <Error />
-    }
-
-    if (!loading && !hasGames) {
-      return <Error message="No games found" />
-    }
-
+  if (error) {
     return (
       <React.Fragment>
-        <ScrollToTopOnMount />
         <Navigation />
-        {loading ? (
-          <Loading loading={loading} />
-        ) : (
-          <div className="games--content">
-            {games.map(game => (
-              <Game label={label} game={game} key={game.id} />
-            ))}
-          </div>
-        )}
+        <Error />
       </React.Fragment>
     )
   }
+
+  if (loading) {
+    return (
+      <React.Fragment>
+        <Navigation />
+        <Loading loading={loading} />
+      </React.Fragment>
+    )
+  }
+
+  if (!loading && !hasGames) {
+    return (
+      <React.Fragment>
+        <Navigation />
+        <Error message="No games found" />
+      </React.Fragment>
+    )
+  }
+
+  return (
+    <React.Fragment>
+      <ScrollToTopOnMount />
+      <Navigation />
+      <div className="games--content">
+        {games.map(game => (
+          <Game label={label} game={game} key={game.id} />
+        ))}
+      </div>
+    </React.Fragment>
+  )
 }
 
-const mapStateToProps = (state, ownProps) => ({
-  games: getGamesFromState(ownProps.label, state)
-})
-
-const mapDispatchToProps = (dispatch, ownProps) => ({
-  saveToState: value => setGamesToState(ownProps.label, value, dispatch)
-})
-
-export default connect(
-  mapStateToProps,
-  mapDispatchToProps
-)(Games)
+export default Games
