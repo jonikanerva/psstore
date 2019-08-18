@@ -8,19 +8,3 @@
     width: 230px;
   }
 }
-
-.game--date:first-child {
-  padding: 5px 0 5px 5px;
-}
-
-.game--date {
-  break-before: always;
-  width: 100%;
-  flex-grow: 1;
-  font-size: 25px;
-  font-weight: 200;
-  padding: 35px 0 5px 5px;
-  margin-bottom: 15px;
-  text-transform: capitalize;
-  border-bottom: 1px solid rgb(242, 242, 242);
-}

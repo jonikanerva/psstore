@@ -5,6 +5,7 @@ import Game from './Game'
 import ScrollToTopOnMount from './ScrollToTopOnMount'
 import Loading from './Spinner'
 import Navigation from './Navigation'
+import DateHeader from './DateHeader'
 
 import './Games.css'
 
@@ -58,9 +59,16 @@ const Games = ({ label, fetch }) => {
       <ScrollToTopOnMount />
       <Navigation />
       <div className="games--content">
-        {games.map(game => (
-          <Game label={label} game={game} key={game.id} />
-        ))}
+        {games.map(({ date, discountDate, id, name, url }) => {
+          const dateTime = label === 'discounted' ? discountDate : date
+
+          return (
+            <React.Fragment key={id}>
+              <DateHeader date={dateTime} />
+              <Game id={id} name={name} url={url} />
+            </React.Fragment>
+          )
+        })}
       </div>
     </React.Fragment>
   )
