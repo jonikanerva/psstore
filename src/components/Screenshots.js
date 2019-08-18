@@ -1,13 +1,13 @@
-import React from 'react'
-import { connect } from 'react-redux'
-import { DateTime } from 'luxon'
 import * as R from 'ramda'
-import ScrollToTopOnMount from './ScrollToTopOnMount'
-import Error from './Error'
+import React, { useEffect, useState } from 'react'
+import { DateTime } from 'luxon'
+
 import Image from './Image'
+import Loading from './Spinner'
+import ScrollToTopOnMount from './ScrollToTopOnMount'
+import { searchLink, fetchGame } from '../modules/psnStore'
 
 import './Screenshots.css'
-import { searchLink } from '../modules/psnStore'
 
 const storeUrl = id => `https://store.playstation.com/en-fi/product/${id}`
 const dateFormat = date =>
@@ -31,27 +31,32 @@ const Videos = ({ videos }) =>
     </div>
   ))
 
-const findGame = (gameId, games) =>
-  R.compose(
-    R.find(R.propEq('id', gameId)),
-    R.reject(R.isNil),
-    R.flatten,
-    R.props([
-      'newGames',
-      'discountedGames',
-      'upcomingGames',
-      'searchGames',
-      'plusGames'
-    ])
-  )(games)
+const Screenshots = ({ gameId }) => {
+  const [game, setGame] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
 
-const Screenshots = props => {
-  const gameId = props.gameId
-  const games = props.games
-  const game = findGame(gameId, games)
+  useEffect(() => {
+    fetchGame(gameId)
+      .then(R.head)
+      .then(setGame)
+      .then(() => setLoading(false))
+      .catch(() => {
+        setError(true)
+        setLoading(false)
+      })
+  }, [gameId])
 
-  if (!game) {
-    return <Error />
+  if (loading) {
+    return (
+      <div className="screenshots">
+        <Loading loading={loading} />
+      </div>
+    )
+  }
+
+  if (error || !game) {
+    return <div className="screenshots">Game not found!</div>
   }
 
   const {
@@ -107,4 +112,4 @@ const Screenshots = props => {
   )
 }
 
-export default connect(R.pick(['games']))(Screenshots)
+export default Screenshots

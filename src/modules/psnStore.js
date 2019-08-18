@@ -12,6 +12,9 @@ const discountGamesUrl =
 const plusGamesUrl =
   'https://store.playstation.com/valkyrie-api/en/FI/19/container/STORE-MSF75508-PLUSINSTANTGAME?size=30&bucket=games&start=0'
 
+const gameUrl = gameId =>
+  `https://store.playstation.com/valkyrie-api/en/FI/999/resolve/${gameId}`
+
 const searchGamesUrl = string =>
   `https://store.playstation.com/valkyrie-api/en/FI/999/bucket-search/${encodeURIComponent(
     string
@@ -84,3 +87,5 @@ export const fetchPlusGames = () =>
 
 export const searchGames = searchString =>
   fetchUrl(searchGamesUrl(searchString)).then(sortGames('desc'))
+
+export const fetchGame = gameId => fetchUrl(gameUrl(gameId))
