@@ -36,8 +36,8 @@
     "lint": "eslint 'src/**/*.js' && stylelint 'src/**/*.css'",
     "test": "react-scripts test --env=jsdom",
     "eject": "react-scripts eject",
-    "docker:build": "docker build -t registry.gitlab.com/jonikanerva/dok/psstore:latest .",
-    "docker:push": "docker push registry.gitlab.com/jonikanerva/dok/psstore:latest",
+    "docker:build": "docker build -t docker.pkg.github.com/jonikanerva/dok8s/psstore:latest .",
+    "docker:push": "docker push docker.pkg.github.com/jonikanerva/dok8s/psstore:latest",
     "deploy": "run-s build docker:build docker:push"
   },
   "browserslist": [
