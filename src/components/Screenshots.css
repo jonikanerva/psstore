@@ -20,26 +20,28 @@
 }
 
 .screenshots--header {
-  color: rgb(0, 0, 0);
+  color: inherit;
   padding-bottom: 10px;
   font-size: 30px;
   flex-grow: 1;
 }
 
 .screenshots--subheader {
-  color: #aaa;
+  color: inherit;
+  opacity: 0.6;
   padding-bottom: 5px;
   font-size: 20px;
 }
 
 .screenshots--price {
-  color: rgb(60, 60, 60);
+  color: inherit;
+  opacity: 0.2;
   padding: 5px 0;
   font-size: 20px;
 }
 
 .screenshots--description {
-  color: rgb(79, 79, 79);
+  opacity: 0.8;
   padding-top: 20px;
   font-size: 20px;
 }

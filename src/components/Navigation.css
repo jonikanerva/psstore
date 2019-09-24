@@ -4,8 +4,8 @@
   left: 0;
   height: 50px;
   width: 100%;
-  border-bottom: 1px solid rgb(216, 216, 216);
-  background: rgba(255, 255, 255, 0.95);
+  border-bottom: 1px solid var(--main-border-color);
+  background: var(--main-bg-color);
   display: flex;
   flex-flow: row nowrap;
   z-index: 100;
@@ -13,7 +13,7 @@
 }
 
 .navigation--link {
-  color: rgb(0, 0, 0);
+  color: inherit;
   font-size: 18px;
   text-decoration: none;
   flex-grow: 1;

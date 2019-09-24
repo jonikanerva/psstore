@@ -11,5 +11,5 @@
   padding: 35px 0 5px 5px;
   margin-bottom: 15px;
   text-transform: capitalize;
-  border-bottom: 1px solid rgb(242, 242, 242);
+  border-bottom: 1px solid var(--main-border-color);
 }
