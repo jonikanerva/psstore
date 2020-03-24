@@ -20,6 +20,7 @@ const SearchResults = (props) => {
         <Games
           label="search"
           linkto="field"
+          location={props.location}
           fetch={() => searchGames(searchString)}
         />
       )}
