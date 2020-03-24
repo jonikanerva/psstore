@@ -12,6 +12,7 @@
 .games--filterNavi {
   display: flex;
   flex-wrap: wrap;
+  margin-top: 10px;
   margin-bottom: -30px;
 }
 
@@ -19,12 +20,13 @@
   text-align: center;
   padding-right: 10px;
   white-space: nowrap;
-  height: 35px;
+  height: 50px;
 }
 
 .games--filterName a {
+  font-size: 18px;
   border-radius: 10px;
-  padding: 5px 10px;
+  padding: 8px 12px;
   color: #2e2b2b;
   background-color: #94bcdf;
   text-decoration: none;
