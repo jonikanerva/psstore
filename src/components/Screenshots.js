@@ -85,7 +85,7 @@ const Screenshots = ({ gameId }) => {
         </a>
       </div>
       <div className="screenshots--subheader">
-        {genres} by {studio}
+        {genres.join(', ')} by {studio}
       </div>
       <div className="screenshots--subheader">Released {dateFormat(date)}</div>
       {discounted && (

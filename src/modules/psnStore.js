@@ -41,7 +41,7 @@ const createGameObject = (game) => {
     discountDate: R.pathOr(defaultTime, ['availability', 'start-date'], prices),
     screenshots: R.map(R.prop('url'), images),
     videos: R.map(R.prop('url'), videos),
-    genres: R.join(', ', R.propOr([], 'genres', attributes)),
+    genres: R.propOr([], 'genres', attributes),
     description: R.propOr('', 'long-description', attributes),
     studio: R.propOr('', 'provider-name', attributes),
   }
