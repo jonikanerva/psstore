@@ -7,7 +7,7 @@ import ScrollToTopOnMount from './ScrollToTopOnMount'
 import Navigation from './Navigation'
 import { searchGames } from '../modules/psnStore'
 
-const SearchResults = props => {
+const SearchResults = (props) => {
   const searchString = R.prop('q', queryString.parse(props.location.search))
 
   return (

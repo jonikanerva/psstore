@@ -2,7 +2,7 @@ import React from 'react'
 import { NavLink } from 'react-router-dom'
 import Screenshots from './Screenshots'
 
-const Details = props => (
+const Details = (props) => (
   <React.Fragment>
     <div className="navigation">
       <NavLink to="/" className="navigation--link">

@@ -9,12 +9,12 @@ import { searchLink, fetchGame } from '../modules/psnStore'
 
 import './Screenshots.css'
 
-const storeUrl = id => `https://store.playstation.com/en-fi/product/${id}`
-const dateFormat = date =>
+const storeUrl = (id) => `https://store.playstation.com/en-fi/product/${id}`
+const dateFormat = (date) =>
   DateTime.fromISO(date).toLocaleString({
     month: 'numeric',
     day: 'numeric',
-    year: 'numeric'
+    year: 'numeric',
   })
 
 const Images = ({ screenshots, name }) =>
@@ -69,7 +69,7 @@ const Screenshots = ({ gameId }) => {
     price,
     screenshots,
     studio,
-    videos
+    videos,
   } = game
   const discounted = discountDate !== '1975-01-01T00:00:00Z'
   const search = searchLink(name)

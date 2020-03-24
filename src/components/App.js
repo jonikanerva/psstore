@@ -3,7 +3,7 @@ import {
   BrowserRouter as Router,
   Route,
   Redirect,
-  Switch
+  Switch,
 } from 'react-router-dom'
 import Games from './Games'
 import Details from './Details'
@@ -12,7 +12,7 @@ import {
   fetchNewGames,
   fetchDiscountedGames,
   fetchUpcomingGames,
-  fetchPlusGames
+  fetchPlusGames,
 } from '../modules/psnStore'
 
 import './App.css'

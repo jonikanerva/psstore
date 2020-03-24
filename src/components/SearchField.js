@@ -16,7 +16,7 @@ const SearchField = ({ searchString }) => {
             type="text"
             value={value}
             name="q"
-            onChange={e => setValue(e.target.value)}
+            onChange={(e) => setValue(e.target.value)}
             className="searchfield--text"
           />
           <input type="submit" value="Search" className="searchfield--submit" />

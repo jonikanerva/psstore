@@ -1,6 +1,6 @@
 import React from 'react'
 import VisibilityObserver, {
-  useVisibilityObserver
+  useVisibilityObserver,
 } from 'react-visibility-observer'
 import './Image.css'
 

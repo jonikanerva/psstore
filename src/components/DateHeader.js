@@ -3,12 +3,12 @@ import { DateTime } from 'luxon'
 
 import './DateHeader.css'
 
-const formatDate = date =>
+const formatDate = (date) =>
   DateTime.fromISO(date).toLocaleString({
     weekday: 'long',
     month: 'numeric',
     day: 'numeric',
-    year: 'numeric'
+    year: 'numeric',
   })
 let lastDay = ''
 

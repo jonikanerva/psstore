@@ -12,20 +12,20 @@ const discountGamesUrl =
 const plusGamesUrl =
   'https://store.playstation.com/valkyrie-api/en/FI/19/container/STORE-MSF75508-PLUSINSTANTGAME?size=30&bucket=games&start=0'
 
-const gameUrl = gameId =>
+const gameUrl = (gameId) =>
   `https://store.playstation.com/valkyrie-api/en/FI/999/resolve/${gameId}`
 
-const searchGamesUrl = string =>
+const searchGamesUrl = (string) =>
   `https://store.playstation.com/valkyrie-api/en/FI/999/bucket-search/${encodeURIComponent(
     string
   )}?size=50&bucket=games`
 
-export const searchLink = string =>
+export const searchLink = (string) =>
   `https://www.metacritic.com/search/game/${encodeURI(
     string
   )}/results?plats%5B72496%5D=1&search_type=advanced&sort=recent`
 
-const createGameObject = game => {
+const createGameObject = (game) => {
   const attributes = R.propOr({}, 'attributes', game)
   const prices = R.pathOr({}, ['skus', 0, 'prices', 'plus-user'], attributes)
   const images = R.pathOr([], ['media-list', 'screenshots'], attributes)
@@ -43,20 +43,20 @@ const createGameObject = game => {
     videos: R.map(R.prop('url'), videos),
     genres: R.join(', ', R.propOr([], 'genres', attributes)),
     description: R.propOr('', 'long-description', attributes),
-    studio: R.propOr('', 'provider-name', attributes)
+    studio: R.propOr('', 'provider-name', attributes),
   }
 
   return ob
 }
 
-const sortGames = sort => {
+const sortGames = (sort) => {
   switch (sort) {
     case 'desc':
       return R.sort(R.descend(R.prop('date')))
     case 'discounted':
       return R.sortWith([
         R.descend(R.prop('discountDate')),
-        R.descend(R.prop('date'))
+        R.descend(R.prop('date')),
       ])
     default:
       return R.sort(R.ascend(R.prop('date')))
@@ -69,9 +69,9 @@ const parseGames = R.compose(
   R.propOr([], 'included')
 )
 
-const fetchUrl = url =>
+const fetchUrl = (url) =>
   fetch(url)
-    .then(res => res.json())
+    .then((res) => res.json())
     .then(parseGames)
 
 export const fetchNewGames = () => fetchUrl(newGamesUrl).then(sortGames('desc'))
@@ -85,7 +85,7 @@ export const fetchDiscountedGames = () =>
 export const fetchPlusGames = () =>
   fetchUrl(plusGamesUrl).then(sortGames('desc'))
 
-export const searchGames = searchString =>
+export const searchGames = (searchString) =>
   fetchUrl(searchGamesUrl(searchString)).then(sortGames('desc'))
 
-export const fetchGame = gameId => fetchUrl(gameUrl(gameId))
+export const fetchGame = (gameId) => fetchUrl(gameUrl(gameId))
