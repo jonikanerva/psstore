@@ -8,3 +8,24 @@
   justify-content: left;
   width: 100%;
 }
+
+.games--filterNavi {
+  display: flex;
+  flex-wrap: wrap;
+  margin-bottom: -30px;
+}
+
+.games--filterName {
+  text-align: center;
+  padding-right: 10px;
+  white-space: nowrap;
+  height: 35px;
+}
+
+.games--filterName a {
+  border-radius: 10px;
+  padding: 5px 10px;
+  color: #2e2b2b;
+  background-color: #94bcdf;
+  text-decoration: none;
+}

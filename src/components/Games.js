@@ -54,11 +54,25 @@ const Games = ({ label, fetch }) => {
     )
   }
 
+  const genreList = R.compose(
+    (array) => array.sort(),
+    R.uniq,
+    R.chain(R.prop('genres'))
+  )(games)
+
   return (
     <React.Fragment>
       <ScrollToTopOnMount />
       <Navigation />
       <div className="games--content">
+        <div className="games--filterNavi">
+          {genreList.map((genre) => (
+            <div key={genre} className="games--filterName">
+              <a href={`?filter=${genre}`}>{genre}</a>
+            </div>
+          ))}
+        </div>
+
         {games.map(({ date, discountDate, id, name, url }) => {
           const dateTime = label === 'discounted' ? discountDate : date
 
