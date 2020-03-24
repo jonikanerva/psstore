@@ -9,6 +9,10 @@
   width: 100%;
 }
 
+.games--selected {
+  border: 2px solid rgb(255, 0, 0);
+}
+
 .games--filterNavi {
   display: flex;
   flex-wrap: wrap;

@@ -71,6 +71,7 @@ const Games = ({ label, fetch, location }) => {
     )
   }
 
+  const allSelected = !filter ? 'games--selected' : ''
   const genreList = R.compose(
     (array) => array.sort(),
     R.uniq,
@@ -84,14 +85,24 @@ const Games = ({ label, fetch, location }) => {
       <div className="games--content">
         <div className="games--filterNavi">
           <div className="games--filterName">
-            <a href={location.pathname}>All</a>
+            <a className={allSelected} href={location.pathname}>
+              All
+            </a>
           </div>
 
-          {genreList.map((genre) => (
-            <div key={genre} className="games--filterName">
-              <a href={`?filter=${genre}`}>{genre}</a>
-            </div>
-          ))}
+          {genreList.map((genre) => {
+            const selectedClass = genre === filter ? 'games--selected' : ''
+            return (
+              <div key={genre} className="games--filterName">
+                <a
+                  className={selectedClass}
+                  href={`${location.pathname}?filter=${genre}`}
+                >
+                  {genre}
+                </a>
+              </div>
+            )
+          })}
         </div>
 
         {gameList.map(({ date, discountDate, id, name, url }) => {
