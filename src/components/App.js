@@ -18,18 +18,14 @@ import {
 import './App.css'
 
 const RedirectNew = () => <Redirect to="/new" />
-const NewGames = ({ location }) => (
-  <Games label="new" location={location} fetch={fetchNewGames} />
+const NewGames = () => <Games label="new" fetch={fetchNewGames} />
+const DiscountedGames = () => (
+  <Games label="discounted" fetch={fetchDiscountedGames} />
 )
-const DiscountedGames = ({ location }) => (
-  <Games label="discounted" location={location} fetch={fetchDiscountedGames} />
+const UpcomintGames = () => (
+  <Games label="upcoming" fetch={fetchUpcomingGames} />
 )
-const UpcomintGames = ({ location }) => (
-  <Games label="upcoming" location={location} fetch={fetchUpcomingGames} />
-)
-const PlusGames = ({ location }) => (
-  <Games label="plus" location={location} fetch={fetchPlusGames} />
-)
+const PlusGames = () => <Games label="plus" fetch={fetchPlusGames} />
 
 const App = () => (
   <Router>

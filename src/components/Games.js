@@ -1,6 +1,5 @@
 import * as R from 'ramda'
 import React, { useEffect, useState } from 'react'
-import queryString from 'query-string'
 import Error from './Error'
 import Game from './Game'
 import ScrollToTopOnMount from './ScrollToTopOnMount'
@@ -12,18 +11,21 @@ import './Games.css'
 
 const isEmpty = R.either(R.isEmpty, R.isNil)
 
-const Games = ({ label, fetch, location }) => {
+const Games = ({ label, fetch }) => {
   const [games, setGames] = useState(null)
   const [filteredGames, setFilteredGames] = useState(null)
+  const [filter, setFilter] = useState(undefined)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
   const hasGames = !isEmpty(games)
-  const search = R.prop('search', location)
-  const { filter } = queryString.parse(search)
+  const filterGames = (filter) => () => setFilter(filter)
 
   useEffect(() => {
     fetch()
-      .then(setGames)
+      .then((gamesResponse) => {
+        setGames(gamesResponse)
+        setFilteredGames(gamesResponse)
+      })
       .then(() => setLoading(false))
       .catch(() => {
         setError(true)
@@ -36,13 +38,14 @@ const Games = ({ label, fetch, location }) => {
       return
     }
 
-    const filteredGames = games.filter(({ genres }) =>
-      R.includes(filter, genres)
-    )
-    setFilteredGames(filteredGames)
-  }, [games, filter])
+    const filtered =
+      filter === undefined
+        ? games
+        : games.filter(({ genres }) => R.includes(filter, genres))
 
-  const gameList = R.isEmpty(filteredGames) ? games : filteredGames
+    setFilter(filter)
+    setFilteredGames(filtered)
+  }, [filter, games])
 
   if (error) {
     return (
@@ -84,28 +87,28 @@ const Games = ({ label, fetch, location }) => {
       <Navigation />
       <div className="games--content">
         <div className="games--filterNavi">
-          <div className="games--filterName">
-            <a className={allSelected} href={location.pathname}>
-              All
-            </a>
+          <div
+            className={`games--filterName ${allSelected}`}
+            onClick={filterGames()}
+          >
+            All
           </div>
 
           {genreList.map((genre) => {
             const selectedClass = genre === filter ? 'games--selected' : ''
             return (
-              <div key={genre} className="games--filterName">
-                <a
-                  className={selectedClass}
-                  href={`${location.pathname}?filter=${genre}`}
-                >
-                  {genre}
-                </a>
+              <div
+                key={genre}
+                className={`games--filterName ${selectedClass}`}
+                onClick={filterGames(genre)}
+              >
+                {genre}
               </div>
             )
           })}
         </div>
 
-        {gameList.map(({ date, discountDate, id, name, url }) => {
+        {filteredGames.map(({ date, discountDate, id, name, url }) => {
           const dateTime = label === 'discounted' ? discountDate : date
 
           return (
