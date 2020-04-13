@@ -1,13 +1,13 @@
 import * as R from 'ramda'
 
-const newGamesUrl =
-  'https://store.playstation.com/valkyrie-api/en/FI/19/container/STORE-MSF75508-GAMENEWTHISMONTH?sort=release_date&direction=desc&platform=ps4&game_content_type=games%2Cbundles&size=600&bucket=games&start=0'
+const newGamesUrl = (start) =>
+  `https://store.playstation.com/valkyrie-api/en/FI/19/container/STORE-MSF75508-FULLGAMES?sort=release_date&direction=desc&platform=ps4&game_content_type=games%2Cbundles&size=99&bucket=games&start=${start}`
 
 const upcomingGamesUrl =
-  'https://store.playstation.com/valkyrie-api/en/FI/19/container/STORE-MSF75508-COMINGSOON?sort=release_date&direction=desc&size=600&bucket=games&start=0'
+  'https://store.playstation.com/valkyrie-api/en/FI/19/container/STORE-MSF75508-COMINGSOON?sort=release_date&direction=desc&size=100&bucket=games&start=0'
 
-const discountGamesUrl =
-  'https://store.playstation.com/valkyrie-api/en/FI/19/container/STORE-MSF75508-PRICEDROPSCHI?sort=release_date&direction=desc&platform=ps4&game_content_type=games%2Cbundles&size=600&bucket=games&start=0'
+const discountGamesUrl = (start) =>
+  `https://store.playstation.com/valkyrie-api/en/FI/19/container/STORE-MSF75508-PRICEDROPSCHI?sort=release_date&direction=desc&platform=ps4&game_content_type=games%2Cbundles&size=99&bucket=games&start=${start}`
 
 const plusGamesUrl =
   'https://store.playstation.com/valkyrie-api/en/FI/19/container/STORE-MSF75508-PLUSINSTANTGAME?size=30&bucket=games&start=0'
@@ -44,6 +44,7 @@ const createGameObject = (game) => {
     genres: R.propOr([], 'genres', attributes),
     description: R.propOr('', 'long-description', attributes),
     studio: R.propOr('', 'provider-name', attributes),
+    preOrder: R.pathOr(false, ['skus', 0, 'is-preorder'], attributes),
   }
 
   return ob
@@ -74,13 +75,29 @@ const fetchUrl = (url) =>
     .then((res) => res.json())
     .then(parseGames)
 
-export const fetchNewGames = () => fetchUrl(newGamesUrl).then(sortGames('desc'))
+export const fetchNewGames = () =>
+  Promise.all([
+    fetchUrl(newGamesUrl(0)),
+    fetchUrl(newGamesUrl(99)),
+    fetchUrl(newGamesUrl(198)),
+    fetchUrl(newGamesUrl(297)),
+  ])
+    .then(R.flatten)
+    .then(R.filter(R.propEq('preOrder', false)))
+    .then(sortGames('desc'))
 
 export const fetchUpcomingGames = () =>
   fetchUrl(upcomingGamesUrl).then(sortGames('asc'))
 
 export const fetchDiscountedGames = () =>
-  fetchUrl(discountGamesUrl).then(sortGames('discounted'))
+  Promise.all([
+    fetchUrl(discountGamesUrl(0)),
+    fetchUrl(discountGamesUrl(99)),
+    fetchUrl(discountGamesUrl(198)),
+    fetchUrl(discountGamesUrl(297)),
+  ])
+    .then(R.flatten)
+    .then(sortGames('discounted'))
 
 export const fetchPlusGames = () =>
   fetchUrl(plusGamesUrl).then(sortGames('desc'))
