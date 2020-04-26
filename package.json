@@ -35,7 +35,7 @@
     "build": "yarn lint && yarn clean && parcel build --out-dir build ./public/index.html",
     "clean": "rm -rf ./build",
     "format": "prettier --config package.json 'src/**/*.{js,css}' --write",
-    "lint": "eslint 'src/**/*.js' && stylelint 'src/**/*.css'",
+    "lint": "eslint 'src/**/*.js' && stylelint 'src/**/*.css' && prettier --config package.json 'src/**/*.{js,css}' --check",
     "docker:build": "docker build -t docker.pkg.github.com/jonikanerva/dok8s/psstore:latest .",
     "docker:push": "docker push docker.pkg.github.com/jonikanerva/dok8s/psstore:latest",
     "deploy": "run-s build docker:build docker:push"
