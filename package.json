@@ -32,7 +32,7 @@
   "scripts": {
     "s": "yarn start",
     "start": "parcel serve --port 3000 --out-dir build ./public/index.html",
-    "build": "yarn lint && yarn clean && parcel build --out-dir build ./public/index.html",
+    "build": "yarn lint && yarn clean && parcel build --experimental-scope-hoisting --out-dir build ./public/index.html",
     "clean": "rm -rf ./build",
     "format": "prettier --config package.json 'src/**/*.{js,css}' --write",
     "lint": "eslint 'src/**/*.js' && stylelint 'src/**/*.css' && prettier --config package.json 'src/**/*.{js,css}' --check",
