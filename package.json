@@ -8,18 +8,20 @@
   },
   "dependencies": {
     "luxon": "^1.23.0",
+    "query-string": "^6.12.1",
     "ramda": "^0.27.0",
     "react": "^16.13.1",
     "react-dom": "^16.13.1",
     "react-router-dom": "^5.1.2",
-    "react-scripts": "^3.4.1",
     "react-visibility-observer": "^1.0.4"
   },
   "devDependencies": {
+    "eslint": "^6.8.0",
     "eslint-plugin-node": "^11.1.0",
     "eslint-plugin-prettier": "^3.1.3",
     "eslint-plugin-react": "^7.19.0",
     "npm-run-all": "^4.1.5",
+    "parcel-bundler": "^1.12.4",
     "prettier": "^2.0.5",
     "stylelint": "^13.3.3"
   },
@@ -29,20 +31,13 @@
   },
   "scripts": {
     "s": "yarn start",
-    "start": "react-scripts start",
-    "build": "react-scripts build",
+    "start": "parcel serve --port 3000 --out-dir build ./public/index.html",
+    "build": "yarn lint && yarn clean && parcel build --out-dir build ./public/index.html",
+    "clean": "rm -rf ./build",
     "format": "prettier --config package.json 'src/**/*.{js,css}' --write",
     "lint": "eslint 'src/**/*.js' && stylelint 'src/**/*.css'",
-    "test": "react-scripts test --env=jsdom",
-    "eject": "react-scripts eject",
     "docker:build": "docker build -t docker.pkg.github.com/jonikanerva/dok8s/psstore:latest .",
     "docker:push": "docker push docker.pkg.github.com/jonikanerva/dok8s/psstore:latest",
     "deploy": "run-s build docker:build docker:push"
-  },
-  "browserslist": [
-    ">0.2%",
-    "not dead",
-    "not ie <= 11",
-    "not op_mini all"
-  ]
+  }
 }
