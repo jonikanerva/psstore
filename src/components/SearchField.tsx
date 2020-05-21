@@ -1,9 +1,13 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, ChangeEvent } from 'react'
 
 import './SearchField.css'
 
-const SearchField = ({ searchString }) => {
-  const [value, setValue] = useState()
+interface SearchFieldProps {
+  searchString: string
+}
+
+const SearchField = ({ searchString }: SearchFieldProps): JSX.Element => {
+  const [value, setValue] = useState<string>()
 
   useEffect(() => setValue(searchString), [searchString])
 
@@ -16,7 +20,9 @@ const SearchField = ({ searchString }) => {
             type="text"
             value={value}
             name="q"
-            onChange={(e) => setValue(e.target.value)}
+            onChange={(e: ChangeEvent<HTMLInputElement>): void =>
+              setValue(e.target.value)
+            }
             className="searchfield--text"
           />
           <input type="submit" value="Search" className="searchfield--submit" />

@@ -3,7 +3,7 @@ import { DateTime } from 'luxon'
 
 import './DateHeader.css'
 
-const formatDate = (date) =>
+const formatDate = (date: string): string =>
   DateTime.fromISO(date).toLocaleString({
     weekday: 'long',
     month: 'numeric',
@@ -12,7 +12,7 @@ const formatDate = (date) =>
   })
 let lastDay = ''
 
-const DateHeader = ({ date }) => {
+const DateHeader = ({ date }: { date: string }): JSX.Element | null => {
   const day = formatDate(date)
   const dateChanged = lastDay !== day
   lastDay = day

@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom'
 
 import './Navigation.css'
 
-const Navigation = () => (
+const Navigation = (): JSX.Element => (
   <div className="navigation">
     <NavLink
       to="/new"

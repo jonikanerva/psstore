@@ -4,7 +4,12 @@ import VisibilityObserver, {
 } from 'react-visibility-observer'
 import './Image.css'
 
-const ImageSrc = ({ url, name }) => {
+interface ImageProps {
+  url: string
+  name: string
+}
+
+const ImageSrc = ({ url, name }: ImageProps): JSX.Element => {
   const { isVisible } = useVisibilityObserver()
 
   return (
@@ -12,7 +17,7 @@ const ImageSrc = ({ url, name }) => {
   )
 }
 
-const Image = ({ url, name }) => (
+const Image = ({ url, name }: ImageProps): JSX.Element => (
   <VisibilityObserver rootMargin="200px 200px 200px 200px" triggerOnce={true}>
     <ImageSrc url={url} name={name} />
   </VisibilityObserver>

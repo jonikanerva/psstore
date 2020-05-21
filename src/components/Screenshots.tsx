@@ -1,45 +1,60 @@
-import * as R from 'ramda'
-import React, { useEffect, useState } from 'react'
 import { DateTime } from 'luxon'
-
+import * as R from 'ramda'
+import React, { useEffect, useState, Fragment } from 'react'
+import { fetchGame, Game, searchLink } from '../modules/psnStore'
 import Image from './Image'
-import Loading from './Spinner'
 import ScrollToTopOnMount from './ScrollToTopOnMount'
-import { searchLink, fetchGame } from '../modules/psnStore'
-
+import Loading from './Spinner'
 import './Screenshots.css'
 
-const storeUrl = (id) => `https://store.playstation.com/en-fi/product/${id}`
-const dateFormat = (date) =>
+interface ScreenshotsProps {
+  gameId: string
+}
+
+const storeUrl = (id: string): string =>
+  `https://store.playstation.com/en-fi/product/${id}`
+const dateFormat = (date: string): string =>
   DateTime.fromISO(date).toLocaleString({
     month: 'numeric',
     day: 'numeric',
     year: 'numeric',
   })
 
-const Images = ({ screenshots, name }) =>
-  screenshots.map((screenshot, i) => (
-    <div key={i} className="screenshots--tile">
-      <Image url={screenshot} name={name} />
-    </div>
-  ))
+const Images = ({
+  screenshots,
+  name,
+}: {
+  screenshots: string[]
+  name: string
+}): JSX.Element => (
+  <Fragment>
+    {screenshots.map((screenshot: string, i: number) => (
+      <div key={i} className="screenshots--tile">
+        <Image url={screenshot} name={name} />
+      </div>
+    ))}
+  </Fragment>
+)
 
-const Videos = ({ videos }) =>
-  videos.map((video, i) => (
-    <div key={i} className="screenshots--tile">
-      <video preload="metadata" controls muted width="100%" src={video} />
-    </div>
-  ))
+const Videos = ({ videos }: { videos: string[] }): JSX.Element => (
+  <Fragment>
+    {videos.map((video: string, i: number) => (
+      <div key={i} className="screenshots--tile">
+        <video preload="metadata" controls muted width="100%" src={video} />
+      </div>
+    ))}
+  </Fragment>
+)
 
-const Screenshots = ({ gameId }) => {
-  const [game, setGame] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(false)
+const Screenshots = ({ gameId }: ScreenshotsProps): JSX.Element => {
+  const [game, setGame] = useState<Game>()
+  const [loading, setLoading] = useState<boolean>(true)
+  const [error, setError] = useState<boolean>(false)
 
   useEffect(() => {
     fetchGame(gameId)
-      .then(R.head)
-      .then(setGame)
+      .then((games) => R.head(games))
+      .then((game) => setGame(game))
       .then(() => setLoading(false))
       .catch(() => {
         setError(true)

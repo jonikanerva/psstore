@@ -1,10 +1,15 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import Image from './Image'
-
 import './Game.css'
 
-const Game = ({ id, name, url }) => (
+interface GameProps {
+  id: string
+  name: string
+  url: string
+}
+
+const Game = ({ id, name, url }: GameProps): JSX.Element => (
   <div className="game--tile">
     <Link to={`/g/${id}`}>
       <Image url={url} name={name} />

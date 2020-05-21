@@ -17,17 +17,19 @@ import {
 
 import './App.css'
 
-const RedirectNew = () => <Redirect to="/new" />
-const NewGames = () => <Games label="new" fetch={fetchNewGames} />
-const DiscountedGames = () => (
+const RedirectNew = (): JSX.Element => <Redirect to="/new" />
+const NewGames = (): JSX.Element => <Games label="new" fetch={fetchNewGames} />
+const DiscountedGames = (): JSX.Element => (
   <Games label="discounted" fetch={fetchDiscountedGames} />
 )
-const UpcomintGames = () => (
+const UpcomintGames = (): JSX.Element => (
   <Games label="upcoming" fetch={fetchUpcomingGames} />
 )
-const PlusGames = () => <Games label="plus" fetch={fetchPlusGames} />
+const PlusGames = (): JSX.Element => (
+  <Games label="plus" fetch={fetchPlusGames} />
+)
 
-const App = () => (
+const App = (): JSX.Element => (
   <Router>
     <Switch>
       <Route path="/new" component={NewGames} />
