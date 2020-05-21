@@ -18,8 +18,7 @@
     "deploy": "run-s build docker:build docker:push"
   },
   "engines": {
-    "node": "^12.16.2",
-    "yarn": "^1.22.4"
+    "node": "12.16.3"
   },
   "dependencies": {
     "luxon": "^1.24.1",
