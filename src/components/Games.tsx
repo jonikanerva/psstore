@@ -1,24 +1,29 @@
 import * as R from 'ramda'
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, Fragment } from 'react'
+import { Game as GameObject } from '../modules/psnStore'
+import DateHeader from './DateHeader'
 import Error from './Error'
 import Game from './Game'
+import Navigation from './Navigation'
 import ScrollToTopOnMount from './ScrollToTopOnMount'
 import Loading from './Spinner'
-import Navigation from './Navigation'
-import DateHeader from './DateHeader'
-
 import './Games.css'
 
 const isEmpty = R.either(R.isEmpty, R.isNil)
 
-const Games = ({ label, fetch }) => {
-  const [games, setGames] = useState(null)
-  const [filteredGames, setFilteredGames] = useState(null)
-  const [filter, setFilter] = useState(undefined)
+interface GamesProps {
+  label: string
+  fetch: () => Promise<GameObject[]>
+}
+
+const Games = ({ label, fetch }: GamesProps): JSX.Element => {
+  const [games, setGames] = useState<GameObject[]>([])
+  const [filteredGames, setFilteredGames] = useState<GameObject[]>([])
+  const [filter, setFilter] = useState<string>()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
   const hasGames = !isEmpty(games)
-  const filterGames = (filter) => () => setFilter(filter)
+  const filterGames = (filter?: string) => (): void => setFilter(filter)
 
   useEffect(() => {
     fetch()
@@ -49,40 +54,40 @@ const Games = ({ label, fetch }) => {
 
   if (error) {
     return (
-      <React.Fragment>
+      <Fragment>
         <Navigation />
         <Error />
-      </React.Fragment>
+      </Fragment>
     )
   }
 
   if (loading) {
     return (
-      <React.Fragment>
+      <Fragment>
         <Navigation />
         <Loading loading={loading} />
-      </React.Fragment>
+      </Fragment>
     )
   }
 
   if (!loading && !hasGames) {
     return (
-      <React.Fragment>
+      <Fragment>
         <Navigation />
         <Error message="No games found" />
-      </React.Fragment>
+      </Fragment>
     )
   }
 
   const allSelected = !filter ? 'games--selected' : ''
   const genreList = R.compose(
-    (array) => array.sort(),
-    R.uniq,
-    R.chain(R.prop('genres'))
+    (array: string[]) => array.sort(),
+    R.uniq as never,
+    R.chain(R.propOr([], 'genres'))
   )(games)
 
   return (
-    <React.Fragment>
+    <Fragment>
       <ScrollToTopOnMount />
       <Navigation />
       <div className="games--content">
@@ -94,7 +99,7 @@ const Games = ({ label, fetch }) => {
             All
           </div>
 
-          {genreList.map((genre) => {
+          {genreList.map((genre: string) => {
             const selectedClass = genre === filter ? 'games--selected' : ''
             return (
               <div
@@ -112,14 +117,14 @@ const Games = ({ label, fetch }) => {
           const dateTime = label === 'discounted' ? discountDate : date
 
           return (
-            <React.Fragment key={id}>
+            <Fragment key={id}>
               <DateHeader date={dateTime} />
               <Game id={id} name={name} url={url} />
-            </React.Fragment>
+            </Fragment>
           )
         })}
       </div>
-    </React.Fragment>
+    </Fragment>
   )
 }
 
