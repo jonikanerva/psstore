@@ -18,7 +18,7 @@ const dateFormat = (date: string): string =>
     month: 'numeric',
     day: 'numeric',
     year: 'numeric',
-  })
+  }) || ''
 
 const Images = ({
   screenshots,

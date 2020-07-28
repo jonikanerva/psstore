@@ -9,7 +9,7 @@ const formatDate = (date: string): string =>
     month: 'numeric',
     day: 'numeric',
     year: 'numeric',
-  })
+  }) || ''
 let lastDay = ''
 
 const DateHeader = ({ date }: { date: string }): JSX.Element | null => {
