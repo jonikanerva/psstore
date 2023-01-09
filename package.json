@@ -21,7 +21,7 @@
     "node": "12.18.4"
   },
   "dependencies": {
-    "luxon": "^1.25.0",
+    "luxon": "^1.28.1",
     "query-string": "^6.13.5",
     "ramda": "^0.27.1",
     "react": "^16.13.1",
