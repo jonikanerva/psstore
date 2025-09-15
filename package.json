@@ -3,73 +3,59 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "s": "yarn start",
-    "start": "parcel serve --port 3000 --out-dir build ./public/index.html",
-    "build": "yarn lint && yarn clean && parcel build --experimental-scope-hoisting --out-dir build ./public/index.html",
+    "dev": "vite",
+    "build": "run-s lint clean vite:build",
+    "vite:build": "vite build --outDir=build",
+    "preview": "vite preview",
     "clean": "rm -rf ./build",
-    "lint": "yarn lint:eslint && yarn lint:tsc && yarn lint:ts && yarn lint:style && yarn lint:json",
+    "lint": "run-s lint:eslint lint:tsc lint:ts lint:style lint:json",
     "lint:eslint": "eslint . --ext .ts,.tsx",
     "lint:tsc": "tsc --project .",
     "lint:ts": "prettier --check --parser typescript --config package.json '**/*.{ts,tsx}'",
     "lint:json": "prettier --check '**/*.json'",
     "lint:style": "stylelint 'src/**/*.css'",
+    "format": "run-s format:ts format:other",
+    "format:ts": "prettier --parser typescript --config package.json '**/*.{ts,tsx}' --write",
+    "format:other": "prettier '**/*.json' '**/*.css' --write",
     "docker:build": "docker build -t docker.pkg.github.com/jonikanerva/dok8s/psstore:latest .",
     "docker:push": "docker push docker.pkg.github.com/jonikanerva/dok8s/psstore:latest",
     "deploy": "run-s build docker:build docker:push"
   },
   "engines": {
-    "node": "14.15.0"
+    "node": "22.18.0"
   },
   "dependencies": {
-    "luxon": "^1.25.0",
-    "query-string": "^6.13.7",
-    "ramda": "^0.27.1",
-    "react": "^17.0.1",
-    "react-dom": "^17.0.1",
-    "react-router-dom": "^5.2.0",
-    "react-visibility-observer": "^1.0.4"
+    "luxon": "^3.7.2",
+    "query-string": "^9.3.0",
+    "ramda": "^0.31.3",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "react-router-dom": "^7.9.1",
+    "react-visibility-observer": "^1.0.8"
   },
   "devDependencies": {
-    "@types/luxon": "^1.25.0",
-    "@types/node": "^14.14.7",
-    "@types/ramda": "^0.27.32",
-    "@types/react": "^16.9.56",
-    "@types/react-dom": "^16.9.9",
-    "@types/react-router-dom": "^5.1.6",
-    "@typescript-eslint/eslint-plugin": "^4.7.0",
-    "@typescript-eslint/parser": "^4.7.0",
-    "eslint": "^7.13.0",
-    "eslint-config-prettier": "^6.15.0",
+    "@types/luxon": "^3.7.1",
+    "@types/node": "^24.4.0",
+    "@types/ramda": "^0.31.1",
+    "@types/react": "^19.1.13",
+    "@types/react-dom": "^19.1.9",
+    "@typescript-eslint/eslint-plugin": "^8.43.0",
+    "@typescript-eslint/parser": "^8.43.0",
+    "@vitejs/plugin-react-swc": "^3.7.1",
+    "eslint": "^9.35.0",
+    "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-node": "^11.1.0",
-    "eslint-plugin-prettier": "^3.1.4",
-    "eslint-plugin-react": "^7.21.5",
+    "eslint-plugin-prettier": "^5.5.4",
+    "eslint-plugin-react": "^7.37.5",
     "npm-run-all": "^4.1.5",
-    "parcel-bundler": "^1.12.4",
-    "prettier": "^2.1.2",
-    "stylelint": "^13.7.2",
-    "typescript": "^4.0.5"
+    "prettier": "^3.6.2",
+    "stylelint": "^16.24.0",
+    "stylelint-config-standard": "^39.0.0",
+    "typescript": "^5.9.2",
+    "vite": "^5.4.8"
   },
   "prettier": {
     "semi": false,
     "singleQuote": true
-  },
-  "eslintConfig": {
-    "root": true,
-    "parser": "@typescript-eslint/parser",
-    "plugins": [
-      "@typescript-eslint"
-    ],
-    "extends": [
-      "eslint:recommended",
-      "plugin:react/recommended",
-      "plugin:@typescript-eslint/eslint-recommended",
-      "plugin:@typescript-eslint/recommended",
-      "prettier/@typescript-eslint"
-    ],
-    "settings": {
-      "react": {
-        "version": "detect"
-      }
-    }
   }
 }

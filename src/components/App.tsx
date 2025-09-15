@@ -1,9 +1,8 @@
-import React from 'react'
 import {
   BrowserRouter as Router,
+  Routes,
   Route,
-  Redirect,
-  Switch,
+  Navigate,
 } from 'react-router-dom'
 import Games from './Games'
 import Details from './Details'
@@ -17,29 +16,27 @@ import {
 
 import './App.css'
 
-const RedirectNew = (): JSX.Element => <Redirect to="/new" />
-const NewGames = (): JSX.Element => <Games label="new" fetch={fetchNewGames} />
-const DiscountedGames = (): JSX.Element => (
+const RedirectNew = () => <Navigate to="/new" replace />
+const NewGames = () => <Games label="new" fetch={fetchNewGames} />
+const DiscountedGames = () => (
   <Games label="discounted" fetch={fetchDiscountedGames} />
 )
-const UpcomintGames = (): JSX.Element => (
+const UpcomintGames = () => (
   <Games label="upcoming" fetch={fetchUpcomingGames} />
 )
-const PlusGames = (): JSX.Element => (
-  <Games label="plus" fetch={fetchPlusGames} />
-)
+const PlusGames = () => <Games label="plus" fetch={fetchPlusGames} />
 
-const App = (): JSX.Element => (
+const App = () => (
   <Router>
-    <Switch>
-      <Route path="/new" component={NewGames} />
-      <Route path="/discounted" component={DiscountedGames} />
-      <Route path="/upcoming" component={UpcomintGames} />
-      <Route path="/plus" component={PlusGames} />
-      <Route path="/g/:gameId" component={Details} />
-      <Route path="/search" component={SearchResults} />
-      <Route component={RedirectNew} />
-    </Switch>
+    <Routes>
+      <Route path="/new" element={<NewGames />} />
+      <Route path="/discounted" element={<DiscountedGames />} />
+      <Route path="/upcoming" element={<UpcomintGames />} />
+      <Route path="/plus" element={<PlusGames />} />
+      <Route path="/g/:gameId" element={<Details />} />
+      <Route path="/search" element={<SearchResults />} />
+      <Route path="*" element={<RedirectNew />} />
+    </Routes>
   </Router>
 )
 

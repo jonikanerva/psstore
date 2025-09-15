@@ -3,7 +3,7 @@
   padding: 5px;
 }
 
-@media (min-width: 800px) {
+@media (width >= 800px) {
   .game--tile {
     width: 230px;
   }

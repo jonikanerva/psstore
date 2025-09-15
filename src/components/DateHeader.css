@@ -1,7 +1,3 @@
-.dateheader--date:first-child {
-  padding: 5px 0 5px 5px;
-}
-
 .dateheader--date {
   break-before: always;
   width: 100%;
@@ -12,4 +8,8 @@
   margin-bottom: 15px;
   text-transform: capitalize;
   border-bottom: 1px solid var(--main-border-color);
+}
+
+.dateheader--date:first-child {
+  padding: 5px 0 5px 5px;
 }

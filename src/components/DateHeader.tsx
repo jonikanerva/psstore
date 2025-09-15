@@ -1,4 +1,3 @@
-import React from 'react'
 import { DateTime } from 'luxon'
 
 import './DateHeader.css'
@@ -12,7 +11,7 @@ const formatDate = (date: string): string =>
   }) || ''
 let lastDay = ''
 
-const DateHeader = ({ date }: { date: string }): JSX.Element | null => {
+const DateHeader = ({ date }: { date: string }) => {
   const day = formatDate(date)
   const dateChanged = lastDay !== day
   lastDay = day

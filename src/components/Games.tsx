@@ -1,5 +1,5 @@
 import * as R from 'ramda'
-import React, { useEffect, useState, Fragment } from 'react'
+import { useEffect, useState, Fragment } from 'react'
 import { Game as GameObject } from '../modules/psnStore'
 import DateHeader from './DateHeader'
 import Error from './Error'
@@ -16,7 +16,7 @@ interface GamesProps {
   fetch: () => Promise<GameObject[]>
 }
 
-const Games = ({ label, fetch }: GamesProps): JSX.Element => {
+const Games = ({ label, fetch }: GamesProps) => {
   const [games, setGames] = useState<GameObject[]>([])
   const [filteredGames, setFilteredGames] = useState<GameObject[]>([])
   const [filter, setFilter] = useState<string>()
@@ -80,20 +80,16 @@ const Games = ({ label, fetch }: GamesProps): JSX.Element => {
   }
 
   const allSelected = !filter ? 'games--selected' : ''
-  const genreList = R.compose(
-    (array: string[]) => array.sort(),
-    R.uniq as never,
-    R.chain(R.propOr([], 'genres'))
-  )(games)
+  const genreList = Array.from(new Set(games.flatMap((g) => g.genres))).sort()
 
   return (
     <Fragment>
       <ScrollToTopOnMount />
       <Navigation />
       <div className="games--content">
-        <div className="games--filterNavi">
+        <div className="games--filter-navi">
           <div
-            className={`games--filterName ${allSelected}`}
+            className={`games--filter-name ${allSelected}`}
             onClick={filterGames()}
           >
             All
@@ -104,7 +100,7 @@ const Games = ({ label, fetch }: GamesProps): JSX.Element => {
             return (
               <div
                 key={genre}
-                className={`games--filterName ${selectedClass}`}
+                className={`games--filter-name ${selectedClass}`}
                 onClick={filterGames(genre)}
               >
                 {genre}

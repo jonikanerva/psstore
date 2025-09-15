@@ -30,7 +30,7 @@
   background: none;
   width: 60px;
   height: 60px;
-  border: 3px solid rgba(0, 0, 0, 0.3);
+  border: 3px solid rgb(0 0 0 / 30%);
   border-left-color: #363738;
   border-width: 3px;
   position: absolute;

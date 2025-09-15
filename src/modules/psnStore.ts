@@ -17,12 +17,12 @@ const gameUrl = (gameId: string): string =>
 
 const searchGamesUrl = (string: string): string =>
   `https://store.playstation.com/valkyrie-api/en/FI/999/bucket-search/${encodeURIComponent(
-    string
+    string,
   )}?size=50&bucket=games`
 
 export const searchLink = (string: string): string =>
   `https://www.metacritic.com/search/game/${encodeURI(
-    string
+    string,
   )}/results?plats%5B72496%5D=1&search_type=advanced&sort=recent`
 
 export interface Game {
@@ -40,26 +40,57 @@ export interface Game {
   preOrder: boolean
 }
 
-const createGameObject = (game: never): Game => {
-  const attributes = R.propOr({}, 'attributes', game)
-  const prices = R.pathOr({}, ['skus', 0, 'prices', 'plus-user'], attributes)
-  const images = R.pathOr([], ['media-list', 'screenshots'], attributes)
-  const videos = R.pathOr([], ['media-list', 'preview'], attributes)
+// Minimal API response types
+type ApiMedia = { url?: string }
+type ApiSku = {
+  'is-preorder'?: boolean
+  prices?: {
+    'plus-user'?: {
+      'actual-price'?: { display?: string }
+      availability?: { 'start-date'?: string }
+    }
+  }
+}
+type ApiAttributes = {
+  name?: string
+  'release-date'?: string
+  'thumbnail-url-base'?: string
+  'media-list'?: {
+    screenshots?: ApiMedia[]
+    preview?: ApiMedia[]
+  }
+  skus?: ApiSku[]
+  genres?: string[]
+  'long-description'?: string
+  'provider-name'?: string
+}
+type ApiIncluded = {
+  type?: string
+  id?: string
+  attributes?: ApiAttributes
+}
+type ApiResponse = { included?: ApiIncluded[] }
+
+const createGameObject = (game: ApiIncluded): Game => {
+  const attributes: ApiAttributes = game.attributes || {}
+  const plusUser = attributes.skus?.[0]?.prices?.['plus-user']
+  const images = attributes['media-list']?.screenshots || []
+  const previews = attributes['media-list']?.preview || []
   const defaultTime = '1975-01-01T00:00:00Z'
 
   const ob: Game = {
-    name: R.propOr('', 'name', attributes),
-    date: R.propOr('', 'release-date', attributes),
-    url: R.propOr('', 'thumbnail-url-base', attributes),
-    id: R.propOr('', 'id', game),
-    price: R.pathOr('', ['actual-price', 'display'], prices),
-    discountDate: R.pathOr(defaultTime, ['availability', 'start-date'], prices),
-    screenshots: R.map(R.prop('url'), images) as string[],
-    videos: R.map(R.prop('url'), videos) as string[],
-    genres: R.propOr([], 'genres', attributes),
-    description: R.propOr('', 'long-description', attributes),
-    studio: R.propOr('', 'provider-name', attributes),
-    preOrder: R.pathOr(false, ['skus', 0, 'is-preorder'], attributes),
+    name: attributes.name || '',
+    date: attributes['release-date'] || '',
+    url: attributes['thumbnail-url-base'] || '',
+    id: game.id || '',
+    price: plusUser?.['actual-price']?.display || '',
+    discountDate: plusUser?.availability?.['start-date'] || defaultTime,
+    screenshots: images.map((m) => m.url || '').filter(Boolean) as string[],
+    videos: previews.map((m) => m.url || '').filter(Boolean) as string[],
+    genres: attributes.genres || [],
+    description: attributes['long-description'] || '',
+    studio: attributes['provider-name'] || '',
+    preOrder: Boolean(attributes.skus?.[0]?.['is-preorder']) || false,
   }
 
   return ob
@@ -72,19 +103,20 @@ const sortGames = (sort: string, games: Game[]): Game[] => {
     case 'discounted':
       return R.sortWith(
         [R.descend(R.prop('discountDate')), R.descend(R.prop('date'))],
-        games
+        games,
       )
     default:
       return R.sort(R.ascend(R.prop('date')), games)
   }
 }
 
-const fetchUrl = (url: string): Promise<Game[]> =>
-  fetch(url)
-    .then((res) => res.json())
-    .then((json) => R.propOr([], 'included', json))
-    .then((obj) => R.filter(R.propEq('type', 'game') as never, obj as never))
-    .then((games) => R.map(createGameObject, games as never))
+const fetchUrl = async (url: string): Promise<Game[]> => {
+  const res = await fetch(url)
+  const json = (await res.json()) as ApiResponse
+  const included = json.included || []
+  const games = included.filter((i) => i && i.type === 'game')
+  return games.map(createGameObject)
+}
 
 export const fetchNewGames = (): Promise<Game[]> =>
   Promise.all([
@@ -93,8 +125,8 @@ export const fetchNewGames = (): Promise<Game[]> =>
     fetchUrl(newGamesUrl(198)),
     fetchUrl(newGamesUrl(297)),
   ])
-    .then(R.flatten)
-    .then(R.filter(R.propEq('preOrder', false)) as never)
+    .then((arrs) => arrs.flat())
+    .then((arr) => arr.filter((g) => g.preOrder === false))
     .then((games: Game[]) => sortGames('desc', games))
 
 export const fetchUpcomingGames = (): Promise<Game[]> =>
@@ -115,7 +147,7 @@ export const fetchPlusGames = (): Promise<Game[]> =>
 
 export const searchGames = (searchString: string): Promise<Game[]> =>
   fetchUrl(searchGamesUrl(searchString)).then((games) =>
-    sortGames('desc', games)
+    sortGames('desc', games),
   )
 
 export const fetchGame = (gameId: string): Promise<Game[]> =>

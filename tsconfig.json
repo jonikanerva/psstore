@@ -3,8 +3,9 @@
   "compilerOptions": {
     "baseUrl": "./src",
     "esModuleInterop": true,
-    "jsx": "react",
-    "module": "commonjs",
+    "jsx": "react-jsx",
+    "module": "esnext",
+    "moduleResolution": "bundler",
     "noEmit": true,
     "noFallthroughCasesInSwitch": true,
     "noImplicitReturns": true,
@@ -19,8 +20,7 @@
     "rootDir": ".",
     "sourceMap": true,
     "strict": true,
-    "target": "es6",
-    "typeRoots": ["node_modules/@types"],
-    "types": ["node"]
+    "target": "es2020",
+    "types": ["vite/client", "node", "react", "react-dom"]
   }
 }

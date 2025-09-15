@@ -1,6 +1,6 @@
 import { DateTime } from 'luxon'
 import * as R from 'ramda'
-import React, { useEffect, useState, Fragment } from 'react'
+import { useEffect, useState, Fragment } from 'react'
 import { fetchGame, Game, searchLink } from '../modules/psnStore'
 import Image from './Image'
 import ScrollToTopOnMount from './ScrollToTopOnMount'
@@ -26,7 +26,7 @@ const Images = ({
 }: {
   screenshots: string[]
   name: string
-}): JSX.Element => (
+}) => (
   <Fragment>
     {screenshots.map((screenshot: string, i: number) => (
       <div key={i} className="screenshots--tile">
@@ -36,7 +36,7 @@ const Images = ({
   </Fragment>
 )
 
-const Videos = ({ videos }: { videos: string[] }): JSX.Element => (
+const Videos = ({ videos }: { videos: string[] }) => (
   <Fragment>
     {videos.map((video: string, i: number) => (
       <div key={i} className="screenshots--tile">
@@ -46,7 +46,7 @@ const Videos = ({ videos }: { videos: string[] }): JSX.Element => (
   </Fragment>
 )
 
-const Screenshots = ({ gameId }: ScreenshotsProps): JSX.Element => {
+const Screenshots = ({ gameId }: ScreenshotsProps) => {
   const [game, setGame] = useState<Game>()
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<boolean>(false)

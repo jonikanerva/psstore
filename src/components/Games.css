@@ -1,8 +1,5 @@
 .games--content {
-  padding-top: 65px;
-  padding-left: 15px;
-  padding-right: 15px;
-  padding-bottom: 35px;
+  padding: 65px 15px 35px;
   display: flex;
   flex-wrap: wrap;
   justify-content: left;
@@ -10,17 +7,17 @@
 }
 
 .games--selected {
-  border: 2px solid rgb(255, 0, 0);
+  border: 2px solid rgb(255 0 0);
 }
 
-.games--filterNavi {
+.games--filter-navi {
   display: flex;
   flex-wrap: wrap;
   margin-top: 10px;
   margin-bottom: -30px;
 }
 
-.games--filterName {
+.games--filter-name {
   background-color: #94bcdf;
   border-radius: 10px;
   color: #2e2b2b;

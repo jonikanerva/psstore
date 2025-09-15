@@ -1,4 +1,3 @@
-import React from 'react'
 import VisibilityObserver, {
   useVisibilityObserver,
 } from 'react-visibility-observer'
@@ -9,7 +8,7 @@ interface ImageProps {
   name: string
 }
 
-const ImageSrc = ({ url, name }: ImageProps): JSX.Element => {
+const ImageSrc = ({ url, name }: ImageProps) => {
   const { isVisible } = useVisibilityObserver()
 
   return (
@@ -17,7 +16,7 @@ const ImageSrc = ({ url, name }: ImageProps): JSX.Element => {
   )
 }
 
-const Image = ({ url, name }: ImageProps): JSX.Element => (
+const Image = ({ url, name }: ImageProps) => (
   <VisibilityObserver rootMargin="200px 200px 200px 200px" triggerOnce={true}>
     <ImageSrc url={url} name={name} />
   </VisibilityObserver>

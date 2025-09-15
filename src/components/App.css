@@ -1,21 +1,24 @@
 * {
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
   box-sizing: border-box;
   padding: 0;
   margin: 0;
 }
 
 :root {
-  --main-color: rgb(0, 0, 0);
-  --main-border-color: rgb(216, 216, 216);
-  --main-bg-color: rgba(255, 255, 255, 0.95);
+  --main-color: rgb(0 0 0);
+  --main-border-color: rgb(216 216 216);
+  --main-bg-color: rgb(255 255 255 / 95%);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --main-color: rgb(255, 255, 255);
-    --main-border-color: rgb(48, 48, 48);
-    --main-bg-color: rgba(0, 0, 0, 0.95);
+    --main-color: rgb(255 255 255);
+    --main-border-color: rgb(48 48 48);
+    --main-bg-color: rgb(0 0 0 / 95%);
   }
 }
 

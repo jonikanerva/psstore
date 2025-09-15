@@ -1,4 +1,4 @@
-import React, { useState, useEffect, ChangeEvent } from 'react'
+import { useState, useEffect, ChangeEvent } from 'react'
 
 import './SearchField.css'
 
@@ -6,7 +6,7 @@ interface SearchFieldProps {
   searchString: string
 }
 
-const SearchField = ({ searchString }: SearchFieldProps): JSX.Element => {
+const SearchField = ({ searchString }: SearchFieldProps) => {
   const [value, setValue] = useState<string>()
 
   useEffect(() => setValue(searchString), [searchString])

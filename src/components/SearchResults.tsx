@@ -1,19 +1,17 @@
-import React, { Fragment } from 'react'
+import { Fragment } from 'react'
 import queryString from 'query-string'
-import * as R from 'ramda'
 import Games from './Games'
 import SearchField from './SearchField'
 import ScrollToTopOnMount from './ScrollToTopOnMount'
 import Navigation from './Navigation'
 import { searchGames, Game } from '../modules/psnStore'
-import { RouteComponentProps } from 'react-router-dom'
+import { useLocation } from 'react-router-dom'
 
-const SearchResults = (props: RouteComponentProps): JSX.Element => {
-  const searchString: string = R.propOr(
-    '',
-    'q',
-    queryString.parse(props.location.search)
-  )
+const SearchResults = () => {
+  const location = useLocation()
+  const parsed = queryString.parse(location.search)
+  const q = (parsed as Record<string, unknown>).q
+  const searchString: string = typeof q === 'string' ? q : ''
   const fetch = (): Promise<Game[]> => searchGames(searchString)
 
   return (

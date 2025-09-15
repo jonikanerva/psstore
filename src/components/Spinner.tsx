@@ -1,7 +1,6 @@
-import React from 'react'
 import './Spinner.css'
 
-const Spinner = (): JSX.Element => (
+const Spinner = () => (
   <div className="spinner--modal">
     <div className="spinner" />
   </div>
@@ -11,7 +10,7 @@ interface LoadingProps {
   loading: boolean
 }
 
-const Loading = ({ loading }: LoadingProps): JSX.Element | null =>
+const Loading = ({ loading }: LoadingProps) =>
   loading === false ? null : <Spinner />
 
 export default Loading
