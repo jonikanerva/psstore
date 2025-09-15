@@ -1,24 +1,67 @@
 import * as R from 'ramda'
 
-const newGamesUrl = (start: number): string =>
-  `https://store.playstation.com/valkyrie-api/en/FI/19/container/STORE-MSF75508-FULLGAMES?sort=release_date&direction=desc&platform=ps4&game_content_type=games%2Cbundles&size=99&bucket=games&start=${start}`
+// GraphQL endpoint proxied by Nginx/Vite
+const GRAPHQL_ENDPOINT = '/ps-gql'
+// Persisted query hash for categoryGridRetrieve
+const CATEGORY_GRID_HASH =
+  '757de84ff8efb4aeaa78f4faf51bd610bce94a3fcb248ba158916cb88c5cdb7c'
 
-const upcomingGamesUrl =
-  'https://store.playstation.com/valkyrie-api/en/FI/19/container/STORE-MSF75508-COMINGSOON?sort=release_date&direction=desc&size=100&bucket=games&start=0'
+// Category ID for New Games grid (EU). Used as base feed.
+const CATEGORY_NEW_GAMES_ID = '12a53448-199e-459b-956d-074feeed2d7d'
 
-const discountGamesUrl = (start: number): string =>
-  `https://store.playstation.com/valkyrie-api/en/FI/19/container/STORE-MSF75508-PRICEDROPSCHI?sort=release_date&direction=desc&platform=ps4&game_content_type=games%2Cbundles&size=99&bucket=games&start=${start}`
+type ProductMedia = { url?: string; role?: string; type?: string }
+interface ProductPrice {
+  basePrice?: string
+  discountedPrice?: string
+  discountText?: string | null
+}
+interface Product {
+  id?: string
+  name?: string
+  releaseDate?: string
+  media?: ProductMedia[]
+  price?: ProductPrice
+  genres?: string[]
+  providerName?: string
+}
 
-const plusGamesUrl =
-  'https://store.playstation.com/valkyrie-api/en/FI/19/container/STORE-MSF75508-PLUSINSTANTGAME?size=30&bucket=games&start=0'
+const fetchCategoryGrid = async (options: {
+  categoryId?: string
+  size?: number
+  offset?: number
+  sortBy?: { name: string; isAscending: boolean }
+}): Promise<Product[]> => {
+  const { categoryId = CATEGORY_NEW_GAMES_ID, size = 200, offset = 0 } = options
+  const sortBy = options.sortBy ?? {
+    name: 'productReleaseDate',
+    isAscending: false,
+  }
 
-const gameUrl = (gameId: string): string =>
-  `https://store.playstation.com/valkyrie-api/en/FI/999/resolve/${gameId}`
+  const variables = {
+    id: categoryId,
+    pageArgs: { size, offset },
+    sortBy,
+    facetOptions: [],
+  }
 
-const searchGamesUrl = (string: string): string =>
-  `https://store.playstation.com/valkyrie-api/en/FI/999/bucket-search/${encodeURIComponent(
-    string,
-  )}?size=50&bucket=games`
+  const url = `${GRAPHQL_ENDPOINT}?&variables=${encodeURIComponent(
+    JSON.stringify(variables),
+  )}&extensions=${encodeURIComponent(
+    JSON.stringify({
+      persistedQuery: { version: 1, sha256Hash: CATEGORY_GRID_HASH },
+    }),
+  )}`
+
+  const res = await fetch(url, {
+    headers: { 'x-apollo-operation-name': 'categoryGridRetrieve' },
+  })
+  const json = await res.json()
+  return R.pathOr(
+    [],
+    ['data', 'categoryGridRetrieve', 'products'],
+    json,
+  ) as Product[]
+}
 
 export const searchLink = (string: string): string =>
   `https://www.metacritic.com/search/game/${encodeURI(
@@ -40,60 +83,43 @@ export interface Game {
   preOrder: boolean
 }
 
-// Minimal API response types
-type ApiMedia = { url?: string }
-type ApiSku = {
-  'is-preorder'?: boolean
-  prices?: {
-    'plus-user'?: {
-      'actual-price'?: { display?: string }
-      availability?: { 'start-date'?: string }
-    }
-  }
-}
-type ApiAttributes = {
-  name?: string
-  'release-date'?: string
-  'thumbnail-url-base'?: string
-  'media-list'?: {
-    screenshots?: ApiMedia[]
-    preview?: ApiMedia[]
-  }
-  skus?: ApiSku[]
-  genres?: string[]
-  'long-description'?: string
-  'provider-name'?: string
-}
-type ApiIncluded = {
-  type?: string
-  id?: string
-  attributes?: ApiAttributes
-}
-type ApiResponse = { included?: ApiIncluded[] }
-
-const createGameObject = (game: ApiIncluded): Game => {
-  const attributes: ApiAttributes = game.attributes || {}
-  const plusUser = attributes.skus?.[0]?.prices?.['plus-user']
-  const images = attributes['media-list']?.screenshots || []
-  const previews = attributes['media-list']?.preview || []
+const createGameObjectFromGql = (product: Product): Game => {
   const defaultTime = '1975-01-01T00:00:00Z'
+  const media = (R.propOr([], 'media', product) as ProductMedia[]) || []
+  const screenshots = media
+    .filter(
+      (m) =>
+        m?.type === 'IMAGE' &&
+        (m?.role === 'SCREENSHOT' || m?.role === 'MASTER'),
+    )
+    .map((m) => m.url || '')
 
-  const ob: Game = {
-    name: attributes.name || '',
-    date: attributes['release-date'] || '',
-    url: attributes['thumbnail-url-base'] || '',
-    id: game.id || '',
-    price: plusUser?.['actual-price']?.display || '',
-    discountDate: plusUser?.availability?.['start-date'] || defaultTime,
-    screenshots: images.map((m) => m.url || '').filter(Boolean) as string[],
-    videos: previews.map((m) => m.url || '').filter(Boolean) as string[],
-    genres: attributes.genres || [],
-    description: attributes['long-description'] || '',
-    studio: attributes['provider-name'] || '',
-    preOrder: Boolean(attributes.skus?.[0]?.['is-preorder']) || false,
+  const price = (R.propOr({}, 'price', product) as ProductPrice) || {}
+  const basePrice = price.basePrice || ''
+  const discountedPrice = price.discountedPrice || ''
+  const discountText = price.discountText
+
+  const releaseDate: string =
+    (R.propOr('', 'releaseDate', product) as string) || ''
+  const preOrder = (() => {
+    const d = Date.parse(releaseDate)
+    return Number.isFinite(d) ? d > Date.now() : false
+  })()
+
+  return {
+    name: (R.propOr('', 'name', product) as string) || '',
+    date: releaseDate,
+    url: (screenshots[0] as string) || '',
+    id: (R.propOr('', 'id', product) as string) || '',
+    price: String(discountedPrice || basePrice || ''),
+    discountDate: discountText ? releaseDate || defaultTime : defaultTime,
+    screenshots,
+    videos: [],
+    genres: (R.propOr([], 'genres', product) as string[]) || [],
+    description: '',
+    studio: (R.propOr('', 'providerName', product) as string) || '',
+    preOrder,
   }
-
-  return ob
 }
 
 const sortGames = (sort: string, games: Game[]): Game[] => {
@@ -110,45 +136,45 @@ const sortGames = (sort: string, games: Game[]): Game[] => {
   }
 }
 
-const fetchUrl = async (url: string): Promise<Game[]> => {
-  const res = await fetch(url)
-  const json = (await res.json()) as ApiResponse
-  const included = json.included || []
-  const games = included.filter((i) => i && i.type === 'game')
-  return games.map(createGameObject)
+const fetchCategoryAsGames = async (): Promise<Game[]> => {
+  const products = await fetchCategoryGrid({ size: 300, offset: 0 })
+  return (products as Product[]).map(createGameObjectFromGql)
 }
 
-export const fetchNewGames = (): Promise<Game[]> =>
-  Promise.all([
-    fetchUrl(newGamesUrl(0)),
-    fetchUrl(newGamesUrl(99)),
-    fetchUrl(newGamesUrl(198)),
-    fetchUrl(newGamesUrl(297)),
-  ])
-    .then((arrs) => arrs.flat())
-    .then((arr) => arr.filter((g) => g.preOrder === false))
-    .then((games: Game[]) => sortGames('desc', games))
+export const fetchNewGames = async (): Promise<Game[]> => {
+  const games = await fetchCategoryAsGames()
+  const released = games.filter((g) => !g.preOrder)
+  return sortGames('desc', released)
+}
 
-export const fetchUpcomingGames = (): Promise<Game[]> =>
-  fetchUrl(upcomingGamesUrl).then((games) => sortGames('asc', games))
+export const fetchUpcomingGames = async (): Promise<Game[]> => {
+  const games = await fetchCategoryAsGames()
+  const upcoming = games.filter((g) => g.preOrder)
+  return sortGames('asc', upcoming)
+}
 
-export const fetchDiscountedGames = (): Promise<Game[]> =>
-  Promise.all([
-    fetchUrl(discountGamesUrl(0)),
-    fetchUrl(discountGamesUrl(99)),
-    fetchUrl(discountGamesUrl(198)),
-    fetchUrl(discountGamesUrl(297)),
-  ])
-    .then(R.flatten)
-    .then((games) => sortGames('discounted', games))
-
-export const fetchPlusGames = (): Promise<Game[]> =>
-  fetchUrl(plusGamesUrl).then((games) => sortGames('desc', games))
-
-export const searchGames = (searchString: string): Promise<Game[]> =>
-  fetchUrl(searchGamesUrl(searchString)).then((games) =>
-    sortGames('desc', games),
+export const fetchDiscountedGames = async (): Promise<Game[]> => {
+  const games = await fetchCategoryAsGames()
+  const discounted = games.filter(
+    (g) => g.discountDate !== '1975-01-01T00:00:00Z',
   )
+  return sortGames('discounted', discounted)
+}
 
-export const fetchGame = (gameId: string): Promise<Game[]> =>
-  fetchUrl(gameUrl(gameId))
+export const fetchPlusGames = async (): Promise<Game[]> => {
+  const games = await fetchCategoryAsGames()
+  const plus = games.filter((g) => /plus|ps\s*plus/i.test(g.studio || ''))
+  return sortGames('desc', plus)
+}
+
+export const searchGames = async (searchString: string): Promise<Game[]> => {
+  const games = await fetchCategoryAsGames()
+  const q = (searchString || '').toLowerCase()
+  const filtered = games.filter((g) => g.name.toLowerCase().includes(q))
+  return sortGames('desc', filtered)
+}
+
+export const fetchGame = async (gameId: string): Promise<Game[]> => {
+  const games = await fetchCategoryAsGames()
+  return games.filter((g) => g.id === gameId)
+}

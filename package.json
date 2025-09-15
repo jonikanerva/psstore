@@ -17,9 +17,9 @@
     "format": "run-s format:ts format:other",
     "format:ts": "prettier --parser typescript --config package.json '**/*.{ts,tsx}' --write",
     "format:other": "prettier '**/*.json' '**/*.css' --write",
-    "docker:build": "docker build -t docker.pkg.github.com/jonikanerva/dok8s/psstore:latest .",
-    "docker:push": "docker push docker.pkg.github.com/jonikanerva/dok8s/psstore:latest",
-    "deploy": "run-s build docker:build docker:push"
+    "docker:build": "yarn build && docker build -t docker.pkg.github.com/jonikanerva/dok8s/psstore:latest .",
+    "docker:run": "docker run --rm -p 8080:80 docker.pkg.github.com/jonikanerva/dok8s/psstore:latest",
+    "docker:push": "docker push docker.pkg.github.com/jonikanerva/dok8s/psstore:latest"
   },
   "engines": {
     "node": "22.18.0"
