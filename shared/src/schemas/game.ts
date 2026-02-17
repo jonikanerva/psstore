@@ -6,6 +6,8 @@ export const gameSchema = z.object({
   date: z.string(),
   url: z.string(),
   price: z.string(),
+  originalPrice: z.string(),
+  discountText: z.string(),
   discountDate: z.string(),
   screenshots: z.array(z.string()),
   videos: z.array(z.string()),

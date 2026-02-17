@@ -82,6 +82,8 @@ export const conceptToGame = (concept: Concept): Game => {
     date: releaseDate,
     url: cover,
     price: String(concept.price?.discountedPrice || concept.price?.basePrice || ''),
+    originalPrice: discounted ? String(concept.price?.basePrice || '') : '',
+    discountText: discounted ? String(concept.price?.discountText || '') : '',
     discountDate: discounted && hasReleaseDate ? releaseDate : DEFAULT_DISCOUNT_DATE,
     screenshots,
     videos,

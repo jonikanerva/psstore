@@ -10,6 +10,8 @@ const baseGame: Game = {
   date: '2025-06-15T00:00:00Z',
   url: 'https://example.com/cover.png',
   price: '49,99 €',
+  originalPrice: '',
+  discountText: '',
   discountDate: '1975-01-01T00:00:00Z',
   screenshots: ['https://example.com/ss1.png'],
   videos: ['https://example.com/vid1.mp4'],

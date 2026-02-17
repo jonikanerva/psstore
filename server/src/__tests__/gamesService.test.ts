@@ -190,6 +190,36 @@ describe('gamesService', () => {
     expect(results.map((game) => game.name)).toEqual(['future-soon', 'future-late'])
   })
 
+  it('maps discount fields from concept price', async () => {
+    fetchConceptsByFeature.mockImplementation(async (feature: string) => {
+      if (feature !== 'new') return []
+      return [
+        makeConcept('full-price'),
+        makeConcept('on-sale', {
+          price: {
+            basePrice: '€59,99',
+            discountedPrice: '€39,99',
+            discountText: '-33%',
+            serviceBranding: ['NONE'],
+            upsellServiceBranding: ['NONE'],
+          },
+        }),
+      ]
+    })
+
+    const svc = await import('../services/gamesService.js')
+    const games = await svc.getNewGames()
+
+    const fullPrice = games.find((g) => g.name === 'full-price')
+    expect(fullPrice?.originalPrice).toBe('')
+    expect(fullPrice?.discountText).toBe('')
+
+    const onSale = games.find((g) => g.name === 'on-sale')
+    expect(onSale?.originalPrice).toBe('€59,99')
+    expect(onSale?.discountText).toBe('-33%')
+    expect(onSale?.price).toBe('€39,99')
+  })
+
   it('discounted returns all released games from deals feed in descending order', async () => {
     fetchConceptsByFeature.mockImplementation(async (feature: string) => {
       if (feature === 'new') {
