@@ -44,6 +44,30 @@ describe('extractProductDetail', () => {
     expect(result.description).toBe('')
   })
 
+  it('extracts publisherName from product detail', () => {
+    const result = extractProductDetail({
+      data: {
+        productRetrieve: {
+          id: 'UP4139-PPSA27597_00-STELLARDELUXEPS5',
+          releaseDate: '2025-11-11T00:00:00Z',
+          genres: ['Strategy'],
+          longDescription: '<p>Grand strategy</p>',
+          publisherName: 'PARADOX GAMES INC',
+        },
+      },
+    })
+
+    expect(result.publisherName).toBe('PARADOX GAMES INC')
+  })
+
+  it('returns undefined publisherName when missing', () => {
+    const result = extractProductDetail({
+      data: { productRetrieve: { id: 'test' } },
+    })
+
+    expect(result.publisherName).toBeUndefined()
+  })
+
   it('falls back to description when longDescription is missing', () => {
     const result = extractProductDetail({
       data: {

@@ -83,6 +83,7 @@ export interface ProductDetailResult {
   releaseDate?: string
   genres: string[]
   description: string
+  publisherName?: string
 }
 
 export const extractProductDetail = (json: ProductRetrieveResponse): ProductDetailResult => {
@@ -92,8 +93,11 @@ export const extractProductDetail = (json: ProductRetrieveResponse): ProductDeta
     : undefined
   const genres = product?.genres ?? []
   const description = product?.longDescription ?? product?.description ?? ''
+  const publisherName = typeof product?.publisherName === 'string' && product.publisherName.length > 0
+    ? product.publisherName
+    : undefined
 
-  return { releaseDate, genres, description }
+  return { releaseDate, genres, description, publisherName }
 }
 
 export const fetchProductDetail = async (productId: string): Promise<ProductDetailResult> => {
