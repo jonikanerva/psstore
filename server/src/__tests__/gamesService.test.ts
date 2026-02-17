@@ -112,7 +112,7 @@ describe('gamesService', () => {
 
     expect(upcoming.length).toBe(0)
     expect(discounted.length).toBe(0)
-    expect(plus.length).toBeGreaterThan(0)
+    expect(plus.length).toBe(0)
   })
 
   it('excludes upcoming records with missing releaseDate', async () => {
@@ -188,6 +188,15 @@ describe('gamesService', () => {
     expect(results.every((game) => Number.isFinite(Date.parse(game.date)))).toBe(true)
     expect(results.every((game) => Date.parse(game.date) > Date.now())).toBe(true)
     expect(results.map((game) => game.name)).toEqual(['future-soon', 'future-late'])
+  })
+
+  it('listing endpoints do not call fetchProductReleaseDate', async () => {
+    const svc = await import('../services/gamesService.js')
+    await svc.getNewGames()
+    await svc.getUpcomingGames()
+    await svc.getDiscountedGames()
+    await svc.getPlusGames()
+    expect(fetchProductReleaseDate).not.toHaveBeenCalled()
   })
 
   it('maps discount fields from concept price', async () => {
