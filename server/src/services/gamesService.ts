@@ -30,6 +30,15 @@ const withCache = async <T>(key: string, resolve: () => Promise<T>): Promise<T> 
   return value
 }
 
+type SortOrder = 'date-desc' | 'date-asc'
+
+const sortByDate = (games: Game[], order: SortOrder): Game[] =>
+  [...games].sort((a, b) => {
+    const aTs = Date.parse(a.date)
+    const bTs = Date.parse(b.date)
+    return order === 'date-desc' ? bTs - aTs : aTs - bTs
+  })
+
 const paginate = (games: Game[], offset: number, size: number): PageResult => {
   const page = games.slice(offset, offset + size)
   const nextOffset = offset + size < games.length ? offset + size : null
@@ -118,25 +127,26 @@ const findGameInFeatureConcepts = async (
 
 const enrichedListing = async (
   gamesPromise: Promise<Game[]> | Game[],
+  order: SortOrder,
   offset: number,
   size: number,
 ): Promise<PageResult> => {
   const allGames = await gamesPromise
-  const enriched = await enrichGamesWithDates(allGames)
+  const enriched = sortByDate(await enrichGamesWithDates(allGames), order)
   return paginate(enriched, offset, size)
 }
 
 export const getNewGames = async (offset = 0, size = 60): Promise<PageResult> =>
-  enrichedListing(baseGames(), offset, size)
+  enrichedListing(baseGames(), 'date-desc', offset, size)
 
 export const getUpcomingGames = async (offset = 0, size = 60): Promise<PageResult> =>
-  enrichedListing(mapConceptsToGames(await featureConcepts('upcoming')), offset, size)
+  enrichedListing(mapConceptsToGames(await featureConcepts('upcoming')), 'date-asc', offset, size)
 
 export const getDiscountedGames = async (offset = 0, size = 60): Promise<PageResult> =>
-  enrichedListing(mapConceptsToGames(await featureConcepts('discounted')), offset, size)
+  enrichedListing(mapConceptsToGames(await featureConcepts('discounted')), 'date-desc', offset, size)
 
 export const getPlusGames = async (offset = 0, size = 60): Promise<PageResult> =>
-  enrichedListing(mapConceptsToGames(await featureConcepts('plus')), offset, size)
+  enrichedListing(mapConceptsToGames(await featureConcepts('plus')), 'date-desc', offset, size)
 
 const enrichGameWithDetail = async (game: Game): Promise<Game> => {
   try {

@@ -151,18 +151,47 @@ describe('gamesService', () => {
     expect(plus.length).toBe(0)
   })
 
-  it('preserves Sony API order', async () => {
-    const orderedConcepts = [
-      makeConcept('first'),
-      makeConcept('second'),
-      makeConcept('third'),
+  it('new/discounted/plus sort by date descending', async () => {
+    const concepts = [
+      makeConcept('old'),
+      makeConcept('new'),
+      makeConcept('mid'),
     ]
 
-    fetchConceptsByFeature.mockImplementation(async () => orderedConcepts)
+    fetchProductDetail.mockImplementation(async (productId: string) => ({
+      releaseDate: productId.includes('OLD') ? '2024-01-01T00:00:00Z'
+        : productId.includes('NEW') ? '2026-06-01T00:00:00Z'
+        : '2025-06-01T00:00:00Z',
+      genres: [],
+      description: '',
+    }))
+
+    fetchConceptsByFeature.mockImplementation(async () => concepts)
 
     const svc = await import('../services/gamesService.js')
     const { games } = await svc.getNewGames()
-    expect(games.map((g) => g.name)).toEqual(['first', 'second', 'third'])
+    expect(games.map((g) => g.name)).toEqual(['new', 'mid', 'old'])
+  })
+
+  it('upcoming sorts by date ascending', async () => {
+    const concepts = [
+      makeConcept('later'),
+      makeConcept('sooner'),
+    ]
+
+    fetchProductDetail.mockImplementation(async (productId: string) => ({
+      releaseDate: productId.includes('LATER') ? '2027-06-01T00:00:00Z' : '2026-06-01T00:00:00Z',
+      genres: [],
+      description: '',
+    }))
+
+    fetchConceptsByFeature.mockImplementation(async (feature: string) =>
+      feature === 'upcoming' ? concepts : [makeConcept('base')],
+    )
+
+    const svc = await import('../services/gamesService.js')
+    const { games } = await svc.getUpcomingGames()
+    expect(games.map((g) => g.name)).toEqual(['sooner', 'later'])
   })
 
   it('maps discount fields from concept price', async () => {
