@@ -28,6 +28,27 @@ npm run test
 npm run build
 ```
 
+## Sony Contract Tooling (Hardcoded Scope)
+
+Tooling scope is fixed and immutable:
+- region: `fi`
+- locale: `fi-fi`
+- currency: `EUR`
+- platform: `PS5`
+
+No sign-in is required.
+
+```bash
+# capture + normalize + validate + diff
+npm run sony:refresh
+
+# validate canonical manifest against backend assumptions
+npm run sony:validate
+
+# fail on drift in CI mode
+npm run sony:diff -- --ci
+```
+
 ## Production / Railway
 
 ```bash
@@ -53,6 +74,6 @@ Railway should run the Node server (`npm run start`). In production, Express ser
 
 ## Sony GraphQL Contract Update Workflow
 
-1. Inspect live PlayStation Store traffic for current GraphQL contract.
-2. Update server env values for operation/hash/endpoint as needed.
-3. Verify with `npm run test` and `npm run build`.
+1. Run `npm run sony:refresh` against the public fi-fi storefront.
+2. Keep only PS5/EUR relevant operations via built-in scope filtering.
+3. Verify with `npm run sony:validate` and `npm run sony:diff -- --ci`.

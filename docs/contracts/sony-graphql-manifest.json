@@ -1,0 +1,234 @@
+{
+  "version": 1,
+  "metadata": {
+    "captured_at": "2026-02-17T08:01:32.128Z",
+    "captured_by": "calmdonut",
+    "region": "fi",
+    "locale": "fi-fi",
+    "currency": "EUR",
+    "target_platform": "PS5",
+    "playwright_profile": "default"
+  },
+  "endpoint": {
+    "url": "https://web.np.playstation.com/api/graphql/v1/op",
+    "method": "GET"
+  },
+  "operations": [
+    {
+      "feature": "details",
+      "operation_name": "categoryGridRetrieve",
+      "persisted_query_hash": "257713466fc3264850aa473409a29088e3a4115e6e69e9fb3e061c8dd5b9f5c6",
+      "required_headers": [
+        "x-apollo-operation-name"
+      ],
+      "variables_schema": {
+        "facetOptions": [],
+        "filterBy": [
+          "string"
+        ],
+        "id": "string",
+        "pageArgs": {
+          "offset": "number",
+          "size": "number"
+        },
+        "sortBy": "null"
+      },
+      "sample_variables": {
+        "id": "d0446d4b-dc9a-4f1e-86ec-651f099c9b29",
+        "pageArgs": {
+          "size": 24,
+          "offset": 0
+        },
+        "sortBy": null,
+        "filterBy": [
+          "targetPlatforms:PS5"
+        ],
+        "facetOptions": []
+      },
+      "response_path": "data.categoryGridRetrieve.products",
+      "observed_status_codes": [
+        200
+      ]
+    },
+    {
+      "feature": "discounted",
+      "operation_name": "categoryGridRetrieve",
+      "persisted_query_hash": "257713466fc3264850aa473409a29088e3a4115e6e69e9fb3e061c8dd5b9f5c6",
+      "required_headers": [
+        "x-apollo-operation-name"
+      ],
+      "variables_schema": {
+        "facetOptions": [],
+        "filterBy": [
+          "string"
+        ],
+        "id": "string",
+        "pageArgs": {
+          "offset": "number",
+          "size": "number"
+        },
+        "sortBy": "null"
+      },
+      "sample_variables": {
+        "id": "d0446d4b-dc9a-4f1e-86ec-651f099c9b29",
+        "pageArgs": {
+          "size": 24,
+          "offset": 0
+        },
+        "sortBy": null,
+        "filterBy": [
+          "targetPlatforms:PS5"
+        ],
+        "facetOptions": []
+      },
+      "response_path": "data.categoryGridRetrieve.products",
+      "observed_status_codes": [
+        200
+      ]
+    },
+    {
+      "feature": "new",
+      "operation_name": "categoryGridRetrieve",
+      "persisted_query_hash": "257713466fc3264850aa473409a29088e3a4115e6e69e9fb3e061c8dd5b9f5c6",
+      "required_headers": [
+        "x-apollo-operation-name"
+      ],
+      "variables_schema": {
+        "facetOptions": [],
+        "filterBy": [
+          "string"
+        ],
+        "id": "string",
+        "pageArgs": {
+          "offset": "number",
+          "size": "number"
+        },
+        "sortBy": "null"
+      },
+      "sample_variables": {
+        "id": "d0446d4b-dc9a-4f1e-86ec-651f099c9b29",
+        "pageArgs": {
+          "size": 24,
+          "offset": 0
+        },
+        "sortBy": null,
+        "filterBy": [
+          "targetPlatforms:PS5"
+        ],
+        "facetOptions": []
+      },
+      "response_path": "data.categoryGridRetrieve.products",
+      "observed_status_codes": [
+        200
+      ]
+    },
+    {
+      "feature": "plus",
+      "operation_name": "categoryGridRetrieve",
+      "persisted_query_hash": "257713466fc3264850aa473409a29088e3a4115e6e69e9fb3e061c8dd5b9f5c6",
+      "required_headers": [
+        "x-apollo-operation-name"
+      ],
+      "variables_schema": {
+        "facetOptions": [],
+        "filterBy": [
+          "string"
+        ],
+        "id": "string",
+        "pageArgs": {
+          "offset": "number",
+          "size": "number"
+        },
+        "sortBy": "null"
+      },
+      "sample_variables": {
+        "id": "d0446d4b-dc9a-4f1e-86ec-651f099c9b29",
+        "pageArgs": {
+          "size": 24,
+          "offset": 0
+        },
+        "sortBy": null,
+        "filterBy": [
+          "targetPlatforms:PS5"
+        ],
+        "facetOptions": []
+      },
+      "response_path": "data.categoryGridRetrieve.products",
+      "observed_status_codes": [
+        200
+      ]
+    },
+    {
+      "feature": "search",
+      "operation_name": "categoryGridRetrieve",
+      "persisted_query_hash": "257713466fc3264850aa473409a29088e3a4115e6e69e9fb3e061c8dd5b9f5c6",
+      "required_headers": [
+        "x-apollo-operation-name"
+      ],
+      "variables_schema": {
+        "facetOptions": [],
+        "filterBy": [
+          "string"
+        ],
+        "id": "string",
+        "pageArgs": {
+          "offset": "number",
+          "size": "number"
+        },
+        "sortBy": "null"
+      },
+      "sample_variables": {
+        "id": "d0446d4b-dc9a-4f1e-86ec-651f099c9b29",
+        "pageArgs": {
+          "size": 24,
+          "offset": 0
+        },
+        "sortBy": null,
+        "filterBy": [
+          "targetPlatforms:PS5"
+        ],
+        "facetOptions": []
+      },
+      "response_path": "data.categoryGridRetrieve.products",
+      "observed_status_codes": [
+        200
+      ]
+    },
+    {
+      "feature": "upcoming",
+      "operation_name": "categoryGridRetrieve",
+      "persisted_query_hash": "257713466fc3264850aa473409a29088e3a4115e6e69e9fb3e061c8dd5b9f5c6",
+      "required_headers": [
+        "x-apollo-operation-name"
+      ],
+      "variables_schema": {
+        "facetOptions": [],
+        "filterBy": [
+          "string"
+        ],
+        "id": "string",
+        "pageArgs": {
+          "offset": "number",
+          "size": "number"
+        },
+        "sortBy": "null"
+      },
+      "sample_variables": {
+        "id": "d0446d4b-dc9a-4f1e-86ec-651f099c9b29",
+        "pageArgs": {
+          "size": 24,
+          "offset": 0
+        },
+        "sortBy": null,
+        "filterBy": [
+          "targetPlatforms:PS5"
+        ],
+        "facetOptions": []
+      },
+      "response_path": "data.categoryGridRetrieve.products",
+      "observed_status_codes": [
+        200
+      ]
+    }
+  ]
+}

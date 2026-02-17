@@ -5,16 +5,23 @@
   "workspaces": [
     "client",
     "server",
-    "shared"
+    "shared",
+    "tools/*"
   ],
   "scripts": {
     "dev": "concurrently \"npm run dev -w server\" \"npm run dev -w client\"",
-    "lint": "npm run lint -w shared && npm run lint -w server && npm run lint -w client",
-    "typecheck": "npm run build -w shared && npm run typecheck -w server && npm run typecheck -w client",
-    "test": "npm run test -w shared && npm run test -w server && npm run test -w client",
-    "build": "npm run clean && npm run build -w shared && npm run build -w client && npm run build -w server",
-    "clean": "rm -rf build client/build server/dist shared/dist",
-    "start": "npm run start -w server"
+    "lint": "npm run lint -w shared && npm run lint -w server && npm run lint -w client && npm run lint -w @psstore/sony-contract-bot",
+    "typecheck": "npm run build -w shared && npm run typecheck -w server && npm run typecheck -w client && npm run typecheck -w @psstore/sony-contract-bot",
+    "test": "npm run test -w shared && npm run test -w server && npm run test -w client && npm run test -w @psstore/sony-contract-bot",
+    "build": "npm run clean && npm run build -w shared && npm run build -w client && npm run build -w server && npm run build -w @psstore/sony-contract-bot",
+    "clean": "rm -rf build client/build server/dist shared/dist tools/sony-contract-bot/dist",
+    "start": "npm run start -w server",
+    "sony": "npm run build -w @psstore/sony-contract-bot && node tools/sony-contract-bot/dist/cli.js",
+    "sony:capture": "npm run sony -- capture",
+    "sony:normalize": "npm run sony -- normalize",
+    "sony:validate": "npm run sony -- validate",
+    "sony:diff": "npm run sony -- diff",
+    "sony:refresh": "npm run sony -- refresh"
   },
   "engines": {
     "node": ">=22"
