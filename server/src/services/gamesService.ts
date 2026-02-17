@@ -133,3 +133,23 @@ export const getGameById = async (id: string): Promise<Game> => {
 
   throw new HttpError(404, 'GAME_NOT_FOUND', 'Game not found')
 }
+
+const RELEASE_DATE_TTL_MS = 6 * 60 * 60 * 1000
+
+export const getGameDate = async (id: string): Promise<string> => {
+  const cacheKey = `release-date:${id}`
+  const cached = cache.get<string>(cacheKey)
+  if (cached !== undefined) {
+    return cached
+  }
+
+  try {
+    const detail = await fetchProductDetail(id)
+    const date = detail.releaseDate ?? ''
+    cache.set(cacheKey, date, RELEASE_DATE_TTL_MS)
+    return date
+  } catch (error) {
+    console.warn(`Release date lookup failed for ${id}`, error)
+    return ''
+  }
+}

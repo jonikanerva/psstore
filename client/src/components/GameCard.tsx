@@ -9,9 +9,13 @@ interface GameCardProps {
 }
 
 const formatDate = (value: string): string => {
+  if (!value) {
+    return ''
+  }
+
   const parsed = DateTime.fromISO(value)
   if (!parsed.isValid) {
-    return 'Unknown'
+    return ''
   }
 
   return parsed.toLocaleString(DateTime.DATE_MED)
