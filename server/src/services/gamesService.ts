@@ -6,6 +6,7 @@ import {
   fetchConceptsByFeature,
   fetchSearchConcepts,
   fetchProductReleaseDate,
+  fetchProductDetail,
 } from '../sony/sonyClient.js'
 import { conceptToGame, defaultDiscountDate, isConceptDiscounted, isConceptPlus } from '../sony/mapper.js'
 import type { Concept } from '../sony/types.js'
@@ -265,31 +266,50 @@ export const searchGames = async (query: string): Promise<Game[]> => {
   return results
 }
 
+const enrichGameWithDetail = async (game: Game): Promise<Game> => {
+  try {
+    const detail = await fetchProductDetail(game.id)
+    return {
+      ...game,
+      date: detail.releaseDate ?? game.date,
+      genres: detail.genres.length > 0 ? detail.genres : game.genres,
+      description: detail.description || game.description,
+    }
+  } catch (error) {
+    console.warn(`Product detail enrichment failed for ${game.id}`, error)
+    return game
+  }
+}
+
 export const getGameById = async (id: string): Promise<Game> => {
   const cached = cache.get<Game>(detailCacheKey(id))
   if (cached) {
-    return gameSchema.parse(cached)
+    return gameSchema.parse(await enrichGameWithDetail(cached))
   }
 
   const games = await baseGames()
   const game = games.find((item) => item.id === id)
 
   if (game) {
-    return gameSchema.parse(game)
+    const enriched = await enrichGameWithDetail(game)
+    cache.set(detailCacheKey(enriched.id), enriched, DETAIL_TTL_MS)
+    return gameSchema.parse(enriched)
   }
 
   for (const feature of ['upcoming', 'discounted', 'plus'] as const) {
     const featureGame = await findGameInFeatureConcepts(feature, id)
     if (featureGame) {
-      cache.set(detailCacheKey(featureGame.id), featureGame, DETAIL_TTL_MS)
-      return gameSchema.parse(featureGame)
+      const enriched = await enrichGameWithDetail(featureGame)
+      cache.set(detailCacheKey(enriched.id), enriched, DETAIL_TTL_MS)
+      return gameSchema.parse(enriched)
     }
   }
 
   const searchGame = await findGameInSearchResults(id)
   if (searchGame) {
-    cache.set(detailCacheKey(searchGame.id), searchGame, DETAIL_TTL_MS)
-    return gameSchema.parse(searchGame)
+    const enriched = await enrichGameWithDetail(searchGame)
+    cache.set(detailCacheKey(enriched.id), enriched, DETAIL_TTL_MS)
+    return gameSchema.parse(enriched)
   }
 
   throw new HttpError(404, 'GAME_NOT_FOUND', 'Game not found')

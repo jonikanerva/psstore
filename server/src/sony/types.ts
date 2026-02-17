@@ -36,11 +36,17 @@ export interface CategoryGridRetrieveResponse {
   }
 }
 
+export interface ProductDetail {
+  id?: string
+  releaseDate?: string
+  publisherName?: string
+  genres?: string[]
+  description?: string
+  longDescription?: string
+}
+
 export interface ProductRetrieveResponse {
   data?: {
-    productRetrieve?: {
-      id?: string
-      releaseDate?: string
-    }
+    productRetrieve?: ProductDetail
   }
 }

@@ -3,11 +3,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const fetchConceptsByFeature = vi.fn()
 const fetchSearchConcepts = vi.fn()
 const fetchProductReleaseDate = vi.fn()
+const fetchProductDetail = vi.fn()
 
 vi.mock('../sony/sonyClient.js', () => ({
   fetchConceptsByFeature,
   fetchProductReleaseDate,
   fetchSearchConcepts,
+  fetchProductDetail,
 }))
 
 const makeConcept = (name: string, overrides: Record<string, unknown> = {}) => ({
@@ -43,6 +45,12 @@ beforeEach(() => {
   fetchConceptsByFeature.mockReset()
   fetchProductReleaseDate.mockReset()
   fetchSearchConcepts.mockReset()
+  fetchProductDetail.mockReset()
+  fetchProductDetail.mockImplementation(async (productId: string) => ({
+    releaseDate: productId.includes('future') ? '2099-01-01T00:00:00Z' : '2025-01-01T00:00:00Z',
+    genres: [],
+    description: '',
+  }))
 
   fetchConceptsByFeature.mockImplementation(async (feature: string) => {
     if (feature === 'new') return baseConcepts
