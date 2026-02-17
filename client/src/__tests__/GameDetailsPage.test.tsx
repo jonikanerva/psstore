@@ -21,7 +21,7 @@ const baseGame: Game = {
 
 vi.mock('../modules/psnStore', () => ({
   fetchGame: vi.fn(),
-  searchLink: (name: string) => `https://metacritic.com/search/${encodeURI(name)}`,
+  metacriticLink: (name: string) => `https://metacritic.com/search/${encodeURI(name)}`,
 }))
 
 describe('GameDetailsPage', () => {

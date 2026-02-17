@@ -1,14 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const fetchConceptsByFeature = vi.fn()
-const fetchSearchConcepts = vi.fn()
 const fetchProductReleaseDate = vi.fn()
 const fetchProductDetail = vi.fn()
 
 vi.mock('../sony/sonyClient.js', () => ({
   fetchConceptsByFeature,
   fetchProductReleaseDate,
-  fetchSearchConcepts,
   fetchProductDetail,
 }))
 
@@ -44,7 +42,6 @@ beforeEach(() => {
   vi.resetModules()
   fetchConceptsByFeature.mockReset()
   fetchProductReleaseDate.mockReset()
-  fetchSearchConcepts.mockReset()
   fetchProductDetail.mockReset()
   fetchProductDetail.mockImplementation(async (productId: string) => ({
     releaseDate: productId.includes('future') ? '2099-01-01T00:00:00Z' : '2025-01-01T00:00:00Z',
@@ -60,11 +57,6 @@ beforeEach(() => {
     return []
   })
 
-  fetchSearchConcepts.mockResolvedValue([
-    makeConcept('elden-ring', {
-      products: [{ id: 'elden-ring-product', releaseDate: '2025-01-01T00:00:00Z' }],
-    }),
-  ])
   fetchProductReleaseDate.mockImplementation(async (productId: string) =>
     productId.includes('future') ? '2099-01-01T00:00:00Z' : '2025-01-01T00:00:00Z',
   )
@@ -78,25 +70,6 @@ describe('gamesService', () => {
     await expect(svc.getUpcomingGames()).resolves.not.toHaveLength(0)
     await expect(svc.getDiscountedGames()).resolves.not.toHaveLength(0)
     await expect(svc.getPlusGames()).resolves.not.toHaveLength(0)
-  })
-
-  it('search uses graphql search and returns non-empty result', async () => {
-    const svc = await import('../services/gamesService.js')
-    const result = await svc.searchGames('elden')
-
-    expect(fetchSearchConcepts).toHaveBeenCalledWith('elden', 60)
-    expect(result.length).toBeGreaterThan(0)
-  })
-
-  it('resolves game detail for search result ids not present in base feed', async () => {
-    const svc = await import('../services/gamesService.js')
-    const results = await svc.searchGames('elden')
-
-    expect(results[0]?.id).toBe('elden-ring-product')
-    await expect(svc.getGameById('elden-ring-product')).resolves.toMatchObject({
-      id: 'elden-ring-product',
-      name: 'elden-ring',
-    })
   })
 
   it('resolves game detail for upcoming ids not present in base feed', async () => {
@@ -140,27 +113,6 @@ describe('gamesService', () => {
     expect(upcoming.length).toBe(0)
     expect(discounted.length).toBe(0)
     expect(plus.length).toBeGreaterThan(0)
-  })
-
-  it('returns strict empty result when graphql and base-name search have no matches', async () => {
-    fetchSearchConcepts.mockResolvedValue([])
-
-    const svc = await import('../services/gamesService.js')
-    const result = await svc.searchGames('does-not-exist')
-
-    expect(result).toHaveLength(0)
-    expect(fetchSearchConcepts).toHaveBeenCalledWith('does-not-exist', 60)
-  })
-
-  it('resolves search-only game detail without requiring warm search cache', async () => {
-    const svc = await import('../services/gamesService.js')
-
-    await expect(svc.getGameById('elden-ring-product')).resolves.toMatchObject({
-      id: 'elden-ring-product',
-      name: 'elden-ring',
-    })
-
-    expect(fetchSearchConcepts).toHaveBeenCalledWith('elden-ring-product', 60)
   })
 
   it('excludes upcoming records with missing releaseDate', async () => {

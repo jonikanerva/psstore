@@ -1,9 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { searchQuerySchema } from '../validation/schemas.js'
+import { gameIdParamSchema } from '../validation/schemas.js'
 
-describe('searchQuerySchema', () => {
-  it('rejects missing q', () => {
-    const result = searchQuerySchema.safeParse({})
+describe('gameIdParamSchema', () => {
+  it('rejects missing id', () => {
+    const result = gameIdParamSchema.safeParse({})
     expect(result.success).toBe(false)
+  })
+
+  it('accepts valid id', () => {
+    const result = gameIdParamSchema.safeParse({ id: 'EP0001-PPSA01234_00-TEST' })
+    expect(result.success).toBe(true)
   })
 })

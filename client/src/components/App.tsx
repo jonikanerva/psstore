@@ -13,7 +13,6 @@ import {
 import AppShell from './AppShell'
 import Details from './Details'
 import Games from './Games'
-import SearchResults from './SearchResults'
 import './App.css'
 
 const RedirectNew = () => <Navigate to="/new" replace />
@@ -33,7 +32,6 @@ const App = () => (
         />
         <Route path="/plus" element={<Games label="plus" fetch={fetchPlusGames} />} />
         <Route path="/g/:gameId" element={<Details />} />
-        <Route path="/search" element={<SearchResults />} />
         <Route path="*" element={<RedirectNew />} />
       </Route>
     </Routes>

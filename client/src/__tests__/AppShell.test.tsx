@@ -21,15 +21,4 @@ describe('AppShell', () => {
     expect(screen.getByRole('link', { name: 'Discounted' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Plus' })).toBeInTheDocument()
   })
-
-  it('renders the search form', () => {
-    render(
-      <MemoryRouter>
-        <AppShell />
-      </MemoryRouter>,
-    )
-
-    expect(screen.getByRole('searchbox', { name: 'Search games' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Search' })).toBeInTheDocument()
-  })
 })

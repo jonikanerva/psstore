@@ -28,10 +28,21 @@ export interface Concept {
   products?: ConceptProductRef[]
 }
 
+export interface CategoryGridProduct {
+  id?: string
+  name?: string
+  media?: Media[]
+  price?: ConceptPrice
+  platforms?: string[]
+  storeDisplayClassification?: string
+  npTitleId?: string
+}
+
 export interface CategoryGridRetrieveResponse {
   data?: {
     categoryGridRetrieve?: {
       concepts?: Concept[]
+      products?: CategoryGridProduct[]
     }
   }
 }

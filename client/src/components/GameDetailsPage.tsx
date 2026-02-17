@@ -1,7 +1,7 @@
 import DOMPurify from 'dompurify'
 import { DateTime } from 'luxon'
 import { useEffect, useState } from 'react'
-import { fetchGame, searchLink, type Game } from '../modules/psnStore'
+import { fetchGame, metacriticLink, type Game } from '../modules/psnStore'
 import Error from './Error'
 import Image from './Image'
 import Loading from './Spinner'
@@ -80,7 +80,7 @@ const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
             <a className="details-page--link" href={storeUrl(game.id)}>
               Open In Store
             </a>
-            <a className="details-page--link" href={searchLink(game.name)}>
+            <a className="details-page--link" href={metacriticLink(game.name)}>
               Metacritic
             </a>
           </div>

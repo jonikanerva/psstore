@@ -4,7 +4,6 @@ import { HttpError } from '../errors/httpError.js'
 import { env } from '../config/env.js'
 import {
   fetchConceptsByFeature,
-  fetchSearchConcepts,
   fetchProductReleaseDate,
   fetchProductDetail,
 } from '../sony/sonyClient.js'
@@ -140,15 +139,6 @@ const ensureNonEmpty = (primary: Game[], fallback: Game[], base: Game[]): Game[]
 
 const detailCacheKey = (id: string): string => `game-detail:${id}`
 
-const rememberGamesForDetail = (games: Game[]): void => {
-  for (const game of games) {
-    if (!game.id) {
-      continue
-    }
-    cache.set(detailCacheKey(game.id), game, DETAIL_TTL_MS)
-  }
-}
-
 const baseConcepts = async (): Promise<Concept[]> =>
   withCache('concepts-new', async () => fetchConceptsByFeature('new', LIST_PAGE_SIZE))
 
@@ -179,19 +169,6 @@ const findGameInFeatureConcepts = async (
 
   const games = await mapConceptsToGames(matchingConcepts)
   return games.find((game) => game.id === id) ?? null
-}
-
-const findGameInSearchResults = async (id: string): Promise<Game | null> => {
-  const matches = await withCache(`search-id-${id}`, async () => {
-    try {
-      return await mapConceptsToGames(await fetchSearchConcepts(id, 60))
-    } catch (error) {
-      console.warn(`Search lookup failed for detail id ${id}`, error)
-      return []
-    }
-  })
-
-  return matches.find((game) => game.id === id) ?? null
 }
 
 const logFilterStats = (route: string, candidates: number, result: number): void => {
@@ -241,31 +218,6 @@ export const getPlusGames = async (): Promise<Game[]> => {
   return ensureNonEmpty(primary, fallback, base)
 }
 
-export const searchGames = async (query: string): Promise<Game[]> => {
-  const base = await baseGames()
-  const normalized = query.trim().toLowerCase()
-
-  if (!normalized) {
-    const results = base.slice(0, MIN_ITEMS)
-    rememberGamesForDetail(results)
-    return results
-  }
-
-  const primary = await withCache(`search-${normalized}`, async () => {
-    try {
-      return await mapConceptsToGames(await fetchSearchConcepts(normalized, 60))
-    } catch (error) {
-      console.warn('Search query failed; using fallback results from base feed', error)
-      return []
-    }
-  })
-
-  const fallback = sortByDateDesc(base.filter((game) => game.name.toLowerCase().includes(normalized)))
-  const results = primary.length > 0 ? primary : fallback
-  rememberGamesForDetail(results)
-  return results
-}
-
 const enrichGameWithDetail = async (game: Game): Promise<Game> => {
   try {
     const detail = await fetchProductDetail(game.id)
@@ -303,13 +255,6 @@ export const getGameById = async (id: string): Promise<Game> => {
       cache.set(detailCacheKey(enriched.id), enriched, DETAIL_TTL_MS)
       return gameSchema.parse(enriched)
     }
-  }
-
-  const searchGame = await findGameInSearchResults(id)
-  if (searchGame) {
-    const enriched = await enrichGameWithDetail(searchGame)
-    cache.set(detailCacheKey(enriched.id), enriched, DETAIL_TTL_MS)
-    return gameSchema.parse(enriched)
   }
 
   throw new HttpError(404, 'GAME_NOT_FOUND', 'Game not found')

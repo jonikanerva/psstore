@@ -51,12 +51,3 @@
   outline: 2px solid var(--focus-color);
   outline-offset: 1px;
 }
-
-.games--search-empty {
-  max-width: 1320px;
-  margin: 0 auto;
-  border: 1px solid var(--border-color);
-  border-radius: 10px;
-  background: var(--surface-color);
-  padding: 16px;
-}

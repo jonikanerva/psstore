@@ -17,14 +17,12 @@ export const fetchUpcomingGames = async (): Promise<Game[]> =>
 export const fetchDiscountedGames = async (): Promise<Game[]> =>
   getJson('/api/games/discounted')
 export const fetchPlusGames = async (): Promise<Game[]> => getJson('/api/games/plus')
-export const searchGames = async (searchString: string): Promise<Game[]> =>
-  getJson(`/api/games/search?q=${encodeURIComponent(searchString)}`)
 export const fetchGame = async (gameId: string): Promise<Game> =>
   getJson(`/api/games/${encodeURIComponent(gameId)}`)
 
-export const searchLink = (string: string): string =>
+export const metacriticLink = (name: string): string =>
   `https://www.metacritic.com/search/game/${encodeURI(
-    string,
+    name,
   )}/results?plats%5B72496%5D=1&search_type=advanced&sort=recent`
 
 export type { Game }
