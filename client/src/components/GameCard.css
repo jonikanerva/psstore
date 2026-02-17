@@ -8,8 +8,15 @@
 }
 
 .game-card--image-wrap {
-  aspect-ratio: 3 / 4;
+  aspect-ratio: 1;
   background: var(--field-color);
+  overflow: hidden;
+}
+
+.game-card--image-wrap .image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .game-card--body {
@@ -35,7 +42,6 @@
   overflow: hidden;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
-  min-height: 30px;
 }
 
 .game-card--meta {

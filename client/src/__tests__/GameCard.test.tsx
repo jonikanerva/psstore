@@ -47,13 +47,13 @@ describe('GameCard', () => {
     expect(link).toHaveAttribute('href', `/g/${game.id}`)
   })
 
-  it('shows Unknown genre when genres are empty', () => {
+  it('hides genre line when genres are empty', () => {
     render(
       <MemoryRouter>
         <GameCard game={{ ...game, genres: [] }} />
       </MemoryRouter>,
     )
 
-    expect(screen.getByText('Unknown genre')).toBeInTheDocument()
+    expect(screen.queryByText('Unknown genre')).not.toBeInTheDocument()
   })
 })
