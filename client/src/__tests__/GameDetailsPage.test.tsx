@@ -85,9 +85,9 @@ describe('GameDetailsPage', () => {
     expect(screen.queryByText('Description')).not.toBeInTheDocument()
   })
 
-  it('renders screenshots section only when screenshots exist', async () => {
+  it('renders media section only when screenshots or videos exist', async () => {
     const { fetchGame } = await import('../modules/psnStore')
-    vi.mocked(fetchGame).mockResolvedValue({ ...baseGame, screenshots: [] })
+    vi.mocked(fetchGame).mockResolvedValue({ ...baseGame, screenshots: [], videos: [] })
 
     render(
       <MemoryRouter>
@@ -99,7 +99,7 @@ describe('GameDetailsPage', () => {
       expect(screen.getByText('Detail Game')).toBeInTheDocument()
     })
 
-    expect(screen.queryByText('Screenshots')).not.toBeInTheDocument()
+    expect(screen.queryByText('Media')).not.toBeInTheDocument()
   })
 
   it('shows error state on fetch failure', async () => {

@@ -29,8 +29,19 @@
   line-height: 1.2;
 }
 
-.details-page--meta {
+.details-page--meta-list {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  margin: 0;
+}
+
+.details-page--meta-list dt {
   color: var(--muted-text-color);
+}
+
+.details-page--meta-list dd {
+  margin: 0;
 }
 
 .details-page--actions {

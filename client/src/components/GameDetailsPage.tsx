@@ -72,10 +72,28 @@ const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
         </div>
         <div className="details-page--info">
           <h1 className="details-page--title">{game.name}</h1>
-          <div className="details-page--meta">{game.genres.join(', ') || 'Unknown genre'}</div>
-          <div className="details-page--meta">Price: {game.price || '-'}</div>
-          <div className="details-page--meta">Release: {formatDate(game.date)}</div>
-          <div className="details-page--meta">Studio: {game.studio || '-'}</div>
+          <dl className="details-page--meta-list">
+            {game.price && (
+              <>
+                <dt>Price</dt>
+                <dd>{game.price}</dd>
+              </>
+            )}
+            <dt>Release</dt>
+            <dd>{formatDate(game.date)}</dd>
+            {game.studio && (
+              <>
+                <dt>Publisher</dt>
+                <dd>{game.studio}</dd>
+              </>
+            )}
+            {game.genres.length > 0 && (
+              <>
+                <dt>Genre</dt>
+                <dd>{game.genres.join(', ')}</dd>
+              </>
+            )}
+          </dl>
           <div className="details-page--actions">
             <a className="details-page--link" href={storeUrl(game.id)}>
               Open In Store
@@ -87,30 +105,15 @@ const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
         </div>
       </section>
 
-      {hasDescription && (
+      {(hasScreenshots || hasVideos) && (
         <section className="details-page--section">
-          <h2>Description</h2>
-          <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(game.description) }} />
-        </section>
-      )}
-
-      {hasScreenshots && (
-        <section className="details-page--section">
-          <h2>Screenshots</h2>
+          <h2>Media</h2>
           <div className="details-page--media-grid">
             {game.screenshots.map((screenshot) => (
               <div key={screenshot} className="details-page--media-item">
                 <Image url={screenshot} name={game.name} />
               </div>
             ))}
-          </div>
-        </section>
-      )}
-
-      {hasVideos && (
-        <section className="details-page--section">
-          <h2>Videos</h2>
-          <div className="details-page--media-grid">
             {game.videos.map((video) => (
               <video
                 key={video}
@@ -122,6 +125,13 @@ const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
               />
             ))}
           </div>
+        </section>
+      )}
+
+      {hasDescription && (
+        <section className="details-page--section">
+          <h2>Description</h2>
+          <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(game.description) }} />
         </section>
       )}
     </article>
