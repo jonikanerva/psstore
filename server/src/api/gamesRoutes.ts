@@ -6,37 +6,41 @@ import {
   getPlusGames,
   getUpcomingGames,
 } from '../services/gamesService.js'
-import { gameIdParamSchema } from '../validation/schemas.js'
+import { gameIdParamSchema, paginationQuerySchema } from '../validation/schemas.js'
 
 export const gamesRouter = Router()
 
-gamesRouter.get('/new', async (_request, response, next) => {
+gamesRouter.get('/new', async (request, response, next) => {
   try {
-    response.json(await getNewGames())
+    const { offset, size } = paginationQuerySchema.parse(request.query)
+    response.json(await getNewGames(offset, size))
   } catch (error) {
     next(error)
   }
 })
 
-gamesRouter.get('/upcoming', async (_request, response, next) => {
+gamesRouter.get('/upcoming', async (request, response, next) => {
   try {
-    response.json(await getUpcomingGames())
+    const { offset, size } = paginationQuerySchema.parse(request.query)
+    response.json(await getUpcomingGames(offset, size))
   } catch (error) {
     next(error)
   }
 })
 
-gamesRouter.get('/discounted', async (_request, response, next) => {
+gamesRouter.get('/discounted', async (request, response, next) => {
   try {
-    response.json(await getDiscountedGames())
+    const { offset, size } = paginationQuerySchema.parse(request.query)
+    response.json(await getDiscountedGames(offset, size))
   } catch (error) {
     next(error)
   }
 })
 
-gamesRouter.get('/plus', async (_request, response, next) => {
+gamesRouter.get('/plus', async (request, response, next) => {
   try {
-    response.json(await getPlusGames())
+    const { offset, size } = paginationQuerySchema.parse(request.query)
+    response.json(await getPlusGames(offset, size))
   } catch (error) {
     next(error)
   }

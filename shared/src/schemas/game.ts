@@ -19,6 +19,12 @@ export const gameSchema = z.object({
 
 export const gamesSchema = z.array(gameSchema)
 
+export const pageResultSchema = z.object({
+  games: z.array(gameSchema),
+  totalCount: z.number(),
+  nextOffset: z.number().nullable(),
+})
+
 export const errorPayloadSchema = z.object({
   error: z.object({
     code: z.string(),
