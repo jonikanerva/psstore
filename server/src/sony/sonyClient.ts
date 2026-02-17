@@ -103,7 +103,6 @@ export const fetchProductDetail = async (productId: string): Promise<ProductDeta
       method: 'GET',
       headers: {
         Accept: 'application/json',
-        'content-type': 'application/json',
         'x-apollo-operation-name': productOperationName,
         'x-psn-store-locale-override': localeOverride,
       },
@@ -117,30 +116,7 @@ export const fetchProductDetail = async (productId: string): Promise<ProductDeta
 }
 
 export const fetchProductReleaseDate = async (productId: string): Promise<string | undefined> => {
-  const query = new URLSearchParams({
-    operationName: productOperationName,
-    variables: JSON.stringify({ productId }),
-    extensions: JSON.stringify({
-      persistedQuery: { version: 1, sha256Hash: productOperationHash },
-    }),
-  }).toString()
-
-  const response = await fetchWithRetry(
-    `${env.SONY_GRAPHQL_URL}?${query}`,
-    {
-      method: 'GET',
-      headers: {
-        Accept: 'application/json',
-        'content-type': 'application/json',
-        'x-apollo-operation-name': productOperationName,
-        'x-psn-store-locale-override': localeOverride,
-      },
-    },
-    env.SONY_TIMEOUT_MS,
-    env.SONY_RETRY_COUNT,
-  )
-
-  const json = (await response.json()) as ProductRetrieveResponse
-  return extractReleaseDateFromProductResponse(json)
+  const detail = await fetchProductDetail(productId)
+  return detail.releaseDate
 }
 

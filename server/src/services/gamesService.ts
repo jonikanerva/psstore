@@ -284,7 +284,7 @@ const enrichGameWithDetail = async (game: Game): Promise<Game> => {
 export const getGameById = async (id: string): Promise<Game> => {
   const cached = cache.get<Game>(detailCacheKey(id))
   if (cached) {
-    return gameSchema.parse(await enrichGameWithDetail(cached))
+    return gameSchema.parse(cached)
   }
 
   const games = await baseGames()
