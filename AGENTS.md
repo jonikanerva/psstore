@@ -2,48 +2,71 @@
 
 ## Project Structure & Module Organization
 
-- `src/` — React + TypeScript source. UI lives under `src/components/`; data access in `src/modules/psnStore.ts` (GraphQL).
-- `index.html` — Vite entry (root). Static assets under `public/` (e.g., `/favicon.png`).
-- `build/` — Production output from Vite (`outDir=build`).
-- `nginx.conf` and `nginx.dev.conf` — Nginx configs for prod and dev proxying.
-- `Dockerfile` — Nginx-based image serving the built SPA and proxying `/ps-gql`.
+- `client/` — Vite + React SPA.
+- `server/` — Express API (Railway runtime) and Sony GraphQL adapter.
+- `shared/` — shared TypeScript types, Zod schemas, and utility functions.
+- Client talks only to `/api/*`; Sony GraphQL requests must be server-side only.
+- Production client bundle output is `client/build`.
 
 ## Build, Test, and Development Commands
 
-- `yarn dev` — Start Vite dev server with `/ps-gql` proxied to PlayStation GraphQL.
-- `yarn build` — Lints, cleans, and produces a production bundle in `build/`.
-- `yarn preview` — Preview the production bundle locally.
-- `yarn docker:build` — Build app and Docker image `docker.pkg.github.com/jonikanerva/dok8s/psstore:latest`.
-- `yarn docker:run` — Run the image at `http://localhost:8080`.
-- `yarn docker:push` — Push the image to GitHub Packages.
+- `npm install` — Install workspace dependencies.
+- `npm run dev` — Run server and client in local development.
+- `npm run lint` — Run ESLint/Stylelint checks.
+- `npm run typecheck` — Run TypeScript checks.
+- `npm run test` — Run Vitest suites in all workspaces.
+- `npm run build` — Build shared, client (`client/build`), and server artifacts.
+- `npm run start` — Start production server (serves API + static client bundle).
 
-## Coding Style & Naming Conventions
+## Mandatory Quality Gates (Required Every Time)
 
-- TypeScript, strict mode; React 19 with the modern JSX runtime.
-- CSS: keep BEM-style class names, kebab-case (e.g., `games--filter-name`).
-- Use Prettier and ESLint/Stylelint:
-  - `yarn format` — Auto-format TS/CSS/JSON.
-  - `yarn lint` — Run ESLint, TypeScript, Stylelint, and Prettier checks.
+Agents must run **all** gates below after any code change and before presenting final changes, creating a commit, or opening a PR:
+
+1. `npm run lint`
+2. `npm run typecheck`
+3. `npm run test`
+4. `npm run build`
+
+Rules:
+- Do not skip any required gate, even for small edits.
+- If one command fails, fix it, rerun that command, then rerun the full gate sequence.
+- If environment issues block a gate, report the exact blocker and what was still verified.
+
+## Coding Style & Quality Expectations
+
+- TypeScript strict mode; avoid `any` and other catch-all types.
+- Prefer explicit parameter and return types for public functions.
+- Favor pure functions and immutable transformations where practical.
+- Keep fixes minimal and scoped; avoid unrelated refactors.
+- Reuse existing logic instead of duplicating behavior.
+- CSS classes follow existing BEM-like naming conventions (for example, `games--filter-name`).
 
 ## Testing Guidelines
 
-- No test suite is configured. If adding logic-heavy code, prefer lightweight unit tests (e.g., Vitest) colocated under `src/**/__tests__` and named `*.test.ts`.
-- Keep tests fast and deterministic; mock network calls.
+- Use Vitest for unit tests.
+- Add focused tests for changed behavior in `client/src/**/__tests__`, `server/src/**/__tests__`, or `shared/src/**/__tests__`.
+- Keep tests deterministic and mock external network behavior.
 
-## Commit & Pull Request Guidelines
+## Commit & Branch Guidelines
 
-- Commits: concise, imperative subject lines; scope where helpful (e.g., `feat(psn): migrate to gql grid`).
-- PRs: include a clear summary, linked issues, before/after screenshots for UI, and steps to verify (`yarn dev`, `yarn build`, Docker run instructions).
+- Never commit directly to `main`/`master`.
+- Use feature branches (prefer `codex/*` naming).
+- Keep commits logical and atomic; do not mix unrelated changes.
+- Commit messages should be concise and imperative.
 
-## Security & Configuration Tips
+## Security & Runtime Guidelines
 
-- All network calls go through `/ps-gql`; do not call upstream GraphQL directly from the browser.
-- Never commit secrets or tokens. Nginx proxies handle CORS and headers.
-- Validate external data defensively when mapping to internal types.
+- Do not call Sony GraphQL directly from browser code.
+- Validate external inputs and upstream payloads with Zod at server boundaries.
+- Never commit secrets or tokens.
+- Keep Railway runtime assumptions intact: server serves `/api/*` and SPA fallback from `client/build`.
 
-## Agent-Specific Instructions
+## Agent Reporting Format
 
-- Maintain Vite compatibility (no custom build shims). Do not change `outDir=build`.
-- Keep REST → GraphQL mapping isolated in `src/modules/psnStore.ts` and avoid UI churn.
-- When touching styles, preserve existing class names and variable usage.
-- Always verify any Codex-suggested changes by running `yarn build`.
+Final delivery updates should include:
+
+- `Scope:` changed files/modules
+- `Checks run:` exact commands
+- `Result:` pass/fail per command
+- `Fixes applied:` short list
+- `Open issues:` unresolved blockers only
