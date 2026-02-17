@@ -11,6 +11,7 @@ const envSchema = z.object({
     .string()
     .default('257713466fc3264850aa473409a29088e3a4115e6e69e9fb3e061c8dd5b9f5c6'),
   SONY_CATEGORY_ID: z.string().default('d0446d4b-dc9a-4f1e-86ec-651f099c9b29'),
+  SONY_DEALS_CATEGORY_ID: z.string().default('3f772501-f6f8-49b7-abac-874a88ca4897'),
   SONY_OPERATION_NAME: z.string().default('categoryGridRetrieve'),
   SONY_PRODUCT_OPERATION_NAME: z.string().default('metGetProductById'),
   SONY_PRODUCT_BY_ID_HASH: z

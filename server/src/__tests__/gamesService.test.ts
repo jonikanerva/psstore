@@ -230,7 +230,7 @@ describe('gamesService', () => {
     expect(results.map((game) => game.name)).toEqual(['future-soon', 'future-late'])
   })
 
-  it('discounted returns only discounted released games with valid dates in descending order', async () => {
+  it('discounted returns all released games from deals feed in descending order', async () => {
     fetchConceptsByFeature.mockImplementation(async (feature: string) => {
       if (feature === 'new') {
         return baseConcepts
@@ -240,45 +240,14 @@ describe('gamesService', () => {
       }
 
       return [
-        makeConcept('disc-recent', {
-          price: {
-            basePrice: '€29.95',
-            discountedPrice: '€19.95',
-            discountText: 'sale',
-            serviceBranding: ['NONE'],
-            upsellServiceBranding: ['NONE'],
-          },
+        makeConcept('deal-recent', {
           products: [{ id: 'd-r', releaseDate: '2026-02-01T00:00:00Z' }],
         }),
-        makeConcept('disc-old', {
-          price: {
-            basePrice: '€29.95',
-            discountedPrice: '€19.95',
-            discountText: 'sale',
-            serviceBranding: ['NONE'],
-            upsellServiceBranding: ['NONE'],
-          },
+        makeConcept('deal-old', {
           products: [{ id: 'd-o', releaseDate: '2025-02-01T00:00:00Z' }],
         }),
-        makeConcept('not-disc', {
-          price: {
-            basePrice: '€29.95',
-            discountedPrice: '€29.95',
-            discountText: null,
-            serviceBranding: ['NONE'],
-            upsellServiceBranding: ['NONE'],
-          },
-          products: [{ id: 'n-d', releaseDate: '2026-01-01T00:00:00Z' }],
-        }),
-        makeConcept('disc-no-date', {
-          price: {
-            basePrice: '€29.95',
-            discountedPrice: '€19.95',
-            discountText: 'sale',
-            serviceBranding: ['NONE'],
-            upsellServiceBranding: ['NONE'],
-          },
-          products: [{ id: 'd-u' }],
+        makeConcept('deal-future', {
+          products: [{ id: 'd-f', releaseDate: '2099-01-01T00:00:00Z' }],
         }),
       ]
     })
@@ -286,15 +255,14 @@ describe('gamesService', () => {
     fetchProductReleaseDate.mockImplementation(async (productId: string) => {
       if (productId === 'd-r') return '2026-02-01T00:00:00Z'
       if (productId === 'd-o') return '2025-02-01T00:00:00Z'
-      if (productId === 'n-d') return '2026-01-01T00:00:00Z'
-      return ''
+      if (productId === 'd-f') return '2099-01-01T00:00:00Z'
+      return '2025-01-01T00:00:00Z'
     })
 
     const svc = await import('../services/gamesService.js')
     const results = await svc.getDiscountedGames()
 
-    expect(results.every((game) => Number.isFinite(Date.parse(game.date)))).toBe(true)
     expect(results.every((game) => Date.parse(game.date) <= Date.now())).toBe(true)
-    expect(results.map((game) => game.name)).toEqual(['disc-recent', 'disc-old'])
+    expect(results.map((game) => game.name)).toEqual(['deal-recent', 'deal-old'])
   })
 })

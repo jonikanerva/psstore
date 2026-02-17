@@ -45,7 +45,8 @@ export const sonyStrategies: Record<SonyFeature, SonyQueryStrategy> = {
   })),
   discounted: strategy('discounted', 'discounted', (context) => ({
     ...baseVariables(context),
-    filterBy: ['targetPlatforms:PS5', 'pricePromotion:true'],
+    id: env.SONY_DEALS_CATEGORY_ID,
+    filterBy: ['targetPlatforms:PS5'],
   })),
   plus: strategy('plus', 'plus', (context) => ({
     ...baseVariables(context),

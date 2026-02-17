@@ -221,13 +221,9 @@ export const getUpcomingGames = async (): Promise<Game[]> => {
 export const getDiscountedGames = async (): Promise<Game[]> => {
   const now = Date.now()
   const primaryConcepts = await featureConcepts('discounted')
-  const discounted = await mapConceptsToGames(
-    primaryConcepts.filter((concept) => isConceptDiscounted(concept)),
-  )
-  const result = sortByDateDesc(
-    discounted.filter((game) => game.discountDate !== defaultDiscountDate && isReleased(game, now)),
-  )
-  logFilterStats('discounted', discounted.length, result.length)
+  const all = await mapConceptsToGames(primaryConcepts)
+  const result = sortByDateDesc(all.filter((game) => isReleased(game, now)))
+  logFilterStats('discounted', all.length, result.length)
   return result
 }
 
