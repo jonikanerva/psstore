@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const fetchConceptsByFeature = vi.fn()
-const fetchSearchConcepts = vi.fn()
+const fetchSearchGames = vi.fn()
 const fetchProductReleaseDate = vi.fn()
 
 vi.mock('../sony/sonyClient.js', () => ({
   fetchConceptsByFeature,
   fetchProductReleaseDate,
-  fetchSearchConcepts,
+  fetchSearchGames,
 }))
 
 const makeConcept = (name: string, overrides: Record<string, unknown> = {}) => ({
@@ -42,7 +42,7 @@ beforeEach(() => {
   vi.resetModules()
   fetchConceptsByFeature.mockReset()
   fetchProductReleaseDate.mockReset()
-  fetchSearchConcepts.mockReset()
+  fetchSearchGames.mockReset()
 
   fetchConceptsByFeature.mockImplementation(async (feature: string) => {
     if (feature === 'new') return baseConcepts
@@ -52,7 +52,22 @@ beforeEach(() => {
     return []
   })
 
-  fetchSearchConcepts.mockResolvedValue([makeConcept('elden-ring')])
+  fetchSearchGames.mockResolvedValue([
+    {
+      id: 'elden-ring-product',
+      name: 'Elden Ring',
+      date: '2025-01-01T00:00:00Z',
+      url: 'https://img/elden-ring',
+      price: '€69.95',
+      discountDate: '',
+      screenshots: ['https://img/elden-ring'],
+      videos: [],
+      genres: [],
+      description: '',
+      studio: '',
+      preOrder: false,
+    },
+  ])
   fetchProductReleaseDate.mockImplementation(async (productId: string) =>
     productId.includes('future') ? '2099-01-01T00:00:00Z' : '2025-01-01T00:00:00Z',
   )
@@ -72,7 +87,7 @@ describe('gamesService', () => {
     const svc = await import('../services/gamesService.js')
     const result = await svc.searchGames('elden')
 
-    expect(fetchSearchConcepts).toHaveBeenCalledWith('elden', 120)
+    expect(fetchSearchGames).toHaveBeenCalledWith('elden', 60)
     expect(result.length).toBeGreaterThan(0)
   })
 
@@ -92,14 +107,14 @@ describe('gamesService', () => {
     expect(plus.length).toBeGreaterThan(0)
   })
 
-  it('falls back to category paging search when primary search has no matches', async () => {
-    fetchSearchConcepts.mockResolvedValue([])
+  it('falls back to base-feed filtering when fast search has no matches', async () => {
+    fetchSearchGames.mockResolvedValue([])
 
     const svc = await import('../services/gamesService.js')
     const result = await svc.searchGames('alpha')
 
     expect(result.length).toBeGreaterThan(0)
-    expect(fetchConceptsByFeature).toHaveBeenCalledWith('new', 120, 0)
+    expect(fetchSearchGames).toHaveBeenCalledWith('alpha', 60)
   })
 
   it('excludes upcoming records with missing releaseDate', async () => {

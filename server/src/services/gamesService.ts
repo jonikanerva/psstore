@@ -4,8 +4,8 @@ import { HttpError } from '../errors/httpError.js'
 import { env } from '../config/env.js'
 import {
   fetchConceptsByFeature,
+  fetchSearchGames,
   fetchProductReleaseDate,
-  fetchSearchConcepts,
 } from '../sony/sonyClient.js'
 import { conceptToGame, defaultDiscountDate, isConceptDiscounted, isConceptPlus } from '../sony/mapper.js'
 import type { Concept } from '../sony/types.js'
@@ -13,8 +13,6 @@ import type { Concept } from '../sony/types.js'
 const cache = new MemoryCache()
 const MIN_ITEMS = 24
 const LIST_PAGE_SIZE = 120
-const SEARCH_PAGE_SIZE = 120
-const SEARCH_MAX_PAGES = 5
 const RELEASE_DATE_CONCURRENCY = 2
 const RELEASE_DATE_TTL_MS = 6 * 60 * 60 * 1000
 
@@ -176,35 +174,6 @@ const featureConcepts = async (feature: 'upcoming' | 'discounted' | 'plus'): Pro
     }
   })
 
-const searchCategoryByName = async (query: string): Promise<Game[]> =>
-  withCache(`search-category-${query}`, async () => {
-    const matches: Game[] = []
-
-    for (let page = 0; page < SEARCH_MAX_PAGES && matches.length < MIN_ITEMS; page += 1) {
-      const offset = page * SEARCH_PAGE_SIZE
-      let concepts: Concept[] = []
-
-      try {
-        concepts = await fetchConceptsByFeature('new', SEARCH_PAGE_SIZE, offset)
-      } catch (error) {
-        console.warn(`Category search page fetch failed at offset=${offset}`, error)
-        break
-      }
-
-      if (concepts.length === 0) {
-        break
-      }
-
-      const pageMatches = sortByDateDesc(
-        (await mapConceptsToGames(concepts)).filter((game) => game.name.toLowerCase().includes(query)),
-      )
-
-      matches.push(...pageMatches)
-    }
-
-    return matches
-  })
-
 export const getNewGames = async (): Promise<Game[]> => {
   const games = await baseGames()
   const now = Date.now()
@@ -250,23 +219,15 @@ export const searchGames = async (query: string): Promise<Game[]> => {
   }
 
   const primary = await withCache(`search-${normalized}`, async () => {
-    let concepts: Concept[] = []
     try {
-      concepts = await fetchSearchConcepts(normalized, 120)
+      return gamesSchema.parse(await fetchSearchGames(normalized, 60))
     } catch (error) {
-      console.warn('Search query failed; using fallback search results from base feed', error)
+      console.warn('Search query failed; using fallback results from base feed', error)
+      return []
     }
-
-    return sortByDateDesc(
-      (await mapConceptsToGames(concepts)).filter((game) =>
-        game.name.toLowerCase().includes(normalized),
-      ),
-    )
   })
 
-  const fallback = primary.length > 0
-    ? sortByDateDesc(base.filter((game) => game.name.toLowerCase().includes(normalized)))
-    : await searchCategoryByName(normalized)
+  const fallback = sortByDateDesc(base.filter((game) => game.name.toLowerCase().includes(normalized)))
   return ensureNonEmpty(primary, fallback, base)
 }
 

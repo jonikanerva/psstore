@@ -46,7 +46,7 @@ describe('validateBackendCompatibility', () => {
       sonyClientText:
         "headers: { 'x-apollo-operation-name': strategy.operationName }\nreturn json.data?.categoryGridRetrieve?.concepts ?? []",
       mapperText: 'export const conceptToGame = (concept) => concept',
-      serviceText: 'await fetchConceptsByFeature(\'new\', 300)\nawait fetchSearchConcepts(\'elden\', 120)',
+      serviceText: 'await fetchConceptsByFeature(\'new\', 300)\nawait fetchSearchGames(\'elden\', 60)',
     }
 
     expect(() => validateBackendCompatibility(manifest, context)).not.toThrow()
