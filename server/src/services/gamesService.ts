@@ -186,6 +186,22 @@ const featureConcepts = async (feature: 'upcoming' | 'discounted' | 'plus'): Pro
     }
   })
 
+const conceptProductId = (concept: Concept): string => concept.products?.[0]?.id ?? concept.id ?? ''
+
+const findGameInFeatureConcepts = async (
+  feature: 'upcoming' | 'discounted' | 'plus',
+  id: string,
+): Promise<Game | null> => {
+  const concepts = await featureConcepts(feature)
+  const matchingConcepts = concepts.filter((concept) => conceptProductId(concept) === id)
+  if (matchingConcepts.length === 0) {
+    return null
+  }
+
+  const games = await mapConceptsToGames(matchingConcepts)
+  return games.find((game) => game.id === id) ?? null
+}
+
 export const getNewGames = async (): Promise<Game[]> => {
   const games = await baseGames()
   const now = Date.now()
@@ -256,9 +272,17 @@ export const getGameById = async (id: string): Promise<Game> => {
   const games = await baseGames()
   const game = games.find((item) => item.id === id)
 
-  if (!game) {
-    throw new HttpError(404, 'GAME_NOT_FOUND', 'Game not found')
+  if (game) {
+    return gameSchema.parse(game)
   }
 
-  return gameSchema.parse(game)
+  for (const feature of ['upcoming', 'discounted', 'plus'] as const) {
+    const featureGame = await findGameInFeatureConcepts(feature, id)
+    if (featureGame) {
+      cache.set(detailCacheKey(featureGame.id), featureGame, DETAIL_TTL_MS)
+      return gameSchema.parse(featureGame)
+    }
+  }
+
+  throw new HttpError(404, 'GAME_NOT_FOUND', 'Game not found')
 }

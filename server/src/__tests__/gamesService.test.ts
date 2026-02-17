@@ -102,6 +102,33 @@ describe('gamesService', () => {
     })
   })
 
+  it('resolves game detail for upcoming ids not present in base feed', async () => {
+    fetchConceptsByFeature.mockImplementation(async (feature: string) => {
+      if (feature === 'new') return baseConcepts
+      if (feature === 'upcoming') {
+        return [
+          makeConcept('upcoming-only', {
+            products: [{ id: 'upcoming-only-product', releaseDate: '2099-01-01T00:00:00Z' }],
+          }),
+        ]
+      }
+      return []
+    })
+
+    fetchProductReleaseDate.mockImplementation(async (productId: string) =>
+      productId === 'upcoming-only-product' ? '2099-01-01T00:00:00Z' : '2025-01-01T00:00:00Z',
+    )
+
+    const svc = await import('../services/gamesService.js')
+    const upcoming = await svc.getUpcomingGames()
+
+    expect(upcoming.some((game) => game.id === 'upcoming-only-product')).toBe(true)
+    await expect(svc.getGameById('upcoming-only-product')).resolves.toMatchObject({
+      id: 'upcoming-only-product',
+      name: 'upcoming-only',
+    })
+  })
+
   it('returns strict empty result when no valid upcoming/discounted records exist', async () => {
     fetchConceptsByFeature.mockImplementation(async (feature: string) =>
       feature === 'new' ? baseConcepts : [],
