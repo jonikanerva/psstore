@@ -21,7 +21,7 @@ const makeConcept = (name: string, overrides: Record<string, unknown> = {}) => (
     serviceBranding: ['NONE'],
     upsellServiceBranding: ['NONE'],
   },
-  products: [{ id: `${name}-product`, releaseDate: '2025-01-01T00:00:00Z' }],
+  products: [{ id: `${name}-product` }],
   ...overrides,
 })
 
@@ -43,23 +43,19 @@ beforeEach(() => {
   fetchConceptsByFeature.mockReset()
   fetchProductReleaseDate.mockReset()
   fetchProductDetail.mockReset()
-  fetchProductDetail.mockImplementation(async (productId: string) => ({
-    releaseDate: productId.includes('future') ? '2099-01-01T00:00:00Z' : '2025-01-01T00:00:00Z',
+  fetchProductDetail.mockImplementation(async () => ({
+    releaseDate: '2025-01-01T00:00:00Z',
     genres: [],
     description: '',
   }))
 
   fetchConceptsByFeature.mockImplementation(async (feature: string) => {
     if (feature === 'new') return baseConcepts
-    if (feature === 'upcoming') return [makeConcept('future', { products: [{ id: 'future-p', releaseDate: '2099-01-01T00:00:00Z' }] })]
+    if (feature === 'upcoming') return [makeConcept('future')]
     if (feature === 'discounted') return [baseConcepts[1]]
     if (feature === 'plus') return [baseConcepts[1]]
     return []
   })
-
-  fetchProductReleaseDate.mockImplementation(async (productId: string) =>
-    productId.includes('future') ? '2099-01-01T00:00:00Z' : '2025-01-01T00:00:00Z',
-  )
 })
 
 describe('gamesService', () => {
@@ -78,16 +74,12 @@ describe('gamesService', () => {
       if (feature === 'upcoming') {
         return [
           makeConcept('upcoming-only', {
-            products: [{ id: 'upcoming-only-product', releaseDate: '2099-01-01T00:00:00Z' }],
+            products: [{ id: 'upcoming-only-product' }],
           }),
         ]
       }
       return []
     })
-
-    fetchProductReleaseDate.mockImplementation(async (productId: string) =>
-      productId === 'upcoming-only-product' ? '2099-01-01T00:00:00Z' : '2025-01-01T00:00:00Z',
-    )
 
     const svc = await import('../services/gamesService.js')
     const { games: upcoming } = await svc.getUpcomingGames()
@@ -99,7 +91,7 @@ describe('gamesService', () => {
     })
   })
 
-  it('returns strict empty result when no valid upcoming/discounted records exist', async () => {
+  it('returns empty result when no concepts exist for a feature', async () => {
     fetchConceptsByFeature.mockImplementation(async (feature: string) =>
       feature === 'new' ? baseConcepts : [],
     )
@@ -115,65 +107,44 @@ describe('gamesService', () => {
     expect(plus.length).toBe(0)
   })
 
-  it('excludes upcoming records with missing releaseDate', async () => {
+  it('returns all concepts from API without client-side date filtering', async () => {
     fetchConceptsByFeature.mockImplementation(async (feature: string) => {
-      if (feature === 'new') return baseConcepts
-      if (feature === 'upcoming') return [makeConcept('upcoming-no-date', { products: [{ id: 'u-1' }] })]
+      if (feature !== 'new') return []
+      return [
+        makeConcept('game-a'),
+        makeConcept('game-b'),
+        makeConcept('game-no-date', { products: [{ id: 'nd-1' }] }),
+      ]
+    })
+
+    const svc = await import('../services/gamesService.js')
+    const { games } = await svc.getNewGames()
+
+    expect(games).toHaveLength(3)
+    expect(games.map((g) => g.name)).toEqual(['game-a', 'game-b', 'game-no-date'])
+  })
+
+  it('preserves Sony API order for all listing endpoints', async () => {
+    const orderedConcepts = [
+      makeConcept('first'),
+      makeConcept('second'),
+      makeConcept('third'),
+    ]
+
+    fetchConceptsByFeature.mockImplementation(async (feature: string) => {
+      if (feature === 'new') return orderedConcepts
+      if (feature === 'discounted') return orderedConcepts
+      if (feature === 'upcoming') return orderedConcepts
+      if (feature === 'plus') return orderedConcepts
       return []
     })
 
     const svc = await import('../services/gamesService.js')
-    const { games: upcoming } = await svc.getUpcomingGames()
 
-    expect(upcoming).toHaveLength(0)
-  })
-
-  it('new returns only released games with valid dates in descending order', async () => {
-    const now = Date.now()
-    fetchConceptsByFeature.mockImplementation(async (feature: string) => {
-      if (feature !== 'new') {
-        return []
-      }
-
-      return [
-        makeConcept('released-late', { products: [{ id: 'r-l', releaseDate: '2026-01-01T00:00:00Z' }] }),
-        makeConcept('released-early', { products: [{ id: 'r-e', releaseDate: '2025-01-01T00:00:00Z' }] }),
-        makeConcept('future', { products: [{ id: 'f-1', releaseDate: '2099-01-01T00:00:00Z' }] }),
-        makeConcept('unknown-date', { products: [{ id: 'u-1' }] }),
-      ]
-    })
-
-    const svc = await import('../services/gamesService.js')
-    const { games: results } = await svc.getNewGames()
-
-    expect(results.every((game) => Number.isFinite(Date.parse(game.date)))).toBe(true)
-    expect(results.every((game) => Date.parse(game.date) <= now)).toBe(true)
-    expect(results.map((game) => game.name)).toEqual(['released-late', 'released-early'])
-  })
-
-  it('upcoming returns only future games with valid dates in ascending order', async () => {
-    fetchConceptsByFeature.mockImplementation(async (feature: string) => {
-      if (feature === 'new') {
-        return baseConcepts
-      }
-      if (feature !== 'upcoming') {
-        return []
-      }
-
-      return [
-        makeConcept('future-late', { products: [{ id: 'f-l', releaseDate: '2099-02-01T00:00:00Z' }] }),
-        makeConcept('future-soon', { products: [{ id: 'f-s', releaseDate: '2099-01-01T00:00:00Z' }] }),
-        makeConcept('released', { products: [{ id: 'r-1', releaseDate: '2025-01-01T00:00:00Z' }] }),
-        makeConcept('unknown', { products: [{ id: 'u-1' }] }),
-      ]
-    })
-
-    const svc = await import('../services/gamesService.js')
-    const { games: results } = await svc.getUpcomingGames()
-
-    expect(results.every((game) => Number.isFinite(Date.parse(game.date)))).toBe(true)
-    expect(results.every((game) => Date.parse(game.date) > Date.now())).toBe(true)
-    expect(results.map((game) => game.name)).toEqual(['future-soon', 'future-late'])
+    for (const fn of [svc.getNewGames, svc.getUpcomingGames, svc.getDiscountedGames, svc.getPlusGames]) {
+      const { games } = await fn()
+      expect(games.map((g) => g.name)).toEqual(['first', 'second', 'third'])
+    }
   })
 
   it('listing endpoints do not call fetchProductReleaseDate', async () => {
@@ -217,9 +188,7 @@ describe('gamesService', () => {
 
   it('getNewGames respects offset and size', async () => {
     const concepts = Array.from({ length: 10 }, (_, i) =>
-      makeConcept(`game-${i}`, {
-        products: [{ id: `p-${i}`, releaseDate: `2025-0${Math.min(i + 1, 9)}-01T00:00:00Z` }],
-      }),
+      makeConcept(`game-${i}`),
     )
 
     fetchConceptsByFeature.mockImplementation(async (feature: string) =>
@@ -230,7 +199,7 @@ describe('gamesService', () => {
     const page = await svc.getNewGames(0, 3)
 
     expect(page.games).toHaveLength(3)
-    expect(page.totalCount).toBeGreaterThanOrEqual(3)
+    expect(page.totalCount).toBe(10)
     expect(page.nextOffset).toBe(3)
   })
 
@@ -241,32 +210,21 @@ describe('gamesService', () => {
     expect(page.nextOffset).toBeNull()
   })
 
-  it('discounted returns all released games from deals feed in descending order', async () => {
+  it('discounted returns all games from deals feed', async () => {
     fetchConceptsByFeature.mockImplementation(async (feature: string) => {
-      if (feature === 'new') {
-        return baseConcepts
-      }
-      if (feature !== 'discounted') {
-        return []
-      }
-
+      if (feature === 'new') return baseConcepts
+      if (feature !== 'discounted') return []
       return [
-        makeConcept('deal-recent', {
-          products: [{ id: 'd-r', releaseDate: '2026-02-01T00:00:00Z' }],
-        }),
-        makeConcept('deal-old', {
-          products: [{ id: 'd-o', releaseDate: '2025-02-01T00:00:00Z' }],
-        }),
-        makeConcept('deal-future', {
-          products: [{ id: 'd-f', releaseDate: '2099-01-01T00:00:00Z' }],
-        }),
+        makeConcept('deal-a'),
+        makeConcept('deal-b'),
+        makeConcept('deal-c'),
       ]
     })
 
     const svc = await import('../services/gamesService.js')
-    const { games: results } = await svc.getDiscountedGames()
+    const { games } = await svc.getDiscountedGames()
 
-    expect(results.every((game) => Date.parse(game.date) <= Date.now())).toBe(true)
-    expect(results.map((game) => game.name)).toEqual(['deal-recent', 'deal-old'])
+    expect(games).toHaveLength(3)
+    expect(games.map((g) => g.name)).toEqual(['deal-a', 'deal-b', 'deal-c'])
   })
 })

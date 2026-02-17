@@ -1,4 +1,4 @@
-import { gameSchema, gamesSchema, sortByDateDesc, type Game, type PageResult } from '@psstore/shared'
+import { gameSchema, gamesSchema, type Game, type PageResult } from '@psstore/shared'
 import { MemoryCache } from '../lib/cache.js'
 import { HttpError } from '../errors/httpError.js'
 import { env } from '../config/env.js'
@@ -24,28 +24,6 @@ const withCache = async <T>(key: string, resolve: () => Promise<T>): Promise<T> 
   return value
 }
 
-const sortByDateAsc = (games: Game[]): Game[] =>
-  [...games].sort((a, b) => {
-    const aTs = Date.parse(a.date)
-    const bTs = Date.parse(b.date)
-    return aTs - bTs
-  })
-
-const toTimestamp = (value: string): number | null => {
-  const ts = Date.parse(value)
-  return Number.isFinite(ts) ? ts : null
-}
-
-const isReleased = (game: Game, now: number): boolean => {
-  const ts = toTimestamp(game.date)
-  return ts !== null && ts <= now
-}
-
-const isUpcoming = (game: Game, now: number): boolean => {
-  const ts = toTimestamp(game.date)
-  return ts !== null && ts > now
-}
-
 const paginate = (games: Game[], offset: number, size: number): PageResult => {
   const page = games.slice(offset, offset + size)
   const nextOffset = offset + size < games.length ? offset + size : null
@@ -66,7 +44,7 @@ const baseConcepts = async (): Promise<Concept[]> =>
   withCache('concepts-new', async () => fetchConceptsByFeature('new', LIST_PAGE_SIZE))
 
 const baseGames = async (): Promise<Game[]> =>
-  withCache('games-new', async () => sortByDateDesc(mapConceptsToGames(await baseConcepts())))
+  withCache('games-new', async () => mapConceptsToGames(await baseConcepts()))
 
 const featureConcepts = async (feature: 'upcoming' | 'discounted' | 'plus'): Promise<Concept[]> =>
   withCache(`concepts-${feature}`, async () => {
@@ -94,46 +72,24 @@ const findGameInFeatureConcepts = async (
   return games.find((game) => game.id === id) ?? null
 }
 
-const logFilterStats = (route: string, candidates: number, result: number): void => {
-  console.info(JSON.stringify({
-    route,
-    candidates,
-    excludedMissingDate: candidates - result,
-    result,
-  }))
-}
-
 export const getNewGames = async (offset = 0, size = 60): Promise<PageResult> => {
   const games = await baseGames()
-  const now = Date.now()
-  const filtered = sortByDateDesc(games.filter((game) => isReleased(game, now)))
-  logFilterStats('new', games.length, filtered.length)
-  return paginate(filtered, offset, size)
+  return paginate(games, offset, size)
 }
 
 export const getUpcomingGames = async (offset = 0, size = 60): Promise<PageResult> => {
-  const now = Date.now()
-  const primary = mapConceptsToGames(await featureConcepts('upcoming'))
-  const filtered = sortByDateAsc(primary.filter((game) => isUpcoming(game, now)))
-  logFilterStats('upcoming', primary.length, filtered.length)
-  return paginate(filtered, offset, size)
+  const games = mapConceptsToGames(await featureConcepts('upcoming'))
+  return paginate(games, offset, size)
 }
 
 export const getDiscountedGames = async (offset = 0, size = 60): Promise<PageResult> => {
-  const now = Date.now()
-  const primaryConcepts = await featureConcepts('discounted')
-  const all = mapConceptsToGames(primaryConcepts)
-  const filtered = sortByDateDesc(all.filter((game) => isReleased(game, now)))
-  logFilterStats('discounted', all.length, filtered.length)
-  return paginate(filtered, offset, size)
+  const games = mapConceptsToGames(await featureConcepts('discounted'))
+  return paginate(games, offset, size)
 }
 
 export const getPlusGames = async (offset = 0, size = 60): Promise<PageResult> => {
-  const now = Date.now()
-  const all = mapConceptsToGames(await featureConcepts('plus'))
-  const filtered = sortByDateDesc(all.filter((game) => isReleased(game, now)))
-  logFilterStats('plus', all.length, filtered.length)
-  return paginate(filtered, offset, size)
+  const games = mapConceptsToGames(await featureConcepts('plus'))
+  return paginate(games, offset, size)
 }
 
 const enrichGameWithDetail = async (game: Game): Promise<Game> => {
