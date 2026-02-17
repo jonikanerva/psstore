@@ -15,6 +15,7 @@ const MIN_ITEMS = 24
 const LIST_PAGE_SIZE = 120
 const RELEASE_DATE_CONCURRENCY = 2
 const RELEASE_DATE_TTL_MS = 6 * 60 * 60 * 1000
+const DETAIL_TTL_MS = 6 * 60 * 60 * 1000
 
 const withCache = async <T>(key: string, resolve: () => Promise<T>): Promise<T> => {
   const hit = cache.get<T>(key)
@@ -158,6 +159,17 @@ const ensureNonEmpty = (primary: Game[], fallback: Game[], base: Game[]): Game[]
   return base.slice(0, MIN_ITEMS)
 }
 
+const detailCacheKey = (id: string): string => `game-detail:${id}`
+
+const rememberGamesForDetail = (games: Game[]): void => {
+  for (const game of games) {
+    if (!game.id) {
+      continue
+    }
+    cache.set(detailCacheKey(game.id), game, DETAIL_TTL_MS)
+  }
+}
+
 const baseConcepts = async (): Promise<Concept[]> =>
   withCache('concepts-new', async () => fetchConceptsByFeature('new', LIST_PAGE_SIZE))
 
@@ -215,7 +227,9 @@ export const searchGames = async (query: string): Promise<Game[]> => {
   const normalized = query.trim().toLowerCase()
 
   if (!normalized) {
-    return base.slice(0, MIN_ITEMS)
+    const results = base.slice(0, MIN_ITEMS)
+    rememberGamesForDetail(results)
+    return results
   }
 
   const primary = await withCache(`search-${normalized}`, async () => {
@@ -228,10 +242,17 @@ export const searchGames = async (query: string): Promise<Game[]> => {
   })
 
   const fallback = sortByDateDesc(base.filter((game) => game.name.toLowerCase().includes(normalized)))
-  return ensureNonEmpty(primary, fallback, base)
+  const results = ensureNonEmpty(primary, fallback, base)
+  rememberGamesForDetail(results)
+  return results
 }
 
 export const getGameById = async (id: string): Promise<Game> => {
+  const cached = cache.get<Game>(detailCacheKey(id))
+  if (cached) {
+    return gameSchema.parse(cached)
+  }
+
   const games = await baseGames()
   const game = games.find((item) => item.id === id)
 

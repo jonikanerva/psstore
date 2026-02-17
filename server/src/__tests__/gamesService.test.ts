@@ -91,6 +91,17 @@ describe('gamesService', () => {
     expect(result.length).toBeGreaterThan(0)
   })
 
+  it('resolves game detail for search result ids not present in base feed', async () => {
+    const svc = await import('../services/gamesService.js')
+    const results = await svc.searchGames('elden')
+
+    expect(results[0]?.id).toBe('elden-ring-product')
+    await expect(svc.getGameById('elden-ring-product')).resolves.toMatchObject({
+      id: 'elden-ring-product',
+      name: 'Elden Ring',
+    })
+  })
+
   it('returns strict empty result when no valid upcoming/discounted records exist', async () => {
     fetchConceptsByFeature.mockImplementation(async (feature: string) =>
       feature === 'new' ? baseConcepts : [],

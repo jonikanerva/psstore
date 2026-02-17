@@ -26,6 +26,14 @@ export const createApp = (): express.Express => {
   })
 
   app.use('/api/games', gamesRouter)
+  app.use('/api', (_request, response) => {
+    response.status(404).json({
+      error: {
+        code: 'API_NOT_FOUND',
+        message: 'API route not found',
+      },
+    })
+  })
 
   if (env.NODE_ENV === 'production') {
     const clientBuildPath = path.resolve(__dirname, '../../client/build')
