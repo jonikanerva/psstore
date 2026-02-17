@@ -4,9 +4,7 @@ import type { Game } from '../modules/psnStore'
 import { getSearchQuery } from '../lib/search'
 import { searchGames } from '../modules/psnStore'
 import Games from './Games'
-import Navigation from './Navigation'
 import ScrollToTopOnMount from './ScrollToTopOnMount'
-import SearchField from './SearchField'
 
 const SearchResults = () => {
   const location = useLocation()
@@ -16,9 +14,16 @@ const SearchResults = () => {
   return (
     <Fragment>
       <ScrollToTopOnMount />
-      <Navigation />
-      <SearchField searchString={searchString} />
-      {searchString && <Games label="search" fetch={fetch} showNavigation={false} />}
+      {searchString ? (
+        <Games
+          label="search"
+          fetch={fetch}
+          showFilters={false}
+          emptyMessage={`No games found for "${searchString}"`}
+        />
+      ) : (
+        <div className="games--search-empty">Use search in the top bar to find games.</div>
+      )}
     </Fragment>
   )
 }

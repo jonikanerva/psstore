@@ -1,0 +1,66 @@
+{
+  "args": {
+    "productId": "UP0102-PPSA02530_00-PRAGMATA00000000"
+  },
+  "overrides": {
+    "showRatingInfo": true,
+    "theme": "dark",
+    "locale": "en-fi"
+  },
+  "cache": {
+    "Product:UP0102-PPSA02530_00-PRAGMATA00000000": {
+      "id": "UP0102-PPSA02530_00-PRAGMATA00000000",
+      "__typename": "Product",
+      "concept": {
+        "__ref": "Concept:10002075"
+      },
+      "edition": {
+        "__typename": "ProductEdition",
+        "name": "Standard Edition"
+      },
+      "name": "PRAGMATA",
+      "platforms": [
+        "PS5"
+      ],
+      "publisherName": "CE EUROPE LIMITED",
+      "releaseDate": "2026-04-23T21:00:00Z",
+      "starRating": {
+        "__typename": "StarRating",
+        "averageRating": 4.69,
+        "totalRatingsCount": 5486
+      },
+      "compatibilityNoticesByPlatform": {
+        "__typename": "CompatibilityNotices",
+        "PS5": [
+          {
+            "__typename": "CompatibilityNotice",
+            "type": "PS5_VIBRATION",
+            "value": "OPTIONAL"
+          },
+          {
+            "__typename": "CompatibilityNotice",
+            "type": "PS5_TRIGGER_EFFECT",
+            "value": "OPTIONAL"
+          },
+          {
+            "__typename": "CompatibilityNotice",
+            "type": "GAME_HELP_SUPPORTED",
+            "value": "true"
+          },
+          {
+            "__typename": "CompatibilityNotice",
+            "type": "GRAPHICS_ENHANCED",
+            "value": "true"
+          }
+        ],
+        "PS4": null
+      },
+      "topCategory": "GAME",
+      "webctas": [
+        {
+          "__ref": "GameCTA:PREORDER:BUY_NOW:UP0102-PPSA02530_00-PRAGMATA00000000-E001:OUTRIGHT"
+        }
+      ]
+    }
+  }
+}

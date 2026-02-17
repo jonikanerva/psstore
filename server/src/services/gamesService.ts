@@ -1,60 +1,277 @@
 import { gameSchema, gamesSchema, type Game } from '@psstore/shared'
-import { env } from '../config/env.js'
 import { MemoryCache } from '../lib/cache.js'
-import { fetchCategoryGrid } from '../sony/sonyClient.js'
-import { defaultDiscountDate, productToGame } from '../sony/mapper.js'
 import { HttpError } from '../errors/httpError.js'
+import { env } from '../config/env.js'
+import {
+  fetchConceptsByFeature,
+  fetchProductReleaseDate,
+  fetchSearchConcepts,
+} from '../sony/sonyClient.js'
+import { conceptToGame, defaultDiscountDate, isConceptDiscounted, isConceptPlus } from '../sony/mapper.js'
+import type { Concept } from '../sony/types.js'
 
 const cache = new MemoryCache()
+const MIN_ITEMS = 24
+const LIST_PAGE_SIZE = 120
+const SEARCH_PAGE_SIZE = 120
+const SEARCH_MAX_PAGES = 5
+const RELEASE_DATE_CONCURRENCY = 2
+const RELEASE_DATE_TTL_MS = 6 * 60 * 60 * 1000
 
-const withCache = async (key: string, resolve: () => Promise<Game[]>): Promise<Game[]> => {
-  const hit = cache.get<Game[]>(key)
+const withCache = async <T>(key: string, resolve: () => Promise<T>): Promise<T> => {
+  const hit = cache.get<T>(key)
   if (hit) {
     return hit
   }
 
-  const games = await resolve()
-  cache.set(key, games, env.CACHE_TTL_MS)
-  return games
+  const value = await resolve()
+  cache.set(key, value, env.CACHE_TTL_MS)
+  return value
 }
 
 const sortByDateDesc = (games: Game[]): Game[] =>
-  [...games].sort((a, b) => (a.date < b.date ? 1 : -1))
+  [...games].sort((a, b) => {
+    const aTs = a.date ? Date.parse(a.date) : Number.NaN
+    const bTs = b.date ? Date.parse(b.date) : Number.NaN
+    const aValid = Number.isFinite(aTs)
+    const bValid = Number.isFinite(bTs)
 
-const allGames = async (): Promise<Game[]> =>
-  withCache('all-games', async () => {
-    const products = await fetchCategoryGrid(300)
-    return gamesSchema.parse(products.map(productToGame))
+    if (aValid && bValid) {
+      return bTs - aTs
+    }
+
+    if (aValid && !bValid) {
+      return -1
+    }
+
+    if (!aValid && bValid) {
+      return 1
+    }
+
+    return 0
+  })
+
+const sortByDateAsc = (games: Game[]): Game[] =>
+  [...games].sort((a, b) => {
+    const aTs = Date.parse(a.date)
+    const bTs = Date.parse(b.date)
+    return aTs - bTs
+  })
+
+const toTimestamp = (value: string): number | null => {
+  const ts = Date.parse(value)
+  return Number.isFinite(ts) ? ts : null
+}
+
+const isReleased = (game: Game, now: number): boolean => {
+  const ts = toTimestamp(game.date)
+  return ts !== null && ts <= now
+}
+
+const isUpcoming = (game: Game, now: number): boolean => {
+  const ts = toTimestamp(game.date)
+  return ts !== null && ts > now
+}
+
+const withProductReleaseDates = async (
+  games: Game[],
+  discountedIds: Set<string>,
+): Promise<Game[]> => {
+  const uniqueIds = Array.from(new Set(games.map((game) => game.id).filter(Boolean)))
+  if (uniqueIds.length === 0) {
+    return games
+  }
+
+  const releaseDateById = new Map<string, string>()
+  let nextIndex = 0
+
+  const workers = Array.from(
+    { length: Math.min(RELEASE_DATE_CONCURRENCY, uniqueIds.length) },
+    async () => {
+      while (nextIndex < uniqueIds.length) {
+        const id = uniqueIds[nextIndex]
+        nextIndex += 1
+
+        const cacheKey = `release-date:${id}`
+        const cached = cache.get<{ value: string }>(cacheKey)
+        if (cached) {
+          releaseDateById.set(id, cached.value)
+          continue
+        }
+
+        let resolvedDate = ''
+        try {
+          resolvedDate = (await fetchProductReleaseDate(id)) ?? ''
+        } catch (error) {
+          console.warn(`Product release date lookup failed for ${id}`, error)
+        }
+
+        cache.set(cacheKey, { value: resolvedDate }, RELEASE_DATE_TTL_MS)
+        releaseDateById.set(id, resolvedDate)
+      }
+    },
+  )
+
+  await Promise.all(workers)
+
+  return games.map((game) => {
+    const releaseDate = releaseDateById.get(game.id) ?? game.date
+    if (!releaseDate) {
+      return game
+    }
+
+    return {
+      ...game,
+      date: releaseDate,
+      discountDate:
+        discountedIds.has(game.id) && game.discountDate === defaultDiscountDate
+          ? releaseDate
+          : game.discountDate,
+      preOrder: Date.parse(releaseDate) > Date.now(),
+    }
+  })
+}
+
+const mapConceptsToGames = async (concepts: Concept[]): Promise<Game[]> => {
+  const discountedIds = new Set<string>()
+  const mapped = concepts
+    .map((concept) => {
+      const game = conceptToGame(concept)
+      if (isConceptDiscounted(concept) && game.id) {
+        discountedIds.add(game.id)
+      }
+      return game
+    })
+    .filter((game) => Boolean(game.id || game.name))
+
+  const baseGames = gamesSchema.parse(mapped)
+  return withProductReleaseDates(baseGames, discountedIds)
+}
+
+const ensureNonEmpty = (primary: Game[], fallback: Game[], base: Game[]): Game[] => {
+  if (primary.length > 0) {
+    return primary
+  }
+
+  if (fallback.length > 0) {
+    return fallback
+  }
+
+  return base.slice(0, MIN_ITEMS)
+}
+
+const baseConcepts = async (): Promise<Concept[]> =>
+  withCache('concepts-new', async () => fetchConceptsByFeature('new', LIST_PAGE_SIZE))
+
+const baseGames = async (): Promise<Game[]> =>
+  withCache('games-new', async () => sortByDateDesc(await mapConceptsToGames(await baseConcepts())))
+
+const featureConcepts = async (feature: 'upcoming' | 'discounted' | 'plus'): Promise<Concept[]> =>
+  withCache(`concepts-${feature}`, async () => {
+    try {
+      return await fetchConceptsByFeature(feature, LIST_PAGE_SIZE)
+    } catch (error) {
+      console.warn(`Feature query failed for ${feature}; using base fallback`, error)
+      return []
+    }
+  })
+
+const searchCategoryByName = async (query: string): Promise<Game[]> =>
+  withCache(`search-category-${query}`, async () => {
+    const matches: Game[] = []
+
+    for (let page = 0; page < SEARCH_MAX_PAGES && matches.length < MIN_ITEMS; page += 1) {
+      const offset = page * SEARCH_PAGE_SIZE
+      let concepts: Concept[] = []
+
+      try {
+        concepts = await fetchConceptsByFeature('new', SEARCH_PAGE_SIZE, offset)
+      } catch (error) {
+        console.warn(`Category search page fetch failed at offset=${offset}`, error)
+        break
+      }
+
+      if (concepts.length === 0) {
+        break
+      }
+
+      const pageMatches = sortByDateDesc(
+        (await mapConceptsToGames(concepts)).filter((game) => game.name.toLowerCase().includes(query)),
+      )
+
+      matches.push(...pageMatches)
+    }
+
+    return matches
   })
 
 export const getNewGames = async (): Promise<Game[]> => {
-  const games = await allGames()
-  return sortByDateDesc(games.filter((game) => !game.preOrder))
+  const games = await baseGames()
+  const now = Date.now()
+  return sortByDateDesc(games.filter((game) => isReleased(game, now)))
 }
 
 export const getUpcomingGames = async (): Promise<Game[]> => {
-  const games = await allGames()
-  return sortByDateDesc(games.filter((game) => game.preOrder))
+  const now = Date.now()
+  const primary = await mapConceptsToGames(await featureConcepts('upcoming'))
+  return sortByDateAsc(primary.filter((game) => isUpcoming(game, now)))
 }
 
 export const getDiscountedGames = async (): Promise<Game[]> => {
-  const games = await allGames()
-  return sortByDateDesc(games.filter((game) => game.discountDate !== defaultDiscountDate))
+  const now = Date.now()
+  const primaryConcepts = await featureConcepts('discounted')
+  const discounted = await mapConceptsToGames(
+    primaryConcepts.filter((concept) => isConceptDiscounted(concept)),
+  )
+  return sortByDateDesc(
+    discounted.filter((game) => game.discountDate !== defaultDiscountDate && isReleased(game, now)),
+  )
 }
 
 export const getPlusGames = async (): Promise<Game[]> => {
-  const games = await allGames()
-  return sortByDateDesc(games.filter((game) => /plus|ps\s*plus/i.test(game.studio)))
+  const base = await baseGames()
+  const primaryConcepts = await featureConcepts('plus')
+  const primary = sortByDateDesc(
+    await mapConceptsToGames(primaryConcepts.filter((concept) => isConceptPlus(concept))),
+  )
+
+  const fallback = sortByDateDesc(
+    await mapConceptsToGames(await baseConcepts().then((concepts) => concepts.filter(isConceptPlus))),
+  )
+  return ensureNonEmpty(primary, fallback, base)
 }
 
 export const searchGames = async (query: string): Promise<Game[]> => {
-  const games = await allGames()
-  const normalized = query.toLowerCase()
-  return sortByDateDesc(games.filter((game) => game.name.toLowerCase().includes(normalized)))
+  const base = await baseGames()
+  const normalized = query.trim().toLowerCase()
+
+  if (!normalized) {
+    return base.slice(0, MIN_ITEMS)
+  }
+
+  const primary = await withCache(`search-${normalized}`, async () => {
+    let concepts: Concept[] = []
+    try {
+      concepts = await fetchSearchConcepts(normalized, 120)
+    } catch (error) {
+      console.warn('Search query failed; using fallback search results from base feed', error)
+    }
+
+    return sortByDateDesc(
+      (await mapConceptsToGames(concepts)).filter((game) =>
+        game.name.toLowerCase().includes(normalized),
+      ),
+    )
+  })
+
+  const fallback = primary.length > 0
+    ? sortByDateDesc(base.filter((game) => game.name.toLowerCase().includes(normalized)))
+    : await searchCategoryByName(normalized)
+  return ensureNonEmpty(primary, fallback, base)
 }
 
 export const getGameById = async (id: string): Promise<Game> => {
-  const games = await allGames()
+  const games = await baseGames()
   const game = games.find((item) => item.id === id)
 
   if (!game) {

@@ -1,20 +1,10 @@
-import { Fragment } from 'react'
-import { NavLink, useParams } from 'react-router-dom'
-import Screenshots from './Screenshots'
+import { useParams } from 'react-router-dom'
+import GameDetailsPage from './GameDetailsPage'
 
 const Details = () => {
   const params = useParams<{ gameId: string }>()
   const gameId = params.gameId || ''
-  return (
-    <Fragment>
-      <div className="navigation">
-        <NavLink to="/new" className="navigation--link">
-          Home
-        </NavLink>
-      </div>
-      <Screenshots gameId={gameId} />
-    </Fragment>
-  )
+  return <GameDetailsPage gameId={gameId} />
 }
 
 export default Details

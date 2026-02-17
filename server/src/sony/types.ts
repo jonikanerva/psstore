@@ -1,21 +1,46 @@
-export interface ProductMedia {
+export interface Media {
   url?: string
   role?: string
   type?: string
 }
 
-export interface ProductPrice {
+export interface ConceptPrice {
   basePrice?: string
   discountedPrice?: string
   discountText?: string | null
+  serviceBranding?: string[]
+  upsellServiceBranding?: string[]
+  upsellText?: string | null
 }
 
-export interface Product {
+export interface ConceptProductRef {
+  id?: string
+  releaseDate?: string
+  providerName?: string
+  genres?: string[]
+}
+
+export interface Concept {
   id?: string
   name?: string
-  releaseDate?: string
-  media?: ProductMedia[]
-  price?: ProductPrice
-  genres?: string[]
-  providerName?: string
+  media?: Media[]
+  price?: ConceptPrice
+  products?: ConceptProductRef[]
+}
+
+export interface CategoryGridRetrieveResponse {
+  data?: {
+    categoryGridRetrieve?: {
+      concepts?: Concept[]
+    }
+  }
+}
+
+export interface ProductRetrieveResponse {
+  data?: {
+    productRetrieve?: {
+      id?: string
+      releaseDate?: string
+    }
+  }
 }

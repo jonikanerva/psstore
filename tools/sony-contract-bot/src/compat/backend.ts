@@ -48,14 +48,20 @@ export const validateBackendCompatibility = (
       throw new Error(`Operation ${operation.feature} missing required header x-apollo-operation-name`)
     }
 
-    if (operation.response_path !== 'data.categoryGridRetrieve.products') {
+    if (
+      operation.response_path !== 'data.categoryGridRetrieve.products' &&
+      operation.response_path !== 'data.categoryGridRetrieve.concepts'
+    ) {
       throw new Error(
         `Operation ${operation.feature} response path incompatible: ${operation.response_path}`,
       )
     }
   }
 
-  if (!context.sonyClientText.includes("'x-apollo-operation-name': env.SONY_OPERATION_NAME")) {
+  if (
+    !context.sonyClientText.includes("'x-apollo-operation-name': strategy.operationName") &&
+    !context.sonyClientText.includes("'x-apollo-operation-name': env.SONY_OPERATION_NAME")
+  ) {
     throw new Error('sonyClient does not set expected x-apollo-operation-name header')
   }
 
@@ -63,11 +69,15 @@ export const validateBackendCompatibility = (
     throw new Error('sonyClient response extraction no longer matches expected path')
   }
 
-  if (!context.mapperText.includes('productToGame')) {
-    throw new Error('mapper text missing productToGame mapping')
+  if (!context.mapperText.includes('conceptToGame')) {
+    throw new Error('mapper text missing conceptToGame mapping')
   }
 
-  if (!context.serviceText.includes('fetchCategoryGrid')) {
-    throw new Error('gamesService no longer fetches category grid')
+  if (!context.serviceText.includes('fetchConceptsByFeature')) {
+    throw new Error('gamesService no longer fetches feature concepts')
+  }
+
+  if (!context.serviceText.includes('fetchSearchConcepts')) {
+    throw new Error('gamesService no longer fetches search concepts')
   }
 }

@@ -1,27 +1,26 @@
 .navigation {
-  position: fixed;
-  top: 0;
-  left: 0;
-  height: 50px;
-  width: 100%;
-  border-bottom: 1px solid var(--main-border-color);
-  background: var(--main-bg-color);
   display: flex;
-  flex-flow: row nowrap;
-  z-index: 100;
-  padding: 0 5px;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .navigation--link {
-  color: inherit;
-  font-size: 18px;
+  color: var(--muted-text-color);
+  font-size: 14px;
+  font-weight: 600;
   text-decoration: none;
-  flex-grow: 1;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  padding: 6px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: var(--button-color);
 }
 
 .navigation--active {
-  color: rgb(255 0 0);
+  color: var(--text-color);
+  border-color: var(--text-color);
+}
+
+.navigation--link:focus-visible {
+  outline: 2px solid var(--focus-color);
+  outline-offset: 1px;
 }

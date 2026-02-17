@@ -1,28 +1,22 @@
 * {
-  font-family:
-    system-ui,
-    -apple-system,
-    sans-serif;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   box-sizing: border-box;
   padding: 0;
   margin: 0;
 }
 
 :root {
-  --main-color: rgb(0 0 0);
-  --main-border-color: rgb(216 216 216);
-  --main-bg-color: rgb(255 255 255 / 95%);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --main-color: rgb(255 255 255);
-    --main-border-color: rgb(48 48 48);
-    --main-bg-color: rgb(0 0 0 / 95%);
-  }
+  --text-color: #15171a;
+  --muted-text-color: #59606a;
+  --border-color: #d6dbe1;
+  --surface-color: #fff;
+  --field-color: #f6f8fa;
+  --button-color: #f2f4f7;
+  --background-color: #eef2f6;
+  --focus-color: #0b74d1;
 }
 
 body {
-  background-color: var(--main-bg-color);
-  color: var(--main-color);
+  background-color: var(--background-color);
+  color: var(--text-color);
 }

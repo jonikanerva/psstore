@@ -6,7 +6,7 @@ const navClass = ({ isActive }: { isActive: boolean }): string =>
   `navigation--link ${isActive ? 'navigation--active' : ''}`
 
 const Navigation = () => (
-  <div className="navigation">
+  <nav className="navigation" aria-label="Top navigation">
     <NavLink to="/new" className={navClass}>
       New
     </NavLink>
@@ -19,10 +19,7 @@ const Navigation = () => (
     <NavLink to="/plus" className={navClass}>
       Plus
     </NavLink>
-    <NavLink to="/search" className={navClass}>
-      Search
-    </NavLink>
-  </div>
+  </nav>
 )
 
 export default Navigation

@@ -44,9 +44,9 @@ describe('validateBackendCompatibility', () => {
       serverEnvText:
         "SONY_GRAPHQL_URL: z.string().url().default('https://web.np.playstation.com/api/graphql/v1/op')\nSONY_OPERATION_NAME: z.string().default('categoryGridRetrieve')",
       sonyClientText:
-        "headers: { 'x-apollo-operation-name': env.SONY_OPERATION_NAME }\nreturn json.data?.categoryGridRetrieve?.products ?? []",
-      mapperText: 'export const productToGame = (product) => product',
-      serviceText: 'const products = await fetchCategoryGrid(300)',
+        "headers: { 'x-apollo-operation-name': strategy.operationName }\nreturn json.data?.categoryGridRetrieve?.concepts ?? []",
+      mapperText: 'export const conceptToGame = (concept) => concept',
+      serviceText: 'await fetchConceptsByFeature(\'new\', 300)\nawait fetchSearchConcepts(\'elden\', 120)',
     }
 
     expect(() => validateBackendCompatibility(manifest, context)).not.toThrow()
