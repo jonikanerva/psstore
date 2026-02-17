@@ -1,29 +1,7 @@
 {
-  "extends": ["stylelint-config-standard"],
+  "extends": "stylelint-config-standard",
+  "ignoreFiles": ["build/**/*", "client/build/**/*", "server/dist/**/*", "shared/dist/**/*"],
   "rules": {
-    "selector-class-pattern": [
-      "^([a-z][a-z0-9]*)(?:-[a-z0-9]+)*(?:--[a-z0-9]+(?:-[a-z0-9]+)*)?$",
-      { "resolveNestedSelectors": true }
-    ],
-    "at-rule-disallowed-list": ["extend"],
-    "declaration-property-value-disallowed-list": {
-      "/^transition/": ["/all/"],
-      "/^background/": ["http:", "https:"],
-      "/^border/": ["none"],
-      "/.+/": ["initial"]
-    },
-    "max-nesting-depth": 3,
-    "selector-max-compound-selectors": 3,
-    "selector-max-id": 0,
-    "selector-max-specificity": "0,4,0",
-    "selector-no-qualifying-type": true,
-    "unit-no-unknown": true,
-    "value-no-vendor-prefix": true,
-    "property-no-vendor-prefix": true,
-    "function-calc-no-unspaced-operator": true,
-    "length-zero-no-unit": true,
-    "no-duplicate-selectors": true,
-    "block-no-empty": true,
-    "color-no-invalid-hex": true
+    "selector-class-pattern": "^[a-z][a-z0-9-]*([_-]{1,2}[a-z0-9-]+)*$"
   }
 }

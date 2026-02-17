@@ -1,62 +1,43 @@
 {
   "name": "psstore",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
+  "workspaces": [
+    "client",
+    "server",
+    "shared"
+  ],
   "scripts": {
-    "dev": "vite",
-    "build": "run-s lint clean vite:build",
-    "vite:build": "vite build --outDir=build",
-    "preview": "vite preview",
-    "clean": "rm -rf ./build",
-    "lint": "run-s lint:eslint lint:tsc lint:ts lint:style lint:json",
-    "lint:eslint": "eslint . --ext .ts,.tsx",
-    "lint:tsc": "tsc --project .",
-    "lint:ts": "prettier --check --parser typescript --config package.json '**/*.{ts,tsx}'",
-    "lint:json": "prettier --check '**/*.json'",
-    "lint:style": "stylelint 'src/**/*.css'",
-    "format": "run-s format:ts format:other",
-    "format:ts": "prettier --parser typescript --config package.json '**/*.{ts,tsx}' --write",
-    "format:other": "prettier '**/*.json' '**/*.css' --write",
-    "docker:build": "yarn build && docker build -t docker.pkg.github.com/jonikanerva/dok8s/psstore:latest .",
-    "docker:run": "docker run --rm -p 8080:80 docker.pkg.github.com/jonikanerva/dok8s/psstore:latest",
-    "docker:push": "docker push docker.pkg.github.com/jonikanerva/dok8s/psstore:latest"
+    "dev": "concurrently \"npm run dev -w server\" \"npm run dev -w client\"",
+    "lint": "npm run lint -w shared && npm run lint -w server && npm run lint -w client",
+    "typecheck": "npm run build -w shared && npm run typecheck -w server && npm run typecheck -w client",
+    "test": "npm run test -w shared && npm run test -w server && npm run test -w client",
+    "build": "npm run clean && npm run build -w shared && npm run build -w client && npm run build -w server",
+    "clean": "rm -rf build client/build server/dist shared/dist",
+    "start": "npm run start -w server"
   },
   "engines": {
-    "node": "24.13.1"
-  },
-  "dependencies": {
-    "luxon": "^3.7.2",
-    "query-string": "^9.3.1",
-    "ramda": "^0.32.0",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4",
-    "react-router-dom": "^7.13.0",
-    "react-visibility-observer": "^1.0.8"
+    "node": ">=22"
   },
   "devDependencies": {
-    "@types/luxon": "^3.7.1",
-    "@types/node": "^25.2.3",
-    "@types/ramda": "^0.31.1",
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
-    "@typescript-eslint/eslint-plugin": "^8.56.0",
-    "@typescript-eslint/parser": "^8.56.0",
-    "@vitejs/plugin-react-swc": "^4.2.3",
-    "eslint": "^10.0.0",
-    "eslint-config-prettier": "^10.1.8",
-    "eslint-plugin-node": "^11.1.0",
-    "eslint-plugin-prettier": "^5.5.5",
-    "eslint-plugin-react": "^7.37.5",
-    "npm-run-all": "^4.1.5",
-    "prettier": "^3.8.1",
-    "stylelint": "^17.3.0",
-    "stylelint-config-standard": "^40.0.0",
-    "typescript": "^5.9.3",
-    "vite": "^7.3.1"
-  },
-  "prettier": {
-    "semi": false,
-    "singleQuote": true
-  },
-  "packageManager": "yarn@4.12.0"
+    "@eslint/js": "^9.20.0",
+    "@types/express": "^5.0.1",
+    "@types/luxon": "^3.6.2",
+    "@types/node": "^22.13.10",
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
+    "@typescript-eslint/eslint-plugin": "^8.24.1",
+    "@typescript-eslint/parser": "^8.24.1",
+    "@vitejs/plugin-react-swc": "^3.8.0",
+    "concurrently": "^9.1.2",
+    "eslint": "^9.20.1",
+    "eslint-plugin-react": "^7.37.4",
+    "prettier": "^3.5.3",
+    "stylelint": "^16.14.1",
+    "stylelint-config-standard": "^37.0.0",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.19.3",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.5"
+  }
 }
