@@ -283,6 +283,22 @@ describe('gamesService', () => {
     expect(page.nextOffset).toBe(3)
   })
 
+  it('enriches game with publisher name from product detail', async () => {
+    fetchProductDetail.mockImplementation(async () => ({
+      releaseDate: PAST_DATE,
+      genres: ['Strategy'],
+      description: '<p>Grand strategy</p>',
+      publisherName: 'PARADOX GAMES INC',
+    }))
+
+    const svc = await import('../services/gamesService.js')
+    const game = await svc.getGameById(
+      (await svc.getNewGames()).games[0].id,
+    )
+
+    expect(game.studio).toBe('PARADOX GAMES INC')
+  })
+
   it('getNewGames returns null nextOffset on last page', async () => {
     const svc = await import('../services/gamesService.js')
     const page = await svc.getNewGames(0, 200)

@@ -170,6 +170,7 @@ const enrichGameWithDetail = async (game: Game): Promise<Game> => {
       date: detail.releaseDate ?? game.date,
       genres: detail.genres.length > 0 ? detail.genres : game.genres,
       description: detail.description || game.description,
+      studio: detail.publisherName || game.studio,
     }
   } catch (error) {
     console.warn(`Product detail enrichment failed for ${game.id}`, error)
