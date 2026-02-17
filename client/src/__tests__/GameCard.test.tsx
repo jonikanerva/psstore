@@ -26,7 +26,7 @@ describe('GameCard', () => {
     cleanup()
   })
 
-  it('renders title, genres, and price', () => {
+  it('renders title, date, and price', () => {
     render(
       <MemoryRouter>
         <GameCard game={game} />
@@ -34,8 +34,8 @@ describe('GameCard', () => {
     )
 
     expect(screen.getByText('Test Game')).toBeInTheDocument()
-    expect(screen.getByText('Action, Adventure')).toBeInTheDocument()
     expect(screen.getByText('69,99 €')).toBeInTheDocument()
+    expect(screen.getByText(/15 Jun 2025|Jun 15, 2025/)).toBeInTheDocument()
   })
 
   it('links to the game detail page', () => {
@@ -49,13 +49,33 @@ describe('GameCard', () => {
     expect(link).toHaveAttribute('href', `/g/${game.id}`)
   })
 
-  it('hides genre line when genres are empty', () => {
+  it('shows original price with strikethrough when discounted', () => {
     render(
       <MemoryRouter>
-        <GameCard game={{ ...game, genres: [] }} />
+        <GameCard
+          game={{
+            ...game,
+            price: '€39,99',
+            originalPrice: '€59,99',
+            discountText: '-33%',
+          }}
+        />
       </MemoryRouter>,
     )
 
-    expect(screen.queryByText('Unknown genre')).not.toBeInTheDocument()
+    const original = screen.getByText('€59,99')
+    expect(original.tagName).toBe('S')
+    expect(screen.getByText('€39,99')).toBeInTheDocument()
+  })
+
+  it('shows single price when not discounted', () => {
+    render(
+      <MemoryRouter>
+        <GameCard game={game} />
+      </MemoryRouter>,
+    )
+
+    expect(screen.queryByRole('deletion')).not.toBeInTheDocument()
+    expect(screen.getByText('69,99 €')).toBeInTheDocument()
   })
 })

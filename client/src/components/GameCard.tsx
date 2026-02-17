@@ -17,26 +17,30 @@ const formatDate = (value: string): string => {
   return parsed.toLocaleString(DateTime.DATE_MED)
 }
 
-const GameCard = ({ game }: GameCardProps) => (
-  <Link className="game-card" to={`/g/${game.id}`}>
-    <div className="game-card--image-wrap">
-      <Image url={game.url} name={game.name} />
-    </div>
-    <div className="game-card--body">
-      <div className="game-card--name" title={game.name}>
-        {game.name}
+const GameCard = ({ game }: GameCardProps) => {
+  const hasDiscount = Boolean(game.originalPrice) && game.originalPrice !== game.price
+
+  return (
+    <Link className="game-card" to={`/g/${game.id}`}>
+      <div className="game-card--image-wrap">
+        <Image url={game.url} name={game.name} />
       </div>
-      {game.genres.length > 0 && (
-        <div className="game-card--genres" title={game.genres.join(', ')}>
-          {game.genres.join(', ')}
+      <div className="game-card--body">
+        <div className="game-card--name" title={game.name}>
+          {game.name}
         </div>
-      )}
-      <div className="game-card--meta">
-        <span className="game-card--price">{game.price || '-'}</span>
-        <span className="game-card--date">Released {formatDate(game.date)}</span>
+        <div className="game-card--meta">
+          <span className="game-card--date">{formatDate(game.date)}</span>
+          <span className="game-card--price">
+            {hasDiscount && (
+              <s className="game-card--original-price">{game.originalPrice}</s>
+            )}
+            {game.price || '-'}
+          </span>
+        </div>
       </div>
-    </div>
-  </Link>
-)
+    </Link>
+  )
+}
 
 export default GameCard
