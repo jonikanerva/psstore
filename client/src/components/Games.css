@@ -12,30 +12,3 @@
   grid-template-columns: repeat(auto-fill, minmax(180px, 250px));
   gap: 10px;
 }
-
-.games--selected {
-  border-color: var(--text-color);
-  color: var(--text-color);
-}
-
-.games--filter-navi {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.games--filter-name {
-  border: 1px solid var(--border-color);
-  border-radius: 999px;
-  color: var(--muted-text-color);
-  background: var(--button-color);
-  font-size: 13px;
-  padding: 5px 10px;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.games--filter-name:focus-visible {
-  outline: 2px solid var(--focus-color);
-  outline-offset: 1px;
-}

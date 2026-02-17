@@ -15,7 +15,7 @@ describe('AppShell', () => {
       </MemoryRouter>,
     )
 
-    expect(screen.getByText('PS5 Catalog')).toBeInTheDocument()
+    expect(screen.getByText('PS Store')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'New' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Upcoming' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Discounted' })).toBeInTheDocument()

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { filterGamesByGenre, sortByDateDesc } from '../utils/filters.js'
+import { sortByDateDesc } from '../utils/filters.js'
 
 const games = [
   {
@@ -37,10 +37,6 @@ const games = [
 ]
 
 describe('filters', () => {
-  it('filters by genre', () => {
-    expect(filterGamesByGenre(games, 'Action')).toHaveLength(1)
-  })
-
   it('sorts newest first', () => {
     expect(sortByDateDesc(games).map((g) => g.id)).toEqual(['1', '2'])
   })

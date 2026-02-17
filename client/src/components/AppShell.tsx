@@ -5,7 +5,7 @@ import './AppShell.css'
 const AppShell = () => (
   <div className="app-shell">
     <header className="app-shell--header">
-      <div className="app-shell--brand">PS5 Catalog</div>
+      <div className="app-shell--brand">PS Store</div>
       <Navigation />
     </header>
     <main className="app-shell--main">
