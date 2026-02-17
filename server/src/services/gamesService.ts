@@ -4,7 +4,7 @@ import { HttpError } from '../errors/httpError.js'
 import { env } from '../config/env.js'
 import {
   fetchConceptsByFeature,
-  fetchSearchGames,
+  fetchSearchConcepts,
   fetchProductReleaseDate,
 } from '../sony/sonyClient.js'
 import { conceptToGame, defaultDiscountDate, isConceptDiscounted, isConceptPlus } from '../sony/mapper.js'
@@ -183,7 +183,7 @@ const findGameInFeatureConcepts = async (
 const findGameInSearchResults = async (id: string): Promise<Game | null> => {
   const matches = await withCache(`search-id-${id}`, async () => {
     try {
-      return gamesSchema.parse(await fetchSearchGames(id, 60))
+      return await mapConceptsToGames(await fetchSearchConcepts(id, 60))
     } catch (error) {
       console.warn(`Search lookup failed for detail id ${id}`, error)
       return []
@@ -256,7 +256,7 @@ export const searchGames = async (query: string): Promise<Game[]> => {
 
   const primary = await withCache(`search-${normalized}`, async () => {
     try {
-      return gamesSchema.parse(await fetchSearchGames(normalized, 60))
+      return await mapConceptsToGames(await fetchSearchConcepts(normalized, 60))
     } catch (error) {
       console.warn('Search query failed; using fallback results from base feed', error)
       return []

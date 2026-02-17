@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const fetchConceptsByFeature = vi.fn()
-const fetchSearchGames = vi.fn()
+const fetchSearchConcepts = vi.fn()
 const fetchProductReleaseDate = vi.fn()
 
 vi.mock('../sony/sonyClient.js', () => ({
   fetchConceptsByFeature,
   fetchProductReleaseDate,
-  fetchSearchGames,
+  fetchSearchConcepts,
 }))
 
 const makeConcept = (name: string, overrides: Record<string, unknown> = {}) => ({
@@ -42,7 +42,7 @@ beforeEach(() => {
   vi.resetModules()
   fetchConceptsByFeature.mockReset()
   fetchProductReleaseDate.mockReset()
-  fetchSearchGames.mockReset()
+  fetchSearchConcepts.mockReset()
 
   fetchConceptsByFeature.mockImplementation(async (feature: string) => {
     if (feature === 'new') return baseConcepts
@@ -52,21 +52,10 @@ beforeEach(() => {
     return []
   })
 
-  fetchSearchGames.mockResolvedValue([
-    {
-      id: 'elden-ring-product',
-      name: 'Elden Ring',
-      date: '2025-01-01T00:00:00Z',
-      url: 'https://img/elden-ring',
-      price: '€69.95',
-      discountDate: '',
-      screenshots: ['https://img/elden-ring'],
-      videos: [],
-      genres: [],
-      description: '',
-      studio: '',
-      preOrder: false,
-    },
+  fetchSearchConcepts.mockResolvedValue([
+    makeConcept('elden-ring', {
+      products: [{ id: 'elden-ring-product', releaseDate: '2025-01-01T00:00:00Z' }],
+    }),
   ])
   fetchProductReleaseDate.mockImplementation(async (productId: string) =>
     productId.includes('future') ? '2099-01-01T00:00:00Z' : '2025-01-01T00:00:00Z',
@@ -83,11 +72,11 @@ describe('gamesService', () => {
     await expect(svc.getPlusGames()).resolves.not.toHaveLength(0)
   })
 
-  it('search uses search client and returns non-empty result', async () => {
+  it('search uses graphql search and returns non-empty result', async () => {
     const svc = await import('../services/gamesService.js')
     const result = await svc.searchGames('elden')
 
-    expect(fetchSearchGames).toHaveBeenCalledWith('elden', 60)
+    expect(fetchSearchConcepts).toHaveBeenCalledWith('elden', 60)
     expect(result.length).toBeGreaterThan(0)
   })
 
@@ -98,7 +87,7 @@ describe('gamesService', () => {
     expect(results[0]?.id).toBe('elden-ring-product')
     await expect(svc.getGameById('elden-ring-product')).resolves.toMatchObject({
       id: 'elden-ring-product',
-      name: 'Elden Ring',
+      name: 'elden-ring',
     })
   })
 
@@ -145,14 +134,14 @@ describe('gamesService', () => {
     expect(plus.length).toBeGreaterThan(0)
   })
 
-  it('returns strict empty result when fast and base-name search have no matches', async () => {
-    fetchSearchGames.mockResolvedValue([])
+  it('returns strict empty result when graphql and base-name search have no matches', async () => {
+    fetchSearchConcepts.mockResolvedValue([])
 
     const svc = await import('../services/gamesService.js')
     const result = await svc.searchGames('does-not-exist')
 
     expect(result).toHaveLength(0)
-    expect(fetchSearchGames).toHaveBeenCalledWith('does-not-exist', 60)
+    expect(fetchSearchConcepts).toHaveBeenCalledWith('does-not-exist', 60)
   })
 
   it('resolves search-only game detail without requiring warm search cache', async () => {
@@ -160,10 +149,10 @@ describe('gamesService', () => {
 
     await expect(svc.getGameById('elden-ring-product')).resolves.toMatchObject({
       id: 'elden-ring-product',
-      name: 'Elden Ring',
+      name: 'elden-ring',
     })
 
-    expect(fetchSearchGames).toHaveBeenCalledWith('elden-ring-product', 60)
+    expect(fetchSearchConcepts).toHaveBeenCalledWith('elden-ring-product', 60)
   })
 
   it('excludes upcoming records with missing releaseDate', async () => {
