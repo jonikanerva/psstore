@@ -1,5 +1,5 @@
 import { filterGamesByGenre, type Game as GameObject } from '@psstore/shared'
-import { Fragment, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Error from './Error'
 import GameCard from './GameCard'
 import ScrollToTopOnMount from './ScrollToTopOnMount'
@@ -47,33 +47,21 @@ const Games = ({ label, fetch, showFilters = true, emptyMessage = 'No games foun
   const filteredGames = useMemo(() => filterGamesByGenre(games, filter || undefined), [games, filter])
 
   if (error) {
-    return (
-      <Fragment>
-        <Error message="Failed to load games" />
-      </Fragment>
-    )
+    return <Error message="Failed to load games" />
   }
 
   if (loading) {
-    return (
-      <Fragment>
-        <Loading loading={loading} />
-      </Fragment>
-    )
+    return <Loading loading={loading} />
   }
 
   if (filteredGames.length === 0) {
-    return (
-      <Fragment>
-        <Error message={emptyMessage} />
-      </Fragment>
-    )
+    return <Error message={emptyMessage} />
   }
 
   const genreList = Array.from(new Set(games.flatMap((g) => g.genres))).sort()
 
   return (
-    <Fragment>
+    <>
       <ScrollToTopOnMount />
       <div className="games--content">
         {showFilters && (
@@ -103,7 +91,7 @@ const Games = ({ label, fetch, showFilters = true, emptyMessage = 'No games foun
           ))}
         </div>
       </div>
-    </Fragment>
+    </>
   )
 }
 

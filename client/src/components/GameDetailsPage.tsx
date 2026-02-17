@@ -1,3 +1,4 @@
+import DOMPurify from 'dompurify'
 import { DateTime } from 'luxon'
 import { useEffect, useState } from 'react'
 import { fetchGame, searchLink, type Game } from '../modules/psnStore'
@@ -89,7 +90,7 @@ const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
       {hasDescription && (
         <section className="details-page--section">
           <h2>Description</h2>
-          <div dangerouslySetInnerHTML={{ __html: game.description }} />
+          <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(game.description) }} />
         </section>
       )}
 

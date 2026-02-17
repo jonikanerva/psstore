@@ -1,4 +1,4 @@
-import { gameSchema, gamesSchema, type Game } from '@psstore/shared'
+import { gameSchema, gamesSchema, sortByDateDesc, type Game } from '@psstore/shared'
 import { MemoryCache } from '../lib/cache.js'
 import { HttpError } from '../errors/httpError.js'
 import { env } from '../config/env.js'
@@ -27,28 +27,6 @@ const withCache = async <T>(key: string, resolve: () => Promise<T>): Promise<T> 
   cache.set(key, value, env.CACHE_TTL_MS)
   return value
 }
-
-const sortByDateDesc = (games: Game[]): Game[] =>
-  [...games].sort((a, b) => {
-    const aTs = a.date ? Date.parse(a.date) : Number.NaN
-    const bTs = b.date ? Date.parse(b.date) : Number.NaN
-    const aValid = Number.isFinite(aTs)
-    const bValid = Number.isFinite(bTs)
-
-    if (aValid && bValid) {
-      return bTs - aTs
-    }
-
-    if (aValid && !bValid) {
-      return -1
-    }
-
-    if (!aValid && bValid) {
-      return 1
-    }
-
-    return 0
-  })
 
 const sortByDateAsc = (games: Game[]): Game[] =>
   [...games].sort((a, b) => {
@@ -215,16 +193,29 @@ const findGameInSearchResults = async (id: string): Promise<Game | null> => {
   return matches.find((game) => game.id === id) ?? null
 }
 
+const logFilterStats = (route: string, candidates: number, result: number): void => {
+  console.info(JSON.stringify({
+    route,
+    candidates,
+    excludedMissingDate: candidates - result,
+    result,
+  }))
+}
+
 export const getNewGames = async (): Promise<Game[]> => {
   const games = await baseGames()
   const now = Date.now()
-  return sortByDateDesc(games.filter((game) => isReleased(game, now)))
+  const result = sortByDateDesc(games.filter((game) => isReleased(game, now)))
+  logFilterStats('new', games.length, result.length)
+  return result
 }
 
 export const getUpcomingGames = async (): Promise<Game[]> => {
   const now = Date.now()
   const primary = await mapConceptsToGames(await featureConcepts('upcoming'))
-  return sortByDateAsc(primary.filter((game) => isUpcoming(game, now)))
+  const result = sortByDateAsc(primary.filter((game) => isUpcoming(game, now)))
+  logFilterStats('upcoming', primary.length, result.length)
+  return result
 }
 
 export const getDiscountedGames = async (): Promise<Game[]> => {
@@ -233,9 +224,11 @@ export const getDiscountedGames = async (): Promise<Game[]> => {
   const discounted = await mapConceptsToGames(
     primaryConcepts.filter((concept) => isConceptDiscounted(concept)),
   )
-  return sortByDateDesc(
+  const result = sortByDateDesc(
     discounted.filter((game) => game.discountDate !== defaultDiscountDate && isReleased(game, now)),
   )
+  logFilterStats('discounted', discounted.length, result.length)
+  return result
 }
 
 export const getPlusGames = async (): Promise<Game[]> => {

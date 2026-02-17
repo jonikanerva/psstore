@@ -12,4 +12,23 @@ export const filterGamesByGenre = (
 }
 
 export const sortByDateDesc = (games: Game[]): Game[] =>
-  [...games].sort((a, b) => (a.date < b.date ? 1 : -1))
+  [...games].sort((a, b) => {
+    const aTs = a.date ? Date.parse(a.date) : Number.NaN
+    const bTs = b.date ? Date.parse(b.date) : Number.NaN
+    const aValid = Number.isFinite(aTs)
+    const bValid = Number.isFinite(bTs)
+
+    if (aValid && bValid) {
+      return bTs - aTs
+    }
+
+    if (aValid && !bValid) {
+      return -1
+    }
+
+    if (!aValid && bValid) {
+      return 1
+    }
+
+    return 0
+  })

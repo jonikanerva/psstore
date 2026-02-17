@@ -1,21 +1,5 @@
-export interface Game {
-  id: string
-  name: string
-  date: string
-  url: string
-  price: string
-  discountDate: string
-  screenshots: string[]
-  videos: string[]
-  genres: string[]
-  description: string
-  studio: string
-  preOrder: boolean
-}
+import type { z } from 'zod'
+import type { gameSchema, errorPayloadSchema } from '../schemas/game.js'
 
-export interface ErrorPayload {
-  error: {
-    code: string
-    message: string
-  }
-}
+export type Game = z.infer<typeof gameSchema>
+export type ErrorPayload = z.infer<typeof errorPayloadSchema>

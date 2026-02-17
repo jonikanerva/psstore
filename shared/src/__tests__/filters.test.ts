@@ -40,4 +40,14 @@ describe('filters', () => {
   it('sorts newest first', () => {
     expect(sortByDateDesc(games).map((g) => g.id)).toEqual(['1', '2'])
   })
+
+  it('pushes invalid dates to the end', () => {
+    const withInvalid = [
+      ...games,
+      { ...games[0], id: '3', date: '' },
+      { ...games[0], id: '4', date: 'not-a-date' },
+    ]
+    const sorted = sortByDateDesc(withInvalid)
+    expect(sorted.map((g) => g.id)).toEqual(['1', '2', '3', '4'])
+  })
 })
