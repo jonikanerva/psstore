@@ -23,8 +23,6 @@ export const fetchGame = async (gameId: string): Promise<Game> =>
   getJson(`/api/games/${encodeURIComponent(gameId)}`)
 
 export const metacriticLink = (name: string): string =>
-  `https://www.metacritic.com/search/game/${encodeURI(
-    name,
-  )}/results?plats%5B72496%5D=1&search_type=advanced&sort=recent`
+  `https://www.metacritic.com/search/${encodeURIComponent(name)}/`
 
 export type { Game, PageResult }
