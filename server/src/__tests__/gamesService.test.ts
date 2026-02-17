@@ -30,6 +30,9 @@ const makeConcept = (name: string, overrides: Record<string, unknown> = {}) => {
   }
 }
 
+const PAST_DATE = '2025-01-01T00:00:00Z'
+const FUTURE_DATE = '2099-01-01T00:00:00Z'
+
 beforeEach(() => {
   conceptCounter = 0
   vi.resetModules()
@@ -37,7 +40,7 @@ beforeEach(() => {
   fetchProductReleaseDate.mockReset()
   fetchProductDetail.mockReset()
   fetchProductDetail.mockImplementation(async () => ({
-    releaseDate: '2025-01-01T00:00:00Z',
+    releaseDate: PAST_DATE,
     genres: [],
     description: '',
   }))
@@ -61,6 +64,12 @@ beforeEach(() => {
 
 describe('gamesService', () => {
   it('returns non-empty sets for all feature tabs', async () => {
+    fetchProductDetail.mockImplementation(async (productId: string) => ({
+      releaseDate: productId.includes('FUTURE') ? FUTURE_DATE : PAST_DATE,
+      genres: [],
+      description: '',
+    }))
+
     const svc = await import('../services/gamesService.js')
 
     expect((await svc.getNewGames()).games.length).toBeGreaterThan(0)
@@ -71,7 +80,7 @@ describe('gamesService', () => {
 
   it('enriches games with release dates from fetchProductDetail', async () => {
     fetchProductDetail.mockImplementation(async () => ({
-      releaseDate: '2026-03-15T00:00:00Z',
+      releaseDate: '2024-06-15T00:00:00Z',
       genres: [],
       description: '',
     }))
@@ -80,12 +89,12 @@ describe('gamesService', () => {
     const { games } = await svc.getNewGames()
 
     expect(games.length).toBeGreaterThan(0)
-    expect(games.every((g) => g.date === '2026-03-15T00:00:00Z')).toBe(true)
+    expect(games.every((g) => g.date === '2024-06-15T00:00:00Z')).toBe(true)
   })
 
   it('filters out games without valid release dates', async () => {
     fetchProductDetail.mockImplementation(async (productId: string) => ({
-      releaseDate: productId.includes('ALPHA') ? '2025-01-01T00:00:00Z' : undefined,
+      releaseDate: productId.includes('ALPHA') ? PAST_DATE : undefined,
       genres: [],
       description: '',
     }))
@@ -119,6 +128,12 @@ describe('gamesService', () => {
     const upcomingConcept = makeConcept('upcoming-only')
     const upcomingProductId = upcomingConcept.products[0].id
 
+    fetchProductDetail.mockImplementation(async (productId: string) => ({
+      releaseDate: productId === upcomingProductId ? FUTURE_DATE : PAST_DATE,
+      genres: [],
+      description: '',
+    }))
+
     fetchConceptsByFeature.mockImplementation(async (feature: string) => {
       if (feature === 'new') return [makeConcept('base-game')]
       if (feature === 'upcoming') return [upcomingConcept]
@@ -151,17 +166,44 @@ describe('gamesService', () => {
     expect(plus.length).toBe(0)
   })
 
+  it('new excludes future games, upcoming excludes released games', async () => {
+    const concepts = [
+      makeConcept('released'),
+      makeConcept('future'),
+    ]
+
+    fetchProductDetail.mockImplementation(async (productId: string) => ({
+      releaseDate: productId.includes('RELEASED') ? '2024-01-01T00:00:00Z' : FUTURE_DATE,
+      genres: [],
+      description: '',
+    }))
+
+    fetchConceptsByFeature.mockImplementation(async (feature: string) => {
+      if (feature === 'new') return concepts
+      if (feature === 'upcoming') return concepts
+      return []
+    })
+
+    const svc = await import('../services/gamesService.js')
+
+    const { games: newGames } = await svc.getNewGames()
+    expect(newGames.map((g) => g.name)).toEqual(['released'])
+
+    const { games: upcoming } = await svc.getUpcomingGames()
+    expect(upcoming.map((g) => g.name)).toEqual(['future'])
+  })
+
   it('new/discounted/plus sort by date descending', async () => {
     const concepts = [
       makeConcept('old'),
-      makeConcept('new'),
+      makeConcept('recent'),
       makeConcept('mid'),
     ]
 
     fetchProductDetail.mockImplementation(async (productId: string) => ({
-      releaseDate: productId.includes('OLD') ? '2024-01-01T00:00:00Z'
-        : productId.includes('NEW') ? '2026-06-01T00:00:00Z'
-        : '2025-06-01T00:00:00Z',
+      releaseDate: productId.includes('OLD') ? '2023-01-01T00:00:00Z'
+        : productId.includes('RECENT') ? '2025-06-01T00:00:00Z'
+        : '2024-06-01T00:00:00Z',
       genres: [],
       description: '',
     }))
@@ -170,7 +212,7 @@ describe('gamesService', () => {
 
     const svc = await import('../services/gamesService.js')
     const { games } = await svc.getNewGames()
-    expect(games.map((g) => g.name)).toEqual(['new', 'mid', 'old'])
+    expect(games.map((g) => g.name)).toEqual(['recent', 'mid', 'old'])
   })
 
   it('upcoming sorts by date ascending', async () => {
@@ -180,7 +222,7 @@ describe('gamesService', () => {
     ]
 
     fetchProductDetail.mockImplementation(async (productId: string) => ({
-      releaseDate: productId.includes('LATER') ? '2027-06-01T00:00:00Z' : '2026-06-01T00:00:00Z',
+      releaseDate: productId.includes('LATER') ? '2099-06-01T00:00:00Z' : '2099-01-01T00:00:00Z',
       genres: [],
       description: '',
     }))

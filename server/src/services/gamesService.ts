@@ -125,28 +125,42 @@ const findGameInFeatureConcepts = async (
   return games.find((game) => game.id === id) ?? null
 }
 
+type DateFilter = 'released' | 'upcoming' | 'none'
+
+const applyDateFilter = (games: Game[], filter: DateFilter): Game[] => {
+  if (filter === 'none') return games
+  const now = Date.now()
+  return games.filter((game) => {
+    const ts = Date.parse(game.date)
+    return filter === 'released' ? ts <= now : ts > now
+  })
+}
+
 const enrichedListing = async (
   gamesPromise: Promise<Game[]> | Game[],
   order: SortOrder,
+  dateFilter: DateFilter,
   offset: number,
   size: number,
 ): Promise<PageResult> => {
   const allGames = await gamesPromise
-  const enriched = sortByDate(await enrichGamesWithDates(allGames), order)
-  return paginate(enriched, offset, size)
+  const enriched = await enrichGamesWithDates(allGames)
+  const filtered = applyDateFilter(enriched, dateFilter)
+  const sorted = sortByDate(filtered, order)
+  return paginate(sorted, offset, size)
 }
 
 export const getNewGames = async (offset = 0, size = 60): Promise<PageResult> =>
-  enrichedListing(baseGames(), 'date-desc', offset, size)
+  enrichedListing(baseGames(), 'date-desc', 'released', offset, size)
 
 export const getUpcomingGames = async (offset = 0, size = 60): Promise<PageResult> =>
-  enrichedListing(mapConceptsToGames(await featureConcepts('upcoming')), 'date-asc', offset, size)
+  enrichedListing(mapConceptsToGames(await featureConcepts('upcoming')), 'date-asc', 'upcoming', offset, size)
 
 export const getDiscountedGames = async (offset = 0, size = 60): Promise<PageResult> =>
-  enrichedListing(mapConceptsToGames(await featureConcepts('discounted')), 'date-desc', offset, size)
+  enrichedListing(mapConceptsToGames(await featureConcepts('discounted')), 'date-desc', 'released', offset, size)
 
 export const getPlusGames = async (offset = 0, size = 60): Promise<PageResult> =>
-  enrichedListing(mapConceptsToGames(await featureConcepts('plus')), 'date-desc', offset, size)
+  enrichedListing(mapConceptsToGames(await featureConcepts('plus')), 'date-desc', 'released', offset, size)
 
 const enrichGameWithDetail = async (game: Game): Promise<Game> => {
   try {
