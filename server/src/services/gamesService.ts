@@ -12,6 +12,12 @@ import type { Concept } from '../sony/types.js'
 const cache = new MemoryCache()
 const LIST_PAGE_SIZE = 120
 const DETAIL_TTL_MS = 6 * 60 * 60 * 1000
+const RELEASE_DATE_TTL_MS = 6 * 60 * 60 * 1000
+const DATE_CONCURRENCY = 10
+
+const PRODUCT_ID_PATTERN = /^[A-Z]{2}\d{4}-[A-Z]{4}\d{5}_00-/
+
+const isValidProductId = (id: string): boolean => PRODUCT_ID_PATTERN.test(id)
 
 const withCache = async <T>(key: string, resolve: () => Promise<T>): Promise<T> => {
   const hit = cache.get<T>(key)
@@ -33,9 +39,47 @@ const paginate = (games: Game[], offset: number, size: number): PageResult => {
 const mapConceptsToGames = (concepts: Concept[]): Game[] => {
   const mapped = concepts
     .map((concept) => conceptToGame(concept))
-    .filter((game) => Boolean(game.id || game.name))
+    .filter((game) => Boolean(game.id) && isValidProductId(game.id))
 
   return gamesSchema.parse(mapped)
+}
+
+const enrichGameDate = async (game: Game): Promise<Game> => {
+  const cacheKey = `release-date:${game.id}`
+  const cached = cache.get<string>(cacheKey)
+  if (cached !== undefined) {
+    return { ...game, date: cached }
+  }
+
+  try {
+    const detail = await fetchProductDetail(game.id)
+    const date = detail.releaseDate ?? ''
+    cache.set(cacheKey, date, RELEASE_DATE_TTL_MS)
+    return { ...game, date }
+  } catch (error) {
+    console.warn(`Release date lookup failed for ${game.id}`, error)
+    cache.set(cacheKey, '', RELEASE_DATE_TTL_MS)
+    return game
+  }
+}
+
+const enrichGamesWithDates = async (games: Game[]): Promise<Game[]> => {
+  const result = new Array<Game>(games.length)
+  let nextIndex = 0
+
+  const workers = Array.from(
+    { length: Math.min(DATE_CONCURRENCY, games.length) },
+    async () => {
+      while (nextIndex < games.length) {
+        const index = nextIndex
+        nextIndex += 1
+        result[index] = await enrichGameDate(games[index])
+      }
+    },
+  )
+
+  await Promise.all(workers)
+  return result.filter((game) => Boolean(game.date))
 }
 
 const detailCacheKey = (id: string): string => `game-detail:${id}`
@@ -72,25 +116,27 @@ const findGameInFeatureConcepts = async (
   return games.find((game) => game.id === id) ?? null
 }
 
-export const getNewGames = async (offset = 0, size = 60): Promise<PageResult> => {
-  const games = await baseGames()
-  return paginate(games, offset, size)
+const enrichedListing = async (
+  gamesPromise: Promise<Game[]> | Game[],
+  offset: number,
+  size: number,
+): Promise<PageResult> => {
+  const allGames = await gamesPromise
+  const enriched = await enrichGamesWithDates(allGames)
+  return paginate(enriched, offset, size)
 }
 
-export const getUpcomingGames = async (offset = 0, size = 60): Promise<PageResult> => {
-  const games = mapConceptsToGames(await featureConcepts('upcoming'))
-  return paginate(games, offset, size)
-}
+export const getNewGames = async (offset = 0, size = 60): Promise<PageResult> =>
+  enrichedListing(baseGames(), offset, size)
 
-export const getDiscountedGames = async (offset = 0, size = 60): Promise<PageResult> => {
-  const games = mapConceptsToGames(await featureConcepts('discounted'))
-  return paginate(games, offset, size)
-}
+export const getUpcomingGames = async (offset = 0, size = 60): Promise<PageResult> =>
+  enrichedListing(mapConceptsToGames(await featureConcepts('upcoming')), offset, size)
 
-export const getPlusGames = async (offset = 0, size = 60): Promise<PageResult> => {
-  const games = mapConceptsToGames(await featureConcepts('plus'))
-  return paginate(games, offset, size)
-}
+export const getDiscountedGames = async (offset = 0, size = 60): Promise<PageResult> =>
+  enrichedListing(mapConceptsToGames(await featureConcepts('discounted')), offset, size)
+
+export const getPlusGames = async (offset = 0, size = 60): Promise<PageResult> =>
+  enrichedListing(mapConceptsToGames(await featureConcepts('plus')), offset, size)
 
 const enrichGameWithDetail = async (game: Game): Promise<Game> => {
   try {
@@ -132,24 +178,4 @@ export const getGameById = async (id: string): Promise<Game> => {
   }
 
   throw new HttpError(404, 'GAME_NOT_FOUND', 'Game not found')
-}
-
-const RELEASE_DATE_TTL_MS = 6 * 60 * 60 * 1000
-
-export const getGameDate = async (id: string): Promise<string> => {
-  const cacheKey = `release-date:${id}`
-  const cached = cache.get<string>(cacheKey)
-  if (cached !== undefined) {
-    return cached
-  }
-
-  try {
-    const detail = await fetchProductDetail(id)
-    const date = detail.releaseDate ?? ''
-    cache.set(cacheKey, date, RELEASE_DATE_TTL_MS)
-    return date
-  } catch (error) {
-    console.warn(`Release date lookup failed for ${id}`, error)
-    return ''
-  }
 }

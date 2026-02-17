@@ -21,10 +21,6 @@ export const fetchPlusGames = async (offset: number, size: number): Promise<Page
   getJson(`/api/games/plus?offset=${offset}&size=${size}`)
 export const fetchGame = async (gameId: string): Promise<Game> =>
   getJson(`/api/games/${encodeURIComponent(gameId)}`)
-export const fetchGameDate = async (gameId: string): Promise<string> => {
-  const result = await getJson<{ date: string }>(`/api/games/${encodeURIComponent(gameId)}/date`)
-  return result.date
-}
 
 export const metacriticLink = (name: string): string =>
   `https://www.metacritic.com/search/game/${encodeURI(

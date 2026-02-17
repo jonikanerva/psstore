@@ -14,11 +14,7 @@ const formatDate = (value: string): string => {
   }
 
   const parsed = DateTime.fromISO(value)
-  if (!parsed.isValid) {
-    return ''
-  }
-
-  return parsed.toLocaleString(DateTime.DATE_MED)
+  return parsed.isValid ? parsed.toLocaleString(DateTime.DATE_MED) : ''
 }
 
 const GameCard = ({ game }: GameCardProps) => {

@@ -2,7 +2,6 @@ import { Router } from 'express'
 import {
   getDiscountedGames,
   getGameById,
-  getGameDate,
   getNewGames,
   getPlusGames,
   getUpcomingGames,
@@ -42,16 +41,6 @@ gamesRouter.get('/plus', async (request, response, next) => {
   try {
     const { offset, size } = paginationQuerySchema.parse(request.query)
     response.json(await getPlusGames(offset, size))
-  } catch (error) {
-    next(error)
-  }
-})
-
-gamesRouter.get('/:id/date', async (request, response, next) => {
-  try {
-    const { id } = gameIdParamSchema.parse(request.params)
-    const date = await getGameDate(id)
-    response.json({ date })
   } catch (error) {
     next(error)
   }
