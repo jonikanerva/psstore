@@ -145,14 +145,25 @@ describe('gamesService', () => {
     expect(plus.length).toBeGreaterThan(0)
   })
 
-  it('falls back to base-feed filtering when fast search has no matches', async () => {
+  it('returns strict empty result when fast and base-name search have no matches', async () => {
     fetchSearchGames.mockResolvedValue([])
 
     const svc = await import('../services/gamesService.js')
-    const result = await svc.searchGames('alpha')
+    const result = await svc.searchGames('does-not-exist')
 
-    expect(result.length).toBeGreaterThan(0)
-    expect(fetchSearchGames).toHaveBeenCalledWith('alpha', 60)
+    expect(result).toHaveLength(0)
+    expect(fetchSearchGames).toHaveBeenCalledWith('does-not-exist', 60)
+  })
+
+  it('resolves search-only game detail without requiring warm search cache', async () => {
+    const svc = await import('../services/gamesService.js')
+
+    await expect(svc.getGameById('elden-ring-product')).resolves.toMatchObject({
+      id: 'elden-ring-product',
+      name: 'Elden Ring',
+    })
+
+    expect(fetchSearchGames).toHaveBeenCalledWith('elden-ring-product', 60)
   })
 
   it('excludes upcoming records with missing releaseDate', async () => {

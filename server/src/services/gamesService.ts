@@ -202,6 +202,19 @@ const findGameInFeatureConcepts = async (
   return games.find((game) => game.id === id) ?? null
 }
 
+const findGameInSearchResults = async (id: string): Promise<Game | null> => {
+  const matches = await withCache(`search-id-${id}`, async () => {
+    try {
+      return gamesSchema.parse(await fetchSearchGames(id, 60))
+    } catch (error) {
+      console.warn(`Search lookup failed for detail id ${id}`, error)
+      return []
+    }
+  })
+
+  return matches.find((game) => game.id === id) ?? null
+}
+
 export const getNewGames = async (): Promise<Game[]> => {
   const games = await baseGames()
   const now = Date.now()
@@ -258,7 +271,7 @@ export const searchGames = async (query: string): Promise<Game[]> => {
   })
 
   const fallback = sortByDateDesc(base.filter((game) => game.name.toLowerCase().includes(normalized)))
-  const results = ensureNonEmpty(primary, fallback, base)
+  const results = primary.length > 0 ? primary : fallback
   rememberGamesForDetail(results)
   return results
 }
@@ -282,6 +295,12 @@ export const getGameById = async (id: string): Promise<Game> => {
       cache.set(detailCacheKey(featureGame.id), featureGame, DETAIL_TTL_MS)
       return gameSchema.parse(featureGame)
     }
+  }
+
+  const searchGame = await findGameInSearchResults(id)
+  if (searchGame) {
+    cache.set(detailCacheKey(searchGame.id), searchGame, DETAIL_TTL_MS)
+    return gameSchema.parse(searchGame)
   }
 
   throw new HttpError(404, 'GAME_NOT_FOUND', 'Game not found')
