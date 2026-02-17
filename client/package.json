@@ -1,0 +1,23 @@
+{
+  "name": "@psstore/client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build --outDir=build",
+    "preview": "vite preview",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src --ext .ts,.tsx && stylelint 'src/**/*.css'",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@psstore/shared": "0.1.0",
+    "luxon": "^3.5.0",
+    "query-string": "^9.1.1",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-router-dom": "^7.1.5",
+    "react-visibility-observer": "^1.0.8"
+  }
+}
