@@ -14,7 +14,8 @@ export const gameSchema = z.object({
   genres: z.array(z.string()),
   description: z.string(),
   studio: z.string(),
-  preOrder: z.boolean()
+  preOrder: z.boolean(),
+  plusUpsellText: z.string().nullable()
 })
 
 export const gamesSchema = z.array(gameSchema)

@@ -19,6 +19,7 @@ const game: Game = {
   description: 'A test game',
   studio: 'Test Studio',
   preOrder: false,
+  plusUpsellText: null,
 }
 
 describe('GameCard', () => {

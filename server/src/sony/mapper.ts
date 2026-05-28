@@ -91,6 +91,7 @@ export const conceptToGame = (concept: Concept): Game => {
     description: '',
     studio: concept.products?.[0]?.providerName ?? '',
     preOrder: hasReleaseDate && Date.parse(releaseDate) > Date.now(),
+    plusUpsellText: null,
   }
 }
 

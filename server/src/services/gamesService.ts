@@ -13,6 +13,7 @@ const cache = new MemoryCache()
 const LIST_PAGE_SIZE = 120
 const DETAIL_TTL_MS = 6 * 60 * 60 * 1000
 const RELEASE_DATE_TTL_MS = 6 * 60 * 60 * 1000
+const LIST_CACHE_PREFIX = 'v2:'
 
 const PRODUCT_ID_PATTERN = /^[A-Z]{2}\d{4}-[A-Z]{4}\d{5}_00-/
 
@@ -76,16 +77,16 @@ const enrichGamesWithDates = async (games: Game[]): Promise<Game[]> => {
   return enriched.filter((game) => Boolean(game.date))
 }
 
-const detailCacheKey = (id: string): string => `game-detail:${id}`
+const detailCacheKey = (id: string): string => `${LIST_CACHE_PREFIX}game-detail:${id}`
 
 const baseConcepts = async (): Promise<Concept[]> =>
-  withCache('concepts-new', async () => fetchConceptsByFeature('new', LIST_PAGE_SIZE))
+  withCache(`${LIST_CACHE_PREFIX}concepts-new`, async () => fetchConceptsByFeature('new', LIST_PAGE_SIZE))
 
 const baseGames = async (): Promise<Game[]> =>
-  withCache('games-new', async () => mapConceptsToGames(await baseConcepts()))
+  withCache(`${LIST_CACHE_PREFIX}games-new`, async () => mapConceptsToGames(await baseConcepts()))
 
 const featureConcepts = async (feature: 'upcoming' | 'discounted' | 'plus'): Promise<Concept[]> =>
-  withCache(`concepts-${feature}`, async () => {
+  withCache(`${LIST_CACHE_PREFIX}concepts-${feature}`, async () => {
     try {
       return await fetchConceptsByFeature(feature, LIST_PAGE_SIZE)
     } catch (error) {
