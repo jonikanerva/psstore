@@ -79,4 +79,29 @@ describe('GameCard', () => {
     expect(screen.queryByRole('deletion')).not.toBeInTheDocument()
     expect(screen.getByText('69,99 €')).toBeInTheDocument()
   })
+
+  it('renders the PS+ indicator with Sony upsellText verbatim when set', () => {
+    render(
+      <MemoryRouter>
+        <GameCard
+          game={{
+            ...game,
+            plusUpsellText: 'Säästä 10 %',
+          }}
+        />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByText('PS+ Säästä 10 %')).toBeInTheDocument()
+  })
+
+  it('omits the PS+ indicator when plusUpsellText is null', () => {
+    render(
+      <MemoryRouter>
+        <GameCard game={game} />
+      </MemoryRouter>,
+    )
+
+    expect(screen.queryByText(/^PS\+/)).not.toBeInTheDocument()
+  })
 })
