@@ -4,7 +4,6 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(3000),
   SONY_GRAPHQL_URL: z
-    .string()
     .url()
     .default('https://web.np.playstation.com/api/graphql/v1/op'),
   SONY_CATEGORY_GRID_HASH: z
