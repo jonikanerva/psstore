@@ -5,7 +5,7 @@ import { runRefresh } from './commands/refresh.js'
 import { runValidate } from './commands/validate.js'
 
 export const usageText = [
-  'Usage: npm run sony -- <command> [flags]',
+  'Usage: pnpm run sony -- <command> [flags]',
   'Commands:',
   '  capture',
   '  normalize [--write-manifest]',
