@@ -21,3 +21,14 @@ export const sortByDateDesc = (games: Game[]): Game[] =>
 
     return 0
   })
+
+export const filterGamesByName = (
+  games: readonly Game[],
+  query: string,
+): Game[] => {
+  const needle = query.trim().toLowerCase()
+  if (needle === '') {
+    return [...games]
+  }
+  return games.filter((g) => g.name.toLowerCase().includes(needle))
+}

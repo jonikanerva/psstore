@@ -23,6 +23,24 @@
   white-space: nowrap;
 }
 
+.app-shell--search {
+  justify-self: end;
+  min-width: 0;
+  width: 220px;
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 14px;
+  color: inherit;
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+}
+
+.app-shell--search:focus {
+  outline: 2px solid var(--border-color);
+  outline-offset: 1px;
+}
+
 .app-shell--main {
   padding: 12px 16px 24px;
 }
@@ -31,5 +49,10 @@
   .app-shell--header {
     grid-template-columns: 1fr;
     gap: 8px;
+  }
+
+  .app-shell--search {
+    justify-self: stretch;
+    width: auto;
   }
 }
