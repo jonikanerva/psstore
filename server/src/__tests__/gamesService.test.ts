@@ -126,7 +126,11 @@ describe('gamesService', () => {
 
   it('resolves game detail for upcoming ids not present in base feed', async () => {
     const upcomingConcept = makeConcept('upcoming-only')
-    const upcomingProductId = upcomingConcept.products[0].id
+    const upcomingProduct = upcomingConcept.products[0]
+    if (!upcomingProduct) {
+      throw new Error('test fixture missing upcoming product')
+    }
+    const upcomingProductId = upcomingProduct.id
 
     fetchProductDetail.mockImplementation(async (productId: string) => ({
       releaseDate: productId === upcomingProductId ? FUTURE_DATE : PAST_DATE,
@@ -292,9 +296,11 @@ describe('gamesService', () => {
     }))
 
     const svc = await import('../services/gamesService.js')
-    const game = await svc.getGameById(
-      (await svc.getNewGames()).games[0].id,
-    )
+    const firstNew = (await svc.getNewGames()).games[0]
+    if (!firstNew) {
+      throw new Error('test expected at least one new game')
+    }
+    const game = await svc.getGameById(firstNew.id)
 
     expect(game.studio).toBe('PARADOX GAMES INC')
   })

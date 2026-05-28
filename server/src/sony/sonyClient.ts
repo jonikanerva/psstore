@@ -80,10 +80,10 @@ export const extractReleaseDateFromProductResponse = (json: ProductRetrieveRespo
 }
 
 export interface ProductDetailResult {
-  releaseDate?: string
+  releaseDate?: string | undefined
   genres: string[]
   description: string
-  publisherName?: string
+  publisherName?: string | undefined
 }
 
 export const extractProductDetail = (json: ProductRetrieveResponse): ProductDetailResult => {

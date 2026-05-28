@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
+import type { Game } from '../types/game.js'
 import { sortByDateDesc } from '../utils/filters.js'
 
-const games = [
+const games: Game[] = [
   {
     id: '1',
     name: 'A',
@@ -42,10 +43,14 @@ describe('filters', () => {
   })
 
   it('pushes invalid dates to the end', () => {
-    const withInvalid = [
+    const first = games[0]
+    if (!first) {
+      throw new Error('fixture missing first game')
+    }
+    const withInvalid: Game[] = [
       ...games,
-      { ...games[0], id: '3', date: '' },
-      { ...games[0], id: '4', date: 'not-a-date' },
+      { ...first, id: '3', date: '' },
+      { ...first, id: '4', date: 'not-a-date' },
     ]
     const sorted = sortByDateDesc(withInvalid)
     expect(sorted.map((g) => g.id)).toEqual(['1', '2', '3', '4'])

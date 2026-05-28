@@ -33,11 +33,15 @@ const base: SonyContractManifest = {
 
 describe('diffManifests', () => {
   it('detects changed hash drift', () => {
+    const firstOp = base.operations[0]
+    if (!firstOp) {
+      throw new Error('base manifest missing first operation')
+    }
     const next: SonyContractManifest = {
       ...base,
       operations: [
         {
-          ...base.operations[0],
+          ...firstOp,
           persisted_query_hash: 'b'.repeat(64),
         },
       ],

@@ -1,63 +1,69 @@
 export interface Media {
-  url?: string
-  role?: string
-  type?: string
+  url?: string | undefined
+  role?: string | undefined
+  type?: string | undefined
 }
 
 export interface ConceptPrice {
-  basePrice?: string
-  discountedPrice?: string
-  discountText?: string | null
-  serviceBranding?: string[]
-  upsellServiceBranding?: string[]
-  upsellText?: string | null
+  basePrice?: string | undefined
+  discountedPrice?: string | undefined
+  discountText?: string | null | undefined
+  serviceBranding?: string[] | undefined
+  upsellServiceBranding?: string[] | undefined
+  upsellText?: string | null | undefined
 }
 
 export interface ConceptProductRef {
-  id?: string
-  releaseDate?: string
-  providerName?: string
-  genres?: string[]
+  id?: string | undefined
+  releaseDate?: string | undefined
+  providerName?: string | undefined
+  genres?: string[] | undefined
 }
 
 export interface Concept {
-  id?: string
-  name?: string
-  media?: Media[]
-  price?: ConceptPrice
-  products?: ConceptProductRef[]
+  id?: string | undefined
+  name?: string | undefined
+  media?: Media[] | undefined
+  price?: ConceptPrice | undefined
+  products?: ConceptProductRef[] | undefined
 }
 
 export interface CategoryGridProduct {
-  id?: string
-  name?: string
-  media?: Media[]
-  price?: ConceptPrice
-  platforms?: string[]
-  storeDisplayClassification?: string
-  npTitleId?: string
+  id?: string | undefined
+  name?: string | undefined
+  media?: Media[] | undefined
+  price?: ConceptPrice | undefined
+  platforms?: string[] | undefined
+  storeDisplayClassification?: string | undefined
+  npTitleId?: string | undefined
 }
 
 export interface CategoryGridRetrieveResponse {
-  data?: {
-    categoryGridRetrieve?: {
-      concepts?: Concept[]
-      products?: CategoryGridProduct[]
-    }
-  }
+  data?:
+    | {
+        categoryGridRetrieve?:
+          | {
+              concepts?: Concept[] | undefined
+              products?: CategoryGridProduct[] | undefined
+            }
+          | undefined
+      }
+    | undefined
 }
 
 export interface ProductDetail {
-  id?: string
-  releaseDate?: string
-  publisherName?: string
-  genres?: string[]
-  description?: string
-  longDescription?: string
+  id?: string | undefined
+  releaseDate?: string | undefined
+  publisherName?: string | undefined
+  genres?: string[] | undefined
+  description?: string | undefined
+  longDescription?: string | undefined
 }
 
 export interface ProductRetrieveResponse {
-  data?: {
-    productRetrieve?: ProductDetail
-  }
+  data?:
+    | {
+        productRetrieve?: ProductDetail | undefined
+      }
+    | undefined
 }

@@ -13,7 +13,6 @@ const cache = new MemoryCache()
 const LIST_PAGE_SIZE = 120
 const DETAIL_TTL_MS = 6 * 60 * 60 * 1000
 const RELEASE_DATE_TTL_MS = 6 * 60 * 60 * 1000
-const DATE_CONCURRENCY = 10
 
 const PRODUCT_ID_PATTERN = /^[A-Z]{2}\d{4}-[A-Z]{4}\d{5}_00-/
 
@@ -73,22 +72,8 @@ const enrichGameDate = async (game: Game): Promise<Game> => {
 }
 
 const enrichGamesWithDates = async (games: Game[]): Promise<Game[]> => {
-  const result = new Array<Game>(games.length)
-  let nextIndex = 0
-
-  const workers = Array.from(
-    { length: Math.min(DATE_CONCURRENCY, games.length) },
-    async () => {
-      while (nextIndex < games.length) {
-        const index = nextIndex
-        nextIndex += 1
-        result[index] = await enrichGameDate(games[index])
-      }
-    },
-  )
-
-  await Promise.all(workers)
-  return result.filter((game) => Boolean(game.date))
+  const enriched = await Promise.all(games.map((game) => enrichGameDate(game)))
+  return enriched.filter((game) => Boolean(game.date))
 }
 
 const detailCacheKey = (id: string): string => `game-detail:${id}`
