@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Game } from '../types/game.js'
-import { sortByDateDesc } from '../utils/filters.js'
+import { filterGamesByName, sortByDateDesc } from '../utils/filters.js'
 
 const games: Game[] = [
   {
@@ -56,5 +56,42 @@ describe('filters', () => {
     ]
     const sorted = sortByDateDesc(withInvalid)
     expect(sorted.map((g) => g.id)).toEqual(['1', '2', '3', '4'])
+  })
+})
+
+describe('filterGamesByName', () => {
+  const first = games[0]
+  const second = games[1]
+  if (!first || !second) {
+    throw new Error('fixture missing games')
+  }
+  const named: Game[] = [
+    { ...first, id: '1', name: 'abc xyz' },
+    { ...second, id: '2', name: '1234567x' },
+    { ...first, id: '3', name: 'Hollow Knight: Silksong' },
+  ]
+
+  it('returns the full list for an empty query', () => {
+    expect(filterGamesByName(named, '').map((g) => g.id)).toEqual([
+      '1',
+      '2',
+      '3',
+    ])
+  })
+
+  it('matches case-insensitively', () => {
+    expect(filterGamesByName(named, 'ABC').map((g) => g.id)).toEqual(['1'])
+  })
+
+  it('matches a substring anywhere in the name', () => {
+    expect(filterGamesByName(named, 'x').map((g) => g.id)).toEqual(['1', '2'])
+  })
+
+  it('treats a whitespace-only query as empty', () => {
+    expect(filterGamesByName(named, '   ').map((g) => g.id)).toEqual([
+      '1',
+      '2',
+      '3',
+    ])
   })
 })
