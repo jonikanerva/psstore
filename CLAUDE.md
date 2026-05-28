@@ -4,13 +4,13 @@
 
 # Claude Code workflow
 
-`VISION.md`, `AGENTS.md`, and `STACK.md` are the single sources of truth for product and technical rules. Backlog, milestones, active strategic constraints, and open risks live in GitHub Issues (see "Backlog and milestones" below). This file only adds Claude-Code-specific operational rules (skills, verification, git workflow, safeguards, decision rights). Nothing is duplicated from the other documents.
+`VISION.md`, `AGENTS.md`, and `STACK.md` are the single sources of truth for product and technical rules. The backlog lives in GitHub Issues (see "Backlog" below). This file only adds Claude-Code-specific operational rules (skills, verification, git workflow, safeguards, decision rights). Nothing is duplicated from the other documents.
 
 ## Autonomy
 
-This project runs on the autonomous "default agent stack" pattern. Invoke the `/project-manager` skill — it is the team-lead entry point. The skill runs in two phases: an interactive Phase A where it interprets your prompt, asks any genuinely ambiguous clarifying questions, and waits for explicit plan approval; and an autonomous Phase B where it spawns the four-teammate agent team (`architect`, `lead-dev`, `qa-enforcer`, `ux-guardian`) and drives the work to completion without further prompts. The PM role itself lives in the skill — the lead is the PM in agent-teams mode.
+This project runs on the "default agent stack" pattern. Invoke the `/project-manager` skill — it is the team-lead entry point. You prioritise the backlog and tell the PM which issue to take ("do issue 35") or design ("plan how to build issue 42"); the PM does not pick work on its own. The skill runs in two phases: an interactive Phase A where it interprets your prompt, asks any genuinely ambiguous clarifying questions, and waits for explicit plan approval; and an autonomous Phase B where it spawns the agent team (`architect`, `lead-dev`, `qa-enforcer`, `ux-guardian`) and drives the issue you named to completion without further prompts. The PM role itself lives in the skill — the lead is the PM in agent-teams mode.
 
-The autonomy fallback rule from `AGENTS.md §14.1` applies in Phase B: when a decision is ambiguous, pick the smallest-surface, most-conservative interpretation that satisfies the `VISION.md` decision filter, document the choice in the PR description (and, if it introduces a binding constraint for future work, open a GitHub issue with the `decision` label linking that PR), and proceed. Do not call `AskUserQuestion` in Phase B. The only exceptions are (1) Phase A of the `/project-manager` skill, which is interactive by design, and (2) direct edits to `VISION.md` or `AGENTS.md`, which always require an explicit user request.
+The autonomy fallback rule from `AGENTS.md §14.1` applies in Phase B: when a decision is ambiguous, pick the smallest-surface, most-conservative interpretation that satisfies the `VISION.md` decision filter, document the choice in the PR description, and proceed. Do not call `AskUserQuestion` in Phase B. The only exceptions are (1) Phase A of the `/project-manager` skill, which is interactive by design, and (2) direct edits to `VISION.md` or `AGENTS.md`, which always require an explicit user request.
 
 ## Language
 
@@ -48,27 +48,21 @@ $VERIFY_CMD
 
 ## Skills
 
-- `/project-manager <prompt>` — orchestration entry point. Free-form prompt; the skill classifies it into a mode (autonomous-build, single milestone, bootstrap, audit, PR review, investigation, custom), clarifies if needed, proposes a plan, and only spawns the team after explicit user approval. Milestone status, strategic decisions, and open risks live in GitHub Issues (label `milestone` / `decision` / `risk`); the skill reads and updates those issues directly.
-- `/implement <task>` — feature branch → change → `$VERIFY_CMD` → commit → push → PR. Enforces the `VISION.md` decision filter and the `AGENTS.md §14` workflow rules. The `lead-dev` teammate calls this once per milestone.
+- `/project-manager <prompt>` — orchestration entry point. Free-form prompt naming the issue and what you want done; the skill classifies it into a mode (implement an issue, design an issue, audit, PR review, investigation, custom), clarifies if needed, proposes a plan, and only spawns the team after explicit user approval. The skill works the issue(s) you name; it does not create or curate issues on its own initiative.
+- `/implement <task>` — feature branch → change → `$VERIFY_CMD` → commit → push → PR. Enforces the `VISION.md` decision filter and the `AGENTS.md §14` workflow rules. When the task corresponds to a backlog issue, the PR body carries `Closes #<n>` so the issue closes on merge. The `lead-dev` teammate calls this once per issue.
 - `/codereview` — isolated subagent review of the current branch against `main`. It applies the project governance files first, then risk-based review lenses for correctness, architecture, concurrency, security, privacy, reliability, performance, tests, supply chain, and operability. It posts a plain-text PASS or FAIL PR comment as the audit-trail entry. Every FAIL finding must include evidence, impact, violated local rule, minimum fix, and verification; external standards such as OWASP, CWE, NIST SSDF, SLSA, 12-Factor, ISO/IEC 25010, OpenTelemetry, or OWASP LLM Top 10 are cited only when materially relevant. The `qa-enforcer` teammate calls this after each `/implement` finishes.
 
-## Backlog and milestones
+## Backlog
 
-Backlog, milestones, active strategic constraints, and open risks live in **GitHub Issues**, not in a tracked file. The audit trail of what happened and why is the git history of `main` (merge commits, never squash) plus PR descriptions and comments. Issues are the forward-looking plan; merged PRs are the durable record.
+The backlog lives in **GitHub Issues**. One issue is one backlog item, at whatever granularity makes sense — a feature, a fix, a chore, a question to settle. There is no required label taxonomy and no label-driven state machine: the human owns prioritisation and tells the PM which issue to take.
 
-Labelling convention:
+How an issue moves through the workflow:
 
-- `milestone` — a unit of upcoming work with a scope description. The issue body lists scope (in), scope (out), files to add / remove, and verification steps — self-contained enough for an agent to execute.
-- `decision` — a binding architectural or product constraint currently in force. Each `decision` issue summarises the rule, links the originating PR, and stays open as long as the constraint applies. When superseded, the issue is closed and a new `decision` issue is opened (cross-linked).
-- `risk` — an active risk threatening a milestone, with failing-condition and mitigation in the issue body. Closed when mitigated; the PR that mitigated it is the audit trail.
+1. The human points the PM (or `/implement`) at a specific issue — "do issue 35", "plan how to build issue 42". Agents do not pick work, open issues, or curate the backlog on their own initiative. (If asked directly — "open an issue for X" — an agent may create one; that is the only path.)
+2. The feature branch implements the issue. The PR body opens with `Closes #<n>` so that merging the PR closes the issue automatically. That single line is the only backlog bookkeeping the workflow requires — no progress comments, no status labels, no "shipped" comments.
+3. Binding constraints discovered along the way are documented in the PR description, and — when they are technical and durable — in `STACK.md → Intentional Divergences`. They are not tracked as separate issues.
 
-Every milestone PR updates the relevant issue before being merged:
-
-1. When the branch is opened, leave a comment on the milestone issue with the branch link and move the issue to `In progress` (via project board or status field).
-2. Before merging, comment on the milestone issue with the PR link and close it on merge.
-3. If a new binding constraint surfaces mid-PR, open a `decision` issue. If a new risk surfaces, open a `risk` issue. Close those issues only when superseded (decisions) or mitigated (risks).
-
-The full rationale for any decision lives in the PR that introduced it. Never write PII or any data forbidden by `VISION.md → Persistence and Privacy Posture` into issue titles, bodies, or comments.
+The audit trail of what happened and why is the git history of `main` (merge commits, never squash) plus PR descriptions and comments. Issues are the forward-looking backlog; merged PRs are the durable record. Labels may be used freely for the human's own prioritisation, but no part of the workflow depends on them. Never write PII or any data forbidden by `VISION.md → Persistence and Privacy Posture` into issue titles, bodies, or comments.
 
 ## Safeguards
 
@@ -80,6 +74,6 @@ Safeguards are implemented in `.claude/settings.json` (permissions + hooks). The
 
 ## Decision rights
 
-- **Auto-allow**: read-only commands, `STACK.md` build/test/lint commands, feature-branch operations (create, commit, push origin `<branch>`), PR creation, `gh pr view` / `comment` / `diff` / `review`, `gh issue create` / `comment` / `edit` / `close` (for milestone / decision / risk issue stewardship), `STACK.md` edits.
+- **Auto-allow**: read-only commands (including `gh issue view` / `list`), `STACK.md` build/test/lint commands, feature-branch operations (create, commit, push origin `<branch>`), PR creation, `gh pr view` / `comment` / `diff` / `review`, `STACK.md` edits. Agents do not create, label, or close issues on their own initiative; the backlog is human-curated and the PR's `Closes #<n>` line handles closing. `gh issue create` / `comment` / `edit` / `close` are run only when the user explicitly asks.
 - **Ask first**: edits to `VISION.md` or `AGENTS.md`, `gh api` calls that modify repo settings. `gh pr merge` is allowed only when the user explicitly asks for it.
 - **Never**: force push, push to `main`, bypass hooks (`--no-verify` etc.), `rm -rf` anything inside the project, violate any guardrail in `AGENTS.md §13`, persist or transmit data forbidden by `VISION.md → Persistence and Privacy Posture`.

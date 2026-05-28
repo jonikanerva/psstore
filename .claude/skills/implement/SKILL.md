@@ -21,7 +21,7 @@ Follow these steps in order. Do not skip steps.
 
 Before writing any code, read `VISION.md → Decision Filter` and answer all four questions verbatim.
 
-If the answer to any question is "no", **stop and surface the conflict in the PR description** (or, if no PR exists yet, on the issue / discussion that proposed the change) — list the proposed change and which decision-filter answer was "no". If the rejection establishes a binding constraint future agents must respect, also open a GitHub issue with the `decision` label summarising the rule. Then propose the smallest framework-native alternative that passes the filter — that becomes the new task. Do NOT silently violate `VISION.md`.
+If the answer to any question is "no", **stop and surface the conflict in the PR description** (or, if no PR exists yet, on the issue / discussion that proposed the change) — list the proposed change and which decision-filter answer was "no". If the rejection establishes a binding constraint future agents must respect, record it in the PR description and, when it is technical and durable, in `STACK.md → Intentional Divergences`. Then propose the smallest framework-native alternative that passes the filter — that becomes the new task. Do NOT silently violate `VISION.md`.
 
 Also scan `AGENTS.md §13 "Reject changes that…"` and `STACK.md → Stack-specific reject-list additions`. If the task falls into any rejected category, stop, document, and rewrite the task to the smallest acceptable shape.
 
@@ -55,7 +55,7 @@ Implement what is described in `$ARGUMENTS`, following all project standards:
 If the task is unclear or ambiguous:
 
 1. Pick the smallest-surface, most-conservative interpretation that satisfies the `VISION.md` decision filter.
-2. Document the choice in the PR description (alternatives considered + rationale). If it introduces a binding constraint for future agents, also open a GitHub issue with the `decision` label that links this PR.
+2. Document the choice in the PR description (alternatives considered + rationale). If it introduces a binding constraint for future agents, also record it in `STACK.md → Intentional Divergences` when it is technical and durable.
 3. Proceed.
 
 **Do not call `AskUserQuestion`.** The autonomous flow depends on this.
@@ -105,8 +105,9 @@ Check if a PR already exists for this branch:
 gh pr list --head <branch-name> --json number,url --jq '.[0]'
 ```
 
-**If no PR exists**, create one using `gh pr create --title "<title>" --body "<body>"`. The body must follow `.github/pull_request_template.md`:
+**If no PR exists**, create one using `gh pr create --title "<title>" --body "<body>"`. The body follows `.github/pull_request_template.md`:
 
+- **Closes #\<n\>** — if this task corresponds to a backlog issue, the body opens with `Closes #<n>` so the issue closes automatically on merge. This is the only backlog bookkeeping the workflow requires. Omit only when the task has no backlog issue.
 - **Why** — motivation; which `VISION.md` / `AGENTS.md` / `STACK.md` section is at play.
 - **What** — brief technical summary of changes.
 - **VISION decision filter** — all four questions answered verbatim with a one-line rationale each.
@@ -129,7 +130,7 @@ Tell the user in Finnish (the only Finnish artifact — everything written to th
 - Summary of what was implemented.
 - Verification results (all passing).
 - PR URL.
-- Suggest that the user run `/codereview` when ready for review (or note that `/project-manager` will dispatch `qa-enforcer` automatically when running in `autonomous-build` or `milestone` mode).
+- Suggest that the user run `/codereview` when ready for review (or note that `/project-manager` will dispatch `qa-enforcer` automatically when driving an issue in `implement` mode).
 
 ## Rules
 

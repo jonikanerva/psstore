@@ -99,7 +99,7 @@ The product succeeds when the user feels:
 
 ## Open Questions
 
-Items the human owner has not yet committed to. Agents do not block on these — they pick the most-conservative interpretation per `AGENTS.md §14.1`, document the choice in the PR, and open a GitHub issue with the `decision` label only if the choice introduces a binding constraint for future work.
+Items the human owner has not yet committed to. Agents do not block on these — they pick the most-conservative interpretation per `AGENTS.md §14.1` and document the choice in the PR description (and, when the constraint is technical and durable, in `STACK.md → Intentional Divergences`).
 
 - **UI language.** Sony's `fi-fi` locale returns mixed Finnish / English game data. Should the surrounding chrome (tab labels, search placeholder, error states) be in English or Finnish? Conservative default: English, since game titles and descriptions arrive in English more often than not.
 - **Search scope.** Does the top-bar search filter only the currently visible PLP view, or does it search across all four views at once? Conservative default: filters the current view only, matching the rest of the "no global state" stance.

@@ -126,6 +126,8 @@ Default answer to "should we add a library?" is **no**. The lists below are inte
 
 ## 10. Intentional Divergences
 
+This table is the home for binding technical constraints that future work must respect (the kind of durable rule a feature PR establishes). Record them here and in the originating PR description — not as separate tracking issues.
+
 | Date       | AGENTS.md rule                                 | Divergence                 | Reason                                                                                                                                                                                                                                                                                                               |
 | ---------- | ---------------------------------------------- | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 2026-05-28 | §6 Approved dependencies (target ESLint `^10`) | ESLint pinned at `^9.39.4` | `eslint-plugin-react@7.37.5` (latest published) caps its peer dep at ESLint `^9.7`. ESLint 10 + this plugin fails at lint time (`contextOrFilename.getFilename is not a function`). Hold until `eslint-plugin-react` ships an ESLint-10-compatible release or the project migrates to `@eslint-react/eslint-plugin`. |
