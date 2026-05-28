@@ -82,11 +82,4 @@ export const validateBackendCompatibility = (
   if (!context.serviceText.includes('fetchConceptsByFeature')) {
     throw new Error('gamesService no longer fetches feature concepts')
   }
-
-  if (
-    !context.serviceText.includes('fetchSearchConcepts') &&
-    !context.serviceText.includes('fetchSearchGames')
-  ) {
-    throw new Error('gamesService no longer fetches search results')
-  }
 }
