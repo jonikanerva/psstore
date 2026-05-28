@@ -1,5 +1,8 @@
 import type { Game as GameObject, PageResult } from '@psstore/shared'
+import { filterGamesByName } from '@psstore/shared'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useOutletContext } from 'react-router-dom'
+import type { SearchContext } from './AppShell'
 import Error from './Error'
 import GameCard from './GameCard'
 import ScrollToTopOnMount from './ScrollToTopOnMount'
@@ -15,6 +18,7 @@ interface GamesProps {
 }
 
 const Games = ({ label, fetch, emptyMessage = 'No games found' }: GamesProps) => {
+  const { query } = useOutletContext<SearchContext>()
   const [games, setGames] = useState<GameObject[]>([])
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -77,6 +81,8 @@ const Games = ({ label, fetch, emptyMessage = 'No games found' }: GamesProps) =>
     }
   }, [nextOffset, loadingMore, loadPage])
 
+  const filtered = filterGamesByName(games, query)
+
   if (error) {
     return <Error message="Failed to load games" />
   }
@@ -85,7 +91,7 @@ const Games = ({ label, fetch, emptyMessage = 'No games found' }: GamesProps) =>
     return <Loading loading={loading} />
   }
 
-  if (games.length === 0) {
+  if (filtered.length === 0) {
     return <Error message={emptyMessage} />
   }
 
@@ -94,7 +100,7 @@ const Games = ({ label, fetch, emptyMessage = 'No games found' }: GamesProps) =>
       <ScrollToTopOnMount />
       <div className="games--content">
         <div className="games--grid" data-label={label}>
-          {games.map((game) => (
+          {filtered.map((game) => (
             <GameCard key={game.id} game={game} />
           ))}
         </div>
