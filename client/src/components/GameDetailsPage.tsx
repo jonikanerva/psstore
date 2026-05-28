@@ -79,6 +79,12 @@ const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
                 <dd>{game.price}</dd>
               </>
             )}
+            {game.plusUpsellText !== null && (
+              <>
+                <dt>PS Plus</dt>
+                <dd>{game.plusUpsellText}</dd>
+              </>
+            )}
             <dt>Release</dt>
             <dd>{formatDate(game.date)}</dd>
             {game.studio && (

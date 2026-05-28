@@ -4,6 +4,28 @@ import type { Concept } from './types.js'
 const DEFAULT_DISCOUNT_DATE = ''
 const DEFAULT_RELEASE_DATE = ''
 
+// Module-level dedupe (per-process; resets on process restart).
+// Drift warnings reference Sony product ids only — never names, prices, or
+// localised strings (see AGENTS.md §8 / STACK.md §8).
+const driftKeysSeen = new Set<string>()
+
+export const __resetWarnOnceForTests = (): void => {
+  driftKeysSeen.clear()
+}
+
+const warnOnceDrift = (signature: string, productId: string): void => {
+  if (driftKeysSeen.has(signature)) return
+  driftKeysSeen.add(signature)
+  console.warn(
+    JSON.stringify({
+      source: 'mapper',
+      kind: 'plus_upsell_drift',
+      signature,
+      productId,
+    }),
+  )
+}
+
 const toIsoOrDefault = (value?: string): string => {
   if (!value) {
     return DEFAULT_RELEASE_DATE
@@ -75,9 +97,27 @@ export const conceptToGame = (concept: Concept): Game => {
   const releaseDate = toIsoOrDefault(concept.products?.[0]?.releaseDate)
   const discounted = isConceptDiscounted(concept)
   const hasReleaseDate = Boolean(releaseDate)
+  const productId = conceptId(concept)
+
+  // Sony's anonymous GraphQL exposes a `Concept.price.upsellText` string for
+  // PS Plus members (e.g. "Säästä 10 %"). We surface the string verbatim —
+  // no translation, no regex parsing, no euro derivation (decision #37).
+  // An empty string is coerced to null here so the renderer never sees "".
+  const plusUpsellText: string | null = ((): string | null => {
+    const hasPlus = (concept.price?.upsellServiceBranding ?? []).some(
+      (branding) => branding.toUpperCase() === 'PS_PLUS',
+    )
+    if (!hasPlus) return null
+    const raw = concept.price?.upsellText
+    if (typeof raw !== 'string' || raw === '') {
+      warnOnceDrift('empty-upsell-text', productId)
+      return null
+    }
+    return raw
+  })()
 
   return {
-    id: conceptId(concept),
+    id: productId,
     name: concept.name ?? '',
     date: releaseDate,
     url: cover,
@@ -91,6 +131,7 @@ export const conceptToGame = (concept: Concept): Game => {
     description: '',
     studio: concept.products?.[0]?.providerName ?? '',
     preOrder: hasReleaseDate && Date.parse(releaseDate) > Date.now(),
+    plusUpsellText,
   }
 }
 

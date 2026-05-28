@@ -19,6 +19,7 @@ const baseGame: Game = {
   description: '<p>A great game</p>',
   studio: 'RPG Studio',
   preOrder: false,
+  plusUpsellText: null,
 }
 
 vi.mock('../modules/psnStore', () => ({
@@ -115,5 +116,42 @@ describe('GameDetailsPage', () => {
     await waitFor(() => {
       expect(screen.getByText('Game not found')).toBeInTheDocument()
     })
+  })
+
+  it('renders a PS Plus row with Sony upsellText verbatim when set', async () => {
+    const { fetchGame } = await import('../modules/psnStore')
+    vi.mocked(fetchGame).mockResolvedValue({
+      ...baseGame,
+      plusUpsellText: 'Säästä 10 %',
+    })
+
+    render(
+      <MemoryRouter>
+        <GameDetailsPage gameId={baseGame.id} />
+      </MemoryRouter>,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('PS Plus')).toBeInTheDocument()
+    })
+
+    expect(screen.getByText('Säästä 10 %')).toBeInTheDocument()
+  })
+
+  it('omits the PS Plus row when plusUpsellText is null', async () => {
+    const { fetchGame } = await import('../modules/psnStore')
+    vi.mocked(fetchGame).mockResolvedValue(baseGame)
+
+    render(
+      <MemoryRouter>
+        <GameDetailsPage gameId={baseGame.id} />
+      </MemoryRouter>,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('Detail Game')).toBeInTheDocument()
+    })
+
+    expect(screen.queryByText('PS Plus')).not.toBeInTheDocument()
   })
 })

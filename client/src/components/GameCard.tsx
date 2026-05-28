@@ -36,6 +36,9 @@ const GameCard = ({ game }: GameCardProps) => {
               <s className="game-card--original-price">{game.originalPrice}</s>
             )}
             {game.price || '-'}
+            {game.plusUpsellText !== null && (
+              <span className="game-card--plus">PS+ {game.plusUpsellText}</span>
+            )}
           </span>
         </div>
       </div>
