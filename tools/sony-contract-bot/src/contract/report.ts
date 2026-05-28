@@ -4,9 +4,9 @@ export const renderDiffReport = (diff: ManifestDiff): string => {
   const lines: string[] = ['# Sony GraphQL Contract Drift Report', '']
 
   lines.push(`- Drift detected: ${diff.hasDrift ? 'yes' : 'no'}`)
-  lines.push(`- Added: ${diff.added.length}`)
-  lines.push(`- Removed: ${diff.removed.length}`)
-  lines.push(`- Changed: ${diff.changed.length}`)
+  lines.push(`- Added: ${String(diff.added.length)}`)
+  lines.push(`- Removed: ${String(diff.removed.length)}`)
+  lines.push(`- Changed: ${String(diff.changed.length)}`)
   lines.push('')
 
   if (diff.added.length > 0) {

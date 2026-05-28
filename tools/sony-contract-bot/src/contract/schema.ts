@@ -17,8 +17,8 @@ export const contractOperationSchema = z.object({
     .regex(/^[a-f0-9]{64}$/i)
     .nullable(),
   required_headers: z.array(z.string().min(1)),
-  variables_schema: z.record(z.unknown()),
-  sample_variables: z.record(z.unknown()),
+  variables_schema: z.record(z.string(), z.unknown()),
+  sample_variables: z.record(z.string(), z.unknown()),
   response_path: z.string().min(1),
   observed_status_codes: z.array(z.number().int()),
 })
@@ -35,7 +35,7 @@ export const sonyContractManifestSchema = z.object({
     playwright_profile: z.string().min(1),
   }),
   endpoint: z.object({
-    url: z.string().url(),
+    url: z.url(),
     method: z.string().min(1),
   }),
   operations: z.array(contractOperationSchema),

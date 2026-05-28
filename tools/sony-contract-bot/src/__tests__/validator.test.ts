@@ -40,7 +40,9 @@ const validManifest: SonyContractManifest = {
 
 describe('validateManifest', () => {
   it('accepts valid manifest', () => {
-    expect(() => validateManifest(validManifest)).not.toThrow()
+    expect(() => {
+      validateManifest(validManifest)
+    }).not.toThrow()
   })
 
   it('rejects missing feature coverage', () => {
@@ -49,6 +51,8 @@ describe('validateManifest', () => {
       operations: validManifest.operations.filter((op) => op.feature !== 'details'),
     }
 
-    expect(() => validateManifest(invalid)).toThrow(/Missing required feature mapping/)
+    expect(() => {
+      validateManifest(invalid)
+    }).toThrow(/Missing required feature mapping/)
   })
 })

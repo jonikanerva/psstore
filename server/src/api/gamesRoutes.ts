@@ -1,4 +1,4 @@
-import { Router } from 'express'
+import { Router, type Router as ExpressRouter } from 'express'
 import {
   getDiscountedGames,
   getGameById,
@@ -8,7 +8,7 @@ import {
 } from '../services/gamesService.js'
 import { gameIdParamSchema, paginationQuerySchema } from '../validation/schemas.js'
 
-export const gamesRouter = Router()
+export const gamesRouter: ExpressRouter = Router()
 
 gamesRouter.get('/new', async (request, response, next) => {
   try {

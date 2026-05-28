@@ -12,8 +12,10 @@ describeSmoke('Sony API smoke tests (SMOKE=1)', () => {
 
     const games = concepts.map(conceptToGame)
     expect(games.length).toBeGreaterThan(0)
-    expect(games[0].id).toBeTruthy()
-    expect(games[0].name).toBeTruthy()
+    const first = games[0]
+    expect(first).toBeDefined()
+    expect(first?.id).toBeTruthy()
+    expect(first?.name).toBeTruthy()
   }, 15_000)
 
   it('discounted: returns non-empty game list', async () => {
@@ -21,7 +23,9 @@ describeSmoke('Sony API smoke tests (SMOKE=1)', () => {
     expect(concepts.length).toBeGreaterThan(0)
 
     const games = concepts.map(conceptToGame)
-    expect(games[0].id).toBeTruthy()
+    const first = games[0]
+    expect(first).toBeDefined()
+    expect(first?.id).toBeTruthy()
   }, 15_000)
 
   it('upcoming: returns concepts', async () => {

@@ -31,7 +31,7 @@ const jsonType = (value: unknown): unknown => {
 }
 
 const getResponsePath = (responseJson: unknown): string => {
-  const data = (responseJson as { data?: Record<string, unknown> })?.data
+  const data = (responseJson as { data?: Record<string, unknown> }).data
   if (!data || typeof data !== 'object') {
     return 'data'
   }

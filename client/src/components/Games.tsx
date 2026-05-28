@@ -53,7 +53,7 @@ const Games = ({ label, fetch, emptyMessage = 'No games found' }: GamesProps) =>
     setGames([])
     setNextOffset(null)
     setError(false)
-    loadPage(0, false)
+    void loadPage(0, false)
   }, [loadPage])
 
   useEffect(() => {
@@ -65,14 +65,16 @@ const Games = ({ label, fetch, emptyMessage = 'No games found' }: GamesProps) =>
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0]?.isIntersecting && nextOffset !== null && !loadingMore) {
-          loadPage(nextOffset, true)
+          void loadPage(nextOffset, true)
         }
       },
       { rootMargin: '200px' },
     )
 
     observer.observe(sentinel)
-    return () => observer.disconnect()
+    return () => {
+      observer.disconnect()
+    }
   }, [nextOffset, loadingMore, loadPage])
 
   if (error) {

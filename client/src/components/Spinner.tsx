@@ -10,7 +10,6 @@ interface LoadingProps {
   loading: boolean
 }
 
-const Loading = ({ loading }: LoadingProps) =>
-  loading === false ? null : <Spinner />
+const Loading = ({ loading }: LoadingProps) => (loading ? <Spinner /> : null)
 
 export default Loading

@@ -7,7 +7,8 @@ const productOperationName = env.SONY_PRODUCT_OPERATION_NAME
 const productOperationHash = env.SONY_PRODUCT_BY_ID_HASH
 const localeOverride = env.SONY_LOCALE.replace(
   /^([a-z]{2})-([a-z]{2})$/i,
-  (_match, language, region) => `${language.toLowerCase()}-${region.toUpperCase()}`,
+  (_match: string, language: string, region: string) =>
+    `${language.toLowerCase()}-${region.toUpperCase()}`,
 )
 
 const productToConcept = (product: CategoryGridProduct): Concept => ({
@@ -80,10 +81,10 @@ export const extractReleaseDateFromProductResponse = (json: ProductRetrieveRespo
 }
 
 export interface ProductDetailResult {
-  releaseDate?: string
+  releaseDate?: string | undefined
   genres: string[]
   description: string
-  publisherName?: string
+  publisherName?: string | undefined
 }
 
 export const extractProductDetail = (json: ProductRetrieveResponse): ProductDetailResult => {

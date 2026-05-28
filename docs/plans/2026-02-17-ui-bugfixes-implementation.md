@@ -67,7 +67,7 @@ it('hides genre line when genres are empty', () => {
 
 **Step 4: Run tests**
 
-Run: `npm run test -w client`
+Run: `pnpm --filter @psstore/client run test`
 Expected: PASS (all 12 tests).
 
 **Step 5: Commit**
@@ -239,7 +239,7 @@ it('resolves search-only game detail without requiring warm search cache', async
 
 **Step 6: Run tests**
 
-Run: `npm run test -w server`
+Run: `pnpm --filter @psstore/server run test`
 Expected: PASS (all 20 tests).
 
 **Step 7: Commit**
@@ -275,12 +275,12 @@ import { extractReleaseDateFromProductResponse } from '../sony/sonyClient.js'
 
 **Step 3: Run tests**
 
-Run: `npm run test -w server`
+Run: `pnpm --filter @psstore/server run test`
 Expected: PASS.
 
 **Step 4: Run typecheck**
 
-Run: `npm run typecheck -w server`
+Run: `pnpm --filter @psstore/server run typecheck`
 Expected: PASS.
 
 **Step 5: Commit**
@@ -381,7 +381,7 @@ it('discounted returns all released games from deals feed in descending order', 
 
 **Step 5: Run tests**
 
-Run: `npm run test -w server`
+Run: `pnpm --filter @psstore/server run test`
 Expected: PASS.
 
 **Step 6: Commit**
@@ -582,12 +582,12 @@ describe('extractProductDetail', () => {
 
 **Step 5: Run tests**
 
-Run: `npm run test -w server`
+Run: `pnpm --filter @psstore/server run test`
 Expected: PASS.
 
 **Step 6: Run typecheck**
 
-Run: `npm run typecheck`
+Run: `pnpm run typecheck`
 Expected: PASS.
 
 **Step 7: Commit**
@@ -603,22 +603,22 @@ git commit -m "feat(pdp): enrich game detail with genres and description"
 
 **Step 1: Run full lint**
 
-Run: `npm run lint`
+Run: `pnpm run lint`
 Expected: PASS.
 
 **Step 2: Run full typecheck**
 
-Run: `npm run typecheck`
+Run: `pnpm run typecheck`
 Expected: PASS.
 
 **Step 3: Run full test suite**
 
-Run: `npm run test`
+Run: `pnpm run test`
 Expected: PASS (all tests across all workspaces).
 
 **Step 4: Run build**
 
-Run: `npm run build`
+Run: `pnpm run build`
 Expected: PASS.
 
 **Step 5: Commit any remaining fixes if needed**

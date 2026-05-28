@@ -45,7 +45,7 @@ it('discounted includes only discounted items with valid dates sorted desc', asy
 
 **Step 4: Run tests and verify RED**
 
-Run: `npm run test -w server -- gamesService.test.ts`
+Run: `pnpm --filter @psstore/server run test -- gamesService.test.ts`
 Expected: FAIL on one or more new strict assertions.
 
 **Step 5: Commit**
@@ -90,7 +90,7 @@ const sortByDateAsc = (games: Game[]): Game[] =>
 
 **Step 4: Run server tests**
 
-Run: `npm run test -w server -- gamesService.test.ts`
+Run: `pnpm --filter @psstore/server run test -- gamesService.test.ts`
 Expected: partial pass or remaining failures before full endpoint wiring.
 
 **Step 5: Commit**
@@ -137,7 +137,7 @@ return strict
 
 **Step 5: Run server tests**
 
-Run: `npm run test -w server`
+Run: `pnpm --filter @psstore/server run test`
 Expected: PASS for strict semantic tests.
 
 **Step 6: Commit**
@@ -163,8 +163,8 @@ git commit -m "fix(server): enforce strict tab semantics and sorting rules"
 **Step 3: Run focused tests**
 
 Run:
-- `npm run test -w server -- mapper.test.ts`
-- `npm run test -w server -- gamesService.test.ts`
+- `pnpm --filter @psstore/server run test -- mapper.test.ts`
+- `pnpm --filter @psstore/server run test -- gamesService.test.ts`
 
 Expected: PASS.
 
@@ -197,8 +197,8 @@ console.info(JSON.stringify({
 **Step 3: Run lint/typecheck**
 
 Run:
-- `npm run lint -w server`
-- `npm run typecheck -w server`
+- `pnpm --filter @psstore/server run lint`
+- `pnpm --filter @psstore/server run typecheck`
 
 Expected: PASS.
 
@@ -247,12 +247,12 @@ git commit -m "fix(server): finalize strict listing behavior after smoke"
 **Step 1: Run full mandatory gates**
 
 Run:
-- `npm run lint`
-- `npm run typecheck`
-- `npm run test`
-- `npm run build`
-- `npm run sony:validate`
-- `npm run sony:diff -- --ci`
+- `pnpm run lint`
+- `pnpm run typecheck`
+- `pnpm run test`
+- `pnpm run build`
+- `pnpm run sony:validate`
+- `pnpm run sony:diff -- --ci`
 
 Expected: all PASS.
 

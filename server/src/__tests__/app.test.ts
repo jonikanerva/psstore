@@ -15,7 +15,7 @@ const withServer = async (
       throw new Error('Failed to allocate test port')
     }
 
-    const response = await fetch(`http://127.0.0.1:${address.port}${path}`)
+    const response = await fetch(`http://127.0.0.1:${String(address.port)}${path}`)
     const body = await response.text()
     return {
       status: response.status,

@@ -16,7 +16,9 @@ export const createApp = (): express.Express => {
     const startedAt = Date.now()
     response.on('finish', () => {
       const duration = Date.now() - startedAt
-      console.info(`${request.method} ${request.originalUrl} ${response.statusCode} ${duration}ms`)
+      console.info(
+        `${request.method} ${request.originalUrl} ${String(response.statusCode)} ${String(duration)}ms`,
+      )
     })
     next()
   })

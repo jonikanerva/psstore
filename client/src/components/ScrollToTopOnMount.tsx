@@ -1,13 +1,10 @@
-import React from 'react'
+import { useEffect } from 'react'
 
-class ScrollToTopOnMount extends React.Component {
-  componentDidMount(): void {
+const ScrollToTopOnMount = (): null => {
+  useEffect(() => {
     window.scrollTo(0, 0)
-  }
-
-  render(): null {
-    return null
-  }
+  }, [])
+  return null
 }
 
 export default ScrollToTopOnMount

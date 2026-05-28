@@ -4,8 +4,7 @@
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "jsx": "react-jsx",
-    "types": ["vite/client"],
-    "baseUrl": "."
+    "types": ["vite/client"]
   },
   "include": ["src", "vite.config.ts"]
 }

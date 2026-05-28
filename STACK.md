@@ -1,6 +1,6 @@
 # STACK.md — Strict TypeScript / Node LTS / Express / React / Vite / Vitest profile
 
-> Strict TypeScript monorepo with an Express backend (`server/`), a React + Vite frontend (`client/`), a shared `shared/` module, and a sony-contract-bot CLI (`tools/sony-contract-bot/`). Target package manager: pnpm workspaces (currently npm — see §11 Migration in progress). Vitest for tests.
+> Strict TypeScript monorepo with an Express backend (`server/`), a React + Vite frontend (`client/`), a shared `shared/` module, and a sony-contract-bot CLI (`tools/sony-contract-bot/`). Package manager: pnpm workspaces. Vitest for tests.
 
 ---
 
@@ -12,8 +12,6 @@
 - **Minimum runtime version:** Node 24.0 (no back-deployment to Node 22 / 20)
 - **Package manager:** pnpm (workspaces)
 - **Lockfile:** `pnpm-lock.yaml`
-
-> The repository currently lags some of these targets. Migration is tracked in §11 Migration in progress.
 
 ---
 
@@ -40,8 +38,8 @@
 
 ## 3. Build & verify commands
 
-| Variable | Command (target) |
-| -------- | ---------------- |
+| Variable | Command |
+| -------- | ------- |
 | `$FORMAT_CMD` | `pnpm format` |
 | `$LINT_CMD` | `pnpm lint` |
 | `$BUILD_CMD` | `pnpm build` |
@@ -49,8 +47,6 @@
 | `$VERIFY_CMD` | `pnpm test-all` (type-check → lint → build → tests) |
 
 The `package.json` scripts are the single source of truth. Never invoke `eslint`, `tsc`, `vitest`, or `vite` directly from commits, CI, or agent scripts.
-
-> **Until the pnpm migration ships** (see §11), agents run the npm equivalents: `npm run format`, `npm run lint`, `npm run build`, `npm run test`, `npm run test-all`. The script names in `package.json` are identical; only the invoking package manager differs.
 
 ---
 
@@ -78,21 +74,21 @@ The `package.json` scripts are the single source of truth. Never invoke `eslint`
 
 ## 6. Approved dependencies
 
-Default answer to "should we add a library?" is **no**. The lists below are intentionally short; new entries require a `STACK.md` PR with justification. Rows marked `(target)` represent the version this profile aims at; the currently-installed version is in §11.
+Default answer to "should we add a library?" is **no**. The lists below are intentionally short; new entries require a `STACK.md` PR with justification.
 
 | Dependency | Version | Why it earns its place | Approver | Date |
 | ---------- | ------- | ---------------------- | -------- | ---- |
 | `express` | `^4.21` | Backend HTTP framework — incumbent, stable, sufficient for the Sony proxy | (default) | (template) |
 | `react` | `^19` | Frontend UI framework | (default) | (template) |
 | `react-router-dom` | `^7` | Frontend routing | (default) | (template) |
-| `vite` | `^8` (target) | Frontend build tool | (default) | (template) |
-| `vitest` | `^4` (target) | Test runner | (default) | (template) |
-| `zod` | `^4` (target) | Boundary validation for every external input | (default) | (template) |
+| `vite` | `^8` | Frontend build tool | (default) | (template) |
+| `vitest` | `^4` | Test runner | (default) | (template) |
+| `zod` | `^4` | Boundary validation for every external input | (default) | (template) |
 | `@typescript-eslint/*` | `^8` | TS-aware lint rules | (default) | (template) |
-| `eslint` | `^10` (target) | Linter | (default) | (template) |
+| `eslint` | `^9` | Linter (see §10 Intentional Divergences — held at 9 pending `eslint-plugin-react` 10-compat) | (default) | (template) |
 | `stylelint` | `^16` | CSS linter | (default) | (template) |
 | `prettier` | `^3` | Formatter | (default) | (template) |
-| `typescript` | `^6.0` (target) | Language | (default) | (template) |
+| `typescript` | `^6.0` | Language | (default) | (template) |
 
 ---
 
@@ -132,28 +128,4 @@ Default answer to "should we add a library?" is **no**. The lists below are inte
 
 | Date | AGENTS.md rule | Divergence | Reason |
 | ---- | -------------- | ---------- | ------ |
-| *(none)* | — | — | — |
-
----
-
-## 11. Migration in progress
-
-The repository currently lags the targets declared in §1, §2, §3, and §6. Each row below becomes its own GitHub `milestone` issue when the migration work is scheduled (per `CLAUDE.md → Backlog and milestones`).
-
-| Component | Target (§1–§6) | Current (in repo) | Action |
-| --------- | -------------- | ----------------- | ------ |
-| Package manager | pnpm + workspaces, `pnpm-lock.yaml` | npm + workspaces, `package-lock.json` | Migrate scripts, regenerate lockfile, update CI. Until then, agents use `npm run …`. |
-| TypeScript | 6.0 + 5 strict flags | 5.7.3 + `strict: true` only | Bump version, add the four extra strict flags incrementally (start with `noUncheckedIndexedAccess`). |
-| Node minimum | 24.0 | `engines >=22` (`.nvmrc` 24.13.1) | Bump `engines.node` to `>=24.0.0`, update CI matrix. |
-| Vite | `^8` | `3.8.0` | Migrate config to Vite 8; review breaking changes in dev server and build config. |
-| Vitest | `^4` | `3.0.5` | Bump and verify config compatibility. |
-| Zod | `^4` | `3.24.2` | Bump; review breaking changes in `.parse` / `.safeParse` shapes. |
-| ESLint | `^10` | `9.20.0` | Bump and reconcile with `@typescript-eslint` major versions. |
-
-**While any row is in the "Current" state**, agents must:
-
-- Use the npm equivalents for `$VERIFY_CMD` and the other named commands in §3.
-- Use the currently-installed major versions when extending code — e.g. write Zod 3 schemas, not Zod 4 syntax the current parser cannot handle.
-- Open the migration milestone as a GitHub `milestone` issue before starting the migration work, with scope (in/out), files to touch, and verification steps in the issue body.
-
-When a row migrates successfully, **delete the row** from this table — the merge commit + the closed `milestone` issue are the audit trail.
+| 2026-05-28 | §6 Approved dependencies (target ESLint `^10`) | ESLint pinned at `^9.39.4` | `eslint-plugin-react@7.37.5` (latest published) caps its peer dep at ESLint `^9.7`. ESLint 10 + this plugin fails at lint time (`contextOrFilename.getFilename is not a function`). Hold until `eslint-plugin-react` ships an ESLint-10-compatible release or the project migrates to `@eslint-react/eslint-plugin`. |
