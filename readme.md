@@ -11,8 +11,8 @@ The browser talks only to `/api/*`. The server handles Sony GraphQL requests and
 ## Development
 
 ```bash
-npm install
-npm run dev
+pnpm install
+pnpm run dev
 ```
 
 - Client runs on `http://localhost:5173`
@@ -22,10 +22,10 @@ npm run dev
 ## Quality Gates
 
 ```bash
-npm run lint
-npm run typecheck
-npm run test
-npm run build
+pnpm run lint
+pnpm run typecheck
+pnpm run test
+pnpm run build
 ```
 
 ## Sony Contract Tooling (Hardcoded Scope)
@@ -40,24 +40,24 @@ No sign-in is required.
 
 ```bash
 # capture + normalize + validate + diff
-npm run sony:refresh
+pnpm run sony:refresh
 
 # validate canonical manifest against backend assumptions
-npm run sony:validate
+pnpm run sony:validate
 
 # fail on drift in CI mode
-npm run sony:diff -- --ci
+pnpm run sony:diff -- --ci
 ```
 
 ## Production / Railway
 
 ```bash
-npm install
-npm run build
-npm run start
+pnpm install
+pnpm run build
+pnpm run start
 ```
 
-Railway should run the Node server (`npm run start`). In production, Express serves `client/build` and handles SPA fallback routing.
+Railway should run the Node server (`pnpm run start`). In production, Express serves `client/build` and handles SPA fallback routing.
 
 ## Environment Variables
 
@@ -74,6 +74,6 @@ Railway should run the Node server (`npm run start`). In production, Express ser
 
 ## Sony GraphQL Contract Update Workflow
 
-1. Run `npm run sony:refresh` against the public fi-fi storefront.
+1. Run `pnpm run sony:refresh` against the public fi-fi storefront.
 2. Keep only PS5/EUR relevant operations via built-in scope filtering.
-3. Verify with `npm run sony:validate` and `npm run sony:diff -- --ci`.
+3. Verify with `pnpm run sony:validate` and `pnpm run sony:diff -- --ci`.

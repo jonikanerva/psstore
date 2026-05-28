@@ -48,7 +48,7 @@ it('returns undefined publisherName when missing', () => {
 
 **Step 2: Run test to verify it fails**
 
-Run: `npm test -w server -- --run sonyClient`
+Run: `pnpm --filter @psstore/server test -- --run sonyClient`
 Expected: FAIL — `publisherName` is not in `ProductDetailResult`
 
 **Step 3: Write minimal implementation**
@@ -93,7 +93,7 @@ export interface ProductDetail {
 
 **Step 4: Run test to verify it passes**
 
-Run: `npm test -w server -- --run sonyClient`
+Run: `pnpm --filter @psstore/server test -- --run sonyClient`
 Expected: PASS
 
 **Step 5: Commit**
@@ -135,7 +135,7 @@ it('enriches game with publisher name from product detail', async () => {
 
 **Step 2: Run test to verify it fails**
 
-Run: `npm test -w server -- --run gamesService`
+Run: `pnpm --filter @psstore/server test -- --run gamesService`
 Expected: FAIL — studio will still be empty because `enrichGameWithDetail` doesn't map it
 
 **Step 3: Write minimal implementation**
@@ -162,7 +162,7 @@ const enrichGameWithDetail = async (game: Game): Promise<Game> => {
 
 **Step 4: Run test to verify it passes**
 
-Run: `npm test -w server -- --run gamesService`
+Run: `pnpm --filter @psstore/server test -- --run gamesService`
 Expected: PASS
 
 **Step 5: Commit**
@@ -202,7 +202,7 @@ vi.mock('../modules/psnStore', () => ({
 
 **Step 3: Run tests**
 
-Run: `npm test -w client`
+Run: `pnpm --filter @psstore/client test`
 Expected: PASS
 
 **Step 4: Commit**
@@ -352,7 +352,7 @@ it('renders media section only when screenshots or videos exist', async () => {
 
 **Step 4: Run tests**
 
-Run: `npm test -w client`
+Run: `pnpm --filter @psstore/client test`
 Expected: PASS
 
 **Step 5: Commit**
@@ -368,7 +368,7 @@ git commit -m "feat: reorder PDP layout with media above description, improve ke
 
 **Step 1: Run all tests**
 
-Run: `npm test`
+Run: `pnpm test`
 Expected: All pass
 
 **Step 2: Verify no regressions**

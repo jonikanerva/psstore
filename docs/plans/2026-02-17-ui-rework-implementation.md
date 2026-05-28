@@ -29,7 +29,7 @@ it('renders app shell with tabs and global search', async () => {
 
 **Step 2: Run test and verify failure**
 
-Run: `npm run test -w client -- app-shell.test.tsx`
+Run: `pnpm --filter @psstore/client run test -- app-shell.test.tsx`
 Expected: FAIL because shell/searchbox does not exist in current composition.
 
 **Step 3: Commit**
@@ -66,7 +66,7 @@ git commit -m "test(client): add failing app shell rendering coverage"
 
 **Step 4: Run tests**
 
-Run: `npm run test -w client -- app-shell.test.tsx`
+Run: `pnpm --filter @psstore/client run test -- app-shell.test.tsx`
 Expected: PASS.
 
 **Step 5: Commit**
@@ -96,7 +96,7 @@ git commit -m "feat(client): add sticky app shell and nested route layout"
 
 **Step 4: Run tests**
 
-Run: `npm run test -w client -- app-shell.test.tsx search.test.ts`
+Run: `pnpm --filter @psstore/client run test -- app-shell.test.tsx search.test.ts`
 Expected: PASS.
 
 **Step 5: Commit**
@@ -137,7 +137,7 @@ it('renders cover, name, genres, price and release date', () => {
 
 **Step 4: Run tests**
 
-Run: `npm run test -w client -- game-card.test.tsx`
+Run: `pnpm --filter @psstore/client run test -- game-card.test.tsx`
 Expected: PASS.
 
 **Step 5: Commit**
@@ -168,7 +168,7 @@ git commit -m "feat(client): introduce reusable compact game card for PLP and se
 
 **Step 4: Run tests**
 
-Run: `npm run test -w client`
+Run: `pnpm --filter @psstore/client run test`
 Expected: PASS for client suite.
 
 **Step 5: Commit**
@@ -202,7 +202,7 @@ Create `client/src/__tests__/pdp.test.tsx`:
 
 **Step 4: Run tests**
 
-Run: `npm run test -w client -- pdp.test.tsx`
+Run: `pnpm --filter @psstore/client run test -- pdp.test.tsx`
 Expected: PASS.
 
 **Step 5: Commit**
@@ -237,9 +237,9 @@ git commit -m "feat(client): rebuild pdp with conditional detail/media sections"
 **Step 4: Run lint/build checks for client**
 
 Run:
-- `npm run lint -w client`
-- `npm run typecheck -w client`
-- `npm run build -w client`
+- `pnpm --filter @psstore/client run lint`
+- `pnpm --filter @psstore/client run typecheck`
+- `pnpm --filter @psstore/client run build`
 
 Expected: all PASS.
 
@@ -264,12 +264,12 @@ git commit -m "style(client): apply compact accessible catalog styling"
 **Step 2: Run full required gates**
 
 Run:
-- `npm run lint`
-- `npm run typecheck`
-- `npm run test`
-- `npm run build`
-- `npm run sony:validate`
-- `npm run sony:diff -- --ci`
+- `pnpm run lint`
+- `pnpm run typecheck`
+- `pnpm run test`
+- `pnpm run build`
+- `pnpm run sony:validate`
+- `pnpm run sony:diff -- --ci`
 
 Expected: all PASS.
 

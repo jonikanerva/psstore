@@ -56,7 +56,7 @@ it('maps discount fields from concept price', async () => {
 
 **Step 2: Run test to verify it fails**
 
-Run: `npm run test -- --run`
+Run: `pnpm run test -- --run`
 Expected: FAIL — `originalPrice` property doesn't exist on Game type.
 
 **Step 3: Add fields to shared schema**
@@ -106,12 +106,12 @@ In `client/src/__tests__/AppShell.test.tsx` — no game fixtures, no change need
 
 **Step 6: Run tests to verify they pass**
 
-Run: `npm run test -- --run`
+Run: `pnpm run test -- --run`
 Expected: ALL PASS
 
 **Step 7: Run full quality gates**
 
-Run: `npm run lint && npm run typecheck && npm run test -- --run && npm run build`
+Run: `pnpm run lint && pnpm run typecheck && pnpm run test -- --run && pnpm run build`
 Expected: ALL PASS
 
 **Step 8: Commit**
@@ -154,7 +154,7 @@ expect(plus.length).toBe(0)
 
 **Step 2: Run tests to verify they fail**
 
-Run: `npm run test -- --run`
+Run: `pnpm run test -- --run`
 Expected: FAIL — `fetchProductReleaseDate` is still being called, and Plus still returns base fallback.
 
 **Step 3: Remove enrichment from listing pipeline**
@@ -214,12 +214,12 @@ const games = mapConceptsToGames(matchingConcepts)
 
 **Step 4: Run tests to verify they pass**
 
-Run: `npm run test -- --run`
+Run: `pnpm run test -- --run`
 Expected: ALL PASS
 
 **Step 5: Run full quality gates**
 
-Run: `npm run lint && npm run typecheck && npm run test -- --run && npm run build`
+Run: `pnpm run lint && pnpm run typecheck && pnpm run test -- --run && pnpm run build`
 Expected: ALL PASS
 
 **Step 6: Commit**
@@ -297,7 +297,7 @@ it('shows single price when not discounted', () => {
 
 **Step 2: Run tests to verify they fail**
 
-Run: `npm run test -- --run`
+Run: `pnpm run test -- --run`
 Expected: FAIL — strikethrough element doesn't exist yet, date not shown in card.
 
 **Step 3: Redesign GameCard component**
@@ -443,12 +443,12 @@ Remove the two `@media` blocks for `.games--grid` (the `760px` and `1080px` brea
 
 **Step 6: Run tests to verify they pass**
 
-Run: `npm run test -- --run`
+Run: `pnpm run test -- --run`
 Expected: ALL PASS
 
 **Step 7: Run full quality gates**
 
-Run: `npm run lint && npm run typecheck && npm run test -- --run && npm run build`
+Run: `pnpm run lint && pnpm run typecheck && pnpm run test -- --run && pnpm run build`
 Expected: ALL PASS
 
 **Step 8: Commit**
@@ -481,7 +481,7 @@ expect(screen.getByText('PS Store')).toBeInTheDocument()
 
 **Step 2: Run tests to verify they fail**
 
-Run: `npm run test -- --run`
+Run: `pnpm run test -- --run`
 Expected: FAIL — still says "PS5 Catalog".
 
 **Step 3: Rename brand**
@@ -599,12 +599,12 @@ In `shared/src/index.ts`, no change needed (it re-exports all from `filters.ts` 
 
 **Step 8: Run tests to verify they pass**
 
-Run: `npm run test -- --run`
+Run: `pnpm run test -- --run`
 Expected: ALL PASS
 
 **Step 9: Run full quality gates**
 
-Run: `npm run lint && npm run typecheck && npm run test -- --run && npm run build`
+Run: `pnpm run lint && pnpm run typecheck && pnpm run test -- --run && pnpm run build`
 Expected: ALL PASS. If lint/typecheck reports unused `filterGamesByGenre` imports anywhere, remove them.
 
 **Step 10: Commit**
@@ -687,7 +687,7 @@ it('getNewGames returns null nextOffset on last page', async () => {
 
 **Step 2: Run tests to verify they fail**
 
-Run: `npm run test -- --run`
+Run: `pnpm run test -- --run`
 Expected: FAIL — `paginationQuerySchema` doesn't exist, `getNewGames` doesn't accept args.
 
 **Step 3: Add PageResult schema to shared**
@@ -857,12 +857,12 @@ The existing tests in `gamesService.test.ts` call `getNewGames()` etc. and expec
 
 **Step 8: Run tests to verify they pass**
 
-Run: `npm run test -- --run`
+Run: `pnpm run test -- --run`
 Expected: ALL PASS
 
 **Step 9: Run full quality gates**
 
-Run: `npm run lint && npm run typecheck && npm run test -- --run && npm run build`
+Run: `pnpm run lint && pnpm run typecheck && pnpm run test -- --run && pnpm run build`
 Expected: ALL PASS
 
 **Step 10: Commit**
@@ -1052,7 +1052,7 @@ The `fetch` prop type changed from `() => Promise<Game[]>` to `(offset: number, 
 
 **Step 5: Run full quality gates**
 
-Run: `npm run lint && npm run typecheck && npm run test -- --run && npm run build`
+Run: `pnpm run lint && pnpm run typecheck && pnpm run test -- --run && pnpm run build`
 Expected: ALL PASS. If there are type errors in test files that mock the old `fetch` signature, update them.
 
 **Step 6: Commit**
@@ -1069,10 +1069,10 @@ git commit -m "feat: add infinite scroll with IntersectionObserver"
 **Step 1: Run all quality gates**
 
 ```bash
-npm run lint
-npm run typecheck
-npm run test -- --run
-npm run build
+pnpm run lint
+pnpm run typecheck
+pnpm run test -- --run
+pnpm run build
 ```
 
 Expected: ALL PASS
@@ -1087,7 +1087,7 @@ Check for any remaining references to removed code:
 - `fetchProductReleaseDate` — only used by `fetchProductDetail` delegation, which is fine
 - `MIN_ITEMS` constant — should be deleted if `ensureNonEmpty` is gone
 
-Run: `npm run lint && npm run typecheck && npm run test -- --run && npm run build`
+Run: `pnpm run lint && pnpm run typecheck && pnpm run test -- --run && pnpm run build`
 
 **Step 3: Commit any cleanup**
 

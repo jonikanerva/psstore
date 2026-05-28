@@ -13,7 +13,7 @@ No authentication/sign-in workflow is used.
 ## Refresh contract snapshot
 
 ```bash
-npm run sony:refresh
+pnpm run sony:refresh
 ```
 
 Pipeline:
@@ -26,8 +26,8 @@ Pipeline:
 ## Apply candidate as canonical manifest
 
 ```bash
-npm run sony:normalize -- --write-manifest
-npm run sony:validate
+pnpm run sony:normalize -- --write-manifest
+pnpm run sony:validate
 ```
 
 ## CI checks
@@ -35,8 +35,8 @@ npm run sony:validate
 CI runs:
 
 ```bash
-npm run sony:validate
-npm run sony:diff -- --ci
+pnpm run sony:validate
+pnpm run sony:diff -- --ci
 ```
 
 Drift in CI is a hard failure.
