@@ -32,7 +32,7 @@ Run before every commit and PR — all must pass:
 $VERIFY_CMD
 ```
 
-`$VERIFY_CMD` is declared in `STACK.md`. It is the single source of truth for how to verify, lint, build, and test this project. Never invent raw tool invocations (`swift-format`, `xcodebuild`, `eslint`, `tsc`, etc.) in commits, CI, or agent scripts — always go through the named command in `STACK.md`.
+`$VERIFY_CMD` is declared in `STACK.md`. It is the single source of truth for how to verify, lint, build, and test this project. It is a local-only gate — there is no remote CI to fall back on, so every contributor MUST run it before committing and before opening a PR. Never invent raw tool invocations (`swift-format`, `xcodebuild`, `eslint`, `tsc`, etc.) in commits or agent scripts — always go through the named command in `STACK.md`.
 
 ## Git workflow
 

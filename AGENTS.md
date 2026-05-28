@@ -70,15 +70,15 @@ Views / handlers do not talk directly to low-level system managers or raw networ
 
 Do not create a separate `ViewModel` / `Controller` / `Service` for every tiny unit of UI. Use this decision table:
 
-| Need                                          | Default                                          | Why                                       |
-| --------------------------------------------- | ------------------------------------------------ | ----------------------------------------- |
-| Tiny view-local UI state                      | local state primitive (`@State`, `useState`, …)  | Owned by the view                         |
-| Shared screen/feature state with side effects | one observable state holder per screen           | Clear UI ownership, granular updates      |
-| Shared mutable non-UI state                   | thread-safe primitive (`actor`, mutex, queue)    | Data-race safety                          |
-| App-wide dependency                           | initializer / context / environment injection    | Explicit dependency flow                  |
-| Durable local data                            | the persistence layer declared in `STACK.md`     | Survives cold launches; one source of truth |
-| Ephemeral expensive cache                     | in-memory cache primitive                        | Avoid recomputation and hitching          |
-| Streaming live feed                           | `AsyncSequence` / async iterator from a service  | Cooperative, cancellable                  |
+| Need                                          | Default                                         | Why                                         |
+| --------------------------------------------- | ----------------------------------------------- | ------------------------------------------- |
+| Tiny view-local UI state                      | local state primitive (`@State`, `useState`, …) | Owned by the view                           |
+| Shared screen/feature state with side effects | one observable state holder per screen          | Clear UI ownership, granular updates        |
+| Shared mutable non-UI state                   | thread-safe primitive (`actor`, mutex, queue)   | Data-race safety                            |
+| App-wide dependency                           | initializer / context / environment injection   | Explicit dependency flow                    |
+| Durable local data                            | the persistence layer declared in `STACK.md`    | Survives cold launches; one source of truth |
+| Ephemeral expensive cache                     | in-memory cache primitive                       | Avoid recomputation and hitching            |
+| Streaming live feed                           | `AsyncSequence` / async iterator from a service | Cooperative, cancellable                    |
 
 Name presentation models by responsibility (`HomeModel`, `CheckoutController`), not by mechanical suffix (`HomeViewModel`, `CheckoutPagePresenter`).
 
@@ -99,20 +99,20 @@ The point is one obvious state owner per screen, explicit phases, heavy work beh
 
 ## 4. Concurrency (non-negotiable)
 
-| Rule | Detail                                                                                                                                            |
-| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| C1   | The strictest concurrency / async-safety mode declared in `STACK.md` is enabled. No new warnings, no relaxed-mode escapes.                        |
-| C2   | UI-facing state holders are isolated to the UI thread / event loop. Annotate explicitly; do not rely on inference where the language allows both. |
-| C3   | Shared mutable non-UI state lives behind a thread-safe primitive (`actor`, mutex, channel, queue). Services expose `async` methods or async streams. |
-| C4   | Prefer **structured concurrency**: scoped tasks, `async let`, task groups, `for await`. The lifetime of async work matches a concrete scope.      |
-| C5   | Use unstructured / detached background work only when it must outlive the calling scope, with an inline comment explaining why.                   |
-| C6   | Avoid detached privilege-escalation primitives unless the isolation requirement is documented in an inline comment.                               |
-| C7   | **Cancellation is mandatory.** Long-running streams cooperate with cancellation. When a view disappears, its subscriptions stop.                  |
-| C8   | Types crossing concurrency boundaries are thread-safe (Sendable / immutable / serialisable). Unsafe-marker overrides require an inline justification. |
-| C9   | Cross-actor / cross-thread data uses value types or immutable references. Never pass mutable reference graphs across concurrency boundaries.       |
-| C10  | UI-thread functions awaiting `async` work MUST NOT block. No semaphore.wait, no busy loops, no sync-over-async bridges.                            |
-| C11  | Use lower-level concurrency primitives (`DispatchQueue`, raw threads, raw event-loop tricks) only when an underlying API requires it. Bridge to `AsyncSequence` / async iterator immediately. |
-| C12  | Reactive / publisher frameworks are allowed only at framework boundaries that still vend them. Convert to `async` streams immediately.            |
+| Rule | Detail                                                                                                                                                                                                 |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| C1   | The strictest concurrency / async-safety mode declared in `STACK.md` is enabled. No new warnings, no relaxed-mode escapes.                                                                             |
+| C2   | UI-facing state holders are isolated to the UI thread / event loop. Annotate explicitly; do not rely on inference where the language allows both.                                                      |
+| C3   | Shared mutable non-UI state lives behind a thread-safe primitive (`actor`, mutex, channel, queue). Services expose `async` methods or async streams.                                                   |
+| C4   | Prefer **structured concurrency**: scoped tasks, `async let`, task groups, `for await`. The lifetime of async work matches a concrete scope.                                                           |
+| C5   | Use unstructured / detached background work only when it must outlive the calling scope, with an inline comment explaining why.                                                                        |
+| C6   | Avoid detached privilege-escalation primitives unless the isolation requirement is documented in an inline comment.                                                                                    |
+| C7   | **Cancellation is mandatory.** Long-running streams cooperate with cancellation. When a view disappears, its subscriptions stop.                                                                       |
+| C8   | Types crossing concurrency boundaries are thread-safe (Sendable / immutable / serialisable). Unsafe-marker overrides require an inline justification.                                                  |
+| C9   | Cross-actor / cross-thread data uses value types or immutable references. Never pass mutable reference graphs across concurrency boundaries.                                                           |
+| C10  | UI-thread functions awaiting `async` work MUST NOT block. No semaphore.wait, no busy loops, no sync-over-async bridges.                                                                                |
+| C11  | Use lower-level concurrency primitives (`DispatchQueue`, raw threads, raw event-loop tricks) only when an underlying API requires it. Bridge to `AsyncSequence` / async iterator immediately.          |
+| C12  | Reactive / publisher frameworks are allowed only at framework boundaries that still vend them. Convert to `async` streams immediately.                                                                 |
 | C13  | Concurrency-warning silencers (`@unchecked Sendable`, `nonisolated(unsafe)`, `@preconcurrency`, equivalent escape hatches) are last-resort tools. Prefer fixing isolation over silencing the compiler. |
 
 ---
@@ -209,12 +209,12 @@ Profile before optimising — but stay inside the budgets declared in `STACK.md`
 - No broad type erasure (`AnyView`, `any`, `unknown` cast, reflection tricks) unless there is a clear measured benefit.
 - Avoid global mutable state and singletons unless an underlying API essentially requires one.
 - Delete dead code; do not comment it out.
-- Comments explain *why*, invariants, or tradeoffs — not obvious line-by-line behaviour.
+- Comments explain _why_, invariants, or tradeoffs — not obvious line-by-line behaviour.
 - Public API / exported symbols get a doc comment.
 - Hot-path domain functions are pure, allocation-light, and inline-friendly where the language supports it.
 - Feature flags live in a single typed configuration object, not scattered.
 - No `print` / `console.log` / `dump` in shipped code; use the structured logger declared in `STACK.md`. Never log values that could leak PII.
-- Run `STACK.md → $FORMAT_CMD` before committing. The build / format / lint / test commands declared in `STACK.md` are the single source of truth — never invoke the underlying tools (`swift-format`, `xcodebuild`, `eslint`, `tsc`, etc.) directly from commits, CI, or agent scripts.
+- Run `STACK.md → $FORMAT_CMD` before committing. The build / format / lint / test commands declared in `STACK.md` are the single source of truth — never invoke the underlying tools (`swift-format`, `xcodebuild`, `eslint`, `tsc`, etc.) directly from commits or agent scripts.
 
 ---
 
@@ -229,15 +229,15 @@ Profile before optimising — but stay inside the budgets declared in `STACK.md`
 
 ---
 
-## 12. Build & CI
+## 12. Build & verification
 
 - Use the build tool, language version, and lock-file declared in `STACK.md`. Strictness flags are non-negotiable in every target.
-- The single source of truth for verify / lint / build / test commands is `STACK.md`. CI and every agent runs the named commands (`$VERIFY_CMD`, `$FORMAT_CMD`, `$LINT_CMD`, `$TEST_CMD`, `$BUILD_CMD`) — never raw tool invocations.
-- CI runs at minimum:
+- The single source of truth for verify / lint / build / test commands is `STACK.md`. Every agent runs the named commands (`$VERIFY_CMD`, `$FORMAT_CMD`, `$LINT_CMD`, `$TEST_CMD`, `$BUILD_CMD`) — never raw tool invocations.
+- `$VERIFY_CMD` is the mandatory local gate before every commit and every PR:
   ```sh
   $VERIFY_CMD
   ```
-  This is the gate for every PR.
+  It MUST pass without warnings. There is no remote gate that substitutes for it.
 - Previews / stories for every non-trivial UI surface, at least one per state listed in `VISION.md` / the screen-local state enumeration.
 - `.gitignore` excludes build artefacts, derived data, dependency caches, and editor / OS noise.
 
