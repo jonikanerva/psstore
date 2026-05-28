@@ -1,0 +1,120 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh api repos/*/issues/comments:*)",
+      "Bash(gh api repos/*/pulls/*/comments:*)",
+      "Bash(gh api repos/*/pulls/*/reviews:*)",
+      "Bash(gh auth status)",
+      "Bash(gh pr checks:*)",
+      "Bash(gh pr comment:*)",
+      "Bash(gh pr create:*)",
+      "Bash(gh pr diff:*)",
+      "Bash(gh pr edit:*)",
+      "Bash(gh pr list:*)",
+      "Bash(gh pr review:*)",
+      "Bash(gh pr status:*)",
+      "Bash(gh pr view:*)",
+      "Bash(gh repo view:*)",
+      "Bash(git add:*)",
+      "Bash(git branch:*)",
+      "Bash(git checkout -b:*)",
+      "Bash(git commit:*)",
+      "Bash(git diff:*)",
+      "Bash(git fetch:*)",
+      "Bash(git log:*)",
+      "Bash(git pull:*)",
+      "Bash(git push origin:*)",
+      "Bash(git remote:*)",
+      "Bash(git show:*)",
+      "Bash(git status:*)",
+      "Bash(git switch:*)",
+      "Bash(git worktree:*)",
+      "Bash(node:*)",
+      "Bash(npm:*)",
+      "Bash(npx:*)",
+      "Bash(pnpm:*)",
+      "Bash(tsc:*)",
+      "Bash(vitest:*)",
+      "Skill(codereview)",
+      "Skill(implement)",
+      "Skill(project-manager)",
+      "WebFetch(domain:12factor.net)",
+      "WebFetch(domain:api.github.com)",
+      "WebFetch(domain:cheatsheetseries.owasp.org)",
+      "WebFetch(domain:csrc.nist.gov)",
+      "WebFetch(domain:cwe.mitre.org)",
+      "WebFetch(domain:docs.claude.com)",
+      "WebFetch(domain:docs.github.com)",
+      "WebFetch(domain:getpino.io)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:hono.dev)",
+      "WebFetch(domain:nodejs.org)",
+      "WebFetch(domain:openssf.org)",
+      "WebFetch(domain:opentelemetry.io)",
+      "WebFetch(domain:owasp.org)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:react.dev)",
+      "WebFetch(domain:slsa.dev)",
+      "WebFetch(domain:tanstack.com)",
+      "WebFetch(domain:typescript-eslint.io)",
+      "WebFetch(domain:typescriptlang.org)",
+      "WebFetch(domain:vitejs.dev)",
+      "WebFetch(domain:vitest.dev)",
+      "WebFetch(domain:w3.org)",
+      "WebFetch(domain:www.w3.org)",
+      "WebFetch(domain:zod.dev)"
+    ],
+    "deny": [
+      "Bash(gh api repos/*/merges:*)",
+      "Bash(git clean -fd:*)",
+      "Bash(git clean -fdx:*)",
+      "Bash(git push -f:*)",
+      "Bash(git push origin +:*)",
+      "Bash(git push origin HEAD:main:*)",
+      "Bash(git push origin main:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(rm --recursive:*)",
+      "Bash(rm -f -r:*)",
+      "Bash(rm -fr:*)",
+      "Bash(rm -r -f:*)",
+      "Bash(rm -rf:*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'cmd=$(jq -r \".tool_input.command\"); if echo \"$cmd\" | grep -qE \"git[[:space:]]+push([^[:alnum:]_-]|$)\" && echo \"$cmd\" | grep -qE \"(^|[^[:alnum:]_-])(--force|-f)([^[:alnum:]_-]|$)|origin[[:space:]]+(main|HEAD:main)([^[:alnum:]_/-]|$)\"; then echo \"BLOCKED: destructive push. Never push to main or force-push. Use --force-with-lease if absolutely required; create a PR otherwise.\" >&2; exit 2; fi'"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'cmd=$(jq -r \".tool_input.command\"); if echo \"$cmd\" | grep -q \"gh pr create\"; then echo \"{\\\"hookSpecificOutput\\\":{\\\"hookEventName\\\":\\\"PostToolUse\\\",\\\"additionalContext\\\":\\\"PR created. Run /codereview to start review.\\\"}}\"; fi'"
+          }
+        ]
+      }
+    ]
+  },
+  "sandbox": {
+    "excludedCommands": [
+      "open"
+    ],
+    "filesystem": {
+      "allowWrite": [
+        "~/.gnupg"
+      ]
+    }
+  },
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  }
+}
