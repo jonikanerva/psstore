@@ -17,6 +17,11 @@ export const validateBackendCompatibility = (
   manifest: SonyContractManifest,
   context: CompatibilityContext,
 ): void => {
+  // Defensive runtime check at the trust boundary: the manifest schema
+  // narrows these to literal types, so TypeScript treats the comparisons as
+  // dead. We keep the guard because the manifest is read from disk and Zod
+  // could be bypassed by a future caller; do not remove without re-auditing.
+  /* eslint-disable @typescript-eslint/no-unnecessary-condition -- defensive runtime guard at trust boundary; see comment above */
   if (
     manifest.metadata.region !== 'fi' ||
     manifest.metadata.locale !== 'fi-fi' ||
@@ -25,6 +30,7 @@ export const validateBackendCompatibility = (
   ) {
     throw new Error('Manifest metadata must be fixed to fi / fi-fi / EUR / PS5')
   }
+  /* eslint-enable @typescript-eslint/no-unnecessary-condition */
 
   const expectedOperationName = extractDefault(context.serverEnvText, 'SONY_OPERATION_NAME')
   const expectedEndpoint = extractDefault(context.serverEnvText, 'SONY_GRAPHQL_URL')

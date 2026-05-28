@@ -10,7 +10,7 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "lint": "eslint src --ext .ts",
+    "lint": "eslint src",
     "test": "vitest run"
   },
   "dependencies": {
@@ -19,12 +19,12 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
-    "@eslint/js": "^9.20.0",
+    "@eslint/js": "^9.39.4",
     "@types/express": "^5.0.1",
     "@types/node": "^24.12.4",
-    "@typescript-eslint/eslint-plugin": "^8.24.1",
-    "@typescript-eslint/parser": "^8.24.1",
-    "eslint": "^9.20.1",
+    "@typescript-eslint/eslint-plugin": "^8.60.0",
+    "@typescript-eslint/parser": "^8.60.0",
+    "eslint": "^9.39.4",
     "tsx": "^4.19.3",
     "typescript": "^6.0.3",
     "vitest": "^3.0.5"

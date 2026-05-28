@@ -11,12 +11,17 @@ export class MemoryCache {
   private sweepTimer: ReturnType<typeof setInterval> | null = null
 
   constructor() {
-    this.sweepTimer = setInterval(() => this.sweep(), SWEEP_INTERVAL_MS)
-    if (this.sweepTimer.unref) {
-      this.sweepTimer.unref()
-    }
+    this.sweepTimer = setInterval(() => {
+      this.sweep()
+    }, SWEEP_INTERVAL_MS)
+    this.sweepTimer.unref()
   }
 
+  // T is informational: callers express the expected payload type; the
+  // store erases the value type to `unknown` on insertion and the cast
+  // restores it on read. The cache is keyed by a service-local string,
+  // and entries are only written through the matching typed `set<T>`.
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- intentional ergonomic generic; see comment above
   get<T>(key: string): T | undefined {
     const cached = this.store.get(key)
     if (!cached) {
@@ -31,6 +36,9 @@ export class MemoryCache {
     return cached.value as T
   }
 
+  // T is informational so callers can pass a typed `value`; the cache itself
+  // erases the type to `unknown` on read (see `get<T>`).
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- mirrors `get<T>` ergonomically; see comment above
   set<T>(key: string, value: T, ttlMs: number): void {
     this.store.set(key, { value, expiresAt: Date.now() + ttlMs })
 

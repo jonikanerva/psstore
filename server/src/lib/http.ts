@@ -1,5 +1,15 @@
 import { HttpError } from '../errors/httpError.js'
 
+const describeError = (error: unknown): string => {
+  if (error instanceof Error) {
+    return error.message
+  }
+  if (typeof error === 'string') {
+    return error
+  }
+  return 'Upstream unavailable'
+}
+
 export const fetchWithRetry = async (
   input: string,
   init: RequestInit,
@@ -11,7 +21,9 @@ export const fetchWithRetry = async (
 
   while (attempt <= retries) {
     const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), timeoutMs)
+    const timer = setTimeout(() => {
+      controller.abort()
+    }, timeoutMs)
 
     try {
       const response = await fetch(input, {
@@ -21,7 +33,11 @@ export const fetchWithRetry = async (
       clearTimeout(timer)
 
       if (!response.ok) {
-        throw new HttpError(502, 'UPSTREAM_ERROR', `Sony upstream returned ${response.status}`)
+        throw new HttpError(
+          502,
+          'UPSTREAM_ERROR',
+          `Sony upstream returned ${String(response.status)}`,
+        )
       }
 
       return response
@@ -32,5 +48,5 @@ export const fetchWithRetry = async (
     }
   }
 
-  throw new HttpError(502, 'UPSTREAM_UNAVAILABLE', String(lastError ?? 'Upstream unavailable'))
+  throw new HttpError(502, 'UPSTREAM_UNAVAILABLE', describeError(lastError))
 }

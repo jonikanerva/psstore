@@ -49,6 +49,8 @@ describe('validateBackendCompatibility', () => {
       serviceText: 'await fetchConceptsByFeature(\'new\', 300)\nawait fetchSearchGames(\'elden\', 60)',
     }
 
-    expect(() => validateBackendCompatibility(manifest, context)).not.toThrow()
+    expect(() => {
+      validateBackendCompatibility(manifest, context)
+    }).not.toThrow()
   })
 })

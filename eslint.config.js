@@ -12,8 +12,11 @@ module.exports = [
       'client/build/**',
       'server/dist/**',
       'shared/dist/**',
-      'coverage/**'
-    ]
+      'tools/sony-contract-bot/dist/**',
+      'coverage/**',
+      '**/*.config.js',
+      '**/*.config.ts',
+    ],
   },
   js.configs.recommended,
   {
@@ -23,7 +26,9 @@ module.exports = [
       parserOptions: {
         ecmaVersion: 'latest',
         sourceType: 'module',
-        ecmaFeatures: { jsx: true }
+        ecmaFeatures: { jsx: true },
+        projectService: true,
+        tsconfigRootDir: __dirname,
       },
       globals: {
         console: 'readonly',
@@ -34,28 +39,38 @@ module.exports = [
         setTimeout: 'readonly',
         clearTimeout: 'readonly',
         window: 'readonly',
-        document: 'readonly'
-      }
+        document: 'readonly',
+      },
     },
     plugins: {
-      '@typescript-eslint': tsPlugin
+      '@typescript-eslint': tsPlugin,
     },
     rules: {
-      ...tsPlugin.configs.recommended.rules,
-      'no-undef': 'off'
-    }
+      ...tsPlugin.configs['strict-type-checked'].rules,
+      'no-undef': 'off',
+    },
   },
   {
     files: ['client/src/**/*.tsx'],
     plugins: {
-      react
+      react,
     },
     settings: {
-      react: { version: 'detect' }
+      react: { version: 'detect' },
     },
     rules: {
       ...react.configs.recommended.rules,
-      'react/react-in-jsx-scope': 'off'
-    }
-  }
+      'react/react-in-jsx-scope': 'off',
+      'react/prop-types': 'off',
+    },
+  },
+  {
+    // Test files contain async mock implementations that match the signature
+    // of the function they replace, but their bodies have no `await`. That is
+    // idiomatic for vi.fn mocks; relax `require-await` here.
+    files: ['**/__tests__/**/*.{ts,tsx}', '**/*.test.{ts,tsx}'],
+    rules: {
+      '@typescript-eslint/require-await': 'off',
+    },
+  },
 ]

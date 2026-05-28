@@ -21,7 +21,7 @@ const main = async (): Promise<void> => {
   switch (command) {
     case 'capture': {
       const count = await runCapture()
-      console.info(`Captured ${count} GraphQL requests.`)
+      console.info(`Captured ${String(count)} GraphQL requests.`)
       return
     }
     case 'normalize':
@@ -45,7 +45,7 @@ const main = async (): Promise<void> => {
   }
 }
 
-main().catch((error) => {
+main().catch((error: unknown) => {
   const message = error instanceof Error ? error.message : String(error)
   console.error(message)
   process.exitCode = 1

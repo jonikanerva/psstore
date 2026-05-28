@@ -15,7 +15,7 @@ const makeConcept = (name: string, overrides: Record<string, unknown> = {}) => {
   conceptCounter += 1
   const num = String(conceptCounter).padStart(5, '0')
   return {
-    id: `${conceptCounter}`,
+    id: String(conceptCounter),
     name,
     media: [{ type: 'IMAGE', role: 'MASTER', url: `https://img/${name}` }],
     price: {
@@ -272,7 +272,7 @@ describe('gamesService', () => {
 
   it('getNewGames respects offset and size', async () => {
     const concepts = Array.from({ length: 10 }, (_, i) =>
-      makeConcept(`game-${i}`),
+      makeConcept(`game-${String(i)}`),
     )
 
     fetchConceptsByFeature.mockImplementation(async (feature: string) =>

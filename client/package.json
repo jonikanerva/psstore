@@ -8,7 +8,7 @@
     "build": "vite build --outDir=build",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "lint": "eslint src --ext .ts,.tsx && stylelint 'src/**/*.css'",
+    "lint": "eslint src && stylelint 'src/**/*.css'",
     "test": "vitest run"
   },
   "dependencies": {
@@ -20,16 +20,16 @@
     "react-router-dom": "^7.1.5"
   },
   "devDependencies": {
-    "@eslint/js": "^9.20.0",
+    "@eslint/js": "^9.39.4",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/luxon": "^3.6.2",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
-    "@typescript-eslint/eslint-plugin": "^8.24.1",
-    "@typescript-eslint/parser": "^8.24.1",
+    "@typescript-eslint/eslint-plugin": "^8.60.0",
+    "@typescript-eslint/parser": "^8.60.0",
     "@vitejs/plugin-react-swc": "^3.8.0",
-    "eslint": "^9.20.1",
+    "eslint": "^9.39.4",
     "eslint-plugin-react": "^7.37.4",
     "jsdom": "^28.1.0",
     "stylelint": "^16.14.1",
