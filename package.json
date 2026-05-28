@@ -8,7 +8,7 @@
     "lint": "pnpm --filter @psstore/shared run lint && pnpm --filter @psstore/server run lint && pnpm --filter @psstore/client run lint && pnpm --filter @psstore/sony-contract-bot run lint",
     "typecheck": "pnpm --filter @psstore/shared run build && pnpm --filter @psstore/server run typecheck && pnpm --filter @psstore/client run typecheck && pnpm --filter @psstore/sony-contract-bot run typecheck",
     "test": "pnpm --filter @psstore/shared run test && pnpm --filter @psstore/server run test && pnpm --filter @psstore/client run test && pnpm --filter @psstore/sony-contract-bot run test",
-    "test-all": "pnpm run typecheck && pnpm run lint && pnpm run build && pnpm run test",
+    "test-all": "pnpm run typecheck && pnpm run lint && pnpm run build && pnpm run test && pnpm run sony:validate && pnpm run sony:diff -- --ci",
     "build": "pnpm run clean && pnpm --filter @psstore/shared run build && pnpm --filter @psstore/client run build && pnpm --filter @psstore/server run build && pnpm --filter @psstore/sony-contract-bot run build",
     "clean": "rm -rf build client/build server/dist shared/dist tools/sony-contract-bot/dist",
     "start": "pnpm --filter @psstore/server run start",

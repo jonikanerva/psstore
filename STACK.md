@@ -17,36 +17,36 @@
 
 ## 2. Frameworks
 
-| Concern | Framework / library | Notes |
-| ------- | ------------------- | ----- |
-| Backend HTTP framework | Express 4 | Sony GraphQL proxy + in-memory cache; Hono considered but not adopted — no concrete benefit for this scope |
-| Frontend UI | React 19 | Function components only |
-| Build tool | Vite 8 (target) | For `client/` |
-| State / observation | React built-ins (`useState`, `useReducer`) | No Redux / MobX |
-| Routing | React Router DOM 7 (frontend) / Express router (backend) | TanStack Router not adopted |
-| Data fetching (frontend) | Raw `fetch()` via `client/src/modules/psnStore.ts` | No TanStack Query / SWR; the API is read-only and simple |
-| Validation | Zod 4 (target) | Boundary validation for every external input (HTTP, env, persisted state) |
-| Persistence | In-memory cache (server) + browser storage for response caching (client) | See §5 |
-| Testing | Vitest 4 (target) (unit + integration) | Playwright optional for end-to-end |
-| Logging | `console.*` on server and CLI tools | pino not adopted; PII redaction rules in §8 still apply |
-| Telemetry | none by default | Add only with explicit `STACK.md` approval |
-| Formatting | Prettier 3 | |
-| Linting | ESLint 10 (target) with `@typescript-eslint` flat config | |
-| CSS linting | Stylelint 16 with project config | |
+| Concern                  | Framework / library                                                      | Notes                                                                                                      |
+| ------------------------ | ------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| Backend HTTP framework   | Express 4                                                                | Sony GraphQL proxy + in-memory cache; Hono considered but not adopted — no concrete benefit for this scope |
+| Frontend UI              | React 19                                                                 | Function components only                                                                                   |
+| Build tool               | Vite 8 (target)                                                          | For `client/`                                                                                              |
+| State / observation      | React built-ins (`useState`, `useReducer`)                               | No Redux / MobX                                                                                            |
+| Routing                  | React Router DOM 7 (frontend) / Express router (backend)                 | TanStack Router not adopted                                                                                |
+| Data fetching (frontend) | Raw `fetch()` via `client/src/modules/psnStore.ts`                       | No TanStack Query / SWR; the API is read-only and simple                                                   |
+| Validation               | Zod 4 (target)                                                           | Boundary validation for every external input (HTTP, env, persisted state)                                  |
+| Persistence              | In-memory cache (server) + browser storage for response caching (client) | See §5                                                                                                     |
+| Testing                  | Vitest 4 (target) (unit + integration)                                   | Playwright optional for end-to-end                                                                         |
+| Logging                  | `console.*` on server and CLI tools                                      | pino not adopted; PII redaction rules in §8 still apply                                                    |
+| Telemetry                | none by default                                                          | Add only with explicit `STACK.md` approval                                                                 |
+| Formatting               | Prettier 3                                                               |                                                                                                            |
+| Linting                  | ESLint 10 (target) with `@typescript-eslint` flat config                 |                                                                                                            |
+| CSS linting              | Stylelint 16 with project config                                         |                                                                                                            |
 
 ---
 
 ## 3. Build & verify commands
 
-| Variable | Command |
-| -------- | ------- |
-| `$FORMAT_CMD` | `pnpm format` |
-| `$LINT_CMD` | `pnpm lint` |
-| `$BUILD_CMD` | `pnpm build` |
-| `$TEST_CMD` | `pnpm test` |
-| `$VERIFY_CMD` | `pnpm test-all` (type-check → lint → build → tests) |
+| Variable      | Command                                                                                           |
+| ------------- | ------------------------------------------------------------------------------------------------- |
+| `$FORMAT_CMD` | `pnpm format`                                                                                     |
+| `$LINT_CMD`   | `pnpm lint`                                                                                       |
+| `$BUILD_CMD`  | `pnpm build`                                                                                      |
+| `$TEST_CMD`   | `pnpm test`                                                                                       |
+| `$VERIFY_CMD` | `pnpm test-all` (type-check → lint → build → tests → sony contract validate → sony contract diff) |
 
-The `package.json` scripts are the single source of truth. Never invoke `eslint`, `tsc`, `vitest`, or `vite` directly from commits, CI, or agent scripts.
+The `package.json` scripts are the single source of truth. Never invoke `eslint`, `tsc`, `vitest`, or `vite` directly from commits or agent scripts.
 
 ---
 
@@ -76,19 +76,19 @@ The `package.json` scripts are the single source of truth. Never invoke `eslint`
 
 Default answer to "should we add a library?" is **no**. The lists below are intentionally short; new entries require a `STACK.md` PR with justification.
 
-| Dependency | Version | Why it earns its place | Approver | Date |
-| ---------- | ------- | ---------------------- | -------- | ---- |
-| `express` | `^4.21` | Backend HTTP framework — incumbent, stable, sufficient for the Sony proxy | (default) | (template) |
-| `react` | `^19` | Frontend UI framework | (default) | (template) |
-| `react-router-dom` | `^7` | Frontend routing | (default) | (template) |
-| `vite` | `^8` | Frontend build tool | (default) | (template) |
-| `vitest` | `^4` | Test runner | (default) | (template) |
-| `zod` | `^4` | Boundary validation for every external input | (default) | (template) |
-| `@typescript-eslint/*` | `^8` | TS-aware lint rules | (default) | (template) |
-| `eslint` | `^9` | Linter (see §10 Intentional Divergences — held at 9 pending `eslint-plugin-react` 10-compat) | (default) | (template) |
-| `stylelint` | `^16` | CSS linter | (default) | (template) |
-| `prettier` | `^3` | Formatter | (default) | (template) |
-| `typescript` | `^6.0` | Language | (default) | (template) |
+| Dependency             | Version | Why it earns its place                                                                       | Approver  | Date       |
+| ---------------------- | ------- | -------------------------------------------------------------------------------------------- | --------- | ---------- |
+| `express`              | `^4.21` | Backend HTTP framework — incumbent, stable, sufficient for the Sony proxy                    | (default) | (template) |
+| `react`                | `^19`   | Frontend UI framework                                                                        | (default) | (template) |
+| `react-router-dom`     | `^7`    | Frontend routing                                                                             | (default) | (template) |
+| `vite`                 | `^8`    | Frontend build tool                                                                          | (default) | (template) |
+| `vitest`               | `^4`    | Test runner                                                                                  | (default) | (template) |
+| `zod`                  | `^4`    | Boundary validation for every external input                                                 | (default) | (template) |
+| `@typescript-eslint/*` | `^8`    | TS-aware lint rules                                                                          | (default) | (template) |
+| `eslint`               | `^9`    | Linter (see §10 Intentional Divergences — held at 9 pending `eslint-plugin-react` 10-compat) | (default) | (template) |
+| `stylelint`            | `^16`   | CSS linter                                                                                   | (default) | (template) |
+| `prettier`             | `^3`    | Formatter                                                                                    | (default) | (template) |
+| `typescript`           | `^6.0`  | Language                                                                                     | (default) | (template) |
 
 ---
 
@@ -126,6 +126,6 @@ Default answer to "should we add a library?" is **no**. The lists below are inte
 
 ## 10. Intentional Divergences
 
-| Date | AGENTS.md rule | Divergence | Reason |
-| ---- | -------------- | ---------- | ------ |
+| Date       | AGENTS.md rule                                 | Divergence                 | Reason                                                                                                                                                                                                                                                                                                               |
+| ---------- | ---------------------------------------------- | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 2026-05-28 | §6 Approved dependencies (target ESLint `^10`) | ESLint pinned at `^9.39.4` | `eslint-plugin-react@7.37.5` (latest published) caps its peer dep at ESLint `^9.7`. ESLint 10 + this plugin fails at lint time (`contextOrFilename.getFilename is not a function`). Hold until `eslint-plugin-react` ships an ESLint-10-compatible release or the project migrates to `@eslint-react/eslint-plugin`. |

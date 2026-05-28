@@ -21,6 +21,14 @@ pnpm run dev
 
 ## Quality Gates
 
+There is no remote CI for this repository. Every contributor MUST run the full local gate before committing and before opening a PR:
+
+```bash
+pnpm test-all
+```
+
+This runs type-check, lint, build, tests, and the Sony contract validate + diff steps in order. Individual stages can also be run on their own while iterating:
+
 ```bash
 pnpm run lint
 pnpm run typecheck
@@ -31,6 +39,7 @@ pnpm run build
 ## Sony Contract Tooling (Hardcoded Scope)
 
 Tooling scope is fixed and immutable:
+
 - region: `fi`
 - locale: `fi-fi`
 - currency: `EUR`
@@ -45,7 +54,7 @@ pnpm run sony:refresh
 # validate canonical manifest against backend assumptions
 pnpm run sony:validate
 
-# fail on drift in CI mode
+# fail on drift (used as the last gate in `pnpm test-all`)
 pnpm run sony:diff -- --ci
 ```
 
