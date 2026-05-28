@@ -14,9 +14,28 @@ export const usageText = [
   '  refresh',
 ].join('\n')
 
+export type ParsedArgv = {
+  command: string | undefined
+  args: ReadonlySet<string>
+}
+
+/**
+ * Pure argv parser for the sony-contract-bot CLI.
+ *
+ * Strips a single leading `--` token if present so that
+ * `pnpm run sony -- <command>` (which forwards `['--', '<command>', ...]`
+ * to the CLI under current pnpm behaviour) is parsed identically to
+ * a direct `node cli.js <command>` invocation.
+ */
+export const parseArgv = (tokens: readonly string[]): ParsedArgv => {
+  const normalized = tokens[0] === '--' ? tokens.slice(1) : tokens.slice()
+  const [command, ...rest] = normalized
+
+  return { command, args: new Set(rest) }
+}
+
 const main = async (): Promise<void> => {
-  const [command, ...rest] = process.argv.slice(2)
-  const args = new Set(rest)
+  const { command, args } = parseArgv(process.argv.slice(2))
 
   switch (command) {
     case 'capture': {
