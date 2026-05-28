@@ -14,8 +14,19 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@psstore/shared": "0.1.0",
+    "@psstore/shared": "workspace:*",
     "express": "^4.21.2",
     "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.20.0",
+    "@types/express": "^5.0.1",
+    "@types/node": "^22.13.10",
+    "@typescript-eslint/eslint-plugin": "^8.24.1",
+    "@typescript-eslint/parser": "^8.24.1",
+    "eslint": "^9.20.1",
+    "tsx": "^4.19.3",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.5"
   }
 }

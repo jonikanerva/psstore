@@ -12,7 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@psstore/shared": "0.1.0",
+    "@psstore/shared": "workspace:*",
     "dompurify": "^3.3.1",
     "luxon": "^3.5.0",
     "react": "^19.0.0",
@@ -20,8 +20,22 @@
     "react-router-dom": "^7.1.5"
   },
   "devDependencies": {
+    "@eslint/js": "^9.20.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
-    "jsdom": "^28.1.0"
+    "@types/luxon": "^3.6.2",
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
+    "@typescript-eslint/eslint-plugin": "^8.24.1",
+    "@typescript-eslint/parser": "^8.24.1",
+    "@vitejs/plugin-react-swc": "^3.8.0",
+    "eslint": "^9.20.1",
+    "eslint-plugin-react": "^7.37.4",
+    "jsdom": "^28.1.0",
+    "stylelint": "^16.14.1",
+    "stylelint-config-standard": "^37.0.0",
+    "typescript": "^5.7.3",
+    "vite": "^7.3.3",
+    "vitest": "^3.0.5"
   }
 }

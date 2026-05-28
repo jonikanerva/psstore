@@ -2,26 +2,20 @@
   "name": "psstore",
   "version": "0.2.0",
   "private": true,
-  "workspaces": [
-    "client",
-    "server",
-    "shared",
-    "tools/*"
-  ],
   "scripts": {
-    "dev": "concurrently \"npm run dev -w server\" \"npm run dev -w client\"",
-    "lint": "npm run lint -w shared && npm run lint -w server && npm run lint -w client && npm run lint -w @psstore/sony-contract-bot",
-    "typecheck": "npm run build -w shared && npm run typecheck -w server && npm run typecheck -w client && npm run typecheck -w @psstore/sony-contract-bot",
-    "test": "npm run test -w shared && npm run test -w server && npm run test -w client && npm run test -w @psstore/sony-contract-bot",
-    "build": "npm run clean && npm run build -w shared && npm run build -w client && npm run build -w server && npm run build -w @psstore/sony-contract-bot",
+    "dev": "concurrently \"pnpm --filter @psstore/server run dev\" \"pnpm --filter @psstore/client run dev\"",
+    "lint": "pnpm --filter @psstore/shared run lint && pnpm --filter @psstore/server run lint && pnpm --filter @psstore/client run lint && pnpm --filter @psstore/sony-contract-bot run lint",
+    "typecheck": "pnpm --filter @psstore/shared run build && pnpm --filter @psstore/server run typecheck && pnpm --filter @psstore/client run typecheck && pnpm --filter @psstore/sony-contract-bot run typecheck",
+    "test": "pnpm --filter @psstore/shared run test && pnpm --filter @psstore/server run test && pnpm --filter @psstore/client run test && pnpm --filter @psstore/sony-contract-bot run test",
+    "build": "pnpm run clean && pnpm --filter @psstore/shared run build && pnpm --filter @psstore/client run build && pnpm --filter @psstore/server run build && pnpm --filter @psstore/sony-contract-bot run build",
     "clean": "rm -rf build client/build server/dist shared/dist tools/sony-contract-bot/dist",
-    "start": "npm run start -w server",
-    "sony": "npm run build -w @psstore/sony-contract-bot && node tools/sony-contract-bot/dist/cli.js",
-    "sony:capture": "npm run sony -- capture",
-    "sony:normalize": "npm run sony -- normalize",
-    "sony:validate": "npm run sony -- validate",
-    "sony:diff": "npm run sony -- diff",
-    "sony:refresh": "npm run sony -- refresh"
+    "start": "pnpm --filter @psstore/server run start",
+    "sony": "pnpm --filter @psstore/sony-contract-bot run build && node tools/sony-contract-bot/dist/cli.js",
+    "sony:capture": "pnpm run sony -- capture",
+    "sony:normalize": "pnpm run sony -- normalize",
+    "sony:validate": "pnpm run sony -- validate",
+    "sony:diff": "pnpm run sony -- diff",
+    "sony:refresh": "pnpm run sony -- refresh"
   },
   "engines": {
     "node": ">=22"

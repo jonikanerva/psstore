@@ -16,6 +16,7 @@
 .parcel-cache
 .yarn
 **/.vite
+.pnpm-store/
 
 # sony contract local runtime artifacts
 .sony-contract/
