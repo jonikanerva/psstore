@@ -132,6 +132,11 @@ export const conceptToGame = (concept: Concept): Game => {
     studio: concept.products?.[0]?.providerName ?? '',
     preOrder: hasReleaseDate && Date.parse(releaseDate) > Date.now(),
     plusUpsellText,
+    // Every concept the shared mapper emits is a product SKU (NEW / DISCOUNTED
+    // gate on `isValidProductId`). The UPCOMING-only concept-card path overrides
+    // this to `concept` for SKU-less announcements (see gamesService.ts); the
+    // mapper output for NEW / DISCOUNTED is unchanged.
+    idKind: 'product',
   }
 }
 

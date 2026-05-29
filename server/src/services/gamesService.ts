@@ -84,6 +84,26 @@ const mapConceptsToGames = (concepts: Concept[]): Game[] => {
   return gamesSchema.parse(mapped)
 }
 
+// UPCOMING-only mapping. Unlike `mapConceptsToGames` (used VERBATIM by
+// NEW / DISCOUNTED), this keeps concept-only announcements that Sony does not
+// expose as a priced product SKU anonymously: it drops only truly id-less
+// entries, not the SKU-less ones. `idKind` is derived HERE, once, so the shared
+// mapper and the NEW / DISCOUNTED output stay byte-identical — a `product` id
+// matches the existing `PRODUCT_ID_PATTERN` (internal PDP); anything else is a
+// bare concept id that links out to Sony's concept page (owner ruling
+// 2026-05-29). Owner-authorised, UPCOMING-scoped exception (VISION.md).
+const mapUpcomingConceptsToGames = (concepts: Concept[]): Game[] => {
+  const mapped = concepts
+    .map((concept) => conceptToGame(concept))
+    .filter((game) => Boolean(game.id))
+    .map((game) => ({
+      ...game,
+      idKind: isValidProductId(game.id) ? ('product' as const) : ('concept' as const),
+    }))
+
+  return gamesSchema.parse(mapped)
+}
+
 const enrichGameDate = async (game: Game): Promise<Game> => {
   const cacheKey = `release-date:${game.id}`
   const cached = cache.get<string>(cacheKey)
@@ -209,17 +229,28 @@ const enrichedListing = async (
 export const getNewGames = async (offset = 0, size = 60): Promise<PageResult> =>
   enrichedListing(baseGames(), 'date-desc', 'released', offset, size)
 
-// UPCOMING uses DateFilter 'none': the `next_thirty_days` facet
-// (queryStrategies.ts) already bounds the window upstream. The previous
-// per-product `> now` re-filter stranded trailing-edge survivors — concepts
-// inside the facet window whose enriched date had just slipped into the past
-// between the grid snapshot and enrichment (live: 7 of 12 dropped). The facet
-// is the authoritative window; we keep `enrichGamesWithDates`' empty-date drop
-// (correctly excludes the ~41/53 announced concepts with `products: []` /
-// `price: null` that the PRODUCT_ID_PATTERN already filters), giving a ~12
-// SKU-bearing ceiling.
-export const getUpcomingGames = async (offset = 0, size = 60): Promise<PageResult> =>
-  enrichedListing(mapConceptsToGames(await featureConcepts('upcoming')), 'date-asc', 'none', offset, size)
+// UPCOMING surfaces ALL anonymously-available upcoming PS5 games (owner ruling
+// 2026-05-29, option a): the ~12 priced product SKUs (internal PDP cards) AND
+// the ~40 concept-only announcements (price "Unknown", linking out to Sony's
+// concept page). It therefore does NOT use the shared `enrichedListing`:
+//   - `mapUpcomingConceptsToGames` keeps SKU-less concept cards (the shared
+//     `mapConceptsToGames` would drop them via `isValidProductId`);
+//   - dates are enriched ONLY for `idKind === 'product'`, so the
+//     `metGetProductById` boundary is NEVER called on a bare concept id (Sony
+//     exposes no anonymous date for concept-only titles);
+//   - NO empty-date filter (it would re-drop all concept cards) and NO `> now`
+//     filter (the `next_thirty_days` facet is the authoritative window).
+// `sortByDate(_, 'date-asc')` + the +Infinity sentinel and stable index
+// tiebreaker put the dated SKU cards first (soonest-first) and the undated
+// concept cards after, in Sony grid order. NEW / DISCOUNTED are untouched and
+// still call the shared `enrichedListing` / `enrichGamesWithDates`.
+export const getUpcomingGames = async (offset = 0, size = 60): Promise<PageResult> => {
+  const games = mapUpcomingConceptsToGames(await featureConcepts('upcoming'))
+  const enriched = await Promise.all(
+    games.map((game) => (game.idKind === 'product' ? enrichGameDate(game) : Promise.resolve(game))),
+  )
+  return paginate(sortByDate(enriched, 'date-asc'), offset, size)
+}
 
 // DISCOUNTED enriches each grid concept once via `metGetProductById`, reading
 // the release date AND the store classification, then keeps only full-game SKUs

@@ -218,12 +218,13 @@ describe('gamesService', () => {
     expect(games.map((g) => g.name)).toEqual(['just-passed', 'future-edge'])
   })
 
-  it('upcoming still drops concepts whose enriched date is empty', async () => {
-    // `enrichGamesWithDates` removes empty-date games; this models the ~41/53
-    // announced concepts that the PRODUCT_ID_PATTERN / empty-date drop excludes
-    // because they have no SKU / price / PDP yet (the ~12 SKU-bearing ceiling).
+  it('upcoming keeps a dated product SKU ahead of an undated one', async () => {
+    // Owner ruling 2026-05-29 (option a): UPCOMING no longer drops empty-date
+    // entries. A product SKU whose enriched date is empty (Sony has not dated it
+    // yet) is kept and sorts last via the +Infinity ascending sentinel, behind
+    // the dated SKU.
     const futureIso = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString()
-    const concepts = [makeConcept('has-date'), makeConcept('no-date')]
+    const concepts = [makeConcept('no-date'), makeConcept('has-date')]
 
     fetchProductDetail.mockImplementation(async (productId: string) => ({
       releaseDate: productId.includes('HASDATE') ? futureIso : undefined,
@@ -238,7 +239,108 @@ describe('gamesService', () => {
     const svc = await import('../services/gamesService.js')
     const { games } = await svc.getUpcomingGames()
 
-    expect(games.map((g) => g.name)).toEqual(['has-date'])
+    expect(games.map((g) => g.name)).toEqual(['has-date', 'no-date'])
+    expect(games.every((g) => g.idKind === 'product')).toBe(true)
+  })
+
+  it('upcoming surfaces concept-only announcements without a price or date', async () => {
+    // Concept-only entries (Sony returns `products: []`, `price: null`, a bare
+    // numeric concept id) must appear in UPCOMING as `idKind: 'concept'` with an
+    // empty price and date — they are dropped only by the SKU-gated shared
+    // mapper used by NEW / DISCOUNTED, not by the UPCOMING path.
+    const skuConcept = makeConcept('sku-title')
+    const conceptOnlyA = { id: '10018729', name: 'concept-a', media: [], price: null, products: [] }
+    const conceptOnlyB = { id: '10019188', name: 'concept-b', media: [], price: null, products: [] }
+    const futureIso = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString()
+
+    fetchProductDetail.mockImplementation(async () => ({
+      releaseDate: futureIso,
+      genres: [],
+      description: '',
+    }))
+
+    fetchConceptsByFeature.mockImplementation(async (feature: string) =>
+      feature === 'upcoming' ? [skuConcept, conceptOnlyA, conceptOnlyB] : [],
+    )
+
+    const svc = await import('../services/gamesService.js')
+    const { games } = await svc.getUpcomingGames()
+
+    expect(games).toHaveLength(3)
+    const a = games.find((g) => g.name === 'concept-a')
+    const b = games.find((g) => g.name === 'concept-b')
+    expect(a).toMatchObject({ id: '10018729', idKind: 'concept', price: '', date: '' })
+    expect(b).toMatchObject({ id: '10019188', idKind: 'concept', price: '', date: '' })
+    expect(games.find((g) => g.name === 'sku-title')?.idKind).toBe('product')
+  })
+
+  it('upcoming sorts dated SKU cards before undated concept cards in grid order', async () => {
+    const skuConcept = makeConcept('sku-title')
+    const conceptFirst = { id: '10010001', name: 'concept-first', media: [], price: null, products: [] }
+    const conceptSecond = { id: '10010002', name: 'concept-second', media: [], price: null, products: [] }
+    const futureIso = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString()
+
+    fetchProductDetail.mockImplementation(async () => ({
+      releaseDate: futureIso,
+      genres: [],
+      description: '',
+    }))
+
+    fetchConceptsByFeature.mockImplementation(async (feature: string) =>
+      feature === 'upcoming' ? [conceptFirst, skuConcept, conceptSecond] : [],
+    )
+
+    const svc = await import('../services/gamesService.js')
+    const { games } = await svc.getUpcomingGames()
+
+    // The dated SKU card sorts first; the two undated concept cards keep their
+    // upstream grid order (stable index tiebreaker on the +Infinity sentinel).
+    expect(games.map((g) => g.name)).toEqual(['sku-title', 'concept-first', 'concept-second'])
+  })
+
+  it('upcoming enriches only product SKUs, never a concept id', async () => {
+    const skuConcept = makeConcept('sku-title')
+    const skuProductId = skuConcept.products[0]?.id
+    const conceptOnly = { id: '10018729', name: 'concept-a', media: [], price: null, products: [] }
+    const futureIso = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString()
+
+    const detailCalls: string[] = []
+    fetchProductDetail.mockImplementation(async (productId: string) => {
+      detailCalls.push(productId)
+      return { releaseDate: futureIso, genres: [], description: '' }
+    })
+
+    fetchConceptsByFeature.mockImplementation(async (feature: string) =>
+      feature === 'upcoming' ? [skuConcept, conceptOnly] : [],
+    )
+
+    const svc = await import('../services/gamesService.js')
+    await svc.getUpcomingGames()
+
+    expect(detailCalls).toEqual([skuProductId])
+    expect(detailCalls).not.toContain('10018729')
+  })
+
+  it('getGameById rejects a bare concept id with 404 and never enriches it', async () => {
+    // A concept deep-link must not resolve to an internal PDP. The SKU-gated
+    // baseGames + findGameInFeatureConcepts both miss, so getGameById 404s
+    // without ever calling the product-detail boundary on the concept id.
+    const conceptOnly = { id: '10018729', name: 'concept-a', media: [], price: null, products: [] }
+
+    const detailCalls: string[] = []
+    fetchProductDetail.mockImplementation(async (productId: string) => {
+      detailCalls.push(productId)
+      return { releaseDate: PAST_DATE, genres: [], description: '' }
+    })
+
+    fetchConceptsByFeature.mockImplementation(async (feature: string) =>
+      feature === 'upcoming' ? [conceptOnly] : [],
+    )
+
+    const svc = await import('../services/gamesService.js')
+
+    await expect(svc.getGameById('10018729')).rejects.toMatchObject({ status: 404, code: 'GAME_NOT_FOUND' })
+    expect(detailCalls).not.toContain('10018729')
   })
 
   it('new/discounted sort by date descending', async () => {

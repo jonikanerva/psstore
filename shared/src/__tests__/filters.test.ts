@@ -19,6 +19,7 @@ const games: Game[] = [
     studio: '',
     preOrder: false,
     plusUpsellText: null,
+    idKind: 'product',
   },
   {
     id: '2',
@@ -36,6 +37,7 @@ const games: Game[] = [
     studio: '',
     preOrder: false,
     plusUpsellText: null,
+    idKind: 'product',
   },
 ]
 
