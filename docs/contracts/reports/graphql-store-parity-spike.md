@@ -147,8 +147,9 @@ fixture `docs/contracts/samples/pragmata-pdp-descriptions-genres.json`):
   `combinedLocalizedGenres[]` (the non-existent `genres` / `description` /
   `longDescription` fields are removed).
 - `server/src/sony/productDetailSchema.ts` (new): a tolerant zod boundary schema
-  for the `productRetrieve` node — all fields optional, `.passthrough()` — so a
-  Sony shape change degrades to empty values instead of throwing
+  for the `productRetrieve` node — all fields optional, `z.looseObject` (the
+  non-deprecated Zod 4 replacement for `.passthrough()`) — so a Sony shape
+  change degrades to empty values instead of throwing
   (`STACK.md §7`, `AGENTS.md §6.1`). `extractProductDetail` parses through it and
   degrades to empty description / genres on parse failure.
 - `server/src/sony/sonyClient.ts → extractProductDetail`: rewritten to read the
