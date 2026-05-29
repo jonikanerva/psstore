@@ -7,7 +7,6 @@ import {
 import {
   fetchDiscountedGames,
   fetchNewGames,
-  fetchPlusGames,
   fetchUpcomingGames,
 } from '../modules/psnStore'
 import AppShell from './AppShell'
@@ -30,7 +29,6 @@ const App = () => (
           path="/upcoming"
           element={<Games label="upcoming" fetch={fetchUpcomingGames} />}
         />
-        <Route path="/plus" element={<Games label="plus" fetch={fetchPlusGames} />} />
         <Route path="/g/:gameId" element={<Details />} />
         <Route path="*" element={<RedirectNew />} />
       </Route>

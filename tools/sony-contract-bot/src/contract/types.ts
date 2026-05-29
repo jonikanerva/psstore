@@ -2,7 +2,6 @@ export type ContractFeature =
   | 'new'
   | 'upcoming'
   | 'discounted'
-  | 'plus'
   | 'search'
   | 'details'
 

@@ -16,9 +16,6 @@ const Navigation = () => (
     <NavLink to="/discounted" className={navClass}>
       Discounted
     </NavLink>
-    <NavLink to="/plus" className={navClass}>
-      Plus
-    </NavLink>
   </nav>
 )
 

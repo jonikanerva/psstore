@@ -36,7 +36,6 @@ describe('AppShell', () => {
     expect(screen.getByRole('link', { name: 'New' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Upcoming' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Discounted' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Plus' })).toBeInTheDocument()
   })
 
   it('renders a search input with the agreed a11y attributes', () => {

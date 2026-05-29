@@ -9,7 +9,6 @@
 - /api/games/new
 - /api/games/upcoming
 - /api/games/discounted
-- /api/games/plus
 - /api/games/search
 - /api/games/:id
 
