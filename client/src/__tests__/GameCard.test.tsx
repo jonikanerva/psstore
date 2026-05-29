@@ -20,6 +20,7 @@ const game: Game = {
   studio: 'Test Studio',
   preOrder: false,
   plusUpsellText: null,
+  idKind: 'product',
 }
 
 describe('GameCard', () => {
@@ -103,5 +104,42 @@ describe('GameCard', () => {
     )
 
     expect(screen.queryByText(/^PS\+/)).not.toBeInTheDocument()
+  })
+
+  it('renders an internal PDP link and normal price for a product card', () => {
+    render(
+      <MemoryRouter>
+        <GameCard game={{ ...game, idKind: 'product' }} />
+      </MemoryRouter>,
+    )
+
+    const link = screen.getByRole('link', { name: /Test Game/ })
+    expect(link).toHaveAttribute('href', `/g/${game.id}`)
+    expect(link).not.toHaveAttribute('target')
+    expect(screen.getByText('69,99 €')).toBeInTheDocument()
+    expect(screen.queryByText('Unknown')).not.toBeInTheDocument()
+  })
+
+  it('links a concept card out to Sony and shows "Unknown" for the price', () => {
+    render(
+      <MemoryRouter>
+        <GameCard
+          game={{
+            ...game,
+            id: '10018729',
+            name: 'RunNGun',
+            price: '',
+            date: '',
+            idKind: 'concept',
+          }}
+        />
+      </MemoryRouter>,
+    )
+
+    const link = screen.getByRole('link', { name: 'RunNGun on PlayStation Store' })
+    expect(link).toHaveAttribute('href', 'https://store.playstation.com/en-fi/concept/10018729')
+    expect(link).toHaveAttribute('target', '_blank')
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer')
+    expect(screen.getByText('Unknown')).toBeInTheDocument()
   })
 })

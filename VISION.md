@@ -12,6 +12,7 @@ Let a Finnish PS5 owner see new, upcoming, and discounted games at a glance — 
 
 - **PS5 + Finland + EUR only, PS Plus pricing always visible alongside the standard price.**
   The scope is fixed at the data layer. Non-PS5 SKUs, non-game products (characters, currency, DLC, themes), non-Finnish stores, and other currencies are filtered out before they reach the UI.
+  Exception (UPCOMING view only, owner ruling 2026-05-29): announced PS5 titles that Sony does not yet expose as a priced product SKU anonymously are shown in the UPCOMING list without a price (marked "Unknown") and link out to Sony's concept page for the title. This exception is scoped strictly to the UPCOMING view. NEW and DISCOUNTED always require a real product SKU and price — they never show priceless cards.
 
 - **Utilitarian surface — only relevant data, no decorative chrome.**
   No carousels, no hero videos, no marketing copy, no animations beyond what is needed to communicate state. Every pixel earns its place by carrying information.
@@ -28,7 +29,7 @@ Let a Finnish PS5 owner see new, upcoming, and discounted games at a glance — 
 ## Product Shape
 
 1. The user opens the site. The default view (NEW GAMES) renders: PS5 games released today at the top, then yesterday's, then earlier — descending by release date.
-2. A top bar exposes three fixed views — **NEW**, **UPCOMING**, **DISCOUNTED** — and a single free-text search field that filters the currently visible list by game name.
+2. A top bar exposes three fixed views — **NEW**, **UPCOMING**, **DISCOUNTED** — and a single free-text search field that filters the currently visible list by game name. The UPCOMING view may include announced titles Sony does not yet price anonymously: these show a price of "Unknown" and link out to Sony's concept page instead of opening an internal product detail page.
 3. The user clicks a game card. The product detail page (PDP) opens with the game's full metadata: artwork, description, genres, release date, studio, both prices (standard + PS Plus), and a link out to Sony's store page for the actual purchase.
 4. The PDP is identical regardless of which list view the user arrived from.
 5. The user closes the tab. The site retains nothing about who they are or what they looked at.

@@ -15,7 +15,13 @@ export const gameSchema = z.object({
   description: z.string(),
   studio: z.string(),
   preOrder: z.boolean(),
-  plusUpsellText: z.string().nullable()
+  plusUpsellText: z.string().nullable(),
+  // `product` → internal product SKU with a PDP and (usually) a price;
+  // `concept` → an announced UPCOMING title Sony does not yet expose as a
+  // priced SKU anonymously. The default keeps every existing producer
+  // (NEW / DISCOUNTED, caches, fixtures) parsing as `product` unchanged; only
+  // the UPCOMING concept-card path sets `concept`. See gamesService.ts.
+  idKind: z.enum(['product', 'concept']).default('product')
 })
 
 export const gamesSchema = z.array(gameSchema)

@@ -239,12 +239,13 @@ correct. No NEW change in this branch.
 ### D.2 UPCOMING — funnel and the trailing-edge stranding fix
 
 - The `conceptReleaseDate:next_thirty_days` facet returns ~53 concepts.
-- ~41 of those are pure announcements: `products: []`, `price: null`, no PDP.
-  They have no SKU id, so the mapper sets no valid product id and they are
-  dropped by `PRODUCT_ID_PATTERN` and the empty-date filter. This is correct —
-  an announced-but-not-purchasable title has no price, no PDP, and nothing to
-  link out to. The residual ~12 SKU-bearing concepts are the real UPCOMING
-  ceiling (recorded in `STACK.md → Intentional Divergences`, 2026-05-29).
+- ~41 of those are pure announcements: `products: []`, `price: null`, and no
+  anonymous release date. They have no product SKU id, so the SKU-gated shared
+  mapper (`PRODUCT_ID_PATTERN`) drops them for NEW / DISCOUNTED. They have no
+  *internal* product PDP (no product SKU for `metGetProductById`) — but Sony's
+  anonymous `/en-fi/concept/{id}` page DOES resolve and is the outbound link
+  target for these titles (see §D.5). The ~12 SKU-bearing concepts are the
+  priced, internally-linkable subset.
 - **Defect.** `getUpcomingGames` ran a redundant per-product `> now` re-filter
   (`DateFilter 'upcoming'`) on top of the facet window. A concept inside the
   facet's 30-day window whose enriched `releaseDate` had already slipped just
@@ -299,3 +300,35 @@ correct. No NEW change in this branch.
   PDP, derived from `concept.price.serviceBranding / upsellText` in `mapper.ts`)
   is unaffected and remains a core principle — only the view/tab and its
   contract feature were removed.
+
+### D.5 UPCOMING concept cards — owner ruling (option a, 2026-05-29)
+
+This supersedes the §D.2 "~12 ceiling" conclusion. The earlier funnel framing
+("announcement-only titles correctly excluded / out of scope") was a §14.1
+conservative default; the human owner overruled it.
+
+- **Split (verified live, this session).** The `next_thirty_days` PS5 grid
+  returns ~52 concepts: ≈12 carry a product SKU + price (internal-PDP cards) and
+  ≈40 are concept-only announcements (`products: []`, `price: null`, no anonymous
+  date).
+- **Concept page resolves anonymously (verified).**
+  `GET https://store.playstation.com/en-fi/concept/{conceptId}` returns HTTP 200
+  with a real named page (e.g. concept `10018729` "RunNGun", `10019188`
+  "Rat Protocol"); a bogus id redirects to `/error`. The `en-fi` locale segment
+  is the confirmed working form. So a concept-only title HAS a valid external
+  link target even though it has no internal product PDP.
+- **Owner ruling (option a).** UPCOMING shows ALL ~52: the ~40 concept-only
+  titles are rendered without a price (displayed "Unknown") and link OUT to the
+  Sony concept page (`target="_blank" rel="noopener noreferrer"`); the ~12 priced
+  SKUs keep the internal PDP. NEW and DISCOUNTED are UNCHANGED — they still
+  require a real product SKU + price (SKU-gated shared `mapConceptsToGames`).
+  ux-guardian routed this as NEEDS-NARROWING to the owner, who chose option a.
+- **Implementation invariants.** UPCOMING uses a dedicated
+  `mapUpcomingConceptsToGames` (drops only id-less entries) and enriches dates
+  ONLY for `idKind === 'product'`, so `metGetProductById` is NEVER called on a
+  bare concept id. A concept deep-link to `/g/{conceptId}` still 404s
+  (`getGameById` searches only SKU-gated sets) — that clean 404 is intended and
+  locked by a regression test; concept ids must never resolve to an internal PDP.
+- **§14.1 choices.** Undated concept cards sort after the dated SKU cards (Sony
+  exposes no anonymous date for them; a concept-date operation is deferred); the
+  outbound link uses Sony's concept page rather than any internal concept PDP.

@@ -20,6 +20,7 @@ const baseGame: Game = {
   studio: 'RPG Studio',
   preOrder: false,
   plusUpsellText: null,
+  idKind: 'product',
 }
 
 vi.mock('../modules/psnStore', () => ({
