@@ -184,15 +184,12 @@ const findGameInFeatureConcepts = async (
   return games.find((game) => game.id === id) ?? null
 }
 
-type DateFilter = 'released' | 'upcoming' | 'none'
+type DateFilter = 'released' | 'none'
 
 const applyDateFilter = (games: Game[], filter: DateFilter): Game[] => {
   if (filter === 'none') return games
   const now = Date.now()
-  return games.filter((game) => {
-    const ts = Date.parse(game.date)
-    return filter === 'released' ? ts <= now : ts > now
-  })
+  return games.filter((game) => Date.parse(game.date) <= now)
 }
 
 const enrichedListing = async (
