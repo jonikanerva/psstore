@@ -43,6 +43,7 @@ beforeEach(() => {
     releaseDate: PAST_DATE,
     genres: [],
     description: '',
+    storeDisplayClassification: 'FULL_GAME',
   }))
 
   fetchConceptsByFeature.mockImplementation(async (feature: string) => {
@@ -57,7 +58,6 @@ beforeEach(() => {
     })]
     if (feature === 'upcoming') return [makeConcept('future')]
     if (feature === 'discounted') return [makeConcept('deal')]
-    if (feature === 'plus') return [makeConcept('plusgame')]
     return []
   })
 })
@@ -68,6 +68,7 @@ describe('gamesService', () => {
       releaseDate: productId.includes('FUTURE') ? FUTURE_DATE : PAST_DATE,
       genres: [],
       description: '',
+      storeDisplayClassification: 'FULL_GAME',
     }))
 
     const svc = await import('../services/gamesService.js')
@@ -75,7 +76,6 @@ describe('gamesService', () => {
     expect((await svc.getNewGames()).games.length).toBeGreaterThan(0)
     expect((await svc.getUpcomingGames()).games.length).toBeGreaterThan(0)
     expect((await svc.getDiscountedGames()).games.length).toBeGreaterThan(0)
-    expect((await svc.getPlusGames()).games.length).toBeGreaterThan(0)
   })
 
   it('enriches games with release dates from fetchProductDetail', async () => {
@@ -163,14 +163,12 @@ describe('gamesService', () => {
 
     const { games: upcoming } = await svc.getUpcomingGames()
     const { games: discounted } = await svc.getDiscountedGames()
-    const { games: plus } = await svc.getPlusGames()
 
     expect(upcoming.length).toBe(0)
     expect(discounted.length).toBe(0)
-    expect(plus.length).toBe(0)
   })
 
-  it('new excludes future games, upcoming excludes released games', async () => {
+  it('new excludes future games (released date gate)', async () => {
     const concepts = [
       makeConcept('released'),
       makeConcept('future'),
@@ -182,22 +180,68 @@ describe('gamesService', () => {
       description: '',
     }))
 
-    fetchConceptsByFeature.mockImplementation(async (feature: string) => {
-      if (feature === 'new') return concepts
-      if (feature === 'upcoming') return concepts
-      return []
-    })
+    fetchConceptsByFeature.mockImplementation(async (feature: string) =>
+      feature === 'new' ? concepts : [],
+    )
 
     const svc = await import('../services/gamesService.js')
 
     const { games: newGames } = await svc.getNewGames()
     expect(newGames.map((g) => g.name)).toEqual(['released'])
-
-    const { games: upcoming } = await svc.getUpcomingGames()
-    expect(upcoming.map((g) => g.name)).toEqual(['future'])
   })
 
-  it('new/discounted/plus sort by date descending', async () => {
+  it('upcoming keeps trailing-edge survivors whose date has just passed', async () => {
+    // The `next_thirty_days` facet already bounds the window upstream
+    // (queryStrategies.ts). The previous per-product `> now` re-filter dropped
+    // concepts inside that facet window whose enriched date had slipped just
+    // into the past between the grid snapshot and enrichment (live: 7 of 12).
+    // With DateFilter 'none' both the just-passed and the future survivor stay,
+    // ascending by date.
+    const now = Date.now()
+    const justPassedIso = new Date(now - 60 * 60 * 1000).toISOString()
+    const futureIso = new Date(now + 5 * 24 * 60 * 60 * 1000).toISOString()
+    const concepts = [makeConcept('future-edge'), makeConcept('just-passed')]
+
+    fetchProductDetail.mockImplementation(async (productId: string) => ({
+      releaseDate: productId.includes('JUSTPASSED') ? justPassedIso : futureIso,
+      genres: [],
+      description: '',
+    }))
+
+    fetchConceptsByFeature.mockImplementation(async (feature: string) =>
+      feature === 'upcoming' ? concepts : [],
+    )
+
+    const svc = await import('../services/gamesService.js')
+    const { games } = await svc.getUpcomingGames()
+
+    expect(games.map((g) => g.name)).toEqual(['just-passed', 'future-edge'])
+  })
+
+  it('upcoming still drops concepts whose enriched date is empty', async () => {
+    // `enrichGamesWithDates` removes empty-date games; this models the ~41/53
+    // announced concepts that the PRODUCT_ID_PATTERN / empty-date drop excludes
+    // because they have no SKU / price / PDP yet (the ~12 SKU-bearing ceiling).
+    const futureIso = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString()
+    const concepts = [makeConcept('has-date'), makeConcept('no-date')]
+
+    fetchProductDetail.mockImplementation(async (productId: string) => ({
+      releaseDate: productId.includes('HASDATE') ? futureIso : undefined,
+      genres: [],
+      description: '',
+    }))
+
+    fetchConceptsByFeature.mockImplementation(async (feature: string) =>
+      feature === 'upcoming' ? concepts : [],
+    )
+
+    const svc = await import('../services/gamesService.js')
+    const { games } = await svc.getUpcomingGames()
+
+    expect(games.map((g) => g.name)).toEqual(['has-date'])
+  })
+
+  it('new/discounted sort by date descending', async () => {
     const concepts = [
       makeConcept('old'),
       makeConcept('recent'),
@@ -238,6 +282,89 @@ describe('gamesService', () => {
     const svc = await import('../services/gamesService.js')
     const { games } = await svc.getUpcomingGames()
     expect(games.map((g) => g.name)).toEqual(['sooner', 'later'])
+  })
+
+  it('discounted excludes non-game store classifications', async () => {
+    // VISION forbids DLC / currency / themes / characters. DISCOUNTED keeps only
+    // the FULL_GAME / GAME_BUNDLE allow-list; everything else is dropped.
+    const concepts = [
+      makeConcept('full-game'),
+      makeConcept('game-bundle'),
+      makeConcept('add-on'),
+      makeConcept('currency'),
+      makeConcept('vehicle'),
+    ]
+
+    const classificationByMarker: Record<string, string> = {
+      FULLGAME: 'FULL_GAME',
+      GAMEBUNDLE: 'GAME_BUNDLE',
+      ADDON: 'ADD_ON_PACK',
+      CURRENCY: 'VIRTUAL_CURRENCY',
+      VEHICLE: 'VEHICLE',
+    }
+
+    fetchProductDetail.mockImplementation(async (productId: string) => {
+      const marker = Object.keys(classificationByMarker).find((key) => productId.includes(key))
+      return {
+        releaseDate: PAST_DATE,
+        genres: [],
+        description: '',
+        storeDisplayClassification: marker ? classificationByMarker[marker] : undefined,
+      }
+    })
+
+    fetchConceptsByFeature.mockImplementation(async (feature: string) =>
+      feature === 'discounted' ? concepts : [],
+    )
+
+    const svc = await import('../services/gamesService.js')
+    const { games } = await svc.getDiscountedGames()
+
+    expect(games.map((g) => g.name).sort()).toEqual(['full-game', 'game-bundle'])
+  })
+
+  it('discounted keeps future-dated deals (no released date gate)', async () => {
+    // DISCOUNTED drops the NEW-style `released` gate so a valid future-dated deal
+    // is not stranded.
+    const concepts = [makeConcept('future-deal')]
+
+    fetchProductDetail.mockImplementation(async () => ({
+      releaseDate: FUTURE_DATE,
+      genres: [],
+      description: '',
+      storeDisplayClassification: 'FULL_GAME',
+    }))
+
+    fetchConceptsByFeature.mockImplementation(async (feature: string) =>
+      feature === 'discounted' ? concepts : [],
+    )
+
+    const svc = await import('../services/gamesService.js')
+    const { games } = await svc.getDiscountedGames()
+
+    expect(games.map((g) => g.name)).toEqual(['future-deal'])
+  })
+
+  it('discounted sorts by date descending', async () => {
+    const concepts = [makeConcept('old'), makeConcept('recent'), makeConcept('mid')]
+
+    fetchProductDetail.mockImplementation(async (productId: string) => ({
+      releaseDate: productId.includes('OLD') ? '2023-01-01T00:00:00Z'
+        : productId.includes('RECENT') ? '2025-06-01T00:00:00Z'
+        : '2024-06-01T00:00:00Z',
+      genres: [],
+      description: '',
+      storeDisplayClassification: 'FULL_GAME',
+    }))
+
+    fetchConceptsByFeature.mockImplementation(async (feature: string) =>
+      feature === 'discounted' ? concepts : [],
+    )
+
+    const svc = await import('../services/gamesService.js')
+    const { games } = await svc.getDiscountedGames()
+
+    expect(games.map((g) => g.name)).toEqual(['recent', 'mid', 'old'])
   })
 
   it('maps discount fields from concept price', async () => {

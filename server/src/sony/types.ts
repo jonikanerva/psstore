@@ -65,6 +65,7 @@ export interface ProductDetail {
   id?: string | undefined
   releaseDate?: string | undefined
   publisherName?: string | undefined
+  storeDisplayClassification?: string | undefined
   descriptions?: SonyDescription[] | undefined
   combinedLocalizedGenres?: SonyLocalizedGenre[] | undefined
 }
