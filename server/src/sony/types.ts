@@ -51,13 +51,22 @@ export interface CategoryGridRetrieveResponse {
     | undefined
 }
 
+export interface SonyDescription {
+  type?: string | undefined
+  subType?: string | null | undefined
+  value?: string | undefined
+}
+
+export interface SonyLocalizedGenre {
+  value?: string | undefined
+}
+
 export interface ProductDetail {
   id?: string | undefined
   releaseDate?: string | undefined
   publisherName?: string | undefined
-  genres?: string[] | undefined
-  description?: string | undefined
-  longDescription?: string | undefined
+  descriptions?: SonyDescription[] | undefined
+  combinedLocalizedGenres?: SonyLocalizedGenre[] | undefined
 }
 
 export interface ProductRetrieveResponse {

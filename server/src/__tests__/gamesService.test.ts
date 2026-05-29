@@ -311,4 +311,91 @@ describe('gamesService', () => {
 
     expect(page.nextOffset).toBeNull()
   })
+
+  it('orders games with equal release dates by upstream concept order (stable)', async () => {
+    // All three concepts share one parsed timestamp, so ordering must fall back
+    // to the upstream `conceptReleaseDate`-desc grid order rather than reorder
+    // nondeterministically (spike doc, section B).
+    const concepts = [makeConcept('first'), makeConcept('second'), makeConcept('third')]
+
+    fetchProductDetail.mockImplementation(async () => ({
+      releaseDate: '2025-01-01T00:00:00Z',
+      genres: [],
+      description: '',
+    }))
+
+    fetchConceptsByFeature.mockImplementation(async (feature: string) =>
+      feature === 'new' ? concepts : [],
+    )
+
+    const svc = await import('../services/gamesService.js')
+    const { games } = await svc.getNewGames()
+
+    expect(games.map((g) => g.name)).toEqual(['first', 'second', 'third'])
+  })
+})
+
+describe('getGameById detail enrichment (function-injection seam)', () => {
+  it('enriches the game with LONG description and localized genres', async () => {
+    fetchProductDetail.mockImplementation(async () => ({
+      releaseDate: PAST_DATE,
+      genres: [],
+      description: '',
+    }))
+    fetchConceptsByFeature.mockImplementation(async (feature: string) =>
+      feature === 'new' ? [makeConcept('detailed')] : [],
+    )
+
+    const svc = await import('../services/gamesService.js')
+    const baseGame = (await svc.getNewGames()).games[0]
+    if (!baseGame) {
+      throw new Error('test expected at least one new game')
+    }
+
+    const fakeFetchDetail = async (): Promise<{
+      releaseDate: string
+      genres: string[]
+      description: string
+      publisherName: string
+    }> => ({
+      releaseDate: PAST_DATE,
+      genres: ['Toiminta', 'Roolipelit'],
+      description: '<p>The long game info body.</p>',
+      publisherName: 'STUDIO OY',
+    })
+
+    const game = await svc.getGameById(baseGame.id, fakeFetchDetail)
+
+    expect(game.description).toBe('<p>The long game info body.</p>')
+    expect(game.genres).toEqual(['Toiminta', 'Roolipelit'])
+    expect(game.studio).toBe('STUDIO OY')
+  })
+
+  it('degrades to the un-enriched game when the detail fetch rejects', async () => {
+    fetchProductDetail.mockImplementation(async () => ({
+      releaseDate: PAST_DATE,
+      genres: [],
+      description: '',
+    }))
+    fetchConceptsByFeature.mockImplementation(async (feature: string) =>
+      feature === 'new' ? [makeConcept('degraded')] : [],
+    )
+
+    const svc = await import('../services/gamesService.js')
+    const baseGame = (await svc.getNewGames()).games[0]
+    if (!baseGame) {
+      throw new Error('test expected at least one new game')
+    }
+
+    const rejectingFetchDetail = async (): Promise<never> => {
+      throw new Error('upstream unavailable')
+    }
+
+    const game = await svc.getGameById(baseGame.id, rejectingFetchDetail)
+
+    expect(game.id).toBe(baseGame.id)
+    expect(game.name).toBe('degraded')
+    expect(game.description).toBe('')
+    expect(game.genres).toEqual([])
+  })
 })

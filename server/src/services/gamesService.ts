@@ -32,12 +32,36 @@ const withCache = async <T>(key: string, resolve: () => Promise<T>): Promise<T> 
 
 type SortOrder = 'date-desc' | 'date-asc'
 
-const sortByDate = (games: Game[], order: SortOrder): Game[] =>
-  [...games].sort((a, b) => {
-    const aTs = Date.parse(a.date)
-    const bTs = Date.parse(b.date)
-    return order === 'date-desc' ? bTs - aTs : aTs - bTs
-  })
+// Unparseable / missing dates sort last (most distant in the requested
+// direction) rather than producing NaN comparisons, which would make the sort
+// implementation-defined.
+const DATE_DESC_SENTINEL = Number.NEGATIVE_INFINITY
+const DATE_ASC_SENTINEL = Number.POSITIVE_INFINITY
+
+/**
+ * Sort enriched games by per-product release date, falling back to the upstream
+ * order (the server's `conceptReleaseDate`-desc grid order) as a STABLE
+ * tiebreaker. Without this, equal or unparseable dates reorder
+ * nondeterministically across requests; the tiebreaker keeps the official
+ * grid order Sony already returns for ties (see the spike doc, section B).
+ */
+const sortByDate = (games: Game[], order: SortOrder): Game[] => {
+  const sentinel = order === 'date-desc' ? DATE_DESC_SENTINEL : DATE_ASC_SENTINEL
+  const tsOf = (game: Game): number => {
+    const parsed = Date.parse(game.date)
+    return Number.isNaN(parsed) ? sentinel : parsed
+  }
+
+  return games
+    .map((game, index) => ({ game, index }))
+    .sort((a, b) => {
+      const aTs = tsOf(a.game)
+      const bTs = tsOf(b.game)
+      const byDate = order === 'date-desc' ? bTs - aTs : aTs - bTs
+      return byDate !== 0 ? byDate : a.index - b.index
+    })
+    .map((entry) => entry.game)
+}
 
 const paginate = (games: Game[], offset: number, size: number): PageResult => {
   const page = games.slice(offset, offset + size)
@@ -148,9 +172,17 @@ export const getDiscountedGames = async (offset = 0, size = 60): Promise<PageRes
 export const getPlusGames = async (offset = 0, size = 60): Promise<PageResult> =>
   enrichedListing(mapConceptsToGames(await featureConcepts('plus')), 'date-desc', 'released', offset, size)
 
-const enrichGameWithDetail = async (game: Game): Promise<Game> => {
+// Function-injection seam (AGENTS.md §3.2 / §13 forbid DI containers and
+// Service classes). The optional fetcher defaults to the real boundary and is
+// overridden only by tests with an in-memory fake (AGENTS.md §9).
+type FetchProductDetail = typeof fetchProductDetail
+
+const enrichGameWithDetail = async (
+  game: Game,
+  fetchDetail: FetchProductDetail,
+): Promise<Game> => {
   try {
-    const detail = await fetchProductDetail(game.id)
+    const detail = await fetchDetail(game.id)
     return {
       ...game,
       date: detail.releaseDate ?? game.date,
@@ -164,7 +196,10 @@ const enrichGameWithDetail = async (game: Game): Promise<Game> => {
   }
 }
 
-export const getGameById = async (id: string): Promise<Game> => {
+export const getGameById = async (
+  id: string,
+  fetchDetail: FetchProductDetail = fetchProductDetail,
+): Promise<Game> => {
   const cached = cache.get<Game>(detailCacheKey(id))
   if (cached) {
     return gameSchema.parse(cached)
@@ -174,7 +209,7 @@ export const getGameById = async (id: string): Promise<Game> => {
   const game = games.find((item) => item.id === id)
 
   if (game) {
-    const enriched = await enrichGameWithDetail(game)
+    const enriched = await enrichGameWithDetail(game, fetchDetail)
     cache.set(detailCacheKey(enriched.id), enriched, DETAIL_TTL_MS)
     return gameSchema.parse(enriched)
   }
@@ -182,7 +217,7 @@ export const getGameById = async (id: string): Promise<Game> => {
   for (const feature of ['upcoming', 'discounted', 'plus'] as const) {
     const featureGame = await findGameInFeatureConcepts(feature, id)
     if (featureGame) {
-      const enriched = await enrichGameWithDetail(featureGame)
+      const enriched = await enrichGameWithDetail(featureGame, fetchDetail)
       cache.set(detailCacheKey(enriched.id), enriched, DETAIL_TTL_MS)
       return gameSchema.parse(enriched)
     }

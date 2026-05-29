@@ -1,5 +1,6 @@
 import { env } from '../config/env.js'
 import { fetchWithRetry } from '../lib/http.js'
+import { parseProductRetrieve } from './productDetailSchema.js'
 import { sonyStrategies, type SonyFeature, type StrategyContext } from './queryStrategies.js'
 import type { CategoryGridProduct, CategoryGridRetrieveResponse, Concept, ProductRetrieveResponse } from './types.js'
 
@@ -87,13 +88,37 @@ export interface ProductDetailResult {
   publisherName?: string | undefined
 }
 
+/**
+ * Sony's `productRetrieve.descriptions[]` carries several typed entries. The
+ * PDP "game info" panel uses the LONG body, falling back to the SHORT tagline.
+ * COMPATIBILITY_NOTICE and LEGAL entries are never user-facing copy and are
+ * excluded.
+ */
+const descriptionByType = (
+  descriptions: ReadonlyArray<{ type?: string | undefined; value?: string | undefined }>,
+  type: 'LONG' | 'SHORT',
+): string => {
+  const match = descriptions.find((entry) => entry.type === type)
+  const value = match?.value
+  return typeof value === 'string' ? value : ''
+}
+
 export const extractProductDetail = (json: ProductRetrieveResponse): ProductDetailResult => {
-  const product = json.data?.productRetrieve
+  // Validate at the trust boundary (STACK.md §7). A malformed or missing node
+  // degrades to empty description / genres instead of throwing (AGENTS.md §5.1).
+  const product = parseProductRetrieve(json.data?.productRetrieve)
+
   const releaseDate = typeof product?.releaseDate === 'string' && product.releaseDate.length > 0
     ? product.releaseDate
     : undefined
-  const genres = product?.genres ?? []
-  const description = product?.longDescription ?? product?.description ?? ''
+
+  const descriptions = product?.descriptions ?? []
+  const description = descriptionByType(descriptions, 'LONG') || descriptionByType(descriptions, 'SHORT')
+
+  const genres = (product?.combinedLocalizedGenres ?? [])
+    .map((genre) => genre.value)
+    .filter((value): value is string => typeof value === 'string' && value.length > 0)
+
   const publisherName = typeof product?.publisherName === 'string' && product.publisherName.length > 0
     ? product.publisherName
     : undefined
@@ -132,4 +157,3 @@ export const fetchProductReleaseDate = async (productId: string): Promise<string
   const detail = await fetchProductDetail(productId)
   return detail.releaseDate
 }
-

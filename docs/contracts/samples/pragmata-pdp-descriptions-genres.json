@@ -1,0 +1,47 @@
+{
+  "note": "Synthetic, sanitized fixture for the metGetProductById -> data.productRetrieve node. Field names and value shapes mirror the live fi-FI anonymous response (spike doc section C). Contains only public field names, ids, and prose: no request headers, cookies, tokens, or PII. Description prose is illustrative, not the real Sony copy.",
+  "data": {
+    "productRetrieve": {
+      "__typename": "Product",
+      "id": "UP0102-PPSA02530_00-PRAGMATA00000000",
+      "releaseDate": "2026-04-23T21:00:00Z",
+      "publisherName": "CAPCOM",
+      "localizedStoreDisplayClassification": "Täysi peli",
+      "storeDisplayClassification": "FULL_GAME",
+      "descriptions": [
+        {
+          "__typename": "Description",
+          "type": "SHORT",
+          "subType": null,
+          "value": "A near-future action adventure on the Moon."
+        },
+        {
+          "__typename": "Description",
+          "type": "LONG",
+          "subType": null,
+          "value": "<p>Stranded on a lunar research station, you and an android companion must outwit a rogue intelligence.</p><br><p>Solve real-time hacking puzzles woven into third-person combat as the two of you fight to return home.</p>"
+        },
+        {
+          "__typename": "Description",
+          "type": "COMPATIBILITY_NOTICE",
+          "subType": "PS5",
+          "value": "This game is playable on PS5 consoles only."
+        },
+        {
+          "__typename": "Description",
+          "type": "LEGAL",
+          "subType": null,
+          "value": "© CAPCOM CO., LTD. All rights reserved."
+        }
+      ],
+      "combinedLocalizedGenres": [
+        { "__typename": "LocalizedGenreSubGenre", "value": "Toiminta" },
+        { "__typename": "LocalizedGenreSubGenre", "value": "Roolipelit" },
+        {
+          "__typename": "LocalizedGenreSubGenre",
+          "value": "Kolmannen persoonan ammuntapeli"
+        }
+      ]
+    }
+  }
+}
