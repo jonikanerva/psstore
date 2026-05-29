@@ -117,6 +117,57 @@ VISION-aligned):**
   themes / PS4) is preserved unchanged — "align with official" never means
   "stop filtering" (ux-guardian guardrail).
 
+### B.1 NEW-list defect: recent releases stranded beyond the fetch prefix (SUPERSEDES the B conclusion for NEW)
+
+**Verified bug.** A genuinely recent PS5 release — "007 First Light" (concept
+`10006560`, products `EP3969-PPSA11386_00-007FIRSTLIGHT000` /
+`…007FLDELUXE00000`, release date `2026-05-26`; queried `2026-05-29`) — does NOT
+appear in NEW. Root cause: `getNewGames` fetched only the first 120 concepts of
+the grid (category `d0446d4b`, `sortBy conceptReleaseDate desc`,
+`filterBy ["targetPlatforms:PS5"]`), THEN enriched + filtered `released` +
+re-sorted. But `conceptReleaseDate`-desc is only DAY-granular and mixes past +
+future at the head — it is NOT real-date-newest-first. 007 sat at grid position
+**126**, beyond the 120 cap, so it was never fetched. The app sliced a blind
+120-prefix of a 7,213-concept grid.
+
+**Discovered mechanism.** The `categoryGridRetrieve` response `facetOptions`
+advertises a `conceptReleaseDate` facet with key `last_thirty_days` (displayName
+"Juuri julkaistut", live count **177**) — the released twin of the
+`next_thirty_days` token the UPCOMING strategy already uses, callable
+anonymously with no auth. Adding it to NEW's `filterBy` returns exactly the
+released PS5 window (0 future, 0 undated, 0 dropped by the product-id regex; 007
+lands at position 28).
+
+**Fix shipped (branch `fix/new-list-recent-releases`, stacked on this branch).**
+
+- `server/src/sony/queryStrategies.ts`: the `new` strategy now sets
+  `filterBy: ["targetPlatforms:PS5", "conceptReleaseDate:last_thirty_days"]`,
+  the structural twin of the shipped `upcoming` strategy. Keeps
+  `sortBy conceptReleaseDate desc` from `baseVariables`. This is the only
+  upstream-contract change; only `filterBy` VALUES change, so the persisted-query
+  hash, operation name, variable schema, response path, and headers are
+  unchanged and the contract validator / `sony:diff --ci` stay green. The facet
+  token is inline (exactly like `next_thirty_days`) — no new env var
+  (`AGENTS.md §14.1`, smallest-surface).
+- `server/src/services/gamesService.ts`: NEW now fetches `NEW_LIST_PAGE_SIZE =
+  300` (above the bounded ~177 set, one request, growth headroom). UPCOMING /
+  DISCOUNTED / PLUS keep `LIST_PAGE_SIZE = 120`. The pipeline order is unchanged
+  (map → enrich → `released` filter → `date-desc` sort → paginate); the
+  `released` filter becomes a defensive near-no-op and the intraday `date-desc`
+  re-sort + stable tiebreaker (B above) still matter (grid is day-granular).
+  `getNewGames(offset=0, size=60)` signature is unchanged.
+
+**This SUPERSEDES the §B conclusion for NEW.** The prior conclusion ("do not
+chase parity / keep the blind 120-prefix + tiebreaker") correctly rejected
+official-BROWSE parity, but it lacked the `last_thirty_days` facet evidence. The
+facet is the VISION-aligned, released-only, newest-first INPUT set the prior
+manual approach was approximating over the wrong (unbounded, future-mixed) grid
+prefix. The §B tiebreaker and `released`/`date-desc` semantics are retained; only
+the candidate INPUT set is corrected. The scope filters (`targetPlatforms:PS5`,
+`PRODUCT_ID_PATTERN`, `released` `ts <= now`) are NOT loosened — the fix widens
+the input, it does not weaken any filter (ux-guardian binding constraint). NEW
+and UPCOMING stay cleanly separated (no pre-orders in NEW).
+
 ---
 
 ## C. PDP enrichment — the real bug

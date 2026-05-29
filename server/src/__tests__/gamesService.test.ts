@@ -312,6 +312,71 @@ describe('gamesService', () => {
     expect(page.nextOffset).toBeNull()
   })
 
+  it('surfaces a recent release beyond the legacy 120-concept prefix', async () => {
+    // Regression for the NEW-list defect: a genuinely recent release that sits
+    // past grid position 120 (007 First Light landed at 126 live) must still
+    // appear, and the head must stay strictly date-desc. This fails under the
+    // old blind 120-prefix and passes once the NEW window widens.
+    const total = 130
+    const recentIndex = 126
+    const recentTitle = 'beyond-prefix'
+    const now = Date.now()
+    const threeDaysAgoIso = new Date(now - 3 * 24 * 60 * 60 * 1000).toISOString()
+    const olderIso = new Date(now - 400 * 24 * 60 * 60 * 1000).toISOString()
+    const futureIso = FUTURE_DATE
+
+    const dateByProductId = new Map<string, string>()
+    const concepts = Array.from({ length: total }, (_, i) => {
+      const concept = makeConcept(i === recentIndex ? recentTitle : `filler-${String(i)}`)
+      const productId = concept.products[0]?.id
+      if (!productId) {
+        throw new Error('test fixture missing product id')
+      }
+      // The recent release is the newest released item; fillers alternate
+      // older-released and far-future (filtered out) so the recent one must win
+      // the date-desc sort among released games.
+      const date = i === recentIndex ? threeDaysAgoIso : i % 3 === 0 ? futureIso : olderIso
+      dateByProductId.set(productId, date)
+      return concept
+    })
+
+    fetchProductDetail.mockImplementation(async (productId: string) => ({
+      releaseDate: dateByProductId.get(productId) ?? olderIso,
+      genres: [],
+      description: '',
+    }))
+
+    fetchConceptsByFeature.mockImplementation(async (feature: string) =>
+      feature === 'new' ? concepts : [],
+    )
+
+    const svc = await import('../services/gamesService.js')
+    const { games } = await svc.getNewGames(0, total)
+
+    expect(games.some((g) => g.name === recentTitle)).toBe(true)
+    expect(games[0]?.name).toBe(recentTitle)
+  })
+
+  it('requests a NEW window wide enough to cover the released facet set', async () => {
+    // Guards against a future edit silently reintroducing a small prefix cap.
+    // The live `last_thirty_days` released set is ~177; the window must stay
+    // comfortably above it.
+    const seen: number[] = []
+    fetchConceptsByFeature.mockImplementation(async (feature: string, size?: number) => {
+      if (feature === 'new') {
+        seen.push(size ?? 0)
+        return [makeConcept('any')]
+      }
+      return []
+    })
+
+    const svc = await import('../services/gamesService.js')
+    await svc.getNewGames()
+
+    expect(seen.length).toBeGreaterThan(0)
+    expect(seen.every((size) => size >= 300)).toBe(true)
+  })
+
   it('orders games with equal release dates by upstream concept order (stable)', async () => {
     // All three concepts share one parsed timestamp, so ordering must fall back
     // to the upstream `conceptReleaseDate`-desc grid order rather than reorder

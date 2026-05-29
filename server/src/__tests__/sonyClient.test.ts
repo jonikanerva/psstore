@@ -1,5 +1,21 @@
 import { describe, expect, it } from 'vitest'
 import { extractProductDetail, extractReleaseDateFromProductResponse } from '../sony/sonyClient.js'
+import { sonyStrategies } from '../sony/queryStrategies.js'
+
+describe('sonyStrategies.new', () => {
+  it('filters NEW to PS5 and Sony\'s released "last_thirty_days" facet', () => {
+    const variables = sonyStrategies.new.buildVariables({})
+    expect(variables.filterBy).toEqual([
+      'targetPlatforms:PS5',
+      'conceptReleaseDate:last_thirty_days',
+    ])
+  })
+
+  it('keeps NEW sorted conceptReleaseDate descending', () => {
+    const variables = sonyStrategies.new.buildVariables({})
+    expect(variables.sortBy).toEqual({ name: 'conceptReleaseDate', isAscending: false })
+  })
+})
 
 describe('extractReleaseDateFromProductResponse', () => {
   it('extracts releaseDate from productRetrieve payload', () => {

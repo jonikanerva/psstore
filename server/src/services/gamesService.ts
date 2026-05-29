@@ -11,6 +11,13 @@ import type { Concept } from '../sony/types.js'
 
 const cache = new MemoryCache()
 const LIST_PAGE_SIZE = 120
+// NEW fetches a wider window than the other features. With the
+// `conceptReleaseDate:last_thirty_days` facet (queryStrategies.ts) the released
+// PS5 candidate set is bounded (~177 live), so 300 covers the full window in one
+// request with growth headroom — no blind prefix can strand a recent release
+// beyond the cap (spike doc, section B). The enrichment N+1 stays bounded by
+// this set, keeping NEW within the STACK.md §4 budgets.
+const NEW_LIST_PAGE_SIZE = 300
 const DETAIL_TTL_MS = 6 * 60 * 60 * 1000
 const RELEASE_DATE_TTL_MS = 6 * 60 * 60 * 1000
 const LIST_CACHE_PREFIX = 'v2:'
@@ -104,7 +111,7 @@ const enrichGamesWithDates = async (games: Game[]): Promise<Game[]> => {
 const detailCacheKey = (id: string): string => `${LIST_CACHE_PREFIX}game-detail:${id}`
 
 const baseConcepts = async (): Promise<Concept[]> =>
-  withCache(`${LIST_CACHE_PREFIX}concepts-new`, async () => fetchConceptsByFeature('new', LIST_PAGE_SIZE))
+  withCache(`${LIST_CACHE_PREFIX}concepts-new`, async () => fetchConceptsByFeature('new', NEW_LIST_PAGE_SIZE))
 
 const baseGames = async (): Promise<Game[]> =>
   withCache(`${LIST_CACHE_PREFIX}games-new`, async () => mapConceptsToGames(await baseConcepts()))
