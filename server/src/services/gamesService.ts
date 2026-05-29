@@ -108,6 +108,48 @@ const enrichGamesWithDates = async (games: Game[]): Promise<Game[]> => {
   return enriched.filter((game) => Boolean(game.date))
 }
 
+// DISCOUNTED needs the per-product store classification in addition to the
+// release date so it can drop non-game SKUs (DLC, currency, themes — forbidden
+// by VISION). The metadata comes from the same `metGetProductById` call NEW /
+// UPCOMING already make for the date, so DISCOUNTED reads BOTH in one fetch and
+// caches them together under a distinct `product-meta:` key. The existing
+// `release-date:` cache stays untouched so the NEW / UPCOMING date path keeps
+// its own warm entries (no cross-feature cache collision).
+interface ProductMeta {
+  date: string
+  classification: string | null
+}
+
+// Allow-list of Sony `storeDisplayClassification` values that are full games.
+// Conservative by design: unknown / future classifications are excluded so a
+// new non-game SKU type can never silently leak into the games-only grid.
+// PREMIUM_EDITION is excluded for edition de-duplication (AGENTS.md §14.1);
+// including it would be a one-line addition here.
+const DISCOUNTED_GAME_CLASSIFICATIONS = new Set(['FULL_GAME', 'GAME_BUNDLE'])
+
+const enrichGameMeta = async (game: Game): Promise<{ game: Game; meta: ProductMeta }> => {
+  const cacheKey = `product-meta:${game.id}`
+  const cached = cache.get<ProductMeta>(cacheKey)
+  if (cached !== undefined) {
+    return { game: { ...game, date: cached.date }, meta: cached }
+  }
+
+  try {
+    const detail = await fetchProductDetail(game.id)
+    const meta: ProductMeta = {
+      date: detail.releaseDate ?? '',
+      classification: detail.storeDisplayClassification ?? null,
+    }
+    cache.set(cacheKey, meta, RELEASE_DATE_TTL_MS)
+    return { game: { ...game, date: meta.date }, meta }
+  } catch (error) {
+    console.warn(`Product meta lookup failed for ${game.id}`, error)
+    const meta: ProductMeta = { date: '', classification: null }
+    cache.set(cacheKey, meta, RELEASE_DATE_TTL_MS)
+    return { game, meta }
+  }
+}
+
 const detailCacheKey = (id: string): string => `${LIST_CACHE_PREFIX}game-detail:${id}`
 
 const baseConcepts = async (): Promise<Concept[]> =>
@@ -116,7 +158,7 @@ const baseConcepts = async (): Promise<Concept[]> =>
 const baseGames = async (): Promise<Game[]> =>
   withCache(`${LIST_CACHE_PREFIX}games-new`, async () => mapConceptsToGames(await baseConcepts()))
 
-const featureConcepts = async (feature: 'upcoming' | 'discounted' | 'plus'): Promise<Concept[]> =>
+const featureConcepts = async (feature: 'upcoming' | 'discounted'): Promise<Concept[]> =>
   withCache(`${LIST_CACHE_PREFIX}concepts-${feature}`, async () => {
     try {
       return await fetchConceptsByFeature(feature, LIST_PAGE_SIZE)
@@ -129,7 +171,7 @@ const featureConcepts = async (feature: 'upcoming' | 'discounted' | 'plus'): Pro
 const conceptProductId = (concept: Concept): string => concept.products?.[0]?.id ?? concept.id ?? ''
 
 const findGameInFeatureConcepts = async (
-  feature: 'upcoming' | 'discounted' | 'plus',
+  feature: 'upcoming' | 'discounted',
   id: string,
 ): Promise<Game | null> => {
   const concepts = await featureConcepts(feature)
@@ -142,15 +184,12 @@ const findGameInFeatureConcepts = async (
   return games.find((game) => game.id === id) ?? null
 }
 
-type DateFilter = 'released' | 'upcoming' | 'none'
+type DateFilter = 'released' | 'none'
 
 const applyDateFilter = (games: Game[], filter: DateFilter): Game[] => {
   if (filter === 'none') return games
   const now = Date.now()
-  return games.filter((game) => {
-    const ts = Date.parse(game.date)
-    return filter === 'released' ? ts <= now : ts > now
-  })
+  return games.filter((game) => Date.parse(game.date) <= now)
 }
 
 const enrichedListing = async (
@@ -170,14 +209,33 @@ const enrichedListing = async (
 export const getNewGames = async (offset = 0, size = 60): Promise<PageResult> =>
   enrichedListing(baseGames(), 'date-desc', 'released', offset, size)
 
+// UPCOMING uses DateFilter 'none': the `next_thirty_days` facet
+// (queryStrategies.ts) already bounds the window upstream. The previous
+// per-product `> now` re-filter stranded trailing-edge survivors — concepts
+// inside the facet window whose enriched date had just slipped into the past
+// between the grid snapshot and enrichment (live: 7 of 12 dropped). The facet
+// is the authoritative window; we keep `enrichGamesWithDates`' empty-date drop
+// (correctly excludes the ~41/53 announced concepts with `products: []` /
+// `price: null` that the PRODUCT_ID_PATTERN already filters), giving a ~12
+// SKU-bearing ceiling.
 export const getUpcomingGames = async (offset = 0, size = 60): Promise<PageResult> =>
-  enrichedListing(mapConceptsToGames(await featureConcepts('upcoming')), 'date-asc', 'upcoming', offset, size)
+  enrichedListing(mapConceptsToGames(await featureConcepts('upcoming')), 'date-asc', 'none', offset, size)
 
-export const getDiscountedGames = async (offset = 0, size = 60): Promise<PageResult> =>
-  enrichedListing(mapConceptsToGames(await featureConcepts('discounted')), 'date-desc', 'released', offset, size)
-
-export const getPlusGames = async (offset = 0, size = 60): Promise<PageResult> =>
-  enrichedListing(mapConceptsToGames(await featureConcepts('plus')), 'date-desc', 'released', offset, size)
+// DISCOUNTED enriches each grid concept once via `metGetProductById`, reading
+// the release date AND the store classification, then keeps only full-game SKUs
+// (DLC / currency / themes / editions are dropped — VISION forbids them). No
+// `released` date gate (avoids the NEW-style stranding of valid future-dated
+// deals); sort newest-first. The N+1 enrichment stays (cached 6h, within
+// STACK.md §4); the N+1 reduction is deferred to issue #44.
+export const getDiscountedGames = async (offset = 0, size = 60): Promise<PageResult> => {
+  const games = mapConceptsToGames(await featureConcepts('discounted'))
+  const enriched = await Promise.all(games.map((game) => enrichGameMeta(game)))
+  const gamesOnly = enriched
+    .filter(({ meta }) => meta.classification !== null && DISCOUNTED_GAME_CLASSIFICATIONS.has(meta.classification))
+    .map(({ game }) => game)
+    .filter((game) => Boolean(game.date))
+  return paginate(sortByDate(gamesOnly, 'date-desc'), offset, size)
+}
 
 // Function-injection seam (AGENTS.md §3.2 / §13 forbid DI containers and
 // Service classes). The optional fetcher defaults to the real boundary and is
@@ -221,7 +279,7 @@ export const getGameById = async (
     return gameSchema.parse(enriched)
   }
 
-  for (const feature of ['upcoming', 'discounted', 'plus'] as const) {
+  for (const feature of ['upcoming', 'discounted'] as const) {
     const featureGame = await findGameInFeatureConcepts(feature, id)
     if (featureGame) {
       const enriched = await enrichGameWithDetail(featureGame, fetchDetail)

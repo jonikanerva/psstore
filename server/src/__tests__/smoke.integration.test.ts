@@ -33,9 +33,4 @@ describeSmoke('Sony API smoke tests (SMOKE=1)', () => {
     // Upcoming may legitimately be empty if no games launch in 30 days
     expect(Array.isArray(concepts)).toBe(true)
   }, 15_000)
-
-  it('plus: returns non-empty game list', async () => {
-    const concepts = await fetchConceptsByFeature('plus', 10)
-    expect(concepts.length).toBeGreaterThan(0)
-  }, 15_000)
 })

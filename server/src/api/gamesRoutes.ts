@@ -3,7 +3,6 @@ import {
   getDiscountedGames,
   getGameById,
   getNewGames,
-  getPlusGames,
   getUpcomingGames,
 } from '../services/gamesService.js'
 import { gameIdParamSchema, paginationQuerySchema } from '../validation/schemas.js'
@@ -32,15 +31,6 @@ gamesRouter.get('/discounted', async (request, response, next) => {
   try {
     const { offset, size } = paginationQuerySchema.parse(request.query)
     response.json(await getDiscountedGames(offset, size))
-  } catch (error) {
-    next(error)
-  }
-})
-
-gamesRouter.get('/plus', async (request, response, next) => {
-  try {
-    const { offset, size } = paginationQuerySchema.parse(request.query)
-    response.json(await getPlusGames(offset, size))
   } catch (error) {
     next(error)
   }

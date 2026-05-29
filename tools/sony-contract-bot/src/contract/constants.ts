@@ -4,7 +4,6 @@ export const CORE_FEATURES: ContractFeature[] = [
   'new',
   'upcoming',
   'discounted',
-  'plus',
   'search',
   'details',
 ]

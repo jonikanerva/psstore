@@ -25,6 +25,7 @@ export const productRetrieveSchema = z.looseObject({
   id: z.string().optional(),
   releaseDate: z.string().optional(),
   publisherName: z.string().optional(),
+  storeDisplayClassification: z.string().optional(),
   descriptions: z.array(sonyDescriptionSchema).optional(),
   combinedLocalizedGenres: z.array(sonyLocalizedGenreSchema).optional(),
 })

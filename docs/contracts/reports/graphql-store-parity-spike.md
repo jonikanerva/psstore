@@ -218,3 +218,84 @@ contract-bot validator (`tools/sony-contract-bot/src/compat/backend.ts`) asserts
 every manifest operation's `response_path` is one of
 `data.categoryGridRetrieve.products` / `.concepts`; the PDP operation lives
 outside that grid-only contract by design and is documented here instead.
+
+---
+
+## D. Per-view findings (2026-05-29) — PLUS drop, UPCOMING fix, DISCOUNTED fix
+
+Shipped in branch `fix/remove-plus-fix-upcoming-discounted`. All findings below
+were observed against the anonymous fi-fi proxy (region `fi`, locale `fi-fi`,
+EUR, PS5). Privacy-clean: operation names, public persisted-query hashes
+(already in `env.ts`), variable shapes, field paths, category / concept ids,
+counts, and prose only — no headers, cookies, tokens, IP addresses, or PII.
+
+### D.1 NEW — healthy
+
+The `conceptReleaseDate:last_thirty_days` facet input (section B.1) returns the
+bounded released PS5 window (~178 live). The pipeline (map → enrich → `released`
+gate → `date-desc` sort → paginate, `NEW_LIST_PAGE_SIZE = 300`) is unchanged and
+correct. No NEW change in this branch.
+
+### D.2 UPCOMING — funnel and the trailing-edge stranding fix
+
+- The `conceptReleaseDate:next_thirty_days` facet returns ~53 concepts.
+- ~41 of those are pure announcements: `products: []`, `price: null`, no PDP.
+  They have no SKU id, so the mapper sets no valid product id and they are
+  dropped by `PRODUCT_ID_PATTERN` and the empty-date filter. This is correct —
+  an announced-but-not-purchasable title has no price, no PDP, and nothing to
+  link out to. The residual ~12 SKU-bearing concepts are the real UPCOMING
+  ceiling (recorded in `STACK.md → Intentional Divergences`, 2026-05-29).
+- **Defect.** `getUpcomingGames` ran a redundant per-product `> now` re-filter
+  (`DateFilter 'upcoming'`) on top of the facet window. A concept inside the
+  facet's 30-day window whose enriched `releaseDate` had already slipped just
+  into the past (between Sony's grid snapshot and our enrichment call) was
+  stranded — live: 7 of the 12 SKU-bearing concepts were dropped, leaving only
+  ~5.
+- **Fix.** `DateFilter` switched to `'none'`: the facet is the authoritative
+  window, so the per-product re-filter is removed. `enrichGamesWithDates` still
+  drops empty-date games (the ~41 announcements stay excluded). Result lifts
+  ~5 → ~12. Sort stays `date-asc`. No upstream-contract change.
+
+### D.3 DISCOUNTED — window, non-game SKUs, sort, and the corrected fix
+
+- The deals category (`SONY_DEALS_CATEGORY_ID`, `filterBy ["targetPlatforms:PS5"]`)
+  first page returns ~100–120 mixed products. The grid concept carries no
+  `storeDisplayClassification`; that field lives on the `metGetProductById`
+  (`data.productRetrieve`) response (section A.2).
+- **Defect 1 (non-game SKUs).** Without a classification gate, DISCOUNTED leaked
+  add-on packs, virtual currency, vehicles, and standalone editions — all
+  forbidden by `VISION.md → Non-Goals`. Live first-120 deals classify roughly as
+  ~87 `FULL_GAME` + ~13 `GAME_BUNDLE`, with `ADD_ON_PACK` / `PREMIUM_EDITION` /
+  `VEHICLE` / currency making up the remainder.
+- **Defect 2 (date stranding).** DISCOUNTED reused NEW's `released` date gate,
+  which strands valid future-dated deals (pre-order discounts).
+- **Fix (corrected per devils-advocate rework).** DISCOUNTED gets a focused path:
+  enrich each grid concept once via `metGetProductById`, reading BOTH the release
+  date AND `storeDisplayClassification` in the same call (cached together under a
+  new `product-meta:` key, distinct from the `release-date:` key NEW / UPCOMING
+  use — no cross-feature collision). Keep only the allow-list
+  `{ FULL_GAME, GAME_BUNDLE }`; drop the `released` gate (`DateFilter` effectively
+  `'none'`); sort `date-desc`. `PREMIUM_EDITION` is excluded by default for
+  edition de-duplication (one-line change to include). The allow-list is
+  conservative: unknown / future classifications are excluded so a new non-game
+  SKU type can never silently leak in. The N+1 enrichment stays (cached 6h,
+  within `STACK.md §4`); its reduction is deferred to issue #44. `sales30` sort
+  was NOT adopted — unverified.
+
+### D.4 PLUS — `subscriptionService` ignored, view dropped
+
+- The candidate PLUS strategy used
+  `filterBy ["targetPlatforms:PS5", "subscriptionService:PS_PLUS"]` against the
+  same `categoryGridRetrieve` operation.
+- **Finding.** The `subscriptionService:PS_PLUS` filter is silently ignored:
+  PS5-only, PS5 + PS_PLUS-filtered, and a deliberately bogus
+  `subscriptionService:NOT_A_REAL_TOKEN` request all return the identical
+  full-catalogue concept count (7214). No `subscriptionService` facet is
+  advertised on the category `facetOptions`. The anonymous public GraphQL does
+  not expose the monthly PS Plus catalogue without an authenticated session.
+- **Conclusion.** Per the pre-committed `VISION.md → Open Questions` contingency
+  (resolved 2026-05-29), the PS PLUS *catalogue view* is dropped; the product
+  never adds authentication to obtain it. The PS Plus *price* display (cards +
+  PDP, derived from `concept.price.serviceBranding / upsellText` in `mapper.ts`)
+  is unaffected and remains a core principle — only the view/tab and its
+  contract feature were removed.

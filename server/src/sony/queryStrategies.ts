@@ -1,6 +1,6 @@
 import { env } from '../config/env.js'
 
-export type SonyFeature = 'new' | 'upcoming' | 'discounted' | 'plus'
+export type SonyFeature = 'new' | 'upcoming' | 'discounted'
 
 export interface StrategyContext {
   size?: number
@@ -11,7 +11,7 @@ export interface SonyQueryStrategy {
   feature: SonyFeature
   operationName: string
   persistedQueryHash: string
-  fallbackKey: 'base' | 'upcoming' | 'discounted' | 'plus'
+  fallbackKey: 'base' | 'upcoming' | 'discounted'
   buildVariables: (context: StrategyContext) => Record<string, unknown>
 }
 
@@ -54,9 +54,5 @@ export const sonyStrategies: Record<SonyFeature, SonyQueryStrategy> = {
     ...baseVariables(context),
     id: env.SONY_DEALS_CATEGORY_ID,
     filterBy: ['targetPlatforms:PS5'],
-  })),
-  plus: strategy('plus', 'plus', (context) => ({
-    ...baseVariables(context),
-    filterBy: ['targetPlatforms:PS5', 'subscriptionService:PS_PLUS'],
   })),
 }

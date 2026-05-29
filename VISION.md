@@ -6,7 +6,7 @@ The official PlayStation Store at `store.playstation.com` is a marketing surface
 
 ## Goal
 
-Let a Finnish PS5 owner see new, upcoming, discounted, and this-month's PS Plus games at a glance — with both standard and PS Plus prices visible — without ever navigating the official PlayStation Store.
+Let a Finnish PS5 owner see new, upcoming, and discounted games at a glance — with both standard and PS Plus prices visible — without ever navigating the official PlayStation Store.
 
 ## Core Principles
 
@@ -28,7 +28,7 @@ Let a Finnish PS5 owner see new, upcoming, discounted, and this-month's PS Plus 
 ## Product Shape
 
 1. The user opens the site. The default view (NEW GAMES) renders: PS5 games released today at the top, then yesterday's, then earlier — descending by release date.
-2. A top bar exposes four fixed views — **NEW**, **UPCOMING**, **DISCOUNTED**, **PS PLUS** — and a single free-text search field that filters the currently visible list by game name.
+2. A top bar exposes three fixed views — **NEW**, **UPCOMING**, **DISCOUNTED** — and a single free-text search field that filters the currently visible list by game name.
 3. The user clicks a game card. The product detail page (PDP) opens with the game's full metadata: artwork, description, genres, release date, studio, both prices (standard + PS Plus), and a link out to Sony's store page for the actual purchase.
 4. The PDP is identical regardless of which list view the user arrived from.
 5. The user closes the tab. The site retains nothing about who they are or what they looked at.
@@ -54,7 +54,7 @@ When making product, UX, or feature decisions:
 - Do not introduce user accounts, login flows, OAuth, or any concept of identity.
 - Do not introduce user preferences, settings panels, or toggles. The site looks and behaves the same for everyone.
 - Do not introduce wishlists, favourites, price history, notifications, or any feature that requires remembering one user's behaviour.
-- Do not introduce categories beyond the four fixed views (NEW / UPCOMING / DISCOUNTED / PS PLUS).
+- Do not introduce categories beyond the three fixed views (NEW / UPCOMING / DISCOUNTED).
 - Do not introduce decorative chrome: animations beyond loading/skeleton states, hero sections, carousels, marketing copy, hero videos.
 - Do not expand scope beyond PS5 games in the Finnish store at EUR pricing.
 - Do not add a third-party analytics, telemetry, A/B test, or feature-flag service.
@@ -102,5 +102,5 @@ The product succeeds when the user feels:
 Items the human owner has not yet committed to. Agents do not block on these — they pick the most-conservative interpretation per `AGENTS.md §14.1` and document the choice in the PR description (and, when the constraint is technical and durable, in `STACK.md → Intentional Divergences`).
 
 - **UI language.** Sony's `fi-fi` locale returns mixed Finnish / English game data. Should the surrounding chrome (tab labels, search placeholder, error states) be in English or Finnish? Conservative default: English, since game titles and descriptions arrive in English more often than not.
-- **Search scope.** Does the top-bar search filter only the currently visible PLP view, or does it search across all four views at once? Conservative default: filters the current view only, matching the rest of the "no global state" stance.
-- **PS Plus view feasibility.** The "this month's free PS Plus games" view depends on whether Sony's public GraphQL exposes the monthly PS Plus catalogue without an authenticated session. If the data is not reachable without login, this view is dropped — the product never adds authentication to obtain it.
+- **Search scope.** Does the top-bar search filter only the currently visible PLP view, or does it search across all three views at once? Conservative default: filters the current view only, matching the rest of the "no global state" stance.
+- **PS Plus view feasibility — RESOLVED (2026-05-29, dropped).** Sony's anonymous fi-fi GraphQL does not expose the monthly PS Plus catalogue: the `subscriptionService:PS_PLUS` filter is silently ignored (PS5-only, PS_PLUS-filtered, and a deliberately bogus token all return the identical full-catalogue count of 7214), and no `subscriptionService` facet exists on the category. Per the pre-committed contingency the PS PLUS view is dropped; the product does not add authentication to obtain it. The PS Plus *price* (shown alongside the standard price on cards and the PDP) is unaffected and remains a core principle.
