@@ -17,11 +17,20 @@ const formatDate = (value: string): string => {
   return parsed.isValid ? parsed.toLocaleString(DateTime.DATE_MED) : ''
 }
 
+// Concept-only UPCOMING cards (idKind === 'concept') have no internal PDP and
+// no anonymously-available price. They link OUT to Sony's concept page (the
+// `en-fi` locale segment is confirmed to resolve anonymously) and show
+// "Unknown" in the price slot. Everything else (default `product`) keeps the
+// internal PDP Link and normal price rendering, unchanged.
+const conceptHref = (id: string): string =>
+  `https://store.playstation.com/en-fi/concept/${id}`
+
 const GameCard = ({ game }: GameCardProps) => {
   const hasDiscount = Boolean(game.originalPrice) && game.originalPrice !== game.price
+  const isConcept = game.idKind === 'concept'
 
-  return (
-    <Link className="game-card" to={`/g/${game.id}`}>
+  const body = (
+    <>
       <div className="game-card--image-wrap">
         <Image url={game.url} name={game.name} />
       </div>
@@ -32,16 +41,42 @@ const GameCard = ({ game }: GameCardProps) => {
         <div className="game-card--meta">
           <span className="game-card--date">{formatDate(game.date)}</span>
           <span className="game-card--price">
-            {hasDiscount && (
-              <s className="game-card--original-price">{game.originalPrice}</s>
-            )}
-            {game.price || '-'}
-            {game.plusUpsellText !== null && (
-              <span className="game-card--plus">PS+ {game.plusUpsellText}</span>
+            {isConcept ? (
+              'Unknown'
+            ) : (
+              <>
+                {hasDiscount && (
+                  <s className="game-card--original-price">{game.originalPrice}</s>
+                )}
+                {game.price || '-'}
+                {game.plusUpsellText !== null && (
+                  <span className="game-card--plus">PS+ {game.plusUpsellText}</span>
+                )}
+              </>
             )}
           </span>
         </div>
       </div>
+    </>
+  )
+
+  if (isConcept) {
+    return (
+      <a
+        className="game-card"
+        href={conceptHref(game.id)}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={`${game.name} on PlayStation Store`}
+      >
+        {body}
+      </a>
+    )
+  }
+
+  return (
+    <Link className="game-card" to={`/g/${game.id}`}>
+      {body}
     </Link>
   )
 }
