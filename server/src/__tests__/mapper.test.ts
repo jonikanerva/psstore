@@ -1,6 +1,5 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import {
-  __resetWarnOnceForTests,
   conceptToGame,
   isConceptDiscounted,
   isConceptPlus,
@@ -80,13 +79,7 @@ describe('concept mapper', () => {
   })
 
   describe('plusUpsellText', () => {
-    afterEach(() => {
-      __resetWarnOnceForTests()
-      vi.restoreAllMocks()
-    })
-
     it('returns Sony upsellText verbatim when PS_PLUS branding is present', () => {
-      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
       const game = conceptToGame({
         id: 'concept-id',
         price: {
@@ -99,11 +92,9 @@ describe('concept mapper', () => {
       })
 
       expect(game.plusUpsellText).toBe('Säästä 10 %')
-      expect(warn).not.toHaveBeenCalled()
     })
 
-    it('returns null and warns once when PS_PLUS branding has empty-string upsellText', () => {
-      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    it('returns null when PS_PLUS branding has empty-string upsellText', () => {
       const game = conceptToGame({
         id: 'concept-id',
         price: {
@@ -116,24 +107,9 @@ describe('concept mapper', () => {
       })
 
       expect(game.plusUpsellText).toBeNull()
-      expect(warn).toHaveBeenCalledTimes(1)
-      const firstCall = warn.mock.calls[0]
-      if (!firstCall) {
-        throw new Error('expected console.warn to have been called')
-      }
-      const [payload] = firstCall as [unknown]
-      expect(typeof payload).toBe('string')
-      const parsed: unknown = JSON.parse(String(payload))
-      expect(parsed).toEqual({
-        source: 'mapper',
-        kind: 'plus_upsell_drift',
-        signature: 'empty-upsell-text',
-        productId: 'prod-empty',
-      })
     })
 
-    it('returns null without warning when PS_PLUS branding is absent', () => {
-      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    it('returns null when PS_PLUS branding is absent', () => {
       const game = conceptToGame({
         id: 'concept-id',
         price: {
@@ -146,29 +122,6 @@ describe('concept mapper', () => {
       })
 
       expect(game.plusUpsellText).toBeNull()
-      expect(warn).not.toHaveBeenCalled()
-    })
-
-    it('dedupes drift warnings per process and resets via test helper', () => {
-      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      const driftConcept = {
-        id: 'concept-id',
-        price: {
-          basePrice: '€30',
-          discountedPrice: '€30',
-          upsellServiceBranding: ['PS_PLUS'],
-          upsellText: '',
-        },
-        products: [{ id: 'prod-empty' }],
-      }
-
-      conceptToGame(driftConcept)
-      conceptToGame(driftConcept)
-      expect(warn).toHaveBeenCalledTimes(1)
-
-      __resetWarnOnceForTests()
-      conceptToGame(driftConcept)
-      expect(warn).toHaveBeenCalledTimes(2)
     })
   })
 })

@@ -1,4 +1,6 @@
-import { HttpError } from '../errors/httpError.js'
+// Low-level fetch with timeout + bounded retry. Throws a plain Error on
+// exhaustion / non-2xx; the SonyClient service catches it and maps it to the
+// typed `UpstreamUnavailable` error channel.
 
 const describeError = (error: unknown): string => {
   if (error instanceof Error) {
@@ -33,11 +35,7 @@ export const fetchWithRetry = async (
       clearTimeout(timer)
 
       if (!response.ok) {
-        throw new HttpError(
-          502,
-          'UPSTREAM_ERROR',
-          `Sony upstream returned ${String(response.status)}`,
-        )
+        throw new Error(`Sony upstream returned ${String(response.status)}`)
       }
 
       return response
@@ -48,5 +46,5 @@ export const fetchWithRetry = async (
     }
   }
 
-  throw new HttpError(502, 'UPSTREAM_UNAVAILABLE', describeError(lastError))
+  throw new Error(describeError(lastError))
 }

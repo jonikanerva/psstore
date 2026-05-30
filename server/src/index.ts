@@ -1,8 +1,6 @@
-import { createApp } from './app.js'
-import { env } from './config/env.js'
+import { runServer } from './http/server.js'
 
-const app = createApp()
-
-app.listen(env.PORT, () => {
-  console.info(`server listening on http://localhost:${String(env.PORT)}`)
-})
+// Entry point. NodeRuntime.runMain (inside runServer) installs graceful
+// shutdown / interrupt handling, replacing the manual app.listen + cache
+// teardown of the previous Express server.
+runServer()

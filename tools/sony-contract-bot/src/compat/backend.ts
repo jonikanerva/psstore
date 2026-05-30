@@ -7,8 +7,13 @@ export interface CompatibilityContext {
   serviceText: string
 }
 
+// The server env was migrated from zod (`default('x')`) to Effect Config
+// (`Config.withDefault('x')`). Anchor on the `Config.<reader>('ENV_NAME')`
+// call (the quoted env name), then read the resolved literal of the following
+// `withDefault('…')`. Anchoring on the quoted name avoids matching the env key
+// in the `AppConfig` interface declaration that precedes the config block.
 const extractDefault = (source: string, envName: string): string | null => {
-  const pattern = new RegExp(`${envName}:[\\s\\S]*?default\\('([^']+)'\\)`, 'm')
+  const pattern = new RegExp(`'${envName}'\\)[\\s\\S]*?withDefault\\('([^']+)'\\)`, 'm')
   const match = source.match(pattern)
   return match?.[1] ?? null
 }

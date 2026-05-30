@@ -4,28 +4,6 @@ import type { Concept } from './types.js'
 const DEFAULT_DISCOUNT_DATE = ''
 const DEFAULT_RELEASE_DATE = ''
 
-// Module-level dedupe (per-process; resets on process restart).
-// Drift warnings reference Sony product ids only — never names, prices, or
-// localised strings (see AGENTS.md §8 / STACK.md §8).
-const driftKeysSeen = new Set<string>()
-
-export const __resetWarnOnceForTests = (): void => {
-  driftKeysSeen.clear()
-}
-
-const warnOnceDrift = (signature: string, productId: string): void => {
-  if (driftKeysSeen.has(signature)) return
-  driftKeysSeen.add(signature)
-  console.warn(
-    JSON.stringify({
-      source: 'mapper',
-      kind: 'plus_upsell_drift',
-      signature,
-      productId,
-    }),
-  )
-}
-
 const toIsoOrDefault = (value?: string): string => {
   if (!value) {
     return DEFAULT_RELEASE_DATE
@@ -110,7 +88,6 @@ export const conceptToGame = (concept: Concept): Game => {
     if (!hasPlus) return null
     const raw = concept.price?.upsellText
     if (typeof raw !== 'string' || raw === '') {
-      warnOnceDrift('empty-upsell-text', productId)
       return null
     }
     return raw
