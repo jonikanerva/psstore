@@ -1,4 +1,5 @@
-import { gameSchema, gamesSchema, type Game, type PageResult } from '@psstore/shared'
+import { gameSchema, type Game, type PageResult } from '@psstore/shared'
+import { Schema } from 'effect'
 import { MemoryCache } from '../lib/cache.js'
 import { HttpError } from '../errors/httpError.js'
 import { env } from '../config/env.js'
@@ -6,8 +7,19 @@ import {
   fetchConceptsByFeature,
   fetchProductDetail,
 } from '../sony/sonyClient.js'
-import { conceptToGame } from '../sony/mapper.js'
+import {
+  applyDateFilter,
+  conceptProductId,
+  DISCOUNTED_GAME_CLASSIFICATIONS,
+  mapConceptsToGames,
+  mapUpcomingConceptsToGames,
+  paginate,
+  sortByDate,
+  type SortOrder,
+} from '../domain/listing.js'
 import type { Concept } from '../sony/types.js'
+
+const decodeGame = Schema.decodeUnknownSync(gameSchema)
 
 const cache = new MemoryCache()
 const LIST_PAGE_SIZE = 120
@@ -22,10 +34,6 @@ const DETAIL_TTL_MS = 6 * 60 * 60 * 1000
 const RELEASE_DATE_TTL_MS = 6 * 60 * 60 * 1000
 const LIST_CACHE_PREFIX = 'v2:'
 
-const PRODUCT_ID_PATTERN = /^[A-Z]{2}\d{4}-[A-Z]{4}\d{5}_00-/
-
-const isValidProductId = (id: string): boolean => PRODUCT_ID_PATTERN.test(id)
-
 const withCache = async <T>(key: string, resolve: () => Promise<T>): Promise<T> => {
   const hit = cache.get<T>(key)
   if (hit) {
@@ -35,73 +43,6 @@ const withCache = async <T>(key: string, resolve: () => Promise<T>): Promise<T> 
   const value = await resolve()
   cache.set(key, value, env.CACHE_TTL_MS)
   return value
-}
-
-type SortOrder = 'date-desc' | 'date-asc'
-
-// Unparseable / missing dates sort last (most distant in the requested
-// direction) rather than producing NaN comparisons, which would make the sort
-// implementation-defined.
-const DATE_DESC_SENTINEL = Number.NEGATIVE_INFINITY
-const DATE_ASC_SENTINEL = Number.POSITIVE_INFINITY
-
-/**
- * Sort enriched games by per-product release date, falling back to the upstream
- * order (the server's `conceptReleaseDate`-desc grid order) as a STABLE
- * tiebreaker. Without this, equal or unparseable dates reorder
- * nondeterministically across requests; the tiebreaker keeps the official
- * grid order Sony already returns for ties (see the spike doc, section B).
- */
-const sortByDate = (games: Game[], order: SortOrder): Game[] => {
-  const sentinel = order === 'date-desc' ? DATE_DESC_SENTINEL : DATE_ASC_SENTINEL
-  const tsOf = (game: Game): number => {
-    const parsed = Date.parse(game.date)
-    return Number.isNaN(parsed) ? sentinel : parsed
-  }
-
-  return games
-    .map((game, index) => ({ game, index }))
-    .sort((a, b) => {
-      const aTs = tsOf(a.game)
-      const bTs = tsOf(b.game)
-      const byDate = order === 'date-desc' ? bTs - aTs : aTs - bTs
-      return byDate !== 0 ? byDate : a.index - b.index
-    })
-    .map((entry) => entry.game)
-}
-
-const paginate = (games: Game[], offset: number, size: number): PageResult => {
-  const page = games.slice(offset, offset + size)
-  const nextOffset = offset + size < games.length ? offset + size : null
-  return { games: page, totalCount: games.length, nextOffset }
-}
-
-const mapConceptsToGames = (concepts: Concept[]): Game[] => {
-  const mapped = concepts
-    .map((concept) => conceptToGame(concept))
-    .filter((game) => Boolean(game.id) && isValidProductId(game.id))
-
-  return gamesSchema.parse(mapped)
-}
-
-// UPCOMING-only mapping. Unlike `mapConceptsToGames` (used VERBATIM by
-// NEW / DISCOUNTED), this keeps concept-only announcements that Sony does not
-// expose as a priced product SKU anonymously: it drops only truly id-less
-// entries, not the SKU-less ones. `idKind` is derived HERE, once, so the shared
-// mapper and the NEW / DISCOUNTED output stay byte-identical — a `product` id
-// matches the existing `PRODUCT_ID_PATTERN` (internal PDP); anything else is a
-// bare concept id that links out to Sony's concept page (owner ruling
-// 2026-05-29). Owner-authorised, UPCOMING-scoped exception (VISION.md).
-const mapUpcomingConceptsToGames = (concepts: Concept[]): Game[] => {
-  const mapped = concepts
-    .map((concept) => conceptToGame(concept))
-    .filter((game) => Boolean(game.id))
-    .map((game) => ({
-      ...game,
-      idKind: isValidProductId(game.id) ? ('product' as const) : ('concept' as const),
-    }))
-
-  return gamesSchema.parse(mapped)
 }
 
 const enrichGameDate = async (game: Game): Promise<Game> => {
@@ -139,13 +80,6 @@ interface ProductMeta {
   date: string
   classification: string | null
 }
-
-// Allow-list of Sony `storeDisplayClassification` values that are full games.
-// Conservative by design: unknown / future classifications are excluded so a
-// new non-game SKU type can never silently leak into the games-only grid.
-// PREMIUM_EDITION is excluded for edition de-duplication (AGENTS.md §14.1);
-// including it would be a one-line addition here.
-const DISCOUNTED_GAME_CLASSIFICATIONS = new Set(['FULL_GAME', 'GAME_BUNDLE'])
 
 const enrichGameMeta = async (game: Game): Promise<{ game: Game; meta: ProductMeta }> => {
   const cacheKey = `product-meta:${game.id}`
@@ -188,8 +122,6 @@ const featureConcepts = async (feature: 'upcoming' | 'discounted'): Promise<Conc
     }
   })
 
-const conceptProductId = (concept: Concept): string => concept.products?.[0]?.id ?? concept.id ?? ''
-
 const findGameInFeatureConcepts = async (
   feature: 'upcoming' | 'discounted',
   id: string,
@@ -204,18 +136,10 @@ const findGameInFeatureConcepts = async (
   return games.find((game) => game.id === id) ?? null
 }
 
-type DateFilter = 'released' | 'none'
-
-const applyDateFilter = (games: Game[], filter: DateFilter): Game[] => {
-  if (filter === 'none') return games
-  const now = Date.now()
-  return games.filter((game) => Date.parse(game.date) <= now)
-}
-
 const enrichedListing = async (
   gamesPromise: Promise<Game[]> | Game[],
   order: SortOrder,
-  dateFilter: DateFilter,
+  dateFilter: 'released' | 'none',
   offset: number,
   size: number,
 ): Promise<PageResult> => {
@@ -298,7 +222,7 @@ export const getGameById = async (
 ): Promise<Game> => {
   const cached = cache.get<Game>(detailCacheKey(id))
   if (cached) {
-    return gameSchema.parse(cached)
+    return decodeGame(cached)
   }
 
   const games = await baseGames()
@@ -307,7 +231,7 @@ export const getGameById = async (
   if (game) {
     const enriched = await enrichGameWithDetail(game, fetchDetail)
     cache.set(detailCacheKey(enriched.id), enriched, DETAIL_TTL_MS)
-    return gameSchema.parse(enriched)
+    return decodeGame(enriched)
   }
 
   for (const feature of ['upcoming', 'discounted'] as const) {
@@ -315,7 +239,7 @@ export const getGameById = async (
     if (featureGame) {
       const enriched = await enrichGameWithDetail(featureGame, fetchDetail)
       cache.set(detailCacheKey(enriched.id), enriched, DETAIL_TTL_MS)
-      return gameSchema.parse(enriched)
+      return decodeGame(enriched)
     }
   }
 
