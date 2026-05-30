@@ -10,7 +10,6 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { gamesApi } from '../api/gamesApi.js'
 import { gamesGroupLive } from '../api/gamesHandlers.js'
-import { EnvLive } from '../config/env.js'
 import { GamesServiceLive } from '../services/gamesService.js'
 import { SonyClientLive } from '../sony/sonyClient.js'
 
@@ -23,10 +22,7 @@ const clientBuildPath = path.resolve(dirname, '../../../client/build')
 const indexHtmlPath = path.join(clientBuildPath, 'index.html')
 
 // Service graph for the games API handlers.
-const ServicesLive = GamesServiceLive.pipe(
-  Layer.provide(SonyClientLive),
-  Layer.provide(EnvLive),
-)
+const ServicesLive = GamesServiceLive.pipe(Layer.provide(SonyClientLive))
 
 // Mount the typed REST API (prefix /api/games is declared on the group).
 const ApiRoutes = HttpLayerRouter.addHttpApi(gamesApi).pipe(

@@ -1,13 +1,10 @@
-import { Effect, Layer } from 'effect'
+import { Effect } from 'effect'
 import { describe, expect, it } from 'vitest'
-import { EnvLive } from '../config/env.js'
 import { conceptToGame } from '../sony/mapper.js'
 import { SonyClient, SonyClientLive } from '../sony/sonyClient.js'
 
 const SMOKE = process.env['SMOKE'] === '1'
 const describeSmoke = SMOKE ? describe : describe.skip
-
-const LiveClient = SonyClientLive.pipe(Layer.provide(EnvLive))
 
 const fetchConcepts = (
   feature: 'new' | 'upcoming' | 'discounted',
@@ -15,7 +12,7 @@ const fetchConcepts = (
 ) =>
   SonyClient.pipe(
     Effect.flatMap((client) => client.fetchConceptsByFeature(feature, size)),
-    Effect.provide(LiveClient),
+    Effect.provide(SonyClientLive),
     Effect.runPromise,
   )
 
