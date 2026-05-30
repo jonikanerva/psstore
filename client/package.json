@@ -8,19 +8,24 @@
     "build": "vite build --outDir=build",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "lint": "eslint src && stylelint 'src/**/*.css'",
+    "lint": "eslint src",
     "test": "vitest run"
   },
   "dependencies": {
     "@psstore/shared": "workspace:*",
+    "@tanstack/react-query": "^5.66.0",
+    "@tanstack/react-query-persist-client": "^5.66.0",
+    "@tanstack/query-sync-storage-persister": "^5.66.0",
+    "@tanstack/react-router": "^1.99.0",
     "dompurify": "^3.3.1",
+    "effect": "3.21.2",
     "luxon": "^3.5.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "react-router-dom": "^7.1.5"
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
+    "@tailwindcss/vite": "^4.0.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/luxon": "^3.6.2",
@@ -32,8 +37,7 @@
     "eslint": "^9.39.4",
     "eslint-plugin-react": "^7.37.4",
     "jsdom": "^28.1.0",
-    "stylelint": "^16.14.1",
-    "stylelint-config-standard": "^37.0.0",
+    "tailwindcss": "^4.0.0",
     "typescript": "^6.0.3",
     "vite": "^8.0.14",
     "vitest": "^4.1.7"

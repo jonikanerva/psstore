@@ -1,7 +1,0 @@
-{
-  "extends": "stylelint-config-standard",
-  "ignoreFiles": ["build/**/*", "client/build/**/*", "server/dist/**/*", "shared/dist/**/*"],
-  "rules": {
-    "selector-class-pattern": "^[a-z][a-z0-9-]*([_-]{1,2}[a-z0-9-]+)*$"
-  }
-}
