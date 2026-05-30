@@ -1,13 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import type { ContractFeature, SonyContractManifest } from '../contract/types.js'
+import type {
+  ContractFeature,
+  SonyContractManifest,
+} from '../contract/types.js'
 import { validateManifest } from '../contract/validator.js'
 
-const features: ContractFeature[] = [
-  'new',
-  'upcoming',
-  'discounted',
-  'details',
-]
+const features: ContractFeature[] = ['new', 'upcoming', 'discounted', 'details']
 
 const validManifest: SonyContractManifest = {
   version: 1,
@@ -46,7 +44,9 @@ describe('validateManifest', () => {
   it('rejects missing feature coverage', () => {
     const invalid: SonyContractManifest = {
       ...validManifest,
-      operations: validManifest.operations.filter((op) => op.feature !== 'details'),
+      operations: validManifest.operations.filter(
+        (op) => op.feature !== 'details',
+      ),
     }
 
     expect(() => {

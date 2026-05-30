@@ -18,8 +18,16 @@ const QueryProbe = () => {
 
 const renderShellAt = async (initial: string) => {
   const rootRoute = createRootRoute({ component: AppShell })
-  const newRoute = createRoute({ getParentRoute: () => rootRoute, path: 'new', component: QueryProbe })
-  const discountedRoute = createRoute({ getParentRoute: () => rootRoute, path: 'discounted', component: QueryProbe })
+  const newRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: 'new',
+    component: QueryProbe,
+  })
+  const discountedRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: 'discounted',
+    component: QueryProbe,
+  })
   const router = createRouter({
     routeTree: rootRoute.addChildren([newRoute, discountedRoute]),
     history: createMemoryHistory({ initialEntries: [initial] }),
@@ -70,13 +78,17 @@ describe('AppShell', () => {
   it('clears the query when the route changes', async () => {
     await renderShellAt('/new')
 
-    const input = screen.getByRole<HTMLInputElement>('searchbox', { name: 'Search' })
+    const input = screen.getByRole<HTMLInputElement>('searchbox', {
+      name: 'Search',
+    })
     fireEvent.change(input, { target: { value: 'silksong' } })
     expect(input.value).toBe('silksong')
 
     fireEvent.click(screen.getByRole('link', { name: 'Discounted' }))
 
-    expect(screen.getByRole<HTMLInputElement>('searchbox', { name: 'Search' }).value).toBe('')
+    expect(
+      screen.getByRole<HTMLInputElement>('searchbox', { name: 'Search' }).value,
+    ).toBe('')
     expect(screen.getByTestId('probe-query')).toHaveTextContent('')
   })
 })

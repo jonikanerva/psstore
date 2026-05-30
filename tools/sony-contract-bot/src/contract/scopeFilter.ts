@@ -10,7 +10,9 @@ const includesPs5 = (value: unknown): boolean => {
   }
 
   if (value && typeof value === 'object') {
-    return Object.values(value as Record<string, unknown>).some((entry) => includesPs5(entry))
+    return Object.values(value as Record<string, unknown>).some((entry) =>
+      includesPs5(entry),
+    )
   }
 
   return false
@@ -26,7 +28,9 @@ const includesEur = (value: unknown): boolean => {
   }
 
   if (value && typeof value === 'object') {
-    return Object.values(value as Record<string, unknown>).some((entry) => includesEur(entry))
+    return Object.values(value as Record<string, unknown>).some((entry) =>
+      includesEur(entry),
+    )
   }
 
   return false
@@ -42,7 +46,9 @@ const includesFiFi = (value: unknown): boolean => {
   }
 
   if (value && typeof value === 'object') {
-    return Object.values(value as Record<string, unknown>).some((entry) => includesFiFi(entry))
+    return Object.values(value as Record<string, unknown>).some((entry) =>
+      includesFiFi(entry),
+    )
   }
 
   return false
@@ -58,7 +64,9 @@ const includesValue = (value: unknown, needle: string): boolean => {
   }
 
   if (value && typeof value === 'object') {
-    return Object.values(value as Record<string, unknown>).some((entry) => includesValue(entry, needle))
+    return Object.values(value as Record<string, unknown>).some((entry) =>
+      includesValue(entry, needle),
+    )
   }
 
   return false

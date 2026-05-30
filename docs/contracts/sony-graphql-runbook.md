@@ -3,6 +3,7 @@
 ## Scope (Locked)
 
 This tooling always targets the public Finnish storefront with fixed scope:
+
 - region: `fi`
 - locale: `fi-fi`
 - currency: `EUR`
@@ -17,6 +18,7 @@ pnpm run sony:refresh
 ```
 
 Pipeline:
+
 1. capture traffic from public fi-fi routes
 2. normalize into candidate manifest
 3. filter non-PS5 / non-EUR operations

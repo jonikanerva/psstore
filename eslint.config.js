@@ -84,7 +84,12 @@ module.exports = [
         {
           patterns: [
             {
-              group: ['@effect/platform', '@effect/platform/*', '@effect/platform-node', '@effect/platform-node/*'],
+              group: [
+                '@effect/platform',
+                '@effect/platform/*',
+                '@effect/platform-node',
+                '@effect/platform-node/*',
+              ],
               message:
                 'Import @effect/platform only from api/gamesApi.ts, api/gamesHandlers.ts, or http/server.ts (HttpApi is confined to the interface layer).',
             },

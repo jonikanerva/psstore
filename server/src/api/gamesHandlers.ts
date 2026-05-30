@@ -8,13 +8,22 @@ import { gamesApi } from './gamesApi.js'
 // is mapped to HTTP status by the endpoint definitions in gamesApi.ts. One of
 // the three modules permitted to import `@effect/platform`.
 
-export const gamesGroupLive = HttpApiBuilder.group(gamesApi, 'games', (handlers) =>
-  Effect.gen(function* () {
-    const games = yield* GamesService
-    return handlers
-      .handle('new', ({ urlParams }) => games.getNewGames(urlParams.offset, urlParams.size))
-      .handle('upcoming', ({ urlParams }) => games.getUpcomingGames(urlParams.offset, urlParams.size))
-      .handle('discounted', ({ urlParams }) => games.getDiscountedGames(urlParams.offset, urlParams.size))
-      .handle('getById', ({ path }) => games.getGameById(path.id))
-  }),
+export const gamesGroupLive = HttpApiBuilder.group(
+  gamesApi,
+  'games',
+  (handlers) =>
+    Effect.gen(function* () {
+      const games = yield* GamesService
+      return handlers
+        .handle('new', ({ urlParams }) =>
+          games.getNewGames(urlParams.offset, urlParams.size),
+        )
+        .handle('upcoming', ({ urlParams }) =>
+          games.getUpcomingGames(urlParams.offset, urlParams.size),
+        )
+        .handle('discounted', ({ urlParams }) =>
+          games.getDiscountedGames(urlParams.offset, urlParams.size),
+        )
+        .handle('getById', ({ path }) => games.getGameById(path.id))
+    }),
 )

@@ -25,7 +25,8 @@ const baseGame: Game = {
 
 vi.mock('../modules/psnStore', () => ({
   fetchGame: vi.fn(),
-  metacriticLink: (name: string) => `https://www.metacritic.com/search/${encodeURIComponent(name)}/`,
+  metacriticLink: (name: string) =>
+    `https://www.metacritic.com/search/${encodeURIComponent(name)}/`,
 }))
 
 describe('GameDetailsPage', () => {
@@ -77,7 +78,11 @@ describe('GameDetailsPage', () => {
 
   it('renders media section only when screenshots or videos exist', async () => {
     const { fetchGame } = await import('../modules/psnStore')
-    vi.mocked(fetchGame).mockResolvedValue({ ...baseGame, screenshots: [], videos: [] })
+    vi.mocked(fetchGame).mockResolvedValue({
+      ...baseGame,
+      screenshots: [],
+      videos: [],
+    })
 
     await renderWithRouter(<GameDetailsPage gameId={baseGame.id} />)
 
@@ -101,7 +106,10 @@ describe('GameDetailsPage', () => {
 
   it('renders a PS Plus row with Sony upsellText verbatim when set', async () => {
     const { fetchGame } = await import('../modules/psnStore')
-    vi.mocked(fetchGame).mockResolvedValue({ ...baseGame, plusUpsellText: 'Säästä 10 %' })
+    vi.mocked(fetchGame).mockResolvedValue({
+      ...baseGame,
+      plusUpsellText: 'Säästä 10 %',
+    })
 
     await renderWithRouter(<GameDetailsPage gameId={baseGame.id} />)
 

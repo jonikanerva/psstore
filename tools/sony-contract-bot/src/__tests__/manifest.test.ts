@@ -8,8 +8,16 @@ const operations: ContractOperation[] = [
     operation_name: 'categoryGridRetrieve',
     persisted_query_hash: 'a'.repeat(64),
     required_headers: ['x-apollo-operation-name'],
-    variables_schema: { id: 'string', targetPlatforms: ['PS5'], currencyCode: 'EUR' },
-    sample_variables: { id: 'x', targetPlatforms: ['PS5'], currencyCode: 'EUR' },
+    variables_schema: {
+      id: 'string',
+      targetPlatforms: ['PS5'],
+      currencyCode: 'EUR',
+    },
+    sample_variables: {
+      id: 'x',
+      targetPlatforms: ['PS5'],
+      currencyCode: 'EUR',
+    },
     response_path: 'data.categoryGridRetrieve.products',
     observed_status_codes: [200],
   },

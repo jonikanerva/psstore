@@ -3,7 +3,9 @@ import type { ContractOperation } from './types.js'
 const normalizeRecord = (operation: ContractOperation): ContractOperation => ({
   ...operation,
   required_headers: [...new Set(operation.required_headers)].sort(),
-  observed_status_codes: [...new Set(operation.observed_status_codes)].sort((a, b) => a - b),
+  observed_status_codes: [...new Set(operation.observed_status_codes)].sort(
+    (a, b) => a - b,
+  ),
 })
 
 const dedupeKey = (operation: ContractOperation): string =>
@@ -16,7 +18,9 @@ const dedupeKey = (operation: ContractOperation): string =>
     operation.variables_schema,
   ])
 
-export const normalizeOperations = (operations: ContractOperation[]): ContractOperation[] => {
+export const normalizeOperations = (
+  operations: ContractOperation[],
+): ContractOperation[] => {
   const map = new Map<string, ContractOperation>()
 
   for (const operation of operations.map(normalizeRecord)) {

@@ -12,7 +12,8 @@ const decodeGames = Schema.decodeUnknownSync(gamesSchema)
 
 const PRODUCT_ID_PATTERN = /^[A-Z]{2}\d{4}-[A-Z]{4}\d{5}_00-/
 
-export const isValidProductId = (id: string): boolean => PRODUCT_ID_PATTERN.test(id)
+export const isValidProductId = (id: string): boolean =>
+  PRODUCT_ID_PATTERN.test(id)
 
 export type SortOrder = 'date-desc' | 'date-asc'
 
@@ -29,8 +30,12 @@ const DATE_ASC_SENTINEL = Number.POSITIVE_INFINITY
  * nondeterministically across requests; the tiebreaker keeps the official
  * grid order Sony already returns for ties (see the spike doc, section B).
  */
-export const sortByDate = (games: readonly Game[], order: SortOrder): Game[] => {
-  const sentinel = order === 'date-desc' ? DATE_DESC_SENTINEL : DATE_ASC_SENTINEL
+export const sortByDate = (
+  games: readonly Game[],
+  order: SortOrder,
+): Game[] => {
+  const sentinel =
+    order === 'date-desc' ? DATE_DESC_SENTINEL : DATE_ASC_SENTINEL
   const tsOf = (game: Game): number => {
     const parsed = Date.parse(game.date)
     return Number.isNaN(parsed) ? sentinel : parsed
@@ -47,7 +52,11 @@ export const sortByDate = (games: readonly Game[], order: SortOrder): Game[] => 
     .map((entry) => entry.game)
 }
 
-export const paginate = (games: readonly Game[], offset: number, size: number): PageResult => {
+export const paginate = (
+  games: readonly Game[],
+  offset: number,
+  size: number,
+): PageResult => {
   const page = games.slice(offset, offset + size)
   const nextOffset = offset + size < games.length ? offset + size : null
   return { games: page, totalCount: games.length, nextOffset }
@@ -55,7 +64,10 @@ export const paginate = (games: readonly Game[], offset: number, size: number): 
 
 export type DateFilter = 'released' | 'none'
 
-export const applyDateFilter = (games: readonly Game[], filter: DateFilter): Game[] => {
+export const applyDateFilter = (
+  games: readonly Game[],
+  filter: DateFilter,
+): Game[] => {
   if (filter === 'none') return [...games]
   const now = Date.now()
   return games.filter((game) => Date.parse(game.date) <= now)
@@ -78,13 +90,17 @@ export const mapConceptsToGames = (concepts: readonly Concept[]): Game[] => {
 // matches the existing `PRODUCT_ID_PATTERN` (internal PDP); anything else is a
 // bare concept id that links out to Sony's concept page (owner ruling
 // 2026-05-29). Owner-authorised, UPCOMING-scoped exception (VISION.md).
-export const mapUpcomingConceptsToGames = (concepts: readonly Concept[]): Game[] => {
+export const mapUpcomingConceptsToGames = (
+  concepts: readonly Concept[],
+): Game[] => {
   const mapped = concepts
     .map((concept) => conceptToGame(concept))
     .filter((game) => Boolean(game.id))
     .map((game) => ({
       ...game,
-      idKind: isValidProductId(game.id) ? ('product' as const) : ('concept' as const),
+      idKind: isValidProductId(game.id)
+        ? ('product' as const)
+        : ('concept' as const),
     }))
 
   return [...decodeGames(mapped)]
@@ -95,7 +111,10 @@ export const mapUpcomingConceptsToGames = (concepts: readonly Concept[]): Game[]
 // new non-game SKU type can never silently leak into the games-only grid.
 // PREMIUM_EDITION is excluded for edition de-duplication; including it would be
 // a one-line addition here.
-export const DISCOUNTED_GAME_CLASSIFICATIONS = new Set(['FULL_GAME', 'GAME_BUNDLE'])
+export const DISCOUNTED_GAME_CLASSIFICATIONS = new Set([
+  'FULL_GAME',
+  'GAME_BUNDLE',
+])
 
 export const conceptProductId = (concept: Concept): string =>
   concept.products?.[0]?.id ?? concept.id ?? ''

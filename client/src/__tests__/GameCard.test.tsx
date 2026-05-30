@@ -46,7 +46,12 @@ describe('GameCard', () => {
   it('shows original price with strikethrough when discounted', async () => {
     await renderWithRouter(
       <GameCard
-        game={{ ...game, price: '€39,99', originalPrice: '€59,99', discountText: '-33%' }}
+        game={{
+          ...game,
+          price: '€39,99',
+          originalPrice: '€59,99',
+          discountText: '-33%',
+        }}
       />,
     )
 
@@ -63,7 +68,9 @@ describe('GameCard', () => {
   })
 
   it('renders the PS+ indicator with Sony upsellText verbatim when set', async () => {
-    await renderWithRouter(<GameCard game={{ ...game, plusUpsellText: 'Säästä 10 %' }} />)
+    await renderWithRouter(
+      <GameCard game={{ ...game, plusUpsellText: 'Säästä 10 %' }} />,
+    )
 
     expect(screen.getByText('PS+ Säästä 10 %')).toBeInTheDocument()
   })
@@ -87,12 +94,24 @@ describe('GameCard', () => {
   it('links a concept card out to Sony and shows "Unknown" for the price', async () => {
     await renderWithRouter(
       <GameCard
-        game={{ ...game, id: '10018729', name: 'RunNGun', price: '', date: '', idKind: 'concept' }}
+        game={{
+          ...game,
+          id: '10018729',
+          name: 'RunNGun',
+          price: '',
+          date: '',
+          idKind: 'concept',
+        }}
       />,
     )
 
-    const link = screen.getByRole('link', { name: 'RunNGun on PlayStation Store' })
-    expect(link).toHaveAttribute('href', 'https://store.playstation.com/en-fi/concept/10018729')
+    const link = screen.getByRole('link', {
+      name: 'RunNGun on PlayStation Store',
+    })
+    expect(link).toHaveAttribute(
+      'href',
+      'https://store.playstation.com/en-fi/concept/10018729',
+    )
     expect(link).toHaveAttribute('target', '_blank')
     expect(link).toHaveAttribute('rel', 'noopener noreferrer')
     expect(screen.getByText('Unknown')).toBeInTheDocument()

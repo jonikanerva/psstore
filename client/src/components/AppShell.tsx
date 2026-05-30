@@ -5,7 +5,9 @@ import Navigation from './Navigation'
 
 const AppShell = () => {
   const [query, setQuery] = useState('')
-  const pathname = useRouterState({ select: (state) => state.location.pathname })
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  })
 
   // Clear the search when the route changes — the search is per-view and never
   // remembered (ux condition 3).

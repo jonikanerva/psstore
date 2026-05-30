@@ -95,20 +95,20 @@ TBD. Let's aim for fast.
 
 Default answer to "should we add a library?" is **no**. Track the latest **stable** version; pin exact versions in the lockfile; upgrade deliberately, not by drift. **Effect stays on v3** until a v4 migration is performed intentionally — v4-beta MUST NOT leak in via model priors or an unpinned install.
 
-| Dependency                         | Version | Context7 ID                             | Why it earns its place                                 |
-| ---------------------------------- | ------- | --------------------------------------- | ------------------------------------------------------ |
-| `effect` (+ Schema, Cache)         | `3.21.2`  | `/llmstxt/effect_website_llms-full_txt` | Backbone: typed effects, errors, DI                  |
+| Dependency                         | Version   | Context7 ID                             | Why it earns its place                                                                                                                                                      |
+| ---------------------------------- | --------- | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `effect` (+ Schema, Cache)         | `3.21.2`  | `/llmstxt/effect_website_llms-full_txt` | Backbone: typed effects, errors, DI                                                                                                                                         |
 | `@effect/platform`                 | `0.96.1`  | `/llmstxt/effect_website_llms-full_txt` | Typed HttpApi REST + OpenAPI. Published on a 0.x line (it never reached 1.0) while `effect` itself is genuinely 3.x; pinned exact to the build paired with `effect@3.21.2`. |
-| `@effect/platform-node`            | `0.106.0` | `/llmstxt/effect_website_llms-full_txt` | Node HttpServer + runtime adapter for HttpApi; same 0.x line, pinned exact to the build paired with `@effect/platform@0.96.1`. |
-| `typescript`                       | `6.x`   | `/microsoft/typescript`                 | Language                                               |
-| `react`                            | `19.x`  | `/facebook/react`                       | Frontend UI                                            |
-| `vite`                             | latest  | `/vitejs/vite`                          | Frontend build tool                                    |
-| `@tanstack/react-router` (+ Start) | `1.x`   | `/tanstack/router`                      | Type-safe routing                                      |
-| `@tanstack/react-query`            | `5.x`   | `/tanstack/query`                       | Client cache                                           |
-| `tailwindcss`                      | `4.x`   | `/tailwindlabs/tailwindcss`             | Utilitarian styling                                    |
-| `vitest`                           | latest  | `/vitest-dev/vitest`                    | Test runner                                            |
-| `typescript-eslint`                | latest  | `/typescript-eslint/typescript-eslint`  | Typed lint gates                                       |
-| `pnpm`                             | latest  | `/pnpm/pnpm`                            | Package manager (runtime: Node 24 LTS, `/nodejs/node`) |
+| `@effect/platform-node`            | `0.106.0` | `/llmstxt/effect_website_llms-full_txt` | Node HttpServer + runtime adapter for HttpApi; same 0.x line, pinned exact to the build paired with `@effect/platform@0.96.1`.                                              |
+| `typescript`                       | `6.x`     | `/microsoft/typescript`                 | Language                                                                                                                                                                    |
+| `react`                            | `19.x`    | `/facebook/react`                       | Frontend UI                                                                                                                                                                 |
+| `vite`                             | latest    | `/vitejs/vite`                          | Frontend build tool                                                                                                                                                         |
+| `@tanstack/react-router` (+ Start) | `1.x`     | `/tanstack/router`                      | Type-safe routing                                                                                                                                                           |
+| `@tanstack/react-query`            | `5.x`     | `/tanstack/query`                       | Client cache                                                                                                                                                                |
+| `tailwindcss`                      | `4.x`     | `/tailwindlabs/tailwindcss`             | Utilitarian styling                                                                                                                                                         |
+| `vitest`                           | latest    | `/vitest-dev/vitest`                    | Test runner                                                                                                                                                                 |
+| `typescript-eslint`                | latest    | `/typescript-eslint/typescript-eslint`  | Typed lint gates                                                                                                                                                            |
+| `pnpm`                             | latest    | `/pnpm/pnpm`                            | Package manager (runtime: Node 24 LTS, `/nodejs/node`)                                                                                                                      |
 
 New entries require a `STACK.md` PR with rationale, approver, and date.
 

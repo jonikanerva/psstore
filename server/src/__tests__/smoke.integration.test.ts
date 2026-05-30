@@ -9,7 +9,10 @@ const describeSmoke = SMOKE ? describe : describe.skip
 
 const LiveClient = SonyClientLive.pipe(Layer.provide(EnvLive))
 
-const fetchConcepts = (feature: 'new' | 'upcoming' | 'discounted', size: number) =>
+const fetchConcepts = (
+  feature: 'new' | 'upcoming' | 'discounted',
+  size: number,
+) =>
   SonyClient.pipe(
     Effect.flatMap((client) => client.fetchConceptsByFeature(feature, size)),
     Effect.provide(LiveClient),

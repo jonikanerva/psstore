@@ -28,7 +28,9 @@ export const productRetrieveSchema = Schema.Struct({
   publisherName: Schema.optional(Schema.String),
   storeDisplayClassification: Schema.optional(Schema.String),
   descriptions: Schema.optional(Schema.Array(sonyDescriptionSchema)),
-  combinedLocalizedGenres: Schema.optional(Schema.Array(sonyLocalizedGenreSchema)),
+  combinedLocalizedGenres: Schema.optional(
+    Schema.Array(sonyLocalizedGenreSchema),
+  ),
 })
 
 export type ProductRetrieveNode = typeof productRetrieveSchema.Type
@@ -42,7 +44,9 @@ const decode = Schema.decodeUnknownEither(productRetrieveSchema, {
  * `null` when the payload is missing or malformed — callers degrade to empty
  * values rather than surfacing a transport-level failure to the user.
  */
-export const parseProductRetrieve = (node: unknown): ProductRetrieveNode | null => {
+export const parseProductRetrieve = (
+  node: unknown,
+): ProductRetrieveNode | null => {
   if (node === null || node === undefined) {
     return null
   }

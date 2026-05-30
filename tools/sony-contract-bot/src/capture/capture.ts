@@ -9,7 +9,8 @@ interface CaptureEntry extends CaptureRecord {
   feature: ContractFeature
 }
 
-const graphqlRequest = (url: string): boolean => /graphql|\/api\/graphql|\/graphql\/v1\/op/i.test(url)
+const graphqlRequest = (url: string): boolean =>
+  /graphql|\/api\/graphql|\/graphql\/v1\/op/i.test(url)
 
 export const runCapture = async (): Promise<number> => {
   await ensureDir(paths.rawCapture)

@@ -11,11 +11,20 @@ const getJson = async <T>(url: string): Promise<T> => {
   return (await response.json()) as T
 }
 
-export const fetchNewGames = async (offset: number, size: number): Promise<PageResult> =>
+export const fetchNewGames = async (
+  offset: number,
+  size: number,
+): Promise<PageResult> =>
   getJson(`/api/games/new?offset=${String(offset)}&size=${String(size)}`)
-export const fetchUpcomingGames = async (offset: number, size: number): Promise<PageResult> =>
+export const fetchUpcomingGames = async (
+  offset: number,
+  size: number,
+): Promise<PageResult> =>
   getJson(`/api/games/upcoming?offset=${String(offset)}&size=${String(size)}`)
-export const fetchDiscountedGames = async (offset: number, size: number): Promise<PageResult> =>
+export const fetchDiscountedGames = async (
+  offset: number,
+  size: number,
+): Promise<PageResult> =>
   getJson(`/api/games/discounted?offset=${String(offset)}&size=${String(size)}`)
 export const fetchGame = async (gameId: string): Promise<Game> =>
   getJson(`/api/games/${encodeURIComponent(gameId)}`)

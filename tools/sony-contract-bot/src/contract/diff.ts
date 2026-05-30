@@ -10,14 +10,22 @@ export interface ManifestDiff {
   }>
 }
 
-const identity = (operation: ContractOperation): string => `${operation.feature}:${operation.operation_name}`
+const identity = (operation: ContractOperation): string =>
+  `${operation.feature}:${operation.operation_name}`
 
 const equals = (left: ContractOperation, right: ContractOperation): boolean =>
   JSON.stringify(left) === JSON.stringify(right)
 
-export const diffManifests = (base: SonyContractManifest, next: SonyContractManifest): ManifestDiff => {
-  const baseMap = new Map(base.operations.map((operation) => [identity(operation), operation]))
-  const nextMap = new Map(next.operations.map((operation) => [identity(operation), operation]))
+export const diffManifests = (
+  base: SonyContractManifest,
+  next: SonyContractManifest,
+): ManifestDiff => {
+  const baseMap = new Map(
+    base.operations.map((operation) => [identity(operation), operation]),
+  )
+  const nextMap = new Map(
+    next.operations.map((operation) => [identity(operation), operation]),
+  )
 
   const added: ContractOperation[] = []
   const removed: ContractOperation[] = []

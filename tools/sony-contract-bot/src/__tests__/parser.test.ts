@@ -23,7 +23,9 @@ describe('parseCaptureRecordToOperation', () => {
     const operation = parseCaptureRecordToOperation(capture, 'new')
 
     expect(operation.operation_name).toBe('categoryGridRetrieve')
-    expect(operation.persisted_query_hash).toBe('757de84ff8efb4aeaa78f4faf51bd610bce94a3fcb248ba158916cb88c5cdb7c')
+    expect(operation.persisted_query_hash).toBe(
+      '757de84ff8efb4aeaa78f4faf51bd610bce94a3fcb248ba158916cb88c5cdb7c',
+    )
     expect(operation.required_headers).toEqual(['x-apollo-operation-name'])
     expect(operation.variables_schema).toEqual({ id: 'string' })
     expect(operation.response_path).toBe('data.categoryGridRetrieve.products')

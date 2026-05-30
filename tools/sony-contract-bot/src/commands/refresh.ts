@@ -6,7 +6,9 @@ import { runValidate } from './validate.js'
 export const runRefresh = async (): Promise<void> => {
   const count = await runCapture()
   if (count === 0) {
-    throw new Error('No GraphQL requests captured from fi-fi public storefront routes.')
+    throw new Error(
+      'No GraphQL requests captured from fi-fi public storefront routes.',
+    )
   }
 
   await runNormalize(false)

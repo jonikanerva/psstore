@@ -36,17 +36,22 @@ export const runNormalize = async (writeManifest: boolean): Promise<void> => {
     ),
   )
 
-  const scopedOperations = filterOperationsByFinnishPs5EurScope(parsedOperations)
+  const scopedOperations =
+    filterOperationsByFinnishPs5EurScope(parsedOperations)
 
   if (scopedOperations.length === 0) {
-    throw new Error('No fi-fi / PS5 / EUR operations remained after scope filtering.')
+    throw new Error(
+      'No fi-fi / PS5 / EUR operations remained after scope filtering.',
+    )
   }
 
   const operations = normalizeOperations(scopedOperations)
 
   for (const feature of CORE_FEATURES) {
     if (!operations.some((operation) => operation.feature === feature)) {
-      throw new Error(`Scope filtering removed required feature coverage: ${feature}`)
+      throw new Error(
+        `Scope filtering removed required feature coverage: ${feature}`,
+      )
     }
   }
 

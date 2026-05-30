@@ -1,7 +1,14 @@
 import { HttpApi, HttpApiEndpoint, HttpApiGroup } from '@effect/platform'
 import { gameSchema, pageResultSchema } from '@psstore/shared'
-import { GameNotFound, UpstreamUnavailable, ValidationError } from '../errors/errors.js'
-import { gameIdParamSchema, paginationQuerySchema } from '../validation/schemas.js'
+import {
+  GameNotFound,
+  UpstreamUnavailable,
+  ValidationError,
+} from '../errors/errors.js'
+import {
+  gameIdParamSchema,
+  paginationQuerySchema,
+} from '../validation/schemas.js'
 
 // The typed REST surface. The endpoint schemas validate path / query at the
 // boundary; the typed error channel maps each tagged error to its HTTP status

@@ -19,7 +19,7 @@ For every PR / branch, all must be true:
 4. **`$FORMAT_CMD`** is idempotent — re-run it; zero diff.
 5. **`$VERIFY_CMD`** is green and warning-free. Capture the tail of the output as evidence.
 6. **The issue is linked** — when the PR resolves a GitHub issue, its description carries `Closes #<N>`. Any binding decision is written in plain language in the PR description (and the issue). There is no roadmap or change-log to check — the issue, commits, PR description, and merge-commit chain on `main` are the audit trail.
-7. **PR description** quotes the decision-filter answers, names the rules involved, and lists the new states handled. *Trivial PRs* (per `CLAUDE.md → Git workflow → Trivial PR exception`) may collapse those blocks to a single `N/A — trivial change…` line; verify the change actually qualifies. Otherwise the verbatim quote is mandatory.
+7. **PR description** quotes the decision-filter answers, names the rules involved, and lists the new states handled. _Trivial PRs_ (per `CLAUDE.md → Git workflow → Trivial PR exception`) may collapse those blocks to a single `N/A — trivial change…` line; verify the change actually qualifies. Otherwise the verbatim quote is mandatory.
 
 ## Definition-of-done checklist
 

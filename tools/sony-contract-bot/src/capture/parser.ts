@@ -1,5 +1,9 @@
 import { HEADER_ALLOWLIST } from '../contract/constants.js'
-import type { CaptureRecord, ContractFeature, ContractOperation } from '../contract/types.js'
+import type {
+  CaptureRecord,
+  ContractFeature,
+  ContractOperation,
+} from '../contract/types.js'
 
 const jsonType = (value: unknown): unknown => {
   if (Array.isArray(value)) {
@@ -20,10 +24,12 @@ const jsonType = (value: unknown): unknown => {
     case 'boolean':
       return typeof value
     case 'object': {
-      const entries = Object.entries(value as Record<string, unknown>).sort(([a], [b]) =>
-        a.localeCompare(b),
+      const entries = Object.entries(value as Record<string, unknown>).sort(
+        ([a], [b]) => a.localeCompare(b),
       )
-      return Object.fromEntries(entries.map(([key, val]) => [key, jsonType(val)]))
+      return Object.fromEntries(
+        entries.map(([key, val]) => [key, jsonType(val)]),
+      )
     }
     default:
       return 'unknown'

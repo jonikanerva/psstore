@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { extractProductDetail, extractReleaseDateFromProductResponse } from '../sony/sonyClient.js'
+import {
+  extractProductDetail,
+  extractReleaseDateFromProductResponse,
+} from '../sony/sonyClient.js'
 import { buildStrategies } from '../sony/queryStrategies.js'
 import type { AppConfig } from '../config/env.js'
 
@@ -30,7 +33,10 @@ describe('buildStrategies.new', () => {
 
   it('keeps NEW sorted conceptReleaseDate descending', () => {
     const variables = buildStrategies(config).new.buildVariables({})
-    expect(variables.sortBy).toEqual({ name: 'conceptReleaseDate', isAscending: false })
+    expect(variables.sortBy).toEqual({
+      name: 'conceptReleaseDate',
+      isAscending: false,
+    })
   })
 })
 
@@ -62,7 +68,10 @@ describe('extractProductDetail', () => {
             { type: 'COMPATIBILITY_NOTICE', value: 'Requires a PS5 console.' },
             { type: 'LEGAL', value: '© Publisher. All rights reserved.' },
           ],
-          combinedLocalizedGenres: [{ value: 'Toiminta' }, { value: 'Roolipelit' }],
+          combinedLocalizedGenres: [
+            { value: 'Toiminta' },
+            { value: 'Roolipelit' },
+          ],
         },
       },
     })

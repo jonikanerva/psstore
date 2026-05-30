@@ -12,7 +12,9 @@ export const renderDiffReport = (diff: ManifestDiff): string => {
   if (diff.added.length > 0) {
     lines.push('## Added')
     for (const operation of diff.added) {
-      lines.push(`- ${operation.feature}: ${operation.operation_name} (${operation.persisted_query_hash ?? 'no-hash'})`)
+      lines.push(
+        `- ${operation.feature}: ${operation.operation_name} (${operation.persisted_query_hash ?? 'no-hash'})`,
+      )
     }
     lines.push('')
   }
@@ -20,7 +22,9 @@ export const renderDiffReport = (diff: ManifestDiff): string => {
   if (diff.removed.length > 0) {
     lines.push('## Removed')
     for (const operation of diff.removed) {
-      lines.push(`- ${operation.feature}: ${operation.operation_name} (${operation.persisted_query_hash ?? 'no-hash'})`)
+      lines.push(
+        `- ${operation.feature}: ${operation.operation_name} (${operation.persisted_query_hash ?? 'no-hash'})`,
+      )
     }
     lines.push('')
   }

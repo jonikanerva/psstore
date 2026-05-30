@@ -32,15 +32,33 @@ interface ProductMeta {
 }
 
 export interface GamesServiceApi {
-  readonly getNewGames: (offset?: number, size?: number) => Effect.Effect<PageResult, UpstreamUnavailable>
-  readonly getUpcomingGames: (offset?: number, size?: number) => Effect.Effect<PageResult, UpstreamUnavailable>
-  readonly getDiscountedGames: (offset?: number, size?: number) => Effect.Effect<PageResult, UpstreamUnavailable>
-  readonly getGameById: (id: string) => Effect.Effect<Game, GameNotFound | UpstreamUnavailable>
+  readonly getNewGames: (
+    offset?: number,
+    size?: number,
+  ) => Effect.Effect<PageResult, UpstreamUnavailable>
+  readonly getUpcomingGames: (
+    offset?: number,
+    size?: number,
+  ) => Effect.Effect<PageResult, UpstreamUnavailable>
+  readonly getDiscountedGames: (
+    offset?: number,
+    size?: number,
+  ) => Effect.Effect<PageResult, UpstreamUnavailable>
+  readonly getGameById: (
+    id: string,
+  ) => Effect.Effect<Game, GameNotFound | UpstreamUnavailable>
 }
 
-export class GamesService extends Context.Tag('GamesService')<GamesService, GamesServiceApi>() {}
+export class GamesService extends Context.Tag('GamesService')<
+  GamesService,
+  GamesServiceApi
+>() {}
 
-export const GamesServiceLive: Layer.Layer<GamesService, never, Env | SonyClient> = Layer.effect(
+export const GamesServiceLive: Layer.Layer<
+  GamesService,
+  never,
+  Env | SonyClient
+> = Layer.effect(
   GamesService,
   Effect.gen(function* () {
     const config = yield* Env
@@ -53,11 +71,18 @@ export const GamesServiceLive: Layer.Layer<GamesService, never, Env | SonyClient
     // Concepts per feature. NEW uses the wider window; upcoming/discounted use
     // the standard list size. Failures propagate as UpstreamUnavailable here;
     // the upcoming/discounted call sites degrade to an empty list.
-    const conceptsCache = yield* Cache.make<'new' | 'upcoming' | 'discounted', Concept[], UpstreamUnavailable>({
+    const conceptsCache = yield* Cache.make<
+      'new' | 'upcoming' | 'discounted',
+      Concept[],
+      UpstreamUnavailable
+    >({
       capacity: 16,
       timeToLive: listTtl,
       lookup: (feature) =>
-        sony.fetchConceptsByFeature(feature, feature === 'new' ? NEW_LIST_PAGE_SIZE : LIST_PAGE_SIZE),
+        sony.fetchConceptsByFeature(
+          feature,
+          feature === 'new' ? NEW_LIST_PAGE_SIZE : LIST_PAGE_SIZE,
+        ),
     })
 
     // Per-product detail (release date, classification, genres, description,
@@ -71,7 +96,10 @@ export const GamesServiceLive: Layer.Layer<GamesService, never, Env | SonyClient
       lookup: (productId) =>
         sony.fetchProductDetail(productId).pipe(
           Effect.catchAll(() =>
-            Effect.succeed<ProductDetailResult>({ genres: [], description: '' }),
+            Effect.succeed<ProductDetailResult>({
+              genres: [],
+              description: '',
+            }),
           ),
         ),
     })
@@ -84,21 +112,30 @@ export const GamesServiceLive: Layer.Layer<GamesService, never, Env | SonyClient
         })),
       )
 
-    const featureConcepts = (feature: 'upcoming' | 'discounted'): Effect.Effect<Concept[]> =>
+    const featureConcepts = (
+      feature: 'upcoming' | 'discounted',
+    ): Effect.Effect<Concept[]> =>
       conceptsCache.get(feature).pipe(
         Effect.catchAll((error) =>
-          Effect.logWarning('feature concept query failed; using empty fallback', {
-            feature,
-            reason: error._tag,
-          }).pipe(Effect.as<Concept[]>([])),
+          Effect.logWarning(
+            'feature concept query failed; using empty fallback',
+            {
+              feature,
+              reason: error._tag,
+            },
+          ).pipe(Effect.as<Concept[]>([])),
         ),
       )
 
     const enrichDate = (game: Game): Effect.Effect<Game> =>
-      productMeta(game.id).pipe(Effect.map((meta) => ({ ...game, date: meta.date })))
+      productMeta(game.id).pipe(
+        Effect.map((meta) => ({ ...game, date: meta.date })),
+      )
 
     const baseGames = (): Effect.Effect<Game[], UpstreamUnavailable> =>
-      conceptsCache.get('new').pipe(Effect.map((concepts) => mapConceptsToGames(concepts)))
+      conceptsCache
+        .get('new')
+        .pipe(Effect.map((concepts) => mapConceptsToGames(concepts)))
 
     const enrichedListing = (
       games: Game[],
@@ -110,11 +147,20 @@ export const GamesServiceLive: Layer.Layer<GamesService, never, Env | SonyClient
       Effect.forEach(games, enrichDate, { concurrency: 'unbounded' }).pipe(
         Effect.map((enriched) => enriched.filter((game) => Boolean(game.date))),
         Effect.map((withDates) => applyDateFilter(withDates, dateFilter)),
-        Effect.map((filtered) => paginate(sortByDate(filtered, order), offset, size)),
+        Effect.map((filtered) =>
+          paginate(sortByDate(filtered, order), offset, size),
+        ),
       )
 
-    const getNewGames = (offset = 0, size = 60): Effect.Effect<PageResult, UpstreamUnavailable> =>
-      baseGames().pipe(Effect.flatMap((games) => enrichedListing(games, 'date-desc', 'released', offset, size)))
+    const getNewGames = (
+      offset = 0,
+      size = 60,
+    ): Effect.Effect<PageResult, UpstreamUnavailable> =>
+      baseGames().pipe(
+        Effect.flatMap((games) =>
+          enrichedListing(games, 'date-desc', 'released', offset, size),
+        ),
+      )
 
     // UPCOMING surfaces ALL anonymously-available upcoming PS5 games (owner
     // ruling 2026-05-29, option a): priced product SKUs (internal PDP cards) AND
@@ -124,43 +170,63 @@ export const GamesServiceLive: Layer.Layer<GamesService, never, Env | SonyClient
     // applies no date filter. The +Infinity ascending sentinel + stable index
     // tiebreaker put dated SKU cards first and undated concept cards after, in
     // Sony grid order.
-    const getUpcomingGames = (offset = 0, size = 60): Effect.Effect<PageResult, UpstreamUnavailable> =>
+    const getUpcomingGames = (
+      offset = 0,
+      size = 60,
+    ): Effect.Effect<PageResult, UpstreamUnavailable> =>
       featureConcepts('upcoming').pipe(
         Effect.map((concepts) => mapUpcomingConceptsToGames(concepts)),
         Effect.flatMap((games) =>
           Effect.forEach(
             games,
-            (game) => (game.idKind === 'product' ? enrichDate(game) : Effect.succeed(game)),
+            (game) =>
+              game.idKind === 'product'
+                ? enrichDate(game)
+                : Effect.succeed(game),
             { concurrency: 'unbounded' },
           ),
         ),
-        Effect.map((enriched) => paginate(sortByDate(enriched, 'date-asc'), offset, size)),
+        Effect.map((enriched) =>
+          paginate(sortByDate(enriched, 'date-asc'), offset, size),
+        ),
       )
 
     // DISCOUNTED enriches each grid concept once, reading release date AND store
     // classification, then keeps only full-game SKUs (DLC / currency / themes /
     // editions dropped — VISION forbids them). No released-date gate; newest
     // first.
-    const getDiscountedGames = (offset = 0, size = 60): Effect.Effect<PageResult, UpstreamUnavailable> =>
+    const getDiscountedGames = (
+      offset = 0,
+      size = 60,
+    ): Effect.Effect<PageResult, UpstreamUnavailable> =>
       featureConcepts('discounted').pipe(
         Effect.map((concepts) => mapConceptsToGames(concepts)),
         Effect.flatMap((games) =>
           Effect.forEach(
             games,
             (game) =>
-              productMeta(game.id).pipe(Effect.map((meta) => ({ game: { ...game, date: meta.date }, meta }))),
+              productMeta(game.id).pipe(
+                Effect.map((meta) => ({
+                  game: { ...game, date: meta.date },
+                  meta,
+                })),
+              ),
             { concurrency: 'unbounded' },
           ),
         ),
         Effect.map((enriched) =>
           enriched
             .filter(
-              ({ meta }) => meta.classification !== null && DISCOUNTED_GAME_CLASSIFICATIONS.has(meta.classification),
+              ({ meta }) =>
+                meta.classification !== null &&
+                DISCOUNTED_GAME_CLASSIFICATIONS.has(meta.classification),
             )
             .map(({ game }) => game)
             .filter((game) => Boolean(game.date)),
         ),
-        Effect.map((gamesOnly) => paginate(sortByDate(gamesOnly, 'date-desc'), offset, size)),
+        Effect.map((gamesOnly) =>
+          paginate(sortByDate(gamesOnly, 'date-desc'), offset, size),
+        ),
       )
 
     const enrichWithDetail = (game: Game): Effect.Effect<Game> =>
@@ -181,13 +247,20 @@ export const GamesServiceLive: Layer.Layer<GamesService, never, Env | SonyClient
       id: string,
     ): Effect.Effect<Game | null> =>
       featureConcepts(feature).pipe(
-        Effect.map((concepts) => concepts.filter((concept) => conceptProductId(concept) === id)),
+        Effect.map((concepts) =>
+          concepts.filter((concept) => conceptProductId(concept) === id),
+        ),
         Effect.map((matching) =>
-          matching.length === 0 ? null : (mapConceptsToGames(matching).find((game) => game.id === id) ?? null),
+          matching.length === 0
+            ? null
+            : (mapConceptsToGames(matching).find((game) => game.id === id) ??
+              null),
         ),
       )
 
-    const getGameById = (id: string): Effect.Effect<Game, GameNotFound | UpstreamUnavailable> =>
+    const getGameById = (
+      id: string,
+    ): Effect.Effect<Game, GameNotFound | UpstreamUnavailable> =>
       Effect.gen(function* () {
         const games = yield* baseGames()
         const base = games.find((item) => item.id === id)
@@ -205,6 +278,11 @@ export const GamesServiceLive: Layer.Layer<GamesService, never, Env | SonyClient
         return yield* Effect.fail(new GameNotFound({ id }))
       })
 
-    return GamesService.of({ getNewGames, getUpcomingGames, getDiscountedGames, getGameById })
+    return GamesService.of({
+      getNewGames,
+      getUpcomingGames,
+      getDiscountedGames,
+      getGameById,
+    })
   }),
 )

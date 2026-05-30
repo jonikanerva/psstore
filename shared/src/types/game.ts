@@ -1,4 +1,8 @@
-import type { gameSchema, errorPayloadSchema, pageResultSchema } from '../schemas/game.js'
+import type {
+  gameSchema,
+  errorPayloadSchema,
+  pageResultSchema,
+} from '../schemas/game.js'
 
 export type Game = typeof gameSchema.Type
 export type PageResult = typeof pageResultSchema.Type
