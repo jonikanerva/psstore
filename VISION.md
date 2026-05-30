@@ -10,17 +10,16 @@ Let a Finnish PS5 owner see new, upcoming, and discounted games at a glance — 
 
 ## Core Principles
 
-- **PS5 + Finland + EUR only, PS Plus pricing always visible alongside the standard price.**
-  The scope is fixed at the data layer. Non-PS5 SKUs, non-game products (characters, currency, DLC, themes), non-Finnish stores, and other currencies are filtered out before they reach the UI.
-  Exception (UPCOMING view only, owner ruling 2026-05-29): announced PS5 titles that Sony does not yet expose as a priced product SKU anonymously are shown in the UPCOMING list without a price (marked "Unknown") and link out to Sony's concept page for the title. This exception is scoped strictly to the UPCOMING view. NEW and DISCOUNTED always require a real product SKU and price — they never show priceless cards.
+- **PS5 + Finland + EUR only, PS Plus pricing visible alongside the standard price.**
+  The scope is fixed at the data layer. Non-PS5 SKUs, non-game products (characters, currency, DLC, themes), non-Finnish stores, and other currencies are filtered out before they reach the UI. In short our REST API is a cleaned up official GraphQL API for our use case.
 
 - **Utilitarian surface — only relevant data, no decorative chrome.**
-  No carousels, no hero videos, no marketing copy, no animations beyond what is needed to communicate state. Every pixel earns its place by carrying information.
+  We just want to present the relevant info to the user. Less clicks the better.
 
 - **No accounts, no user preferences, no tracking.**
   The app works the same way for every visitor on every device. There is nothing to log in to, nothing to configure, nothing personalised. Local storage is for caching Sony's response only, never for remembering user behaviour.
 
-- **Sony's public GraphQL is the single source of truth.**
+- **Sony's public GraphQL is the source of truth.**
   The backend proxies and normalises Sony's GraphQL, the client renders what the backend returns. Caching exists only to make the page fast; it never becomes state of its own.
 
 - **The default view is the most useful one.**
@@ -45,22 +44,13 @@ The product must not become:
 - A multi-region or multi-currency tool — only the Finnish store, only EUR.
 - A multi-platform catalogue — only PS5 games. No PS4, no characters, no currency, no DLC, no themes, no apps.
 - A personalised product — no themes, no toggles, no remembered sort order, no remembered last view, no per-user defaults.
-- A marketing surface — no carousels, no hero banners, no animated decoration, no editorial copy.
 - An analytics / telemetry product — nothing about user behaviour leaves the device.
 
 ## Guardrails for Agents
 
 When making product, UX, or feature decisions:
 
-- Do not introduce user accounts, login flows, OAuth, or any concept of identity.
-- Do not introduce user preferences, settings panels, or toggles. The site looks and behaves the same for everyone.
-- Do not introduce wishlists, favourites, price history, notifications, or any feature that requires remembering one user's behaviour.
-- Do not introduce categories beyond the three fixed views (NEW / UPCOMING / DISCOUNTED).
-- Do not introduce decorative chrome: animations beyond loading/skeleton states, hero sections, carousels, marketing copy, hero videos.
 - Do not expand scope beyond PS5 games in the Finnish store at EUR pricing.
-- Do not add a third-party analytics, telemetry, A/B test, or feature-flag service.
-
-If a feature makes the product feel more like the **official PlayStation Store**, a **deal-alert site (e.g. IsThereAnyDeal-style)**, or a **gaming social network (e.g. Metacritic/Steam community)**, it is the wrong direction.
 
 ## Decision Filter
 
@@ -71,7 +61,7 @@ Ask:
 1. Does it help a Finnish PS5 owner reach relevant PlayStation Store data with fewer clicks or less noise than `store.playstation.com`?
 2. Can it be implemented without user accounts, login, or any stored user preferences / per-user state?
 3. Does the result stay scoped to PS5 games in the Finnish store at EUR pricing, with both standard and PS Plus prices visible?
-4. Does it preserve the utilitarian surface — only essential data, no decorative chrome, no marketing-style content, no notifications, no social features?
+4. Does it preserve the utilitarian surface — only essential data, no decorative chrome, no notifications, no social features?
 
 If any answer is "no", the change must not be added.
 
@@ -89,19 +79,10 @@ The product succeeds when the user feels:
 
 - **Persisted on-device:** Sony GraphQL response data only, for client-side rendering performance (browser `localStorage` and/or IndexedDB). Cache entries carry an explicit short-lived TTL and refresh from the backend in the background. **No user preferences, no user identifiers, no behaviour log.**
 - **Persisted on-server:** Sony GraphQL response data only, in an in-memory cache (current `server/src/lib/cache.ts`). No database, no on-disk persistence, no per-visitor session state.
-- **Transmitted off-device:** HTTP requests from the client to this app's own backend, which in turn calls Sony's public GraphQL. No third-party services, no analytics endpoints, no error reporters.
 - **Never persisted (anywhere):** user identifiers, IP addresses written to durable logs, theme / language / sort / view preferences, click history, search history, viewing history, wishlist data, any per-user state of any kind.
-- **Telemetry / analytics:** none. Logs are operational only (request metadata, upstream failures), redact anything that could identify a visitor, and are not shipped to any third-party SaaS.
 
 ## Audience & Voice
 
 - **Primary audience:** Finnish PS5 owners (starting with the author) who want to browse the Finnish PlayStation Store catalogue without going through Sony's marketing-heavy storefront. Power users — they already know what PS Plus is, what a release date is, and what a price means. The product does not need to teach them anything.
-- **Tone:** terse, utilitarian, calm. The copy is descriptive and short. No exclamation marks, no marketing verbs ("amazing", "must-have"), no editorial framing. The data speaks for itself.
-
-## Open Questions
-
-Items the human owner has not yet committed to. Agents do not block on these — they pick the most-conservative interpretation per `AGENTS.md §14.1` and document the choice in the PR description (and, when the constraint is technical and durable, in `STACK.md → Intentional Divergences`).
-
-- **UI language.** Sony's `fi-fi` locale returns mixed Finnish / English game data. Should the surrounding chrome (tab labels, search placeholder, error states) be in English or Finnish? Conservative default: English, since game titles and descriptions arrive in English more often than not.
-- **Search scope.** Does the top-bar search filter only the currently visible PLP view, or does it search across all three views at once? Conservative default: filters the current view only, matching the rest of the "no global state" stance.
-- **PS Plus view feasibility — RESOLVED (2026-05-29, dropped).** Sony's anonymous fi-fi GraphQL does not expose the monthly PS Plus catalogue: the `subscriptionService:PS_PLUS` filter is silently ignored (PS5-only, PS_PLUS-filtered, and a deliberately bogus token all return the identical full-catalogue count of 7214), and no `subscriptionService` facet exists on the category. Per the pre-committed contingency the PS PLUS view is dropped; the product does not add authentication to obtain it. The PS Plus *price* (shown alongside the standard price on cards and the PDP) is unaffected and remains a core principle.
+- **Tone:** terse, utilitarian, calm. The data speaks for itself.
+- **UI language.** Sony's `fi-fi` locale returns mixed Finnish / English game data. Prefer Finnish but fallback to English when Finnish is not available. The surrounding chrome (tab labels, search placeholder, error states) should in English.
