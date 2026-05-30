@@ -150,7 +150,7 @@ lands at position 28).
   token is inline (exactly like `next_thirty_days`) — no new env var
   (`AGENTS.md §14.1`, smallest-surface).
 - `server/src/services/gamesService.ts`: NEW now fetches `NEW_LIST_PAGE_SIZE =
-  300` (above the bounded ~177 set, one request, growth headroom). UPCOMING /
+300` (above the bounded ~177 set, one request, growth headroom). UPCOMING /
   DISCOUNTED / PLUS keep `LIST_PAGE_SIZE = 120`. The pipeline order is unchanged
   (map → enrich → `released` filter → `date-desc` sort → paginate); the
   `released` filter becomes a defensive near-no-op and the intraday `date-desc`
@@ -242,7 +242,7 @@ correct. No NEW change in this branch.
 - ~41 of those are pure announcements: `products: []`, `price: null`, and no
   anonymous release date. They have no product SKU id, so the SKU-gated shared
   mapper (`PRODUCT_ID_PATTERN`) drops them for NEW / DISCOUNTED. They have no
-  *internal* product PDP (no product SKU for `metGetProductById`) — but Sony's
+  _internal_ product PDP (no product SKU for `metGetProductById`) — but Sony's
   anonymous `/en-fi/concept/{id}` page DOES resolve and is the outbound link
   target for these titles (see §D.5). The ~12 SKU-bearing concepts are the
   priced, internally-linkable subset.
@@ -295,8 +295,8 @@ correct. No NEW change in this branch.
   advertised on the category `facetOptions`. The anonymous public GraphQL does
   not expose the monthly PS Plus catalogue without an authenticated session.
 - **Conclusion.** Per the pre-committed `VISION.md → Open Questions` contingency
-  (resolved 2026-05-29), the PS PLUS *catalogue view* is dropped; the product
-  never adds authentication to obtain it. The PS Plus *price* display (cards +
+  (resolved 2026-05-29), the PS PLUS _catalogue view_ is dropped; the product
+  never adds authentication to obtain it. The PS Plus _price_ display (cards +
   PDP, derived from `concept.price.serviceBranding / upsellText` in `mapper.ts`)
   is unaffected and remains a core principle — only the view/tab and its
   contract feature were removed.

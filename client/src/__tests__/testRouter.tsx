@@ -12,7 +12,9 @@ import type { ReactNode } from 'react'
 // fresh QueryClient — the harness component tests need for Link / useParams /
 // useQuery. Each call gets an isolated client so caches never leak between
 // tests, and a non-persisting client so localStorage stays untouched.
-export const renderWithRouter = async (ui: ReactNode): Promise<RenderResult> => {
+export const renderWithRouter = async (
+  ui: ReactNode,
+): Promise<RenderResult> => {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   })

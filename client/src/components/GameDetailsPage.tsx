@@ -10,7 +10,8 @@ interface GameDetailsPageProps {
   gameId: string
 }
 
-const storeUrl = (id: string): string => `https://store.playstation.com/fi-fi/product/${id}`
+const storeUrl = (id: string): string =>
+  `https://store.playstation.com/fi-fi/product/${id}`
 
 const formatDate = (value: string): string => {
   const parsed = DateTime.fromISO(value)
@@ -119,7 +120,11 @@ const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
           <h2>Description</h2>
           {/* XSS boundary: Sony's description HTML is untrusted and is sanitised
               with DOMPurify before injection. Do not remove or reorder (da #5). */}
-          <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(game.description) }} />
+          <div
+            dangerouslySetInnerHTML={{
+              __html: DOMPurify.sanitize(game.description),
+            }}
+          />
         </section>
       )}
     </article>

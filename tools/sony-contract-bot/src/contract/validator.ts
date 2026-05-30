@@ -5,7 +5,9 @@ import type { SonyContractManifest } from './types.js'
 
 const decodeManifest = Schema.decodeUnknownSync(sonyContractManifestSchema)
 
-const opIdentity = (operation: SonyContractManifest['operations'][number]): string =>
+const opIdentity = (
+  operation: SonyContractManifest['operations'][number],
+): string =>
   `${operation.feature}:${operation.operation_name}:${operation.persisted_query_hash ?? ''}`
 
 export const validateManifest = (manifest: SonyContractManifest): void => {
@@ -14,7 +16,9 @@ export const validateManifest = (manifest: SonyContractManifest): void => {
   decodeManifest(manifest)
 
   for (const feature of CORE_FEATURES) {
-    if (!manifest.operations.some((operation) => operation.feature === feature)) {
+    if (
+      !manifest.operations.some((operation) => operation.feature === feature)
+    ) {
       throw new Error(`Missing required feature mapping: ${feature}`)
     }
   }

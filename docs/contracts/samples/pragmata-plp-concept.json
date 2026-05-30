@@ -247,12 +247,8 @@
     "isExclusive": false,
     "isFree": false,
     "isTiedToSubscription": false,
-    "serviceBranding": [
-      "NONE"
-    ],
-    "upsellServiceBranding": [
-      "NONE"
-    ],
+    "serviceBranding": ["NONE"],
+    "upsellServiceBranding": ["NONE"],
     "upsellText": null
   },
   "products": [

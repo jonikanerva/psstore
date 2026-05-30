@@ -1,13 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import type { ContractFeature, SonyContractManifest } from '../contract/types.js'
+import type {
+  ContractFeature,
+  SonyContractManifest,
+} from '../contract/types.js'
 import { validateBackendCompatibility } from '../compat/backend.js'
 
-const features: ContractFeature[] = [
-  'new',
-  'upcoming',
-  'discounted',
-  'details',
-]
+const features: ContractFeature[] = ['new', 'upcoming', 'discounted', 'details']
 
 const manifest: SonyContractManifest = {
   version: 1,
@@ -44,7 +42,7 @@ describe('validateBackendCompatibility', () => {
       sonyClientText:
         "headers: { 'x-apollo-operation-name': strategy.operationName }\nreturn json.data?.categoryGridRetrieve?.concepts ?? []",
       mapperText: 'export const conceptToGame = (concept) => concept',
-      serviceText: 'await fetchConceptsByFeature(\'new\', 300)',
+      serviceText: "await fetchConceptsByFeature('new', 300)",
     }
 
     expect(() => {

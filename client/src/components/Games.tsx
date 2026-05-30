@@ -16,7 +16,11 @@ interface GamesProps {
   emptyMessage?: string
 }
 
-const Games = ({ feature, fetch, emptyMessage = 'No games found' }: GamesProps) => {
+const Games = ({
+  feature,
+  fetch,
+  emptyMessage = 'No games found',
+}: GamesProps) => {
   const query = useSearchQuery()
   const sentinelRef = useRef<HTMLDivElement>(null)
 

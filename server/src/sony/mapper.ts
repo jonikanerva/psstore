@@ -10,7 +10,9 @@ const toIsoOrDefault = (value?: string): string => {
   }
 
   const parsed = Date.parse(value)
-  return Number.isFinite(parsed) ? new Date(parsed).toISOString() : DEFAULT_RELEASE_DATE
+  return Number.isFinite(parsed)
+    ? new Date(parsed).toISOString()
+    : DEFAULT_RELEASE_DATE
 }
 
 const COVER_ROLE_PRIORITY = [
@@ -60,13 +62,17 @@ export const isConceptDiscounted = (concept: Concept): boolean => {
   const base = concept.price?.basePrice ?? ''
   const discounted = concept.price?.discountedPrice ?? ''
   const hasDiscountText = Boolean(concept.price?.discountText)
-  return hasDiscountText || (Boolean(base) && Boolean(discounted) && base !== discounted)
+  return (
+    hasDiscountText ||
+    (Boolean(base) && Boolean(discounted) && base !== discounted)
+  )
 }
 
 export const isConceptPlus = (concept: Concept): boolean =>
   serviceBranding(concept).some((value) => value.toUpperCase() === 'PS_PLUS')
 
-const conceptId = (concept: Concept): string => concept.products?.[0]?.id ?? concept.id ?? ''
+const conceptId = (concept: Concept): string =>
+  concept.products?.[0]?.id ?? concept.id ?? ''
 
 export const conceptToGame = (concept: Concept): Game => {
   const screenshots = conceptScreenshots(concept)
@@ -99,9 +105,10 @@ export const conceptToGame = (concept: Concept): Game => {
     date: releaseDate,
     url: cover,
     price: concept.price?.discountedPrice || concept.price?.basePrice || '',
-    originalPrice: discounted ? concept.price?.basePrice ?? '' : '',
-    discountText: discounted ? concept.price?.discountText ?? '' : '',
-    discountDate: discounted && hasReleaseDate ? releaseDate : DEFAULT_DISCOUNT_DATE,
+    originalPrice: discounted ? (concept.price?.basePrice ?? '') : '',
+    discountText: discounted ? (concept.price?.discountText ?? '') : '',
+    discountDate:
+      discounted && hasReleaseDate ? releaseDate : DEFAULT_DISCOUNT_DATE,
     screenshots,
     videos,
     genres: concept.products?.[0]?.genres ?? [],

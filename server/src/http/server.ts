@@ -52,7 +52,9 @@ const SpaFallbackRoute = HttpLayerRouter.use((router) =>
       }
       const html = yield* fs.readFileString(indexHtmlPath)
       return HttpServerResponse.html(html)
-    }).pipe(Effect.orElseSucceed(() => HttpServerResponse.empty({ status: 404 }))),
+    }).pipe(
+      Effect.orElseSucceed(() => HttpServerResponse.empty({ status: 404 })),
+    ),
   ),
 )
 

@@ -14,8 +14,14 @@ export const contractOperationSchema = Schema.Struct({
     Schema.String.pipe(Schema.pattern(/^[a-f0-9]{64}$/i)),
   ),
   required_headers: Schema.Array(Schema.String.pipe(Schema.minLength(1))),
-  variables_schema: Schema.Record({ key: Schema.String, value: Schema.Unknown }),
-  sample_variables: Schema.Record({ key: Schema.String, value: Schema.Unknown }),
+  variables_schema: Schema.Record({
+    key: Schema.String,
+    value: Schema.Unknown,
+  }),
+  sample_variables: Schema.Record({
+    key: Schema.String,
+    value: Schema.Unknown,
+  }),
   response_path: Schema.String.pipe(Schema.minLength(1)),
   observed_status_codes: Schema.Array(Schema.Number.pipe(Schema.int())),
 })

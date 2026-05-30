@@ -33,7 +33,9 @@ const appConfig: Config.Config<AppConfig> = Config.all({
     Config.withDefault('https://web.np.playstation.com/api/graphql/v1/op'),
   ),
   SONY_CATEGORY_GRID_HASH: Config.string('SONY_CATEGORY_GRID_HASH').pipe(
-    Config.withDefault('257713466fc3264850aa473409a29088e3a4115e6e69e9fb3e061c8dd5b9f5c6'),
+    Config.withDefault(
+      '257713466fc3264850aa473409a29088e3a4115e6e69e9fb3e061c8dd5b9f5c6',
+    ),
   ),
   SONY_CATEGORY_ID: Config.string('SONY_CATEGORY_ID').pipe(
     Config.withDefault('d0446d4b-dc9a-4f1e-86ec-651f099c9b29'),
@@ -44,11 +46,13 @@ const appConfig: Config.Config<AppConfig> = Config.all({
   SONY_OPERATION_NAME: Config.string('SONY_OPERATION_NAME').pipe(
     Config.withDefault('categoryGridRetrieve'),
   ),
-  SONY_PRODUCT_OPERATION_NAME: Config.string('SONY_PRODUCT_OPERATION_NAME').pipe(
-    Config.withDefault('metGetProductById'),
-  ),
+  SONY_PRODUCT_OPERATION_NAME: Config.string(
+    'SONY_PRODUCT_OPERATION_NAME',
+  ).pipe(Config.withDefault('metGetProductById')),
   SONY_PRODUCT_BY_ID_HASH: Config.string('SONY_PRODUCT_BY_ID_HASH').pipe(
-    Config.withDefault('a128042177bd93dd831164103d53b73ef790d56f51dae647064cb8f9d9fc9d1a'),
+    Config.withDefault(
+      'a128042177bd93dd831164103d53b73ef790d56f51dae647064cb8f9d9fc9d1a',
+    ),
   ),
   SONY_LOCALE: Config.string('SONY_LOCALE').pipe(Config.withDefault('fi-fi')),
   SONY_RETRY_COUNT: Config.integer('SONY_RETRY_COUNT').pipe(
@@ -62,4 +66,7 @@ const appConfig: Config.Config<AppConfig> = Config.all({
 
 export class Env extends Context.Tag('Env')<Env, AppConfig>() {}
 
-export const EnvLive: Layer.Layer<Env> = Layer.effect(Env, Effect.orDie(appConfig))
+export const EnvLive: Layer.Layer<Env> = Layer.effect(
+  Env,
+  Effect.orDie(appConfig),
+)

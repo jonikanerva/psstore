@@ -25,7 +25,8 @@ const conceptHref = (id: string): string =>
   `https://store.playstation.com/en-fi/concept/${id}`
 
 const GameCard = ({ game }: GameCardProps) => {
-  const hasDiscount = Boolean(game.originalPrice) && game.originalPrice !== game.price
+  const hasDiscount =
+    Boolean(game.originalPrice) && game.originalPrice !== game.price
   const isConcept = game.idKind === 'concept'
 
   const body = (
@@ -45,11 +46,15 @@ const GameCard = ({ game }: GameCardProps) => {
             ) : (
               <>
                 {hasDiscount && (
-                  <s className="game-card--original-price">{game.originalPrice}</s>
+                  <s className="game-card--original-price">
+                    {game.originalPrice}
+                  </s>
                 )}
                 {game.price || '-'}
                 {game.plusUpsellText !== null && (
-                  <span className="game-card--plus">PS+ {game.plusUpsellText}</span>
+                  <span className="game-card--plus">
+                    PS+ {game.plusUpsellText}
+                  </span>
                 )}
               </>
             )}

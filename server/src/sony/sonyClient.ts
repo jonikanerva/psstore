@@ -4,8 +4,17 @@ import type { AppConfig } from '../config/env.js'
 import { UpstreamUnavailable } from '../errors/errors.js'
 import { fetchWithRetry } from '../lib/http.js'
 import { parseProductRetrieve } from './productDetailSchema.js'
-import { buildStrategies, type SonyFeature, type StrategyContext } from './queryStrategies.js'
-import type { CategoryGridProduct, CategoryGridRetrieveResponse, Concept, ProductRetrieveResponse } from './types.js'
+import {
+  buildStrategies,
+  type SonyFeature,
+  type StrategyContext,
+} from './queryStrategies.js'
+import type {
+  CategoryGridProduct,
+  CategoryGridRetrieveResponse,
+  Concept,
+  ProductRetrieveResponse,
+} from './types.js'
 
 const localeOverride = (locale: string): string =>
   locale.replace(
@@ -24,9 +33,13 @@ const productToConcept = (product: CategoryGridProduct): Concept => ({
 
 // ---- Pure response extraction (exported for unit tests) --------------------
 
-export const extractReleaseDateFromProductResponse = (json: ProductRetrieveResponse): string | undefined => {
+export const extractReleaseDateFromProductResponse = (
+  json: ProductRetrieveResponse,
+): string | undefined => {
   const releaseDate = json.data?.productRetrieve?.releaseDate
-  return typeof releaseDate === 'string' && releaseDate.length > 0 ? releaseDate : undefined
+  return typeof releaseDate === 'string' && releaseDate.length > 0
+    ? releaseDate
+    : undefined
 }
 
 export interface ProductDetailResult {
@@ -44,7 +57,10 @@ export interface ProductDetailResult {
  * excluded.
  */
 const descriptionByType = (
-  descriptions: ReadonlyArray<{ type?: string | undefined; value?: string | undefined }>,
+  descriptions: ReadonlyArray<{
+    type?: string | undefined
+    value?: string | undefined
+  }>,
   type: 'LONG' | 'SHORT',
 ): string => {
   const match = descriptions.find((entry) => entry.type === type)
@@ -52,31 +68,48 @@ const descriptionByType = (
   return typeof value === 'string' ? value : ''
 }
 
-export const extractProductDetail = (json: ProductRetrieveResponse): ProductDetailResult => {
+export const extractProductDetail = (
+  json: ProductRetrieveResponse,
+): ProductDetailResult => {
   // Validate at the trust boundary. A malformed or missing node degrades to
   // empty description / genres instead of throwing.
   const product = parseProductRetrieve(json.data?.productRetrieve)
 
-  const releaseDate = typeof product?.releaseDate === 'string' && product.releaseDate.length > 0
-    ? product.releaseDate
-    : undefined
+  const releaseDate =
+    typeof product?.releaseDate === 'string' && product.releaseDate.length > 0
+      ? product.releaseDate
+      : undefined
 
   const descriptions = product?.descriptions ?? []
-  const description = descriptionByType(descriptions, 'LONG') || descriptionByType(descriptions, 'SHORT')
+  const description =
+    descriptionByType(descriptions, 'LONG') ||
+    descriptionByType(descriptions, 'SHORT')
 
   const genres = (product?.combinedLocalizedGenres ?? [])
     .map((genre) => genre.value)
-    .filter((value): value is string => typeof value === 'string' && value.length > 0)
+    .filter(
+      (value): value is string => typeof value === 'string' && value.length > 0,
+    )
 
-  const publisherName = typeof product?.publisherName === 'string' && product.publisherName.length > 0
-    ? product.publisherName
-    : undefined
+  const publisherName =
+    typeof product?.publisherName === 'string' &&
+    product.publisherName.length > 0
+      ? product.publisherName
+      : undefined
 
-  const storeDisplayClassification = typeof product?.storeDisplayClassification === 'string' && product.storeDisplayClassification.length > 0
-    ? product.storeDisplayClassification
-    : undefined
+  const storeDisplayClassification =
+    typeof product?.storeDisplayClassification === 'string' &&
+    product.storeDisplayClassification.length > 0
+      ? product.storeDisplayClassification
+      : undefined
 
-  return { releaseDate, genres, description, publisherName, storeDisplayClassification }
+  return {
+    releaseDate,
+    genres,
+    description,
+    publisherName,
+    storeDisplayClassification,
+  }
 }
 
 // ---- SonyClient service (the network boundary) -----------------------------
@@ -128,7 +161,10 @@ const requestProductDetailPromise = async (
     operationName: config.SONY_PRODUCT_OPERATION_NAME,
     variables: JSON.stringify({ productId }),
     extensions: JSON.stringify({
-      persistedQuery: { version: 1, sha256Hash: config.SONY_PRODUCT_BY_ID_HASH },
+      persistedQuery: {
+        version: 1,
+        sha256Hash: config.SONY_PRODUCT_BY_ID_HASH,
+      },
     }),
   }).toString()
 
@@ -152,7 +188,8 @@ const requestProductDetailPromise = async (
 
 const upstream = (error: unknown): UpstreamUnavailable =>
   new UpstreamUnavailable({
-    message: error instanceof Error ? error.message : 'Sony upstream unavailable',
+    message:
+      error instanceof Error ? error.message : 'Sony upstream unavailable',
   })
 
 export interface SonyClientApi {
@@ -166,7 +203,10 @@ export interface SonyClientApi {
   ) => Effect.Effect<ProductDetailResult, UpstreamUnavailable>
 }
 
-export class SonyClient extends Context.Tag('SonyClient')<SonyClient, SonyClientApi>() {}
+export class SonyClient extends Context.Tag('SonyClient')<
+  SonyClient,
+  SonyClientApi
+>() {}
 
 export const SonyClientLive: Layer.Layer<SonyClient, never, Env> = Layer.effect(
   SonyClient,

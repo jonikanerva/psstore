@@ -18,6 +18,8 @@ export const runDiff = async (ci: boolean): Promise<void> => {
   await writeTextFile(paths.diffReport, renderDiffReport(diff))
 
   if (ci && diff.hasDrift) {
-    throw new Error('Sony contract drift detected. See docs/contracts/reports/latest-diff.md')
+    throw new Error(
+      'Sony contract drift detected. See docs/contracts/reports/latest-diff.md',
+    )
   }
 }

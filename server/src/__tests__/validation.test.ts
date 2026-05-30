@@ -1,6 +1,9 @@
 import { Either, Schema } from 'effect'
 import { describe, expect, it } from 'vitest'
-import { gameIdParamSchema, paginationQuerySchema } from '../validation/schemas.js'
+import {
+  gameIdParamSchema,
+  paginationQuerySchema,
+} from '../validation/schemas.js'
 
 const decodeId = Schema.decodeUnknownEither(gameIdParamSchema)
 const decodePagination = Schema.decodeUnknownEither(paginationQuerySchema)
@@ -12,7 +15,9 @@ describe('gameIdParamSchema', () => {
   })
 
   it('accepts valid id', () => {
-    expect(Either.isRight(decodeId({ id: 'EP0001-PPSA01234_00-TEST' }))).toBe(true)
+    expect(Either.isRight(decodeId({ id: 'EP0001-PPSA01234_00-TEST' }))).toBe(
+      true,
+    )
   })
 })
 
@@ -22,7 +27,10 @@ describe('paginationQuerySchema', () => {
   })
 
   it('parses string values', () => {
-    expect(decodePaginationSync({ offset: '60', size: '30' })).toEqual({ offset: 60, size: 30 })
+    expect(decodePaginationSync({ offset: '60', size: '30' })).toEqual({
+      offset: 60,
+      size: 30,
+    })
   })
 
   it('rejects size above max 120', () => {
