@@ -18,8 +18,9 @@ For every PR / branch you review, all of these must be true:
 3. **The latest `/codereview` comment is audit-grade** — it starts with `**Verdict: PASS**` or `**Verdict: FAIL**`. If it is a FAIL, every blocking finding includes location, evidence, impact, local rule, external reference when applicable, minimum fix, and verification. If the comment is malformed, demand a rerun.
 4. **`$FORMAT_CMD`** is idempotent. Re-run it; it must produce zero diff.
 5. **`$VERIFY_CMD`** is green and warning-free (lint → build → tests as composed by `STACK.md`). Capture the tail of the output as evidence.
-6. **Milestone issue is updated** — the open GitHub issue with the `milestone` label has a comment linking the PR and is moved to `In progress` (or closed on merge). Any binding constraint introduced by this PR has its own open GitHub issue with the `decision` label; any newly-surfaced risk has its own open issue with the `risk` label (resolved risks: close the issue, do not maintain a log). Historical "change log" entries are not required — the PR description and merge-commit chain on `main` are the audit trail.
-7. **PR description** quotes the four `VISION.md` decision-filter answers, lists the `AGENTS.md` and `STACK.md` sections involved, and names the new states handled. *Trivial PRs* (per `CLAUDE.md → Git workflow → Trivial PR exception`) may fill these three blocks with a single `N/A — trivial change, no behavioral surface affected.` line; verify the change actually qualifies (no behavioral surface, no new state, no new dependency, no new persistence, no privacy-relevant log line). Otherwise the verbatim quote is mandatory.
+6. **Backlog bookkeeping is correct** — the PR body opens with `Closes #<n>` so merging closes the scoping issue. That single line is the only bookkeeping required: no status labels, no progress comments, no `decision` / `risk` / `milestone` label issues. Binding constraints introduced by the PR are captured in the PR description and (when durable + technical) in `STACK.md → Intentional Divergences`. The PR description + merge-commit chain on `main` are the audit trail.
+7. **Context7 grounding artifact exists** — if the diff uses or changes any package in `STACK.md → Documentation protocol`, the PR description records the Context7 docs grounded (ID, question, confirmed API shape). A package seam with no grounding entry is a hard block (`STACK.md §0.1`, §12).
+8. **PR description** quotes the four `VISION.md` decision-filter answers, lists the `AGENTS.md` and `STACK.md` sections involved, and names the new states handled. *Trivial PRs* (per `CLAUDE.md → Git workflow → Trivial PR exception`) may fill these three blocks with a single `N/A — trivial change, no behavioral surface affected.` line; verify the change actually qualifies (no behavioral surface, no new state, no new dependency, no new persistence, no privacy-relevant log line). Otherwise the verbatim quote is mandatory.
 
 ## §15 definition-of-done checklist
 
@@ -28,22 +29,23 @@ Every item must be verifiable against the diff or in the runtime / simulator / b
 - UI / API stays responsive under: slow network, denied permission, degraded data, backgrounding, CPU load, the project's own degraded states declared in `VISION.md`.
 - Every relevant state declared by `VISION.md` and the screen-local state enumeration renders. Previews / stories cover the applicable subset for changed surfaces.
 - No heavy work on the UI thread. Anything new in the hot-path has been profiled with the tooling declared in `STACK.md` or argued allocation-light.
-- Every new async path is cancellation-safe (`AGENTS.md §4 C7`). View `.task` lifecycles cancel their underlying streams; request handlers cancel on disconnect.
-- No new persisted or transmitted data violates `VISION.md → Persistence and Privacy Posture` or `STACK.md → Persistence shape`. No PII reaches a log sink without the platform's privacy-aware interpolation.
-- Tests cover new pure domain logic with edge cases.
-- Strict-concurrency / strict-type clean — zero new escape hatches (`@unchecked Sendable`, `@preconcurrency`, `MainActor.assumeIsolated`, `nonisolated(unsafe)`, `as any`, `@ts-ignore`) without an inline justification comment that names the underlying-API constraint forcing it.
+- Every new async path is cancellation-safe (`AGENTS.md §4 C7`, mapped in `STACK.md §10`): Effect work is interrupted on scope exit; `AbortSignal` wired into `fetch` / TanStack Query so a disappearing view cancels; request handlers cancel on disconnect.
+- **Effect invariants hold (`STACK.md §0`, §7, §12):** no I/O module (`fetch`, cache, clock, `@effect/platform`) imported into a pure-core file; no `@effect/platform` import outside the one HTTP adapter module; no `throw` in domain logic (failures are tagged errors in the `E` channel); external Sony data is Schema-decoded and narrowed to PS5 / FI / EUR at the boundary.
+- No new persisted or transmitted data violates `VISION.md → Persistence and Privacy Posture` or `STACK.md → Persistence shape`. The TanStack persister stores Sony payloads only — never query keys / search terms / viewed PDPs. No PII reaches a log sink without explicit redaction.
+- Tests cover new pure core logic with edge cases; **every Effect `Schema` decoder has narrowing + price-mapping tests** (`STACK.md §11`).
+- Strict-type clean — zero new escape hatches (`as any`, `as unknown as`, `@ts-ignore` / `@ts-expect-error` without an inline reason naming the constraint, casting past a `Schema` decode). The `no-explicit-any` / `no-unsafe-*` lint gates are error-level and MUST pass. No `effect@4.x` / `next` / beta entry in the lockfile.
 - Accessibility considered: dynamic / large text, screen reader, reduced motion, contrast, dark mode, and any platform-specific dimming / always-on modes declared in `STACK.md`.
 - Privacy declarations updated when required-reason / required-data APIs changed.
-- No `print` / `console.log` / `dump` in shipped code; no `fatalError("TODO")`; no commented-out code left behind.
-- No reintroduced storage primitive forbidden by `STACK.md`.
-- No new non-first-party dependency without a `STACK.md → Approved Dependencies` entry approved in advance.
+- No `console.log` / `dump` in shipped code; no `TODO` / `FIXME` placeholder; no commented-out code left behind.
+- No reintroduced storage primitive forbidden by `STACK.md` (a DB / on-disk state where §5 says in-memory Effect `Cache`).
+- No new non-first-party dependency without a `STACK.md → Approved dependencies` entry approved in advance.
 - Background work conforms to `STACK.md → Background & lifecycle`.
 - Supply-chain and CI changes are intentional: dependency changes, lockfiles, generated artifacts, workflow permissions, external actions, and release steps are documented where `STACK.md` / `AGENTS.md` require it.
 - Observability is sufficient for the changed surface: user-visible failures are not swallowed, logs are structured and privacy-safe, and hot-path measurement exists where `STACK.md → Performance budgets` requires profiling.
 
 ## Process
 
-1. Read `AGENTS.md §15`, `CLAUDE.md`, `STACK.md`, the open GitHub issue scoping this milestone (label `milestone`), the PR diff, and the latest `/codereview` PR comment.
+1. Read `AGENTS.md §15`, `STACK.md → Definition of done (stack additions)`, `CLAUDE.md`, `STACK.md`, the GitHub issue the PR closes, the PR diff, and the latest `/codereview` PR comment.
 2. Run the workflow gates check above.
 3. Walk the §15 checklist against the diff. Quote file paths and line numbers for each verified or blocked item.
 4. Inspect git log for the branch (`git log main..HEAD --oneline`) to confirm Conventional Commits, no pushed-history rewrite without justification, no `gh pr merge` already executed.

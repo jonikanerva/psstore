@@ -32,7 +32,11 @@ Run before every commit and PR — all must pass:
 $VERIFY_CMD
 ```
 
-`$VERIFY_CMD` is declared in `STACK.md`. It is the single source of truth for how to verify, lint, build, and test this project. It is a local-only gate — there is no remote CI to fall back on, so every contributor MUST run it before committing and before opening a PR. Never invent raw tool invocations (`swift-format`, `xcodebuild`, `eslint`, `tsc`, etc.) in commits or agent scripts — always go through the named command in `STACK.md`.
+`$VERIFY_CMD` is declared in `STACK.md`. It is the single source of truth for how to verify, lint, build, and test this project. It is a local-only gate — there is no remote CI to fall back on, so every contributor MUST run it before committing and before opening a PR. Never invent raw tool invocations (`eslint`, `tsc`, `vitest`, `vite`, etc.) in commits or agent scripts — always go through the named command in `STACK.md`.
+
+## Documentation protocol (Context7)
+
+`STACK.md → Documentation protocol` is a **hard rule**: never write or modify code that uses a library from the model's memory — retrieve the version-pinned docs via Context7 first (Effect priors in particular drift to v2 / v4-beta). This applies to every agent and skill that writes code. Each PR records the Context7 docs it grounded. `architect` and `lead-dev` carry the obligation; `qa-enforcer` / `/codereview` verify the PR-description grounding artifact exists.
 
 ## Git workflow
 

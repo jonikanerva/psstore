@@ -1,12 +1,22 @@
 # PS Store (Client/Server Monorepo)
 
+> **Stack migration in progress (issue #68).** `STACK.md` is the definitive, normative spec and describes the **target** stack (Effect v3 backend, `@effect/platform` HttpApi behind a thin adapter, Effect Schema + Cache, React 19 + Vite, TanStack Router + Query, Tailwind v4). The governance and team-instruction documentation has been migrated; the **code refactor is a separate later phase**. Until that lands, the commands below run the current codebase. Where this README and `STACK.md` disagree on a module, `STACK.md` is authoritative for the target and this README for what runs today.
+
 ## Architecture
 
-- `client/` - Vite + React SPA
-- `server/` - Express API + Railway runtime
-- `shared/` - shared types, schemas, and utilities
+### Target (per `STACK.md`)
 
-The browser talks only to `/api/*`. The server handles Sony GraphQL requests and normalizes data.
+- `client/` — Vite + React 19 SPA, TanStack Router + Query, Tailwind v4
+- `server/` — Effect v3 backend, typed REST via `@effect/platform` HttpApi (behind a thin adapter), Effect `Cache`
+- `shared/` — Effect Schema contracts shared across server ↔ client
+
+### Today (pre-refactor)
+
+- `client/` — Vite + React SPA
+- `server/` — Express API + Railway runtime
+- `shared/` — shared types, schemas, and utilities
+
+The browser talks only to `/api/*`. The server handles Sony GraphQL requests and normalizes data. External Sony data is decoded and narrowed to PS5 / Finland / EUR at the boundary (Effect Schema in the target stack).
 
 ## Development
 

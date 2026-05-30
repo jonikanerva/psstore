@@ -4,7 +4,7 @@ description: Review all changes on the current branch against main as an isolate
 context: fork
 agent: general-purpose
 user-invocable: true
-allowed-tools: Read, Grep, Glob, Bash, WebFetch
+allowed-tools: Read, Grep, Glob, Bash, WebFetch, Skill, ToolSearch, mcp__context7__resolve-library-id, mcp__context7__query-docs
 ---
 
 Review all changes on the current branch against `main`. **This skill runs as an isolated subagent** — do not rely on any prior conversation context. Derive all understanding from the PR diff, description, check output, and the project's governance files only.
@@ -72,7 +72,7 @@ Every finding must be grounded in evidence. Specifically:
 
 This rule is narrow. It governs factual claims about how a system works or what an external standard requires. Style preferences, architectural critique, and rule compliance against the governance files still belong in the checklist below and are evaluated on judgment.
 
-Lookups for this rule use documented WebFetch sources (`docs.claude.com`, the framework's official docs site, `docs.github.com`, `owasp.org`, `cheatsheetseries.owasp.org`, `csrc.nist.gov`, `cwe.mitre.org`, `slsa.dev`, `openssf.org`, `12factor.net`, `opentelemetry.io`, `w3.org`). If a lookup is required but not possible, the finding does not meet the verification bar — omit it or report it only as "could not verify".
+Lookups for this rule use documented WebFetch sources (`docs.claude.com`, the framework's official docs site, `docs.github.com`, `owasp.org`, `cheatsheetseries.owasp.org`, `csrc.nist.gov`, `cwe.mitre.org`, `slsa.dev`, `openssf.org`, `12factor.net`, `opentelemetry.io`, `w3.org`). **For library API claims (Effect, `@effect/platform`, TanStack, Tailwind, etc.), verify against Context7** (`STACK.md → Documentation protocol`) — resolve the library id, then a version-pinned query — rather than memory. If a lookup is required but not possible, the finding does not meet the verification bar — omit it or report it only as "could not verify".
 
 ## Specific zero-tolerance rules
 
@@ -80,9 +80,15 @@ The following are blocking findings when present in changed production code or r
 
 - Dead code, unused imports, orphaned helpers, unreachable paths, or placeholder implementation.
 - Code duplication when a shared helper exists or a small extraction clearly removes real duplication.
-- `TODO` / `FIXME` / `HACK` / `XXX` comments, commented-out code, debug `print` / `console.log` / `dump`, or `fatalError("TODO")`.
-- Force-unwraps / non-null assertions / unsafe casts outside tests and previews.
-- Concurrency / type-check escape hatches (`@unchecked Sendable`, `nonisolated(unsafe)`, `@preconcurrency`, `MainActor.assumeIsolated`, `as any`, `@ts-ignore`, etc.) without a documented, audited justification in an inline comment (`AGENTS.md §4 C8, C13`).
+- `TODO` / `FIXME` / `HACK` / `XXX` comments, commented-out code, debug `console.log` / `dump`.
+- Non-null assertions / unsafe casts (`as any`, `as unknown as`) outside tests, or any cast that bypasses an Effect `Schema` decode.
+- Type-check escape hatches (`as any`, `@ts-ignore` / `@ts-expect-error` without an inline reason naming the constraint) — and any `@typescript-eslint/no-explicit-any` / `no-unsafe-assignment` / `no-unsafe-call` / `no-unsafe-member-access` violation, which are **error-level** gates that MUST fail the build (`STACK.md §1`, §7; `AGENTS.md §4 C13`).
+- `throw` in domain / core logic instead of a tagged error in the Effect `E` channel (`STACK.md §0`, §7).
+- An I/O module (`fetch`, cache, clock, `@effect/platform`) imported into a pure-core file, or `@effect/platform` imported outside the one HTTP adapter module (`STACK.md §7` lint boundaries).
+- Sony / external data flowing past the boundary without an Effect `Schema` decode that narrows to PS5 / FI / EUR (`STACK.md §0`, §11).
+- An Effect `Schema` decoder added or changed without narrowing + price-mapping tests (`STACK.md §11`).
+- An `effect@4.x` / `next` / beta tag in `pnpm-lock.yaml` (`STACK.md §7`, §13).
+- Library API usage not grounded in a Context7-retrieved, version-pinned docs entry recorded in the PR description (`STACK.md → Documentation protocol`) — especially Effect, where v2 / v4-beta priors drift in.
 - Identifier whose meaning contradicts the function / type's documented responsibility, or that reuses a name already bound to a different concept in the same module.
 - New code path whose cyclomatic complexity or nesting depth exceeds the limit declared in `STACK.md` (where one is declared) without an inline justification, or that introduces a control-flow shape the project's lint configuration has flagged.
 - Inconsistency with established patterns in the codebase without an `STACK.md → Intentional Divergences` entry or local justification.
@@ -105,11 +111,11 @@ Evaluate the PR against all of these. **Every missed required check is a FAIL.**
 
 6. **Code style and maintainability** — Check compliance with the formatter / linter declared in `STACK.md` and `AGENTS.md §10 Code conventions`. Enforce small types, clear naming, immutable bindings where practical, no broad type erasure, comments that explain why, and no cleverness without measurable benefit.
 
-7. **Concurrency / async safety** — Check `AGENTS.md §4 C1–C13`: UI-thread isolation; thread-safe primitives for shared mutable state; structured concurrency; cancellation cooperation; thread-safety at boundaries; no sync-over-async on the UI thread; no lower-level concurrency primitives unless the underlying API requires it and is bridged immediately.
+7. **Concurrency / async safety** — Check `AGENTS.md §4 C1–C13`, mapped in `STACK.md §10`: structured concurrency via `Effect.gen` / `Effect.all` / scoped fibers; cancellation via Effect interruption on scope exit + `AbortSignal` into `fetch` / TanStack Query; shared non-UI state behind Effect services / `Ref` / `Cache` provided by `Layer` (never module-level mutable singletons); no blocking the event loop; no sync-over-async bridge.
 
 8. **UI / API responsiveness** — Check `AGENTS.md §5`: hot-path work stays within the budget declared in `STACK.md`; no heavy work in render / view-builder / middleware; lists are virtualized with stable ids; asset / data fetching uses async loaders or thread-safe caches; navigation and input do not wait on network / storage; last-known-good continuity is preserved where useful.
 
-9. **Architecture compliance** — Check `AGENTS.md §3`: one obvious state owner per screen or request flow; phases are tagged unions / enums with associated values, not parallel booleans; domain code stays pure; service actors / wrappers isolate external systems; views / handlers do not consume raw delegates, raw network calls, or persistence internals.
+9. **Architecture compliance** — Check `AGENTS.md §3` + `STACK.md §0`: **functional core / imperative shell** — the pure core does not import I/O (`fetch`, cache, clock, `@effect/platform`); I/O is injected as Effect services via `Layer` (DI is Layer-based, services flat — no ad-hoc singletons, no second DI system, no generic service factories, `STACK.md §6` guardrail); HttpApi handlers are thin (decoded input → pure core → typed `E` channel → HTTP status); UI phases are tagged unions, not parallel booleans; `@effect/platform` confined to the one adapter module.
 
 10. **Stack-specific rules** — Check `STACK.md → Stack-specific reject-list additions`. Every entry there is a hard rule for this project. Verify the PR honors all of them, including runtime, framework, persistence, logging, background, and dependency constraints.
 
@@ -117,7 +123,7 @@ Evaluate the PR against all of these. **Every missed required check is a FAIL.**
 
 12. **Tests** — Check `AGENTS.md §9`: pure domain code has edge-case coverage; state holders driving screens / handlers are tested with fake or in-memory service boundaries and asserted timelines; async paths and cancellation-sensitive flows have tests where practical; no heavyweight mocking framework was added; all tests are strict-concurrency / strict-type clean.
 
-13. **Supply-chain and CI trust** — Check dependency additions, lockfile updates, build scripts, generated files, package-manager configuration, GitHub Actions permissions, tokens, upload / deploy steps, and external tool invocations. Require documentation in `STACK.md → Approved Dependencies` or `STACK.md → Intentional Divergences` when the local rules require it.
+13. **Supply-chain, dependency, and documentation-grounding trust** — Check dependency additions, lockfile updates (incl. no `effect@4.x` / `next` / beta tag), build scripts, generated files, package-manager configuration, tokens, deploy steps, and external tool invocations. Require documentation in `STACK.md → Approved dependencies` or `STACK.md → Intentional Divergences` when the local rules require it. **Verify the Context7 grounding artifact**: for every package in `STACK.md → Documentation protocol` the diff touches, the PR description must record the Context7 ID, question, and confirmed API shape; a missing entry is a blocking finding.
 
 14. **Operability and observability** — Check that failures are visible to the user or operator at the right level, logs are structured and privacy-safe, hot paths have signposts / measurement where `STACK.md` requires it, errors are actionable, and no important failure is swallowed silently.
 

@@ -41,7 +41,7 @@ The decision filter is product-specific; agents read it dynamically from `VISION
 - The UI thread / event loop is for UI work only. Never block it with network, disk, parsing, image decoding/resizing, crypto, sorting, mapping, or waiting.
 - Offline, denied-permission, degraded-data, and failure paths are first-class UX states.
 - Prefer standard, framework-native components, navigation, and styling. No custom chrome when standard components solve the problem.
-- **Avoid architecture astronautics.** No custom app frameworks, god objects, service locators, base-view-model hierarchies, generic reducer systems, or dependency-injection containers unless explicitly authorised in `STACK.md`.
+- **Avoid architecture astronautics.** No custom app frameworks, god objects, service locators, base-view-model hierarchies, generic reducer systems, or dependency-injection containers unless explicitly authorised in `STACK.md`. _(This project authorises Effect's `Layer` as its DI mechanism and Effect as its effect runtime — see `STACK.md → Approved dependencies` and the DI guardrail there. The authorisation is bounded: no second DI system or home-grown framework on top of Effect.)_
 - **Never persist or transmit user data the product does not require.** Persistence rules are defined per project in `STACK.md` and `VISION.md`.
 
 ---
@@ -141,9 +141,9 @@ Every user-visible surface handles, when applicable, the states declared by the 
 
 ### 6.1 Networking
 
-- Use the framework-native async client declared in `STACK.md`. Configure timeouts, retries, and connectivity expectations once per service.
-- Request construction, decoding, retries, and backoff live in the service layer. Views / handlers never build raw requests or decode payloads inline.
-- Per-feature typed error enum / class. UI never sees raw transport-level error codes.
+- Use the framework-native async client declared in `STACK.md` _(this project: `@effect/platform` `HttpClient` / HttpApi, behind the thin adapter — see `STACK.md §2`, §13)_. Configure timeouts, retries, and connectivity expectations once per service.
+- Request construction, decoding, retries, and backoff live in the service layer. Views / handlers never build raw requests or decode payloads inline. External data is decoded and narrowed via Effect `Schema` at the boundary before it reaches any other code.
+- Per-feature typed error enum / class _(this project: tagged errors in the Effect `E` channel; no `throw` in domain logic — see `STACK.md §0`)_. UI never sees raw transport-level error codes.
 
 ### 6.2 Persistence
 
@@ -194,7 +194,7 @@ Profile before optimising — but stay inside the budgets declared in `STACK.md`
 - Use the test framework declared in `STACK.md`. All tests run clean under the strictest concurrency / type-check mode.
 - **Test the pure domain code first**: transforms, state-machine transitions, edge cases. These are the highest-value tests.
 - Test the state holder that drives a view / handler, not the view / handler itself. Drive it with a fake / in-memory implementation of the service boundary and assert the resulting timeline.
-- Prefer protocol-backed services with `Live` / `Preview` / `Fake` implementations over heavyweight mocking frameworks.
+- Prefer protocol-backed services with `Live` / `Preview` / `Fake` implementations over heavyweight mocking frameworks _(this project: Effect `Layer`s — test runs provide fake Sony-client + cache `Layer`s; time-dependent logic uses `TestClock`; see `STACK.md §11`)_.
 - Profiling / load testing for performance-sensitive features uses the tooling declared in `STACK.md`.
 
 ---
@@ -221,7 +221,7 @@ Profile before optimising — but stay inside the budgets declared in `STACK.md`
 ## 11. Dependencies
 
 - Default answer to "should we add a library?" is **no**.
-- Banned by category: UI frameworks competing with the chosen one, state-management frameworks, DI containers, reactive frameworks where structured concurrency suffices, navigation libraries the platform already covers, networking wrappers, JSON libraries, analytics libraries, crash reporters bundled by default.
+- Banned by category: UI frameworks competing with the chosen one, state-management frameworks, DI containers, reactive frameworks where structured concurrency suffices, navigation libraries the platform already covers, networking wrappers, JSON libraries, analytics libraries, crash reporters bundled by default. _(Exceptions authorised in `STACK.md → Approved dependencies`: Effect's `Layer` (DI) and Effect itself (structured concurrency, not a reactive framework); TanStack Query (client cache) and TanStack Router (routing). The category bans stand for everything not explicitly listed there.)_
 - If a dependency is genuinely needed:
   - Must use the platform's package manager declared in `STACK.md` (`SwiftPM`, `pnpm`, `cargo`, …).
   - Must compile clean under the strictest concurrency / type-check mode.
@@ -285,11 +285,12 @@ When implementing a change:
 5. Keep heavy work off the UI thread.
 6. Keep async work cancellable.
 7. Prefer the smallest framework-native solution that fits.
-8. Run `$FORMAT_CMD` then `$VERIFY_CMD`. Never invoke underlying tools directly.
-9. Update previews / stories / fixtures if UI surfaces changed.
-10. Update tests for logic changes.
-11. Update `STACK.md` if approved dependencies or build commands changed.
-12. Summarise in the PR description: _what changed, which `AGENTS.md` / `STACK.md` rules apply, what was tested, any new states handled, the §0.1 decision-filter outcome._
+8. **Before writing or editing any code that uses an approved dependency, retrieve its version-pinned docs via Context7** per `STACK.md → Documentation protocol`. Never write library code from memory (Effect priors in particular drift to v2 / v4-beta). Ground the glue *between* packages, not just each call.
+9. Run `$FORMAT_CMD` then `$VERIFY_CMD`. Never invoke underlying tools directly.
+10. Update previews / stories / fixtures if UI surfaces changed.
+11. Update tests for logic changes.
+12. Update `STACK.md` if approved dependencies or build commands changed.
+13. Summarise in the PR description: _what changed, which `AGENTS.md` / `STACK.md` rules apply, what was tested, any new states handled, the §0.1 decision-filter outcome, and the Context7 docs grounded (per `STACK.md → Documentation protocol`)._
 
 ### 14.1 Autonomy fallback (single source of truth)
 
@@ -317,6 +318,7 @@ A change is not done unless:
 - every async path is cancellation-safe,
 - no new persisted or transmitted data violates `VISION.md` or `STACK.md`,
 - tests cover new core logic and run clean under the strictest concurrency / type-check mode,
+- the stack-specific done criteria in `STACK.md → Definition of done (stack additions)` also hold (no I/O in the pure core, no `throw` in domain logic, every Schema decoder has narrowing + price-mapping tests, new library usage grounded in Context7),
 - accessibility (Dynamic Type / large text, screen reader, reduced motion, contrast, dark mode) was considered,
 - `$VERIFY_CMD` passes without warnings,
 - privacy declarations are updated if new data flows were introduced,
