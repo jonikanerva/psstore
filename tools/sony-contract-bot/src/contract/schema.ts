@@ -1,40 +1,40 @@
-import { z } from 'zod'
+import { Schema } from 'effect'
 
-export const contractFeatureSchema = z.enum([
+export const contractFeatureSchema = Schema.Literal(
   'new',
   'upcoming',
   'discounted',
   'details',
-])
+)
 
-export const contractOperationSchema = z.object({
+export const contractOperationSchema = Schema.Struct({
   feature: contractFeatureSchema,
-  operation_name: z.string().min(1),
-  persisted_query_hash: z
-    .string()
-    .regex(/^[a-f0-9]{64}$/i)
-    .nullable(),
-  required_headers: z.array(z.string().min(1)),
-  variables_schema: z.record(z.string(), z.unknown()),
-  sample_variables: z.record(z.string(), z.unknown()),
-  response_path: z.string().min(1),
-  observed_status_codes: z.array(z.number().int()),
+  operation_name: Schema.String.pipe(Schema.minLength(1)),
+  persisted_query_hash: Schema.NullOr(
+    Schema.String.pipe(Schema.pattern(/^[a-f0-9]{64}$/i)),
+  ),
+  required_headers: Schema.Array(Schema.String.pipe(Schema.minLength(1))),
+  variables_schema: Schema.Record({ key: Schema.String, value: Schema.Unknown }),
+  sample_variables: Schema.Record({ key: Schema.String, value: Schema.Unknown }),
+  response_path: Schema.String.pipe(Schema.minLength(1)),
+  observed_status_codes: Schema.Array(Schema.Number.pipe(Schema.int())),
 })
 
-export const sonyContractManifestSchema = z.object({
-  version: z.number().int().positive(),
-  metadata: z.object({
-    captured_at: z.string().min(1),
-    captured_by: z.string().min(1),
-    region: z.literal('fi'),
-    locale: z.literal('fi-fi'),
-    currency: z.literal('EUR'),
-    target_platform: z.literal('PS5'),
-    playwright_profile: z.string().min(1),
+export const sonyContractManifestSchema = Schema.Struct({
+  version: Schema.Number.pipe(Schema.int(), Schema.positive()),
+  metadata: Schema.Struct({
+    captured_at: Schema.String.pipe(Schema.minLength(1)),
+    captured_by: Schema.String.pipe(Schema.minLength(1)),
+    region: Schema.Literal('fi'),
+    locale: Schema.Literal('fi-fi'),
+    currency: Schema.Literal('EUR'),
+    target_platform: Schema.Literal('PS5'),
+    playwright_profile: Schema.String.pipe(Schema.minLength(1)),
   }),
-  endpoint: z.object({
-    url: z.url(),
-    method: z.string().min(1),
+  endpoint: Schema.Struct({
+    // Equivalent to the previous `z.url()`: a syntactically valid http(s) URL.
+    url: Schema.String.pipe(Schema.pattern(/^https?:\/\/[^\s]+$/)),
+    method: Schema.String.pipe(Schema.minLength(1)),
   }),
-  operations: z.array(contractOperationSchema),
+  operations: Schema.Array(contractOperationSchema),
 })
