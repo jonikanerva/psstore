@@ -1,135 +1,157 @@
-# STACK.md — Strict TypeScript / Node LTS / Express / React / Vite / Vitest profile
+# STACK.md — TypeScript + Effect profile
 
-> Strict TypeScript monorepo with an Express backend (`server/`), a React + Vite frontend (`client/`), a shared `shared/` module, and a sony-contract-bot CLI (`tools/sony-contract-bot/`). Package manager: pnpm workspaces. Vitest for tests.
+> Effect-backed TypeScript: a `@effect/platform` HttpApi backend (typed REST + generated OpenAPI) plus a React + Vite SPA, in a pnpm monorepo sharing Effect Schema across server ↔ client. Effect is the backbone because correctness must be machine-checkable: typed errors and Layer-provided dependencies maximise what the compiler proves. **Normative** — MUST / MUST NOT are binding; surface conflicts before deviating.
+
+---
+
+## 0. Project shape
+
+- **Shape:** backend service (typed REST via `@effect/platform` HttpApi) + React SPA frontend.
+- **Critical execution path:** the per-request hot path on the server; the browser main thread / React render path on the web.
+- **Applicable states:** web surfaces handle awaiting-first-data, success, empty, degraded, offline, error; API responses are typed success / typed error (the Effect error channel maps to HTTP status). No per-user state.
+
+## Scope boundary
+
+Product scope (from `VISION.md`) is enforced **structurally at the Schema layer, not in the UI**: external data is filtered and narrowed during decode, before it reaches any other code. Anything outside scope is dropped at the boundary. No accounts, no user preferences, no per-user state, no telemetry. If a change cannot fit the scope, surface it rather than expanding it.
 
 ---
 
 ## 1. Language & Runtime
 
-- **Primary language:** TypeScript 6.0
-- **Strictness mode:** `"strict": true`, `"noUncheckedIndexedAccess": true`, `"exactOptionalPropertyTypes": true`, `"noImplicitOverride": true`, `"verbatimModuleSyntax": true`. ESLint with `@typescript-eslint/strict-type-checked`.
-- **Target runtime:** Node.js 24 (Krypton — active LTS, latest 24.15.0)
-- **Minimum runtime version:** Node 24.0 (no back-deployment to Node 22 / 20)
-- **Package manager:** pnpm (workspaces)
-- **Lockfile:** `pnpm-lock.yaml`
+- **Primary language:** TypeScript 6.x (strict).
+- **Strictness mode (non-negotiable `tsconfig`):** `"strict": true`, `"noUncheckedIndexedAccess": true`, `"exactOptionalPropertyTypes": true`, `"noImplicitOverride": true`.
+- **Target runtime:** Node.js 24 LTS.
+- **Minimum runtime version:** Node 24.0 (no back-deployment).
+- **Package manager:** pnpm (workspaces). **Lockfile:** `pnpm-lock.yaml`.
 
 ---
 
 ## 2. Frameworks
 
-| Concern                  | Framework / library                                                      | Notes                                                                                                      |
-| ------------------------ | ------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
-| Backend HTTP framework   | Express 4                                                                | Sony GraphQL proxy + in-memory cache; Hono considered but not adopted — no concrete benefit for this scope |
-| Frontend UI              | React 19                                                                 | Function components only                                                                                   |
-| Build tool               | Vite 8 (target)                                                          | For `client/`                                                                                              |
-| State / observation      | React built-ins (`useState`, `useReducer`)                               | No Redux / MobX                                                                                            |
-| Routing                  | React Router DOM 7 (frontend) / Express router (backend)                 | TanStack Router not adopted                                                                                |
-| Data fetching (frontend) | Raw `fetch()` via `client/src/modules/psnStore.ts`                       | No TanStack Query / SWR; the API is read-only and simple                                                   |
-| Validation               | Zod 4 (target)                                                           | Boundary validation for every external input (HTTP, env, persisted state)                                  |
-| Persistence              | In-memory cache (server) + browser storage for response caching (client) | See §5                                                                                                     |
-| Testing                  | Vitest 4 (target) (unit + integration)                                   | Playwright optional for end-to-end                                                                         |
-| Logging                  | `console.*` on server and CLI tools                                      | pino not adopted; PII redaction rules in §8 still apply                                                    |
-| Telemetry                | none by default                                                          | Add only with explicit `STACK.md` approval                                                                 |
-| Formatting               | Prettier 3                                                               |                                                                                                            |
-| Linting                  | ESLint 10 (target) with `@typescript-eslint` flat config                 |                                                                                                            |
-| CSS linting              | Stylelint 16 with project config                                         |                                                                                                            |
+| Concern             | Technology                                                    | Role                                                                                      |
+| ------------------- | ------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Backend core        | Effect v3                                                     | Side effects as values; typed errors (`Effect<A, E, R>`); DI via `Layer`                  |
+| Schema / validation | Effect Schema (`effect/Schema`)                               | Decode + narrow external data at the boundary (hand-written, single API → no codegen)     |
+| REST layer          | `@effect/platform` HttpApi                                    | End-to-end typed routes + generated OpenAPI; thin handlers                                |
+| Server cache        | Effect `Cache`                                                | In-memory, built-in TTL, deterministically testable with `TestClock`                      |
+| Frontend UI         | React 19 + Vite                                               | Foundation; function components only                                                      |
+| Routing             | TanStack Router (SPA); TanStack Start only if SSR is required | Type-safe routing                                                                         |
+| Client cache        | TanStack Query                                                | TTL, background refetch, persisted to `localStorage`/IndexedDB via the official persister |
+| Styling             | Tailwind CSS v4                                               | Utilitarian; no decorative chrome                                                         |
+| Tests               | Vitest                                                        | Pure functions + Effect test `Layer`s                                                     |
+| Lint                | ESLint + typescript-eslint                                    | `no-explicit-any` + `no-unsafe-*` as CI gates                                             |
+
+### Effect conventions (binding)
+
+- **Functional core, imperative shell.** Pure functions compute; I/O lives at the edge. The core MUST NOT import I/O modules (fetch, cache, clock) directly — they are provided as Effect services / `Layer`s and declared in `R`.
+- **Errors are values.** No `throw` in domain logic. Failures are modelled in the Effect error channel as **tagged errors**, so the compiler forces every failure path to be handled.
+- **The compiler is the reviewer.** Prefer designs where a mistake is a compile error over designs that rely on discipline or runtime checks — this is the primary safety mechanism, as there is no downstream human code review.
+- **External data is untrusted until decoded.** Decode and narrow with Effect Schema at the boundary before the data touches any other code.
+- Handlers are thin: take decoded input, call the pure core, let the typed error channel map to HTTP status. No hand-rolled error-to-response glue.
 
 ---
 
-## 3. Build & verify commands
+## 3. Documentation protocol (Context7)
 
-| Variable      | Command                                                                                           |
-| ------------- | ------------------------------------------------------------------------------------------------- |
-| `$FORMAT_CMD` | `pnpm format`                                                                                     |
-| `$LINT_CMD`   | `pnpm lint`                                                                                       |
-| `$BUILD_CMD`  | `pnpm build`                                                                                      |
-| `$TEST_CMD`   | `pnpm test`                                                                                       |
-| `$VERIFY_CMD` | `pnpm test-all` (type-check → lint → build → tests → sony contract validate → sony contract diff) |
+**Hard rule: never write or modify code that uses a package in §7 from memory. Retrieve version-pinned docs via Context7 first** (the `find-docs` skill or the Context7 MCP).
 
-The `package.json` scripts are the single source of truth. Never invoke `eslint`, `tsc`, `vitest`, or `vite` directly from commits or agent scripts.
+1. **Resolve, don't guess.** If a Context7 ID in §7 fails to resolve, use Context7's library-id resolver and take the canonical ID it returns. Never invent an API without resolved docs backing it.
+2. **Pin the version in the query.** Especially Effect: always target the v3 docs — model priors drift toward v2 / v4-beta, but the retrieved v3 docs are the source of truth, not memory.
+3. **Targeted queries only.** Ask the question for the task at hand; do not retrieve whole documents speculatively (the Effect entry is large).
+4. **Retrieve before integrating, not just before calling.** The riskiest code is the glue _between_ packages (e.g. wiring a service into an HttpApi handler). When per-package docs don't cover a seam, retrieve both sides and prefer the cohesive Effect-native path over hand-rolled glue.
 
 ---
 
-## 4. Performance budgets
+## 4. Build & verify commands
 
-- **API request p99:** 100 ms (per route, excluding upstream calls).
-- **API request p50:** 30 ms.
-- **Cold start (edge runtime):** < 500 ms.
-- **Cold start (Node):** < 2 s.
-- **Web bundle:** < 200 KB gzipped initial JS, < 50 KB gzipped initial CSS.
-- **Time to Interactive (web, slow 4G simulation):** < 3 s.
-- **Memory ceiling (API container):** < 512 MB resident.
+| Variable      | Command                                                        |
+| ------------- | -------------------------------------------------------------- |
+| `$FORMAT_CMD` | `pnpm format`                                                  |
+| `$LINT_CMD`   | `pnpm lint` (ESLint; the gates below fail the build, not warn) |
+| `$BUILD_CMD`  | `pnpm build`                                                   |
+| `$TEST_CMD`   | `pnpm test` (Vitest)                                           |
+| `$VERIFY_CMD` | `pnpm test-all` (type-check → lint → build → tests)            |
 
----
-
-## 5. Persistence shape
-
-- **Storage primitive (server):** in-memory cache (`server/src/lib/cache.ts`) for Sony GraphQL responses. TTL-based, no database, no on-disk state.
-- **Storage primitive (client):** browser storage (`localStorage` and/or IndexedDB) for caching Sony response payloads only, to speed up page reloads. Never used for user preferences or behaviour state (per `VISION.md → Persistence and Privacy Posture`).
-- **Persisted entities:** Sony GraphQL response payloads only.
-- **Schema migration policy:** N/A — no persistent schema.
-- **Forbidden persistence:** anything declared forbidden in `VISION.md → Persistence and Privacy Posture` (user identifiers, preferences, click / search / viewing history, etc.).
+The `package.json` scripts are the single source of truth. Never invoke `tsc`, `eslint`, `vitest`, or `vite` directly from commits, CI, or agent scripts.
 
 ---
 
-## 6. Approved dependencies
+## 5. Performance budgets
 
-Default answer to "should we add a library?" is **no**. The lists below are intentionally short; new entries require a `STACK.md` PR with justification.
-
-| Dependency             | Version | Why it earns its place                                                                       | Approver  | Date       |
-| ---------------------- | ------- | -------------------------------------------------------------------------------------------- | --------- | ---------- |
-| `express`              | `^4.21` | Backend HTTP framework — incumbent, stable, sufficient for the Sony proxy                    | (default) | (template) |
-| `react`                | `^19`   | Frontend UI framework                                                                        | (default) | (template) |
-| `react-router-dom`     | `^7`    | Frontend routing                                                                             | (default) | (template) |
-| `vite`                 | `^8`    | Frontend build tool                                                                          | (default) | (template) |
-| `vitest`               | `^4`    | Test runner                                                                                  | (default) | (template) |
-| `zod`                  | `^4`    | Boundary validation for every external input                                                 | (default) | (template) |
-| `@typescript-eslint/*` | `^8`    | TS-aware lint rules                                                                          | (default) | (template) |
-| `eslint`               | `^9`    | Linter (see §10 Intentional Divergences — held at 9 pending `eslint-plugin-react` 10-compat) | (default) | (template) |
-| `stylelint`            | `^16`   | CSS linter                                                                                   | (default) | (template) |
-| `prettier`             | `^3`    | Formatter                                                                                    | (default) | (template) |
-| `typescript`           | `^6.0`  | Language                                                                                     | (default) | (template) |
+TBD. Let's aim for fast.
 
 ---
 
-## 7. Stack-specific reject-list additions
+## 6. Persistence shape
 
-- `any` (explicit or implicit via `@typescript-eslint/no-explicit-any`) without an inline `// reason: ...` justification.
-- `as` casts that bypass type checking — use `satisfies` or a runtime guard.
-- `// @ts-ignore` / `// @ts-expect-error` without an inline explanation that names the underlying constraint.
-- `moment` / `moment.js` — use `Temporal` (proposal) via polyfill or `date-fns` if approved.
-- Full-import of `lodash` (`import _ from 'lodash'`) — import single functions only, or use the standard library equivalent.
-- Raw `fetch` without zod-validated response parsing for any external network call (client-side fetch in `psnStore.ts` is acknowledged in §11; new code must validate at the boundary).
-- `console.log` calls that interpolate dynamic values without an inline redaction check (the existing `console.info` / `console.warn` allowance in §8 still requires PII-free fields).
-- Default exports for non-component, non-route modules — prefer named exports for tree-shakability and refactor safety.
-- `useEffect` with empty dependency arrays for data fetching in new code — wrap the fetch in a small custom hook with abort handling, or adopt a query library only after explicit approval.
-- Class-based React components — function components only.
-- Redux, MobX, Recoil, Jotai, TanStack Query, TanStack Router unless `Section 6 → Approved Dependencies` explicitly authorises them.
-- `process.env.X` reads outside a single `env.ts` module that validates with zod and re-exports a typed constant.
+- **Server:** in-memory Effect `Cache` only — TTL built in, no manual invalidation. **No database, no on-disk persistence, no per-visitor state.**
+- **Client:** TanStack Query cache persisted to `localStorage`/IndexedDB via the official persister. **No per-user state of any kind.**
+- **Persisted entities:** declared by `VISION.md → Persistence and Privacy Posture`.
+- **Forbidden persistence:** accounts, user preferences, per-user state, telemetry, and anything forbidden in `VISION.md → Persistence and Privacy Posture`.
 
 ---
 
-## 8. Logging & privacy
+## 7. Approved dependencies
 
-- **Logger:** `console.*` on backend (`server/src/`) and CLI tools (`tools/sony-contract-bot/src/`). pino was considered but not adopted; if it is adopted later, the redaction rules below transfer unchanged.
-- **PII redaction:** code paths emitting dynamic values must filter sensitive fields explicitly before output. No PII — user identifiers, IP addresses, click history, search terms — is logged at any level.
-- **Crash / error reporter:** none by default. If added (e.g. Sentry), declare it in `Section 6 → Approved Dependencies` with explicit data-flow justification.
+Default answer to "should we add a library?" is **no**. Track the latest **stable** version; pin exact versions in the lockfile; upgrade deliberately, not by drift. **Effect stays on v3** until a v4 migration is performed intentionally — v4-beta MUST NOT leak in via model priors or an unpinned install.
+
+| Dependency                         | Version | Context7 ID                             | Why it earns its place                                 |
+| ---------------------------------- | ------- | --------------------------------------- | ------------------------------------------------------ |
+| `effect` (+ Schema, Cache)         | `3.x`   | `/llmstxt/effect_website_llms-full_txt` | Backbone: typed effects, errors, DI                    |
+| `@effect/platform`                 | `3.x`   | `/llmstxt/effect_website_llms-full_txt` | Typed HttpApi REST + OpenAPI                           |
+| `typescript`                       | `6.x`   | `/microsoft/typescript`                 | Language                                               |
+| `react`                            | `19.x`  | `/facebook/react`                       | Frontend UI                                            |
+| `vite`                             | latest  | `/vitejs/vite`                          | Frontend build tool                                    |
+| `@tanstack/react-router` (+ Start) | `1.x`   | `/tanstack/router`                      | Type-safe routing                                      |
+| `@tanstack/react-query`            | `5.x`   | `/tanstack/query`                       | Client cache                                           |
+| `tailwindcss`                      | `4.x`   | `/tailwindlabs/tailwindcss`             | Utilitarian styling                                    |
+| `vitest`                           | latest  | `/vitest-dev/vitest`                    | Test runner                                            |
+| `typescript-eslint`                | latest  | `/typescript-eslint/typescript-eslint`  | Typed lint gates                                       |
+| `pnpm`                             | latest  | `/pnpm/pnpm`                            | Package manager (runtime: Node 24 LTS, `/nodejs/node`) |
+
+New entries require a `STACK.md` PR with rationale, approver, and date.
 
 ---
 
-## 9. Background & lifecycle
+## 8. Stack-specific reject-list additions
 
-- **Allowed background work:** TTL-based refresh inside the Express process's in-memory cache. No cron jobs, no scheduled tasks, no queues.
-- **Forbidden background work:** long-polling websockets that keep a connection alive without active user interaction; background tabs that drive expensive computation; service workers that retain data forbidden by `VISION.md → Persistence and Privacy Posture`.
+- **`any`** — explicit or implicit. `@typescript-eslint/no-explicit-any` and `no-unsafe-assignment` / `no-unsafe-call` / `no-unsafe-member-access` are **CI gates (build fails, not warns)**.
+- **`throw` in domain logic** — model failures in the Effect error channel as tagged errors.
+- **I/O imported directly into the pure core** (fetch, cache, clock) — provide them as Effect services / `Layer`s.
+- **Untyped external data** reaching code before it is decoded and narrowed with Effect Schema.
+- **`as` casts** that bypass type checking — use `satisfies` or a runtime/Schema guard.
+- **`// @ts-ignore` / `// @ts-expect-error`** without an inline reason naming the underlying constraint.
+- **`console.*` in shipped code** — use the structured logger (§9).
+- **Class-based React components**; **`useEffect` for data fetching** — use TanStack Query.
+- **Hand-rolled error-to-response glue** in HttpApi handlers — let the typed error channel map to status.
+- **Effect v4-beta APIs** — v3 only until an intentional migration.
+- **Writing package code from memory** without the §3 Context7 retrieval.
 
 ---
 
-## 10. Intentional Divergences
+## 9. Logging & privacy
 
-This table is the home for binding technical constraints that future work must respect (the kind of durable rule a feature PR establishes). Record them here and in the originating PR description — not as separate tracking issues.
+- **Logger:** Effect's logging (`Effect.log*`) on the server, structured; never `console.*` in shipped code.
+- **No PII / no telemetry.** UI chrome (labels, placeholders, error states) is in English; externally-sourced data follows its own locale (e.g. `fi-fi`, falling back to English).
+- **Crash / error reporter:** none by default; if added, declare it in §7 with data-flow justification.
 
-| Date       | AGENTS.md rule                                 | Divergence                 | Reason                                                                                                                                                                                                                                                                                                               |
-| ---------- | ---------------------------------------------- | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-05-28 | §6 Approved dependencies (target ESLint `^10`) | ESLint pinned at `^9.39.4` | `eslint-plugin-react@7.37.5` (latest published) caps its peer dep at ESLint `^9.7`. ESLint 10 + this plugin fails at lint time (`contextOrFilename.getFilename is not a function`). Hold until `eslint-plugin-react` ships an ESLint-10-compatible release or the project migrates to `@eslint-react/eslint-plugin`. |
-| 2026-05-29 (rev. 2026-05-29) | §3 Architecture / VISION price principle | UPCOMING surfaces ALL ~52 anonymously-available upcoming PS5 games — ~12 priced product-SKU cards (internal PDP) + ~40 concept-only cards (price "Unknown", linking out to Sony's `/en-fi/concept/{id}` page) | The `next_thirty_days` PS5 grid returns ~52 concepts: ~12 carry a product SKU + price, ~40 are announcement-only (`products: []`, `price: null`, no anonymous date). The earlier ceiling here (concept-only titles "correctly excluded / out of scope") is REVERSED by the owner ruling 2026-05-29 (option a): the UPCOMING view shows the concept-only titles without a price (marked "Unknown") and links them out to Sony's concept page (verified to resolve anonymously). UPCOMING uses a dedicated `mapUpcomingConceptsToGames` + no empty-date drop; NEW / DISCOUNTED keep the SKU-gated shared mapper VERBATIM. Concept ids never resolve to an internal PDP (`getGameById` 404s; locked by test). The `metGetProductById` boundary is never called on a concept id. |
-| 2026-05-29 | §2 Frameworks / VISION views (four fixed views) | The PS PLUS view is dropped; only NEW / UPCOMING / DISCOUNTED ship | Sony's anonymous fi-fi GraphQL does not expose the monthly PS Plus catalogue: the `subscriptionService:PS_PLUS` filter is silently ignored (PS5-only, PS_PLUS-filtered, and a bogus token all return the identical full-catalogue count of 7214) and no `subscriptionService` facet exists. The `VISION.md → Open Questions` "PS Plus view feasibility" contingency triggered (2026-05-29): the view is dropped, no authentication is added. The PS Plus *price* display (cards + PDP) is unaffected and remains a core principle. |
+---
+
+## 10. Background & lifecycle
+
+- **Allowed:** TTL-bounded cache refresh driven by request access (Effect `Cache`).
+- **Forbidden:** background polling or long-lived connections without active user interaction; any background work that retains data forbidden by `VISION.md`.
+
+---
+
+## 11. Definition-of-done additions
+
+On top of `CLAUDE.md → Definition of done`, this stack also requires: `tsc` zero errors; ESLint zero errors (the §8 `no-any` / `no-unsafe-*` gates); no I/O imported into the pure core; no `throw` in domain logic; and any new package usage grounded in §3 Context7-retrieved, version-pinned docs. The compiler and this checklist are the review — design code so the checklist _can_ catch mistakes.
+
+---
+
+## 12. Intentional Divergences
+
+| Date     | CLAUDE.md rule | Divergence | Reason |
+| -------- | -------------- | ---------- | ------ |
+| _(none)_ | —              | —          | —      |

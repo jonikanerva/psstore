@@ -14,13 +14,13 @@ Communicate in Finnish when reporting progress to the user; write the PR-review 
 ## Prerequisites
 
 - A PR must exist for the current branch. If not, the autonomy fallback applies: do NOT call `AskUserQuestion`. Instead, run `gh pr create` against the current branch with a minimal title / body derived from the latest commit, then proceed. (The lead-dev should already have done this; the fallback is for races where it has not.)
-- Read: `gh pr view --comments`, `gh pr diff`, `gh pr checks`, and the governance files `VISION.md`, `AGENTS.md`, `STACK.md`, `CLAUDE.md`, `README.md`.
+- Read: `gh pr view --comments`, `gh pr diff`, `gh pr checks`, and the governance files `VISION.md`, `CLAUDE.md` (the engineering doctrine + workflow), `STACK.md`, `README.md`. If the PR links an issue (`Closes #<N>`), read it with `gh issue view <N> --comments` — that issue is the scope contract for the scope-fit lens.
 - Inspect the branch history with `git log main..HEAD --oneline`.
 - Prefer reviewing the whole changed surface, not only the displayed diff hunk. Follow call sites, state ownership, service boundaries, tests, previews / stories, build scripts, and configuration touched by the change.
 
 ## Quality standard
 
-The bar is the quality target stated in `VISION.md → Success Definition`, `AGENTS.md §15 Definition of done`, and `STACK.md → Performance budgets`.
+The bar is the quality target stated in `VISION.md → Success Definition`, `CLAUDE.md → Definition of done`, and `STACK.md → Performance budgets`.
 
 **Every blocking finding is a FAIL.** A blocking finding is any rule-backed defect, regression risk, missing required evidence, security / privacy issue, production failure mode, required-test gap, unsupported dependency / build-system change, or mismatch with the PR's stated scope.
 
@@ -31,12 +31,12 @@ Do **not** fail a PR for subjective taste, personal style, or a possible alterna
 Evaluate every PR through these lenses. Use the lenses to organize your reasoning; convert them into findings only when the evidence meets the blocking-finding bar.
 
 1. **Functional correctness** — Does the changed code do what the PR claims? Are edge cases, empty inputs, invalid data, permission denial, retries, cancellation, and migration paths correct?
-2. **Product and scope fit** — Does the change satisfy `VISION.md → Decision Filter`, avoid `VISION.md → Non-Goals`, and stay inside the scope of the GitHub issue the PR closes (if one applies to this branch)?
-3. **Architecture and maintainability** — Does it preserve the layered shape in `AGENTS.md §3`, local ownership, obvious state flow, small purpose-driven types, and framework-native primitives?
-4. **Concurrency and lifecycle safety** — Does it satisfy `AGENTS.md §4 C1–C13`, including UI-thread isolation, structured concurrency, cancellation, and thread-safe boundary types?
+2. **Product and scope fit** — Does the change satisfy `VISION.md → Decision Filter`, avoid `VISION.md → Non-Goals`, and stay inside the scope of the issue it is solving (the issue the PR links with `Closes #<N>`)?
+3. **Architecture and maintainability** — Does it preserve the layered shape in `CLAUDE.md → Architecture`, local ownership, obvious state flow, small purpose-driven types, and idiomatic primitives (as declared in `STACK.md`)?
+4. **Concurrency and lifecycle safety** — Does it satisfy `CLAUDE.md → Concurrency`, including critical-path isolation, structured concurrency, cancellation, and thread-safe boundary types?
 5. **Security and privacy** — Does it avoid injection, credential exposure, broken access control, PII leakage, overbroad permissions, forbidden persistence, and unsafe transport / logging?
 6. **Reliability and failure modes** — Does it behave under slow network, degraded dependencies, missing permissions, first launch, cold start, backgrounding, low memory, and partial failure?
-7. **Performance and resource budget** — Does it avoid hot-path work, UI-thread blocking, unbounded collection rendering, excessive allocation, battery drain, and bundle / memory budget drift?
+7. **Performance and resource budget** — Does it avoid critical-path blocking, unbounded collection rendering, excessive allocation, and drift past the budgets in `STACK.md` (latency, memory, battery, bundle — whichever apply)?
 8. **Test adequacy** — Do tests cover new domain logic, state transitions, edge cases, async timelines, and regression risks using the project's declared test framework?
 9. **Supply-chain and dependency risk** — Are dependencies approved, lockfiles intentional, build scripts safe, CI permissions bounded, generated artifacts justified, and external tooling pinned where appropriate?
 10. **Operability and observability** — Are errors actionable, logs privacy-safe, hot paths measurable where needed, and silent failures avoided?
@@ -65,7 +65,7 @@ Do not cite a standard just to make a finding look stronger. The finding must st
 
 Every finding must be grounded in evidence. Specifically:
 
-- **Findings about the project's own rules** are grounded in the governance files — cite the section (`AGENTS.md §4 C2`, `VISION.md → Decision Filter`, `STACK.md → Approved Dependencies`, `CLAUDE.md → Language`, etc.). The files in the repo are the source of truth for project rules.
+- **Findings about the project's own rules** are grounded in the governance files — cite the rule by name (`CLAUDE.md → Concurrency`, `VISION.md → Decision Filter`, `STACK.md → Approved Dependencies`, etc.). The files in the repo are the source of truth for project rules.
 - **Findings that turn on external-tool behavior** — how Claude Code treats a setting, how the build tool parses a config key, what `gh` does with a flag, whether a strict-mode diagnostic exists, what a framework API requires, what GitHub's merge semantics are, what a security standard currently says — must be verified against **current official documentation** before being recorded.
 - If the docs contradict the assumption, drop the finding.
 - If the docs are silent or ambiguous after a reasonable lookup, report it as "could not verify" in a separate verification note rather than asserting it as a failure. Let the author decide.
@@ -80,13 +80,13 @@ The following are blocking findings when present in changed production code or r
 
 - Dead code, unused imports, orphaned helpers, unreachable paths, or placeholder implementation.
 - Code duplication when a shared helper exists or a small extraction clearly removes real duplication.
-- `TODO` / `FIXME` / `HACK` / `XXX` comments, commented-out code, debug `print` / `console.log` / `dump`, or `fatalError("TODO")`.
+- `TODO` / `FIXME` / `HACK` / `XXX` comments, commented-out code, debug / console output, or crash-on-stub placeholders (the specific calls `STACK.md` bans).
 - Force-unwraps / non-null assertions / unsafe casts outside tests and previews.
-- Concurrency / type-check escape hatches (`@unchecked Sendable`, `nonisolated(unsafe)`, `@preconcurrency`, `MainActor.assumeIsolated`, `as any`, `@ts-ignore`, etc.) without a documented, audited justification in an inline comment (`AGENTS.md §4 C8, C13`).
+- Concurrency / type-check escape hatches (the ones `STACK.md → Stack-specific reject-list additions` bans for this stack) without a documented, audited justification in an inline comment naming the underlying-API constraint (`CLAUDE.md → Concurrency`).
 - Identifier whose meaning contradicts the function / type's documented responsibility, or that reuses a name already bound to a different concept in the same module.
 - New code path whose cyclomatic complexity or nesting depth exceeds the limit declared in `STACK.md` (where one is declared) without an inline justification, or that introduces a control-flow shape the project's lint configuration has flagged.
 - Inconsistency with established patterns in the codebase without an `STACK.md → Intentional Divergences` entry or local justification.
-- Logging of values forbidden by `AGENTS.md §8`, `STACK.md → Logging & privacy`, or `VISION.md → Persistence and Privacy Posture`.
+- Logging of values forbidden by `CLAUDE.md → Privacy & security`, `STACK.md → Logging & privacy`, or `VISION.md → Persistence and Privacy Posture`.
 - New dependency, build step, generated artifact, or CI permission that is not documented and justified in the appropriate governance file.
 
 ## Review checklist
@@ -95,7 +95,7 @@ Evaluate the PR against all of these. **Every missed required check is a FAIL.**
 
 1. **Scope verification** — Does the diff match the PR description? Are there undocumented changes, especially removals, renames, build changes, generated files, dependency changes, data-flow changes, or architectural shifts?
 
-2. **VISION decision filter** — Read `VISION.md → Decision Filter` and verify all four questions still answer "yes" for what this PR actually ships. Also verify the PR is not pulling the project toward any category in `VISION.md → Non-Goals`, `AGENTS.md §13`, or `STACK.md → Stack-specific reject-list additions`.
+2. **VISION decision filter** — Read `VISION.md → Decision Filter` and verify all four questions still answer "yes" for what this PR actually ships. Also verify the PR is not pulling the project toward any category in `VISION.md → Non-Goals`, `CLAUDE.md → Reject changes that…`, or `STACK.md → Stack-specific reject-list additions`.
 
 3. **Functional correctness** — Verify the changed behavior against the stated requirement, surrounding code, edge cases, invalid inputs, empty states, first launch, repeated actions, partial failure, and backwards / forwards compatibility expectations.
 
@@ -103,19 +103,19 @@ Evaluate the PR against all of these. **Every missed required check is a FAIL.**
 
 5. **Threat modeling and reliability** — Ask what could go wrong in production: race conditions, degraded-data masking bugs, missing-permission paths, crashes on first launch, lifecycle bugs in long-running activities, stale caches, unbounded retries, timeouts, idempotency failures, and inconsistent recovery after cancellation.
 
-6. **Code style and maintainability** — Check compliance with the formatter / linter declared in `STACK.md` and `AGENTS.md §10 Code conventions`. Enforce small types, clear naming, immutable bindings where practical, no broad type erasure, comments that explain why, and no cleverness without measurable benefit.
+6. **Code style and maintainability** — Check compliance with the formatter / linter declared in `STACK.md` and `CLAUDE.md → Code conventions`. Enforce small types, clear naming, immutable bindings where practical, no broad type erasure, comments that explain why, and no cleverness without measurable benefit.
 
-7. **Concurrency / async safety** — Check `AGENTS.md §4 C1–C13`: UI-thread isolation; thread-safe primitives for shared mutable state; structured concurrency; cancellation cooperation; thread-safety at boundaries; no sync-over-async on the UI thread; no lower-level concurrency primitives unless the underlying API requires it and is bridged immediately.
+7. **Concurrency / async safety** — Check `CLAUDE.md → Concurrency`: critical-path isolation; thread-safe primitives for shared mutable state; structured concurrency; cancellation cooperation; thread-safety at boundaries; no sync-over-async on the critical path; no lower-level concurrency primitives unless the underlying API requires it and is bridged immediately.
 
-8. **UI / API responsiveness** — Check `AGENTS.md §5`: hot-path work stays within the budget declared in `STACK.md`; no heavy work in render / view-builder / middleware; lists are virtualized with stable ids; asset / data fetching uses async loaders or thread-safe caches; navigation and input do not wait on network / storage; last-known-good continuity is preserved where useful.
+8. **Responsiveness** — Check `CLAUDE.md → Responsiveness & resource budget`: critical-path work stays within the budget declared in `STACK.md`; no heavy work in code that runs on every event; large collections render lazily with stable ids; asset / data fetching uses async loaders or thread-safe caches; navigation and input do not wait on network / storage; last-known-good continuity is preserved where useful.
 
-9. **Architecture compliance** — Check `AGENTS.md §3`: one obvious state owner per screen or request flow; phases are tagged unions / enums with associated values, not parallel booleans; domain code stays pure; service actors / wrappers isolate external systems; views / handlers do not consume raw delegates, raw network calls, or persistence internals.
+9. **Architecture compliance** — Check `CLAUDE.md → Architecture`: one obvious state owner per surface or request flow; phases are tagged unions, not parallel booleans; domain code stays pure; services isolate external systems; the interface layer does not consume raw clients, raw network calls, or persistence internals.
 
 10. **Stack-specific rules** — Check `STACK.md → Stack-specific reject-list additions`. Every entry there is a hard rule for this project. Verify the PR honors all of them, including runtime, framework, persistence, logging, background, and dependency constraints.
 
 11. **Dead code, duplication, leftover markers** — Scan the diff and touched files for unused functions, variables, parameters, imports, unreachable branches, orphaned helpers, copy-paste of existing helpers, `TODO` / `FIXME` / `HACK` / `XXX`, commented-out code, placeholder strings, and debug output. Zero avoidable debt at merge.
 
-12. **Tests** — Check `AGENTS.md §9`: pure domain code has edge-case coverage; state holders driving screens / handlers are tested with fake or in-memory service boundaries and asserted timelines; async paths and cancellation-sensitive flows have tests where practical; no heavyweight mocking framework was added; all tests are strict-concurrency / strict-type clean.
+12. **Tests** — Check `CLAUDE.md → Testing`: pure domain code has edge-case coverage; state owners driving surfaces / handlers are tested with fake or in-memory service boundaries and asserted timelines; async paths and cancellation-sensitive flows have tests where practical; no heavyweight mocking framework was added; all tests are strict-mode clean.
 
 13. **Supply-chain and CI trust** — Check dependency additions, lockfile updates, build scripts, generated files, package-manager configuration, GitHub Actions permissions, tokens, upload / deploy steps, and external tool invocations. Require documentation in `STACK.md → Approved Dependencies` or `STACK.md → Intentional Divergences` when the local rules require it.
 
@@ -135,13 +135,13 @@ Every blocking finding in the PR comment must use this format:
 - **Location:** `<file>:<line>`
 - **Evidence:** <what the diff or surrounding code shows>
 - **Impact:** <production risk or rule consequence>
-- **Local rule:** `<VISION.md / AGENTS.md / STACK.md / CLAUDE.md section>`
+- **Local rule:** `<VISION.md / CLAUDE.md / STACK.md rule, by name>`
 - **External reference:** <official standard or docs URL when materially applicable, otherwise `N/A`>
 - **Minimum fix:** <smallest change that resolves the issue>
 - **Verification:** <test, check, preview, or command that proves the fix>
 ```
 
-Do not include findings that cannot be tied to a concrete location, PR metadata item, or changed project artifact. For PR-level issues, use `PR description`, `branch history`, `CI checks`, or the GitHub issue the PR closes as the location.
+Do not include findings that cannot be tied to a concrete location, PR metadata item, or changed project artifact. For PR-level issues, use `PR description`, `branch history`, `CI checks`, or the linked `issue #<N>` as the location.
 
 ## Output
 
@@ -171,7 +171,7 @@ Finally, report to the user in Finnish (Claude's chat replies are the only Finni
 - Verdict (PASS / FAIL).
 - Number of blocking findings if FAIL.
 - Link to the review comment on GitHub.
-- For FAIL: suggest running `/codereview` again after fixing (the autonomous flow does this automatically — up to 3 review rounds before the issue is handed back to the human).
+- For FAIL: suggest running `/codereview` again after fixing (the autonomous flow does this automatically — up to 3 review rounds before the issue is flagged for a human look).
 
 ## Autonomy fallback
 
