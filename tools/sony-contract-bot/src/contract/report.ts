@@ -39,7 +39,6 @@ export const renderDiffReport = (diff: ManifestDiff): string => {
   lines.push('- /api/games/new')
   lines.push('- /api/games/upcoming')
   lines.push('- /api/games/discounted')
-  lines.push('- /api/games/search')
   lines.push('- /api/games/:id')
   lines.push('')
 

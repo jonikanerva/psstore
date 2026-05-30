@@ -4,7 +4,6 @@ export const contractFeatureSchema = z.enum([
   'new',
   'upcoming',
   'discounted',
-  'search',
   'details',
 ])
 

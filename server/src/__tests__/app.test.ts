@@ -7,7 +7,17 @@ const withServer = async (
 ): Promise<{ status: number; contentType: string; body: string }> => {
   const { createApp } = await import('../app.js')
   const app = createApp()
-  const server = app.listen(0)
+  // Binding to an explicit host makes listen() asynchronous, so wait for the
+  // `listening` event before reading the allocated address.
+  const server = await new Promise<ReturnType<typeof app.listen>>(
+    (resolve, reject) => {
+      const listener = app.listen(0, '127.0.0.1')
+      listener.once('listening', () => {
+        resolve(listener)
+      })
+      listener.once('error', reject)
+    },
+  )
 
   try {
     const address = server.address()

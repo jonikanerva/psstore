@@ -6,7 +6,6 @@ const features: ContractFeature[] = [
   'new',
   'upcoming',
   'discounted',
-  'search',
   'details',
 ]
 

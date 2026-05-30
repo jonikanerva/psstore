@@ -2,7 +2,6 @@ export type ContractFeature =
   | 'new'
   | 'upcoming'
   | 'discounted'
-  | 'search'
   | 'details'
 
 export interface ContractOperation {
