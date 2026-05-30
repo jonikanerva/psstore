@@ -1,11 +1,10 @@
+import { useQuery } from '@tanstack/react-query'
 import DOMPurify from 'dompurify'
 import { DateTime } from 'luxon'
-import { useEffect, useState } from 'react'
-import { fetchGame, metacriticLink, type Game } from '../modules/psnStore'
+import { fetchGame, metacriticLink } from '../modules/psnStore'
 import Error from './Error'
 import Image from './Image'
 import Loading from './Spinner'
-import './GameDetailsPage.css'
 
 interface GameDetailsPageProps {
   gameId: string
@@ -23,40 +22,21 @@ const formatDate = (value: string): string => {
 }
 
 const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
-  const [game, setGame] = useState<Game | null>(null)
-  const [loading, setLoading] = useState<boolean>(true)
-  const [error, setError] = useState<boolean>(false)
+  const {
+    data: game,
+    isPending,
+    isError,
+  } = useQuery({
+    queryKey: ['game', gameId],
+    queryFn: () => fetchGame(gameId),
+    enabled: gameId !== '',
+  })
 
-  useEffect(() => {
-    let cancelled = false
-
-    fetchGame(gameId)
-      .then((resolved) => {
-        if (!cancelled) {
-          setGame(resolved)
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setError(true)
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setLoading(false)
-        }
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [gameId])
-
-  if (loading) {
-    return <Loading loading={loading} />
+  if (isPending) {
+    return <Loading loading />
   }
 
-  if (error || !game) {
+  if (isError) {
     return <Error message="Game not found" />
   }
 
@@ -137,6 +117,8 @@ const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
       {hasDescription && (
         <section className="details-page--section">
           <h2>Description</h2>
+          {/* XSS boundary: Sony's description HTML is untrusted and is sanitised
+              with DOMPurify before injection. Do not remove or reorder (da #5). */}
           <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(game.description) }} />
         </section>
       )}

@@ -1,19 +1,17 @@
+import { Outlet, useRouterState } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
-import { Outlet, useLocation } from 'react-router-dom'
+import { SearchContext } from '../modules/searchContext'
 import Navigation from './Navigation'
-import './AppShell.css'
-
-export type SearchContext = { readonly query: string }
 
 const AppShell = () => {
   const [query, setQuery] = useState('')
-  const location = useLocation()
+  const pathname = useRouterState({ select: (state) => state.location.pathname })
 
+  // Clear the search when the route changes — the search is per-view and never
+  // remembered (ux condition 3).
   useEffect(() => {
     setQuery('')
-  }, [location.pathname])
-
-  const context: SearchContext = { query }
+  }, [pathname])
 
   return (
     <div className="app-shell">
@@ -35,7 +33,9 @@ const AppShell = () => {
         />
       </header>
       <main className="app-shell--main">
-        <Outlet context={context} />
+        <SearchContext.Provider value={query}>
+          <Outlet />
+        </SearchContext.Provider>
       </main>
     </div>
   )

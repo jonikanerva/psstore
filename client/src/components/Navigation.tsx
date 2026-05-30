@@ -1,21 +1,28 @@
-import { NavLink } from 'react-router-dom'
-
-import './Navigation.css'
-
-const navClass = ({ isActive }: { isActive: boolean }): string =>
-  `navigation--link ${isActive ? 'navigation--active' : ''}`
+import { Link } from '@tanstack/react-router'
 
 const Navigation = () => (
   <nav className="navigation" aria-label="Top navigation">
-    <NavLink to="/new" className={navClass}>
+    <Link
+      to="/new"
+      className="navigation--link"
+      activeProps={{ className: 'navigation--link navigation--active' }}
+    >
       New
-    </NavLink>
-    <NavLink to="/upcoming" className={navClass}>
+    </Link>
+    <Link
+      to="/upcoming"
+      className="navigation--link"
+      activeProps={{ className: 'navigation--link navigation--active' }}
+    >
       Upcoming
-    </NavLink>
-    <NavLink to="/discounted" className={navClass}>
+    </Link>
+    <Link
+      to="/discounted"
+      className="navigation--link"
+      activeProps={{ className: 'navigation--link navigation--active' }}
+    >
       Discounted
-    </NavLink>
+    </Link>
   </nav>
 )
 

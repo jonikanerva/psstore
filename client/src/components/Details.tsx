@@ -1,9 +1,8 @@
-import { useParams } from 'react-router-dom'
+import { useParams } from '@tanstack/react-router'
 import GameDetailsPage from './GameDetailsPage'
 
 const Details = () => {
-  const params = useParams<{ gameId: string }>()
-  const gameId = params.gameId || ''
+  const { gameId } = useParams({ from: '/g/$gameId' })
   return <GameDetailsPage gameId={gameId} />
 }
 
