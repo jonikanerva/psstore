@@ -1,12 +1,23 @@
-# PS Store (Client/Server Monorepo)
+# PS Store
+
+A fast, utilitarian view of the Finnish PlayStation Store. It shows new, upcoming, and
+discounted **PS5 games** in the Finnish store, priced in **EUR** with both the standard and
+**PS Plus** price visible — without the carousels, mixed platforms, and non-game products of
+`store.playstation.com`. Open the page, see what's new, click out to Sony to buy. No accounts,
+no preferences, no tracking.
+
+The backend proxies and normalises Sony's public GraphQL API into a clean REST surface scoped
+to PS5 / Finland / EUR; the frontend renders what the backend returns.
 
 ## Architecture
 
-- `client/` - Vite + React SPA
-- `server/` - Express API + Railway runtime
-- `shared/` - shared types, schemas, and utilities
+- `client/` — Vite + React SPA (TanStack Router, TanStack Query, Tailwind CSS)
+- `server/` — `@effect/platform` HttpApi backend on Effect (typed REST + in-memory Effect `Cache`), Railway runtime
+- `shared/` — Effect Schema types, schemas, and utilities shared across server and client
+- `tools/sony-contract-bot/` — captures and validates Sony's GraphQL contract
 
-The browser talks only to `/api/*`. The server handles Sony GraphQL requests and normalizes data.
+The browser talks only to `/api/*`. The server handles Sony GraphQL requests, decodes and
+narrows the data at the Schema boundary, and serves the normalised result.
 
 ## Development
 
@@ -21,13 +32,15 @@ pnpm run dev
 
 ## Quality Gates
 
-There is no remote CI for this repository. Every contributor MUST run the full local gate before committing and before opening a PR:
+There is no remote CI for this repository. Every contributor MUST run the full local gate
+before committing and before opening a PR:
 
 ```bash
 pnpm test-all
 ```
 
-This runs type-check, lint, build, tests, and the Sony contract validate + diff steps in order. Individual stages can also be run on their own while iterating:
+This runs type-check, lint, build, tests, and the Sony contract validate + diff steps in
+order. Individual stages can also be run while iterating:
 
 ```bash
 pnpm run lint
@@ -38,14 +51,8 @@ pnpm run build
 
 ## Sony Contract Tooling (Hardcoded Scope)
 
-Tooling scope is fixed and immutable:
-
-- region: `fi`
-- locale: `fi-fi`
-- currency: `EUR`
-- platform: `PS5`
-
-No sign-in is required.
+Tooling scope is fixed and immutable: region `fi`, locale `fi-fi`, currency `EUR`, platform
+`PS5`. No sign-in is required.
 
 ```bash
 # capture + normalize + validate + diff
@@ -66,7 +73,8 @@ pnpm run build
 pnpm run start
 ```
 
-Railway should run the Node server (`pnpm run start`). In production, Express serves `client/build` and handles SPA fallback routing.
+Railway runs the Node server (`pnpm run start`). In production the server serves
+`client/build` and handles SPA fallback routing.
 
 ## Environment Variables
 
@@ -75,7 +83,10 @@ Railway should run the Node server (`pnpm run start`). In production, Express se
 - `SONY_GRAPHQL_URL` (default: `https://web.np.playstation.com/api/graphql/v1/op`)
 - `SONY_CATEGORY_GRID_HASH`
 - `SONY_CATEGORY_ID`
+- `SONY_DEALS_CATEGORY_ID`
 - `SONY_OPERATION_NAME`
+- `SONY_PRODUCT_OPERATION_NAME`
+- `SONY_PRODUCT_BY_ID_HASH`
 - `SONY_LOCALE`
 - `SONY_RETRY_COUNT`
 - `SONY_TIMEOUT_MS`
