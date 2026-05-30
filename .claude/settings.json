@@ -109,13 +109,9 @@
     ]
   },
   "sandbox": {
-    "excludedCommands": [
-      "open"
-    ],
+    "excludedCommands": ["open"],
     "filesystem": {
-      "allowWrite": [
-        "~/.gnupg"
-      ]
+      "allowWrite": ["~/.gnupg"]
     }
   },
   "env": {

@@ -38,7 +38,7 @@ git branch --show-current
 
 ### Step 3.0: Documentation grounding (blocking, per `STACK.md → Documentation protocol`)
 
-Before writing or editing any code that imports a package in the `STACK.md` pinned-version table, query Context7 for that package, version-pinned, with a task-specific question. You **MUST NOT** write library code from memory — Effect priors in particular drift to v2 / v4-beta. For each package touched, record in the PR description: the Context7 ID queried, the question asked, and the API shape it confirmed. **A package seam with no corresponding grounding entry is an incomplete change — `qa-enforcer` will FAIL it.** The riskiest grounding is the glue *between* packages (e.g. wiring an Effect service `Layer` into an HttpApi handler): when a seam spans two packages, ground both sides.
+Before writing or editing any code that imports a package in the `STACK.md` pinned-version table, query Context7 for that package, version-pinned, with a task-specific question. You **MUST NOT** write library code from memory — Effect priors in particular drift to v2 / v4-beta. For each package touched, record in the PR description: the Context7 ID queried, the question asked, and the API shape it confirmed. **A package seam with no corresponding grounding entry is an incomplete change — `qa-enforcer` will FAIL it.** The riskiest grounding is the glue _between_ packages (e.g. wiring an Effect service `Layer` into an HttpApi handler): when a seam spans two packages, ground both sides.
 
 ### Step 3: Implement the change
 

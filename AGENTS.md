@@ -285,7 +285,7 @@ When implementing a change:
 5. Keep heavy work off the UI thread.
 6. Keep async work cancellable.
 7. Prefer the smallest framework-native solution that fits.
-8. **Before writing or editing any code that uses an approved dependency, retrieve its version-pinned docs via Context7** per `STACK.md → Documentation protocol`. Never write library code from memory (Effect priors in particular drift to v2 / v4-beta). Ground the glue *between* packages, not just each call.
+8. **Before writing or editing any code that uses an approved dependency, retrieve its version-pinned docs via Context7** per `STACK.md → Documentation protocol`. Never write library code from memory (Effect priors in particular drift to v2 / v4-beta). Ground the glue _between_ packages, not just each call.
 9. Run `$FORMAT_CMD` then `$VERIFY_CMD`. Never invoke underlying tools directly.
 10. Update previews / stories / fixtures if UI surfaces changed.
 11. Update tests for logic changes.
