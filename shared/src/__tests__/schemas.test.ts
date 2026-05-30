@@ -1,3 +1,4 @@
+import { Either, Schema } from 'effect'
 import { describe, expect, it } from 'vitest'
 import { gameSchema } from '../schemas/game.js'
 
@@ -19,19 +20,22 @@ const baseGame = {
   plusUpsellText: null,
 }
 
+const decode = Schema.decodeUnknownSync(gameSchema)
+const decodeEither = Schema.decodeUnknownEither(gameSchema)
+
 describe('game schema', () => {
   it('rejects invalid payload', () => {
-    const result = gameSchema.safeParse({ id: '1' })
-    expect(result.success).toBe(false)
+    const result = decodeEither({ id: '1' })
+    expect(Either.isLeft(result)).toBe(true)
   })
 
   it('defaults idKind to "product" when absent (back-compat)', () => {
-    const parsed = gameSchema.parse(baseGame)
+    const parsed = decode(baseGame)
     expect(parsed.idKind).toBe('product')
   })
 
   it('round-trips an explicit concept idKind', () => {
-    const parsed = gameSchema.parse({ ...baseGame, idKind: 'concept' })
+    const parsed = decode({ ...baseGame, idKind: 'concept' })
     expect(parsed.idKind).toBe('concept')
   })
 })

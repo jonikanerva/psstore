@@ -1,36 +1,41 @@
-import { z } from 'zod'
+import { Either, Schema } from 'effect'
 
 /**
- * Zod boundary schema for Sony's `data.productRetrieve` node
+ * Effect Schema boundary schema for Sony's `data.productRetrieve` node
  * (operation `metGetProductById`).
  *
- * Deliberately tolerant (STACK.md §7 requires zod-validated parsing of every
- * external response, AGENTS.md §6.1 keeps decoding in the service layer): every
- * field is optional and unknown keys pass through (Zod 4 `z.looseObject`, the
- * non-deprecated replacement for `.passthrough()`), so a Sony shape change
- * degrades to empty description / genres rather than throwing and failing the
- * request. Only the fields the PDP enrichment reads are described.
+ * Deliberately tolerant (STACK.md scope-at-the-boundary; this is a DEFENSIVE
+ * boundary, not the scope filter): every field is optional and unknown keys are
+ * preserved (`onExcessProperty: "preserve"`, the Effect equivalent of the
+ * previous zod `z.looseObject`), so a Sony shape change degrades to empty
+ * description / genres rather than throwing and failing the request. Only the
+ * fields the PDP enrichment reads are described. Do NOT tighten this — see
+ * devils-advocate correction #6.
  */
-const sonyDescriptionSchema = z.looseObject({
-  type: z.string().optional(),
-  subType: z.string().nullish(),
-  value: z.string().optional(),
+const sonyDescriptionSchema = Schema.Struct({
+  type: Schema.optional(Schema.String),
+  subType: Schema.optional(Schema.NullOr(Schema.String)),
+  value: Schema.optional(Schema.String),
 })
 
-const sonyLocalizedGenreSchema = z.looseObject({
-  value: z.string().optional(),
+const sonyLocalizedGenreSchema = Schema.Struct({
+  value: Schema.optional(Schema.String),
 })
 
-export const productRetrieveSchema = z.looseObject({
-  id: z.string().optional(),
-  releaseDate: z.string().optional(),
-  publisherName: z.string().optional(),
-  storeDisplayClassification: z.string().optional(),
-  descriptions: z.array(sonyDescriptionSchema).optional(),
-  combinedLocalizedGenres: z.array(sonyLocalizedGenreSchema).optional(),
+export const productRetrieveSchema = Schema.Struct({
+  id: Schema.optional(Schema.String),
+  releaseDate: Schema.optional(Schema.String),
+  publisherName: Schema.optional(Schema.String),
+  storeDisplayClassification: Schema.optional(Schema.String),
+  descriptions: Schema.optional(Schema.Array(sonyDescriptionSchema)),
+  combinedLocalizedGenres: Schema.optional(Schema.Array(sonyLocalizedGenreSchema)),
 })
 
-export type ProductRetrieveNode = z.infer<typeof productRetrieveSchema>
+export type ProductRetrieveNode = typeof productRetrieveSchema.Type
+
+const decode = Schema.decodeUnknownEither(productRetrieveSchema, {
+  onExcessProperty: 'preserve',
+})
 
 /**
  * Parse the `productRetrieve` node defensively. Returns the validated node, or
@@ -42,6 +47,6 @@ export const parseProductRetrieve = (node: unknown): ProductRetrieveNode | null 
     return null
   }
 
-  const result = productRetrieveSchema.safeParse(node)
-  return result.success ? result.data : null
+  const result = decode(node)
+  return Either.isRight(result) ? result.right : null
 }

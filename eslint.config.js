@@ -65,6 +65,35 @@ module.exports = [
     },
   },
   {
+    // The `@effect/platform` HttpApi surface is confined to exactly three server
+    // modules (the typed API definition, its handlers, and the HTTP composition
+    // root). Everything else — domain, services, the Sony client — stays
+    // framework-free so the interface layer never couples to transport
+    // internals (CLAUDE.md → Architecture; STACK.md §0 layering). CI gate.
+    files: ['server/src/**/*.ts'],
+    ignores: [
+      'server/src/api/gamesApi.ts',
+      'server/src/api/gamesHandlers.ts',
+      'server/src/http/server.ts',
+      // The app integration test boots the API through the platform web handler.
+      'server/src/__tests__/app.test.ts',
+    ],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@effect/platform', '@effect/platform/*', '@effect/platform-node', '@effect/platform-node/*'],
+              message:
+                'Import @effect/platform only from api/gamesApi.ts, api/gamesHandlers.ts, or http/server.ts (HttpApi is confined to the interface layer).',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     // Test files contain async mock implementations that match the signature
     // of the function they replace, but their bodies have no `await`. That is
     // idiomatic for vi.fn mocks; relax `require-await` here.

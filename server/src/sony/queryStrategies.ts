@@ -1,4 +1,4 @@
-import { env } from '../config/env.js'
+import type { AppConfig } from '../config/env.js'
 
 export type SonyFeature = 'new' | 'upcoming' | 'discounted'
 
@@ -15,9 +15,12 @@ export interface SonyQueryStrategy {
   buildVariables: (context: StrategyContext) => Record<string, unknown>
 }
 
-const baseVariables = (context: StrategyContext): Record<string, unknown> => ({
-  id: env.SONY_CATEGORY_ID,
-  locale: env.SONY_LOCALE,
+const baseVariables = (
+  config: AppConfig,
+  context: StrategyContext,
+): Record<string, unknown> => ({
+  id: config.SONY_CATEGORY_ID,
+  locale: config.SONY_LOCALE,
   pageArgs: { size: context.size ?? 300, offset: context.offset ?? 0 },
   sortBy: { name: 'conceptReleaseDate', isAscending: false },
   filterBy: ['targetPlatforms:PS5'],
@@ -25,34 +28,37 @@ const baseVariables = (context: StrategyContext): Record<string, unknown> => ({
 })
 
 const strategy = (
+  config: AppConfig,
   feature: SonyFeature,
   fallbackKey: SonyQueryStrategy['fallbackKey'],
   buildVariables: SonyQueryStrategy['buildVariables'],
 ): SonyQueryStrategy => ({
   feature,
-  operationName: env.SONY_OPERATION_NAME,
-  persistedQueryHash: env.SONY_CATEGORY_GRID_HASH,
+  operationName: config.SONY_OPERATION_NAME,
+  persistedQueryHash: config.SONY_CATEGORY_GRID_HASH,
   fallbackKey,
   buildVariables,
 })
 
-export const sonyStrategies: Record<SonyFeature, SonyQueryStrategy> = {
+export const buildStrategies = (
+  config: AppConfig,
+): Record<SonyFeature, SonyQueryStrategy> => ({
   // NEW uses Sony's released-twin facet of UPCOMING's `next_thirty_days` token.
   // `conceptReleaseDate:last_thirty_days` ("Juuri julkaistut") bounds the grid to
   // the released PS5 window, so genuinely recent releases are no longer stranded
   // beyond a blind day-granular prefix (see the spike doc, section B). Keeps the
   // `conceptReleaseDate`-desc sort from baseVariables.
-  new: strategy('new', 'base', (context) => ({
-    ...baseVariables(context),
+  new: strategy(config, 'new', 'base', (context) => ({
+    ...baseVariables(config, context),
     filterBy: ['targetPlatforms:PS5', 'conceptReleaseDate:last_thirty_days'],
   })),
-  upcoming: strategy('upcoming', 'upcoming', (context) => ({
-    ...baseVariables(context),
+  upcoming: strategy(config, 'upcoming', 'upcoming', (context) => ({
+    ...baseVariables(config, context),
     filterBy: ['targetPlatforms:PS5', 'conceptReleaseDate:next_thirty_days'],
   })),
-  discounted: strategy('discounted', 'discounted', (context) => ({
-    ...baseVariables(context),
-    id: env.SONY_DEALS_CATEGORY_ID,
+  discounted: strategy(config, 'discounted', 'discounted', (context) => ({
+    ...baseVariables(config, context),
+    id: config.SONY_DEALS_CATEGORY_ID,
     filterBy: ['targetPlatforms:PS5'],
   })),
-}
+})

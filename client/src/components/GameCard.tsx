@@ -1,8 +1,7 @@
+import { Link } from '@tanstack/react-router'
 import { DateTime } from 'luxon'
-import { Link } from 'react-router-dom'
 import type { Game } from '@psstore/shared'
 import Image from './Image'
-import './GameCard.css'
 
 interface GameCardProps {
   game: Game
@@ -75,7 +74,7 @@ const GameCard = ({ game }: GameCardProps) => {
   }
 
   return (
-    <Link className="game-card" to={`/g/${game.id}`}>
+    <Link className="game-card" to="/g/$gameId" params={{ gameId: game.id }}>
       {body}
     </Link>
   )

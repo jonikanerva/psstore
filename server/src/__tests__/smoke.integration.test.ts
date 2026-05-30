@@ -1,13 +1,24 @@
+import { Effect, Layer } from 'effect'
 import { describe, expect, it } from 'vitest'
-import { fetchConceptsByFeature } from '../sony/sonyClient.js'
+import { EnvLive } from '../config/env.js'
 import { conceptToGame } from '../sony/mapper.js'
+import { SonyClient, SonyClientLive } from '../sony/sonyClient.js'
 
 const SMOKE = process.env['SMOKE'] === '1'
 const describeSmoke = SMOKE ? describe : describe.skip
 
+const LiveClient = SonyClientLive.pipe(Layer.provide(EnvLive))
+
+const fetchConcepts = (feature: 'new' | 'upcoming' | 'discounted', size: number) =>
+  SonyClient.pipe(
+    Effect.flatMap((client) => client.fetchConceptsByFeature(feature, size)),
+    Effect.provide(LiveClient),
+    Effect.runPromise,
+  )
+
 describeSmoke('Sony API smoke tests (SMOKE=1)', () => {
   it('new: returns non-empty game list', async () => {
-    const concepts = await fetchConceptsByFeature('new', 10)
+    const concepts = await fetchConcepts('new', 10)
     expect(concepts.length).toBeGreaterThan(0)
 
     const games = concepts.map(conceptToGame)
@@ -19,7 +30,7 @@ describeSmoke('Sony API smoke tests (SMOKE=1)', () => {
   }, 15_000)
 
   it('discounted: returns non-empty game list', async () => {
-    const concepts = await fetchConceptsByFeature('discounted', 10)
+    const concepts = await fetchConcepts('discounted', 10)
     expect(concepts.length).toBeGreaterThan(0)
 
     const games = concepts.map(conceptToGame)
@@ -29,8 +40,7 @@ describeSmoke('Sony API smoke tests (SMOKE=1)', () => {
   }, 15_000)
 
   it('upcoming: returns concepts', async () => {
-    const concepts = await fetchConceptsByFeature('upcoming', 10)
-    // Upcoming may legitimately be empty if no games launch in 30 days
+    const concepts = await fetchConcepts('upcoming', 10)
     expect(Array.isArray(concepts)).toBe(true)
   }, 15_000)
 })

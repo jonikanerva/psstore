@@ -1,62 +1,69 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { Etag, HttpLayerRouter, HttpPlatform } from '@effect/platform'
+import { NodeContext } from '@effect/platform-node'
+import { Effect, Layer } from 'effect'
+import { afterAll, describe, expect, it } from 'vitest'
+import { gamesApi } from '../api/gamesApi.js'
+import { gamesGroupLive } from '../api/gamesHandlers.js'
+import { GamesServiceLive } from '../services/gamesService.js'
+import { SonyClient } from '../sony/sonyClient.js'
+import type { Concept } from '../sony/types.js'
+import { EnvLive } from '../config/env.js'
 
-const envBackup = { ...process.env }
-
-const withServer = async (
-  path: string,
-): Promise<{ status: number; contentType: string; body: string }> => {
-  const { createApp } = await import('../app.js')
-  const app = createApp()
-  // Binding to an explicit host makes listen() asynchronous, so wait for the
-  // `listening` event before reading the allocated address.
-  const server = await new Promise<ReturnType<typeof app.listen>>(
-    (resolve, reject) => {
-      const listener = app.listen(0, '127.0.0.1')
-      listener.once('listening', () => {
-        resolve(listener)
-      })
-      listener.once('error', reject)
-    },
-  )
-
-  try {
-    const address = server.address()
-    if (!address || typeof address === 'string') {
-      throw new Error('Failed to allocate test port')
-    }
-
-    const response = await fetch(`http://127.0.0.1:${String(address.port)}${path}`)
-    const body = await response.text()
-    return {
-      status: response.status,
-      contentType: response.headers.get('content-type') ?? '',
-      body,
-    }
-  } finally {
-    await new Promise<void>((resolve, reject) => {
-      server.close((error) => {
-        if (error) {
-          reject(error)
-          return
-        }
-        resolve()
-      })
-    })
-  }
+// A fake SonyClient: NEW returns one valid product SKU; product detail returns a
+// past release date so the released gate keeps it. No network, no real env.
+const productId = 'EP0001-PPSA00001_00-ALPHA00000000000'
+const concept: Concept = {
+  id: '1',
+  name: 'Alpha',
+  media: [{ type: 'IMAGE', role: 'MASTER', url: 'https://img/alpha' }],
+  price: { basePrice: '€29.95', discountedPrice: '€29.95', serviceBranding: ['NONE'] },
+  products: [{ id: productId }],
 }
 
-afterEach(() => {
-  vi.resetModules()
-  process.env = { ...envBackup }
+const FakeSony = Layer.succeed(SonyClient, {
+  fetchConceptsByFeature: (feature) =>
+    Effect.succeed(feature === 'new' ? [concept] : []),
+  fetchProductDetail: () =>
+    Effect.succeed({ releaseDate: '2024-01-01T00:00:00Z', genres: [], description: '' }),
 })
 
-describe('app production routing', () => {
-  it('does not route unknown /api paths to SPA fallback', async () => {
-    process.env.NODE_ENV = 'production'
+const Services = GamesServiceLive.pipe(Layer.provide(FakeSony), Layer.provide(EnvLive))
 
-    const response = await withServer('/api/missing-route')
+const PlatformLive = Layer.mergeAll(
+  HttpPlatform.layer.pipe(Layer.provide(NodeContext.layer)),
+  Etag.layer,
+  NodeContext.layer,
+)
+
+const AppLive = HttpLayerRouter.addHttpApi(gamesApi).pipe(
+  Layer.provide(gamesGroupLive),
+  Layer.provide(Services),
+  Layer.provide(PlatformLive),
+)
+
+const { handler, dispose } = HttpLayerRouter.toWebHandler(AppLive)
+
+afterAll(async () => {
+  await dispose()
+})
+
+describe('games HTTP API', () => {
+  it('serves the NEW list as typed JSON', async () => {
+    const response = await handler(new Request('http://localhost/api/games/new'))
+    expect(response.status).toBe(200)
+    const body = (await response.json()) as { games: { id: string }[]; totalCount: number }
+    expect(body.totalCount).toBe(1)
+    expect(body.games[0]?.id).toBe(productId)
+  })
+
+  it('maps a missing game id to 404', async () => {
+    const response = await handler(new Request('http://localhost/api/games/EP0001-PPSA09999_00-MISSING000000000'))
     expect(response.status).toBe(404)
-    expect(response.contentType).toContain('application/json')
-    expect(response.body).toContain('"code"')
+  })
+
+  it('rejects an out-of-range page size at the boundary', async () => {
+    const response = await handler(new Request('http://localhost/api/games/new?size=500'))
+    expect(response.status).toBeGreaterThanOrEqual(400)
+    expect(response.status).toBeLessThan(500)
   })
 })

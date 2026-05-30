@@ -40,7 +40,7 @@ describe('validateBackendCompatibility', () => {
   it('accepts compatible manifest', () => {
     const context = {
       serverEnvText:
-        "SONY_GRAPHQL_URL: z.string().url().default('https://web.np.playstation.com/api/graphql/v1/op')\nSONY_OPERATION_NAME: z.string().default('categoryGridRetrieve')",
+        "SONY_GRAPHQL_URL: Config.string('SONY_GRAPHQL_URL').pipe(Config.withDefault('https://web.np.playstation.com/api/graphql/v1/op'))\nSONY_OPERATION_NAME: Config.string('SONY_OPERATION_NAME').pipe(Config.withDefault('categoryGridRetrieve'))",
       sonyClientText:
         "headers: { 'x-apollo-operation-name': strategy.operationName }\nreturn json.data?.categoryGridRetrieve?.concepts ?? []",
       mapperText: 'export const conceptToGame = (concept) => concept',

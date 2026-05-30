@@ -1,34 +1,35 @@
+import { Either, Schema } from 'effect'
 import { describe, expect, it } from 'vitest'
 import { gameIdParamSchema, paginationQuerySchema } from '../validation/schemas.js'
 
+const decodeId = Schema.decodeUnknownEither(gameIdParamSchema)
+const decodePagination = Schema.decodeUnknownEither(paginationQuerySchema)
+const decodePaginationSync = Schema.decodeUnknownSync(paginationQuerySchema)
+
 describe('gameIdParamSchema', () => {
   it('rejects missing id', () => {
-    const result = gameIdParamSchema.safeParse({})
-    expect(result.success).toBe(false)
+    expect(Either.isLeft(decodeId({}))).toBe(true)
   })
 
   it('accepts valid id', () => {
-    const result = gameIdParamSchema.safeParse({ id: 'EP0001-PPSA01234_00-TEST' })
-    expect(result.success).toBe(true)
+    expect(Either.isRight(decodeId({ id: 'EP0001-PPSA01234_00-TEST' }))).toBe(true)
   })
 })
 
 describe('paginationQuerySchema', () => {
   it('uses defaults for empty query', () => {
-    const result = paginationQuerySchema.parse({})
-    expect(result).toEqual({ offset: 0, size: 60 })
+    expect(decodePaginationSync({})).toEqual({ offset: 0, size: 60 })
   })
 
   it('parses string values', () => {
-    const result = paginationQuerySchema.parse({ offset: '60', size: '30' })
-    expect(result).toEqual({ offset: 60, size: 30 })
+    expect(decodePaginationSync({ offset: '60', size: '30' })).toEqual({ offset: 60, size: 30 })
   })
 
   it('rejects size above max 120', () => {
-    expect(paginationQuerySchema.safeParse({ size: '500' }).success).toBe(false)
+    expect(Either.isLeft(decodePagination({ size: '500' }))).toBe(true)
   })
 
   it('rejects negative offset', () => {
-    expect(paginationQuerySchema.safeParse({ offset: '-1' }).success).toBe(false)
+    expect(Either.isLeft(decodePagination({ offset: '-1' }))).toBe(true)
   })
 })

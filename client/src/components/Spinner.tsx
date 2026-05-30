@@ -1,5 +1,3 @@
-import './Spinner.css'
-
 const Spinner = () => (
   <div className="spinner--modal">
     <div className="spinner" />

@@ -1,0 +1,374 @@
+@import 'tailwindcss';
+
+/*
+ * Tailwind CSS v4 is the styling pipeline (loaded via @tailwindcss/vite). The
+ * surface is a faithful 1:1 port of the previous per-component stylesheets,
+ * consolidated into this single entry sheet — same selectors, same pixels, no
+ * redesign and no new chrome (ux condition 4). Tailwind utilities are available
+ * for any future work; the existing markup keeps its semantic class names.
+ */
+
+* {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+:root {
+  --text-color: #15171a;
+  --muted-text-color: #59606a;
+  --border-color: #d6dbe1;
+  --surface-color: #fff;
+  --field-color: #f6f8fa;
+  --button-color: #f2f4f7;
+  --background-color: #eef2f6;
+  --focus-color: #0b74d1;
+}
+
+body {
+  background-color: var(--background-color);
+  color: var(--text-color);
+}
+
+.app-shell {
+  min-height: 100vh;
+}
+
+.app-shell--header {
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--surface-color);
+}
+
+.app-shell--brand {
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.app-shell--search {
+  justify-self: end;
+  min-width: 0;
+  width: 220px;
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 14px;
+  color: inherit;
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+}
+
+.app-shell--search:focus {
+  outline: 2px solid var(--border-color);
+  outline-offset: 1px;
+}
+
+.app-shell--main {
+  padding: 12px 16px 24px;
+}
+
+@media (width <= 980px) {
+  .app-shell--header {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .app-shell--search {
+    justify-self: stretch;
+    width: auto;
+  }
+}
+
+.navigation {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.navigation--link {
+  color: var(--muted-text-color);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  padding: 6px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: var(--button-color);
+}
+
+.navigation--active {
+  color: var(--text-color);
+  border-color: var(--text-color);
+}
+
+.navigation--link:focus-visible {
+  outline: 2px solid var(--focus-color);
+  outline-offset: 1px;
+}
+
+.games--content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 1320px;
+  margin: 0 auto;
+}
+
+.games--grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 250px));
+  gap: 10px;
+}
+
+.games--sentinel {
+  display: flex;
+  justify-content: center;
+  padding: 16px 0;
+  min-height: 1px;
+}
+
+.game-card {
+  color: inherit;
+  text-decoration: none;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--surface-color);
+  overflow: hidden;
+}
+
+.game-card--image-wrap {
+  aspect-ratio: 1;
+  background: var(--field-color);
+  overflow: hidden;
+}
+
+.game-card--image-wrap .image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.game-card--body {
+  padding: 8px;
+}
+
+.game-card--name {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.3;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  min-height: 36px;
+}
+
+.game-card--meta {
+  margin-top: 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.game-card--date {
+  font-size: 12px;
+  color: var(--muted-text-color);
+}
+
+.game-card--price {
+  font-weight: 700;
+  font-size: 14px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.game-card--original-price {
+  color: var(--muted-text-color);
+  font-weight: 400;
+  font-size: 12px;
+  margin-right: 4px;
+}
+
+.game-card--plus {
+  display: block;
+  font-weight: 400;
+  font-size: 12px;
+  color: var(--muted-text-color);
+  margin-top: 2px;
+}
+
+.game-card:focus-visible {
+  outline: 2px solid var(--focus-color);
+  outline-offset: 1px;
+}
+
+.details-page {
+  max-width: 1120px;
+  margin: 0 auto;
+}
+
+.details-page--summary {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--surface-color);
+  padding: 12px;
+}
+
+.details-page--cover {
+  min-height: 320px;
+  background: var(--field-color);
+}
+
+.details-page--info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.details-page--title {
+  font-size: 24px;
+  line-height: 1.2;
+}
+
+.details-page--meta-list {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  margin: 0;
+}
+
+.details-page--meta-list dt {
+  color: var(--muted-text-color);
+}
+
+.details-page--meta-list dd {
+  margin: 0;
+}
+
+.details-page--actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.details-page--link {
+  text-decoration: none;
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 6px 10px;
+  background: var(--button-color);
+}
+
+.details-page--section {
+  margin-top: 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--surface-color);
+  padding: 12px;
+}
+
+.details-page--media-grid {
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.details-page--media-item {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.details-page--video {
+  width: 100%;
+  border-radius: 8px;
+}
+
+.details-page--link:focus-visible {
+  outline: 2px solid var(--focus-color);
+  outline-offset: 1px;
+}
+
+@media (width <= 760px) {
+  .details-page--summary {
+    grid-template-columns: 1fr;
+  }
+
+  .details-page--cover {
+    min-height: 260px;
+  }
+}
+
+.image {
+  border-radius: 3px;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  overflow: hidden;
+}
+
+.error {
+  font-size: 20px;
+  font-weight: bold;
+  padding: 0 15px;
+}
+
+.spinner--modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  z-index: 50;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+    visibility: visible;
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner {
+  animation: spin 1.5s infinite linear;
+  animation-delay: 300ms;
+  display: inline-block;
+  visibility: hidden;
+  content: '';
+  border-radius: 50%;
+  transform: translateZ(0);
+  box-sizing: border-box;
+  background: none;
+  width: 60px;
+  height: 60px;
+  border: 3px solid rgb(0 0 0 / 30%);
+  border-left-color: #363738;
+  border-width: 3px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  margin-top: -30px;
+  margin-left: -30px;
+}

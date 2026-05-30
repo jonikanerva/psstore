@@ -12,7 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "zod": "^4.4.3"
+    "effect": "3.21.2"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",

@@ -1,64 +1,43 @@
-import type { Game as GameObject, PageResult } from '@psstore/shared'
+import type { PageResult } from '@psstore/shared'
 import { filterGamesByName } from '@psstore/shared'
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { useOutletContext } from 'react-router-dom'
-import type { SearchContext } from './AppShell'
+import { useInfiniteQuery } from '@tanstack/react-query'
+import { useEffect, useRef } from 'react'
+import { useSearchQuery } from '../modules/searchContext'
 import Error from './Error'
 import GameCard from './GameCard'
 import ScrollToTopOnMount from './ScrollToTopOnMount'
 import Loading from './Spinner'
-import './Games.css'
 
 const PAGE_SIZE = 60
 
 interface GamesProps {
-  label: string
+  feature: 'new' | 'upcoming' | 'discounted'
   fetch: (offset: number, size: number) => Promise<PageResult>
   emptyMessage?: string
 }
 
-const Games = ({ label, fetch, emptyMessage = 'No games found' }: GamesProps) => {
-  const { query } = useOutletContext<SearchContext>()
-  const [games, setGames] = useState<GameObject[]>([])
-  const [loading, setLoading] = useState(true)
-  const [loadingMore, setLoadingMore] = useState(false)
-  const [error, setError] = useState(false)
-  const [nextOffset, setNextOffset] = useState<number | null>(null)
+const Games = ({ feature, fetch, emptyMessage = 'No games found' }: GamesProps) => {
+  const query = useSearchQuery()
   const sentinelRef = useRef<HTMLDivElement>(null)
 
-  const loadPage = useCallback(
-    async (offset: number, append: boolean) => {
-      if (append) {
-        setLoadingMore(true)
-      } else {
-        setLoading(true)
-      }
-
-      try {
-        const result = await fetch(offset, PAGE_SIZE)
-        setGames((prev) => (append ? [...prev, ...result.games] : result.games))
-        setNextOffset(result.nextOffset)
-      } catch {
-        if (!append) {
-          setError(true)
-        }
-      } finally {
-        if (append) {
-          setLoadingMore(false)
-        } else {
-          setLoading(false)
-        }
-      }
-    },
-    [fetch],
-  )
-
-  useEffect(() => {
-    setGames([])
-    setNextOffset(null)
-    setError(false)
-    void loadPage(0, false)
-  }, [loadPage])
+  // Query key is feature only (pagination flows through pageParam); the search
+  // text is never part of the key, so the persisted cache carries no search or
+  // behaviour state (da #4, ux condition 1). useInfiniteQuery accumulates pages
+  // and preserves the previous append-vs-replace + nextOffset semantics: each
+  // page's `nextOffset` becomes the next pageParam, or undefined to stop.
+  const {
+    data,
+    isPending,
+    isError,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
+    queryKey: ['games', feature],
+    queryFn: ({ pageParam }) => fetch(pageParam, PAGE_SIZE),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) => lastPage.nextOffset ?? undefined,
+  })
 
   useEffect(() => {
     const sentinel = sentinelRef.current
@@ -68,8 +47,8 @@ const Games = ({ label, fetch, emptyMessage = 'No games found' }: GamesProps) =>
 
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0]?.isIntersecting && nextOffset !== null && !loadingMore) {
-          void loadPage(nextOffset, true)
+        if (entries[0]?.isIntersecting && hasNextPage && !isFetchingNextPage) {
+          void fetchNextPage()
         }
       },
       { rootMargin: '200px' },
@@ -79,17 +58,18 @@ const Games = ({ label, fetch, emptyMessage = 'No games found' }: GamesProps) =>
     return () => {
       observer.disconnect()
     }
-  }, [nextOffset, loadingMore, loadPage])
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage])
 
-  const filtered = filterGamesByName(games, query)
-
-  if (error) {
+  if (isError) {
     return <Error message="Failed to load games" />
   }
 
-  if (loading) {
-    return <Loading loading={loading} />
+  if (isPending) {
+    return <Loading loading />
   }
+
+  const games = data.pages.flatMap((page) => page.games)
+  const filtered = filterGamesByName(games, query)
 
   if (filtered.length === 0) {
     return <Error message={emptyMessage} />
@@ -99,13 +79,13 @@ const Games = ({ label, fetch, emptyMessage = 'No games found' }: GamesProps) =>
     <>
       <ScrollToTopOnMount />
       <div className="games--content">
-        <div className="games--grid" data-label={label}>
+        <div className="games--grid" data-label={feature}>
           {filtered.map((game) => (
             <GameCard key={game.id} game={game} />
           ))}
         </div>
         <div ref={sentinelRef} className="games--sentinel">
-          {loadingMore && <Loading loading />}
+          {isFetchingNextPage && <Loading loading />}
         </div>
       </div>
     </>

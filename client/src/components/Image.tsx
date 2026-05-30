@@ -1,5 +1,3 @@
-import './Image.css'
-
 interface ImageProps {
   url: string
   name: string

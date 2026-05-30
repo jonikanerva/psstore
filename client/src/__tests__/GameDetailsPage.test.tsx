@@ -1,8 +1,8 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
+import { cleanup, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Game } from '@psstore/shared'
 import GameDetailsPage from '../components/GameDetailsPage'
+import { renderWithRouter } from './testRouter'
 
 const baseGame: Game = {
   id: 'EP0001-PPSA01234_00-TESTGAME00000001',
@@ -41,11 +41,7 @@ describe('GameDetailsPage', () => {
     const { fetchGame } = await import('../modules/psnStore')
     vi.mocked(fetchGame).mockResolvedValue(baseGame)
 
-    render(
-      <MemoryRouter>
-        <GameDetailsPage gameId={baseGame.id} />
-      </MemoryRouter>,
-    )
+    await renderWithRouter(<GameDetailsPage gameId={baseGame.id} />)
 
     await waitFor(() => {
       expect(screen.getByText('Detail Game')).toBeInTheDocument()
@@ -59,11 +55,7 @@ describe('GameDetailsPage', () => {
     const { fetchGame } = await import('../modules/psnStore')
     vi.mocked(fetchGame).mockResolvedValue(baseGame)
 
-    render(
-      <MemoryRouter>
-        <GameDetailsPage gameId={baseGame.id} />
-      </MemoryRouter>,
-    )
+    await renderWithRouter(<GameDetailsPage gameId={baseGame.id} />)
 
     await waitFor(() => {
       expect(screen.getByText('Description')).toBeInTheDocument()
@@ -74,11 +66,7 @@ describe('GameDetailsPage', () => {
     const { fetchGame } = await import('../modules/psnStore')
     vi.mocked(fetchGame).mockResolvedValue({ ...baseGame, description: '' })
 
-    render(
-      <MemoryRouter>
-        <GameDetailsPage gameId={baseGame.id} />
-      </MemoryRouter>,
-    )
+    await renderWithRouter(<GameDetailsPage gameId={baseGame.id} />)
 
     await waitFor(() => {
       expect(screen.getByText('Detail Game')).toBeInTheDocument()
@@ -91,11 +79,7 @@ describe('GameDetailsPage', () => {
     const { fetchGame } = await import('../modules/psnStore')
     vi.mocked(fetchGame).mockResolvedValue({ ...baseGame, screenshots: [], videos: [] })
 
-    render(
-      <MemoryRouter>
-        <GameDetailsPage gameId={baseGame.id} />
-      </MemoryRouter>,
-    )
+    await renderWithRouter(<GameDetailsPage gameId={baseGame.id} />)
 
     await waitFor(() => {
       expect(screen.getByText('Detail Game')).toBeInTheDocument()
@@ -108,11 +92,7 @@ describe('GameDetailsPage', () => {
     const { fetchGame } = await import('../modules/psnStore')
     vi.mocked(fetchGame).mockRejectedValue(new Error('not found'))
 
-    render(
-      <MemoryRouter>
-        <GameDetailsPage gameId="bad-id" />
-      </MemoryRouter>,
-    )
+    await renderWithRouter(<GameDetailsPage gameId="bad-id" />)
 
     await waitFor(() => {
       expect(screen.getByText('Game not found')).toBeInTheDocument()
@@ -121,16 +101,9 @@ describe('GameDetailsPage', () => {
 
   it('renders a PS Plus row with Sony upsellText verbatim when set', async () => {
     const { fetchGame } = await import('../modules/psnStore')
-    vi.mocked(fetchGame).mockResolvedValue({
-      ...baseGame,
-      plusUpsellText: 'Säästä 10 %',
-    })
+    vi.mocked(fetchGame).mockResolvedValue({ ...baseGame, plusUpsellText: 'Säästä 10 %' })
 
-    render(
-      <MemoryRouter>
-        <GameDetailsPage gameId={baseGame.id} />
-      </MemoryRouter>,
-    )
+    await renderWithRouter(<GameDetailsPage gameId={baseGame.id} />)
 
     await waitFor(() => {
       expect(screen.getByText('PS Plus')).toBeInTheDocument()
@@ -143,11 +116,7 @@ describe('GameDetailsPage', () => {
     const { fetchGame } = await import('../modules/psnStore')
     vi.mocked(fetchGame).mockResolvedValue(baseGame)
 
-    render(
-      <MemoryRouter>
-        <GameDetailsPage gameId={baseGame.id} />
-      </MemoryRouter>,
-    )
+    await renderWithRouter(<GameDetailsPage gameId={baseGame.id} />)
 
     await waitFor(() => {
       expect(screen.getByText('Detail Game')).toBeInTheDocument()

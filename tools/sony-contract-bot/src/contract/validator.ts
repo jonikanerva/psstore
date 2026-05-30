@@ -1,12 +1,17 @@
+import { Schema } from 'effect'
 import { CORE_FEATURES } from './constants.js'
 import { sonyContractManifestSchema } from './schema.js'
 import type { SonyContractManifest } from './types.js'
+
+const decodeManifest = Schema.decodeUnknownSync(sonyContractManifestSchema)
 
 const opIdentity = (operation: SonyContractManifest['operations'][number]): string =>
   `${operation.feature}:${operation.operation_name}:${operation.persisted_query_hash ?? ''}`
 
 export const validateManifest = (manifest: SonyContractManifest): void => {
-  sonyContractManifestSchema.parse(manifest)
+  // Decode throws a ParseError on a malformed manifest (the previous zod
+  // `.parse` contract), which the CLI surfaces as a validation failure.
+  decodeManifest(manifest)
 
   for (const feature of CORE_FEATURES) {
     if (!manifest.operations.some((operation) => operation.feature === feature)) {

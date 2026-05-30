@@ -97,8 +97,9 @@ Default answer to "should we add a library?" is **no**. Track the latest **stabl
 
 | Dependency                         | Version | Context7 ID                             | Why it earns its place                                 |
 | ---------------------------------- | ------- | --------------------------------------- | ------------------------------------------------------ |
-| `effect` (+ Schema, Cache)         | `3.x`   | `/llmstxt/effect_website_llms-full_txt` | Backbone: typed effects, errors, DI                    |
-| `@effect/platform`                 | `3.x`   | `/llmstxt/effect_website_llms-full_txt` | Typed HttpApi REST + OpenAPI                           |
+| `effect` (+ Schema, Cache)         | `3.21.2`  | `/llmstxt/effect_website_llms-full_txt` | Backbone: typed effects, errors, DI                  |
+| `@effect/platform`                 | `0.96.1`  | `/llmstxt/effect_website_llms-full_txt` | Typed HttpApi REST + OpenAPI. Published on a 0.x line (it never reached 1.0) while `effect` itself is genuinely 3.x; pinned exact to the build paired with `effect@3.21.2`. |
+| `@effect/platform-node`            | `0.106.0` | `/llmstxt/effect_website_llms-full_txt` | Node HttpServer + runtime adapter for HttpApi; same 0.x line, pinned exact to the build paired with `@effect/platform@0.96.1`. |
 | `typescript`                       | `6.x`   | `/microsoft/typescript`                 | Language                                               |
 | `react`                            | `19.x`  | `/facebook/react`                       | Frontend UI                                            |
 | `vite`                             | latest  | `/vitejs/vite`                          | Frontend build tool                                    |
