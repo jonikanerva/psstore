@@ -1,4 +1,4 @@
-import { HEADER_ALLOWLIST } from '../contract/constants.js'
+import { REQUIRED_HEADERS } from '../contract/constants.js'
 import type {
   CaptureRecord,
   ContractFeature,
@@ -101,19 +101,16 @@ export const parseCaptureRecordToOperation = (
   const variables = parseVariables(url)
   const variablesSchema = jsonType(variables) as Record<string, unknown>
 
-  const requiredHeaders = HEADER_ALLOWLIST.filter(
-    (header) => record.headers[header] || record.headers[header.toLowerCase()],
-  )
-  const normalizedRequiredHeaders =
-    requiredHeaders.length > 0 || operationName !== 'unknownOperation'
-      ? ['x-apollo-operation-name']
-      : requiredHeaders
-
   return {
     feature,
     operation_name: operationName,
     persisted_query_hash: parseHash(url),
-    required_headers: normalizedRequiredHeaders,
+    // The required-headers contract signal is fixed (see REQUIRED_HEADERS). The
+    // previous code computed a filtered list then discarded it for this same
+    // literal whenever an operation name was present (always true for our
+    // scoped operations) — simplified honestly to the constant. Byte-identical
+    // output, so the committed manifest's `required_headers` is unchanged.
+    required_headers: [...REQUIRED_HEADERS],
     variables_schema: variablesSchema,
     sample_variables: variables,
     response_path: getResponsePath(record.responseJson),

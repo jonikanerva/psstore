@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises'
 import { chromium } from 'playwright'
+import { redactHeaders } from '../contract/constants.js'
 import type { CaptureRecord, ContractFeature } from '../contract/types.js'
 import { ensureDir } from '../io/files.js'
 import { paths } from '../io/paths.js'
@@ -42,7 +43,10 @@ export const runCapture = async (): Promise<number> => {
       feature: currentFeature,
       method: request.method(),
       url,
-      headers: request.headers(),
+      // Redact BEFORE the entry is written so the raw (gitignored) ndjson never
+      // holds tokens/cookies/session/auth headers on local disk (defense-in-depth
+      // — VISION privacy posture; CLAUDE → Privacy & security).
+      headers: redactHeaders(request.headers()),
       status: response.status(),
       responseJson,
     }

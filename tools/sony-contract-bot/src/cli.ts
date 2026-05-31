@@ -51,10 +51,17 @@ const main = async (): Promise<void> => {
       await runValidate(args.has('--candidate'))
       console.info('Validation passed.')
       return
-    case 'diff':
-      await runDiff(args.has('--ci'))
-      console.info('Diff complete.')
+    case 'diff': {
+      const checkedAgainstCandidate = await runDiff(args.has('--ci'))
+      if (!checkedAgainstCandidate) {
+        console.info(
+          'Diff complete. No candidate capture — compared canonical against itself (NOT live Sony). Run `pnpm sony:refresh` for a live check.',
+        )
+      } else {
+        console.info('Diff complete.')
+      }
       return
+    }
     case 'refresh':
       await runRefresh()
       console.info('Refresh complete.')

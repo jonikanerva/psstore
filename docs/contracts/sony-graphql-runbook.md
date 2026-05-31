@@ -32,6 +32,31 @@ pnpm run sony:normalize -- --write-manifest
 pnpm run sony:validate
 ```
 
+## Refresh cadence
+
+Run a live capture **weekly** and review the result:
+
+```bash
+pnpm run sony:refresh
+# then read the headline of:
+docs/contracts/reports/latest-diff.md
+```
+
+On drift, follow the **Failure handling** entries below (re-capture, then commit
+the updated `server/src/config/env.ts` hash constants together with the
+refreshed `docs/contracts/sony-graphql-manifest.json`).
+
+**Why this is manual and weekly:** the `pnpm test-all` gate runs
+`sony:diff -- --ci`, but in CI there is no candidate capture (`.sony-contract/`
+is gitignored and CI never runs `sony:capture`), so that gate only compares the
+canonical manifest **against itself** — it cannot detect live Sony drift. Its
+report headline reads `Drift detected: UNKNOWN (no fresh capture …)` precisely
+so a green CI run is never misread as "verified against live Sony". The weekly
+manual `sony:refresh` is therefore the **actual live-drift detector**.
+
+Do **not** automate this with a cron job or a GitHub Action — scheduled jobs are
+out of scope (STACK.md §10). The cadence is a deliberate human step.
+
 ## CI checks
 
 CI runs:
