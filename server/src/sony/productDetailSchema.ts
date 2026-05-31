@@ -5,31 +5,37 @@ import { Either, Schema } from 'effect'
  * (operation `metGetProductById`).
  *
  * Deliberately tolerant (STACK.md scope-at-the-boundary; this is a DEFENSIVE
- * boundary, not the scope filter): every field is optional and unknown keys are
- * preserved (`onExcessProperty: "preserve"`, the Effect equivalent of the
- * previous zod `z.looseObject`), so a Sony shape change degrades to empty
- * description / genres rather than throwing and failing the request. Only the
- * fields the PDP enrichment reads are described. Do NOT tighten this — see
- * devils-advocate correction #6.
+ * boundary, not the scope filter): every field is `optional(NullOr(...))` — it
+ * accepts an absent key, an explicit `null`, OR the typed value — and unknown
+ * keys are preserved (`onExcessProperty: "preserve"`). Sony's fi-fi store sends
+ * `null` liberally; a plain `optional` rejects a present `null`, and because
+ * `Schema.Array` fails wholesale on one bad element a single null-bearing entry
+ * would fail the whole decode. (This defect was latent here — a failed PDP
+ * decode degrades quietly to empty description/genres via the productDetailCache
+ * catchAll — but it is the same bug class that emptied the list views, so it is
+ * fixed here too.) Only the fields the PDP enrichment reads are described. Do
+ * NOT tighten this.
  */
 const sonyDescriptionSchema = Schema.Struct({
-  type: Schema.optional(Schema.String),
+  type: Schema.optional(Schema.NullOr(Schema.String)),
   subType: Schema.optional(Schema.NullOr(Schema.String)),
-  value: Schema.optional(Schema.String),
+  value: Schema.optional(Schema.NullOr(Schema.String)),
 })
 
 const sonyLocalizedGenreSchema = Schema.Struct({
-  value: Schema.optional(Schema.String),
+  value: Schema.optional(Schema.NullOr(Schema.String)),
 })
 
 export const productRetrieveSchema = Schema.Struct({
-  id: Schema.optional(Schema.String),
-  releaseDate: Schema.optional(Schema.String),
-  publisherName: Schema.optional(Schema.String),
-  storeDisplayClassification: Schema.optional(Schema.String),
-  descriptions: Schema.optional(Schema.Array(sonyDescriptionSchema)),
+  id: Schema.optional(Schema.NullOr(Schema.String)),
+  releaseDate: Schema.optional(Schema.NullOr(Schema.String)),
+  publisherName: Schema.optional(Schema.NullOr(Schema.String)),
+  storeDisplayClassification: Schema.optional(Schema.NullOr(Schema.String)),
+  descriptions: Schema.optional(
+    Schema.NullOr(Schema.Array(sonyDescriptionSchema)),
+  ),
   combinedLocalizedGenres: Schema.optional(
-    Schema.Array(sonyLocalizedGenreSchema),
+    Schema.NullOr(Schema.Array(sonyLocalizedGenreSchema)),
   ),
 })
 

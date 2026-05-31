@@ -72,8 +72,8 @@ export interface ProductDetailResult {
  */
 const descriptionByType = (
   descriptions: ReadonlyArray<{
-    type?: string | undefined
-    value?: string | undefined
+    type?: string | null | undefined
+    value?: string | null | undefined
   }>,
   type: 'LONG' | 'SHORT',
 ): string => {
@@ -127,23 +127,31 @@ export const extractProductDetail = (
 }
 
 /**
- * The outcome of decoding a category-grid response, distinguishing the two
- * empty-list cases the drift policy requires (devils-advocate cut 3):
- *  - `drift`: the `data.categoryGridRetrieve` node was absent or undecodable —
- *    a corrupt grid. The caller degrades to `[]` AND logs a warning so the
- *    operator sees an honest signal.
- *  - `ok`: the node was present and decoded (its concepts/products may be
- *    legitimately empty) — the caller returns the selection silently.
+ * The outcome of decoding a category-grid response. The drift policy
+ * (devils-advocate cut 3) distinguishes the empty-list cases, now at two
+ * granularities:
+ *  - `drift`: the `data.categoryGridRetrieve` node was absent or its outer shape
+ *    was unintelligible — a corrupt grid. The caller degrades to `[]` AND logs a
+ *    warning so the operator sees an honest signal.
+ *  - `ok`: the node was present and its outer shape decoded (concepts/products
+ *    may be legitimately empty). `dropped` counts individual elements that
+ *    failed per-element decode and were skipped; a non-zero `dropped` is an
+ *    element-drift signal the caller logs WITHOUT emptying the list — one odd
+ *    item never nukes the whole grid (the regression this fixes).
  */
 export type CategoryGridOutcome =
   | { readonly kind: 'drift' }
-  | { readonly kind: 'ok'; readonly concepts: readonly Concept[] }
+  | {
+      readonly kind: 'ok'
+      readonly concepts: readonly Concept[]
+      readonly dropped: number
+    }
 
 /**
  * Pure category-grid extraction (exported for unit tests; parallels
- * `extractProductDetail`). Decodes the envelope and the inner node defensively,
- * then applies the concepts-first selection (a concept list wins; otherwise the
- * product list mapped to concepts) — unchanged from the previous inline logic.
+ * `extractProductDetail`). Decodes the envelope and the inner node defensively
+ * and per-element, then applies the concepts-first selection (a concept list
+ * wins; otherwise the product list mapped to concepts).
  */
 export const extractCategoryGrid = (json: unknown): CategoryGridOutcome => {
   const node = extractCategoryGridNode(json)
@@ -156,9 +164,9 @@ export const extractCategoryGrid = (json: unknown): CategoryGridOutcome => {
     return { kind: 'drift' }
   }
 
-  const concepts = grid.concepts ?? []
-  const products = (grid.products ?? []).map(productToConcept)
-  return { kind: 'ok', concepts: concepts.length > 0 ? concepts : products }
+  const products = grid.products.map(productToConcept)
+  const concepts = grid.concepts.length > 0 ? grid.concepts : products
+  return { kind: 'ok', concepts, dropped: grid.dropped }
 }
 
 // ---- SonyClient service (the network boundary) -----------------------------
@@ -304,7 +312,7 @@ export const SonyClientLive: Layer.Layer<SonyClient> = Layer.succeed(
         Effect.flatMap((json) => {
           const outcome = extractCategoryGrid(json)
           if (outcome.kind === 'drift') {
-            // Corrupt-or-absent grid: degrade to [] for the user (VISION
+            // Corrupt-or-absent node: degrade to [] for the user (VISION
             // continuity over blankness) but emit an honest operator signal so a
             // schema drift is never mistaken for a legitimately empty grid
             // (STACK §9 structured log — feature/operation context only, no PII).
@@ -314,7 +322,20 @@ export const SonyClientLive: Layer.Layer<SonyClient> = Layer.succeed(
               operationName: buildStrategies()[feature].operationName,
             }).pipe(Effect.as<Concept[]>([]))
           }
-          return Effect.succeed<Concept[]>([...outcome.concepts])
+          const concepts: Concept[] = [...outcome.concepts]
+          if (outcome.dropped > 0) {
+            // Some elements failed per-element decode and were skipped; the good
+            // items are still returned (one odd item never empties the grid).
+            // A distinct, lower-severity signal from a whole-node drift.
+            return Effect.logWarning('sony category grid element drift', {
+              event: 'sony.categoryGrid.elementDrift',
+              feature,
+              operationName: buildStrategies()[feature].operationName,
+              dropped: outcome.dropped,
+              kept: concepts.length,
+            }).pipe(Effect.as(concepts))
+          }
+          return Effect.succeed(concepts)
         }),
       ),
     fetchProductDetail: (productId) =>

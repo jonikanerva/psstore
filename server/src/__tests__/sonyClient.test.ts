@@ -4,6 +4,7 @@ import {
   extractProductDetail,
   extractReleaseDateFromProductResponse,
 } from '../sony/sonyClient.js'
+import { parseProductRetrieve } from '../sony/productDetailSchema.js'
 import { buildStrategies } from '../sony/queryStrategies.js'
 
 describe('buildStrategies.new', () => {
@@ -262,5 +263,159 @@ describe('extractCategoryGrid', () => {
   it('flags a non-object body as drift', () => {
     expect(extractCategoryGrid('boom').kind).toBe('drift')
     expect(extractCategoryGrid(null).kind).toBe('drift')
+  })
+
+  // ---- Regression: Sony sends `null` liberally (PR #79 emptied the lists) ----
+  // These assert the boundary tolerates the REAL null shapes confirmed live
+  // against fi-fi. They FAIL on the plain-`optional` schema (the bug) and PASS
+  // with `optional(NullOr(...))` + per-element decode.
+
+  it('keeps an UPCOMING concept whose whole price object is null', () => {
+    // Real shape: unpriced/announced upcoming games carry `price: null`.
+    const outcome = extractCategoryGrid({
+      data: {
+        categoryGridRetrieve: {
+          concepts: [
+            { id: '10018729', name: 'RunNGun', price: null },
+            { id: '10019188', name: 'Rat Protocol', price: null },
+          ],
+        },
+      },
+    })
+
+    expect(outcome.kind).toBe('ok')
+    if (outcome.kind === 'ok') {
+      expect(outcome.concepts).toHaveLength(2)
+      expect(outcome.concepts.map((c) => c.name)).toEqual([
+        'RunNGun',
+        'Rat Protocol',
+      ])
+      expect(outcome.dropped).toBe(0)
+    }
+  })
+
+  it('keeps a DISCOUNTED product whose price.serviceBranding is null', () => {
+    const outcome = extractCategoryGrid({
+      data: {
+        categoryGridRetrieve: {
+          products: [
+            {
+              id: 'EP0001-PPSA00003_00-DEAL000000000000',
+              name: 'Deal',
+              price: {
+                basePrice: '€59,99',
+                discountedPrice: '€39,99',
+                serviceBranding: null,
+              },
+            },
+          ],
+        },
+      },
+    })
+
+    expect(outcome.kind).toBe('ok')
+    if (outcome.kind === 'ok') {
+      expect(outcome.concepts).toHaveLength(1)
+      expect(outcome.concepts[0]?.name).toBe('Deal')
+      expect(outcome.dropped).toBe(0)
+    }
+  })
+
+  it('decodes a concept with every optional field explicitly null', () => {
+    const outcome = extractCategoryGrid({
+      data: {
+        categoryGridRetrieve: {
+          concepts: [
+            {
+              id: '99',
+              name: null,
+              media: null,
+              price: null,
+              products: null,
+            },
+          ],
+        },
+      },
+    })
+
+    expect(outcome.kind).toBe('ok')
+    if (outcome.kind === 'ok') {
+      expect(outcome.concepts).toHaveLength(1)
+      expect(outcome.dropped).toBe(0)
+    }
+  })
+
+  it('keeps good concepts and drops only a structurally-broken element', () => {
+    // Per-element decode: one good concept + one element that fails its own
+    // decode (id is the wrong type). The good one survives; dropped is counted.
+    const outcome = extractCategoryGrid({
+      data: {
+        categoryGridRetrieve: {
+          concepts: [
+            { id: '1', name: 'Good', price: null },
+            { id: { nope: true }, name: 'Broken' },
+          ],
+        },
+      },
+    })
+
+    expect(outcome.kind).toBe('ok')
+    if (outcome.kind === 'ok') {
+      expect(outcome.concepts.map((c) => c.name)).toEqual(['Good'])
+      expect(outcome.dropped).toBe(1)
+    }
+  })
+
+  it('drops a null array element without emptying the grid', () => {
+    // `Schema.Array(Unknown)` keeps a null element as `unknown`; the per-element
+    // concept decode then rejects null and drops just that slot.
+    const outcome = extractCategoryGrid({
+      data: {
+        categoryGridRetrieve: {
+          concepts: [{ id: '1', name: 'Good', price: null }, null],
+        },
+      },
+    })
+
+    expect(outcome.kind).toBe('ok')
+    if (outcome.kind === 'ok') {
+      expect(outcome.concepts.map((c) => c.name)).toEqual(['Good'])
+      expect(outcome.dropped).toBe(1)
+    }
+  })
+})
+
+describe('parseProductRetrieve null tolerance (PR #79 latent defect)', () => {
+  it('returns the node when releaseDate / publisherName are null', () => {
+    const node = parseProductRetrieve({
+      id: 'UP0001-PPSA00001_00-GAME000000000000',
+      releaseDate: null,
+      publisherName: null,
+      storeDisplayClassification: null,
+      descriptions: null,
+      combinedLocalizedGenres: null,
+    })
+    expect(node).not.toBeNull()
+  })
+
+  it('still returns null for a missing node', () => {
+    expect(parseProductRetrieve(null)).toBeNull()
+    expect(parseProductRetrieve(undefined)).toBeNull()
+  })
+
+  it('drives extractProductDetail to empty values without throwing on null fields', () => {
+    const result = extractProductDetail({
+      data: {
+        productRetrieve: {
+          id: 'test',
+          releaseDate: null,
+          publisherName: null,
+        },
+      },
+    } as unknown as Parameters<typeof extractProductDetail>[0])
+
+    expect(result.releaseDate).toBeUndefined()
+    expect(result.publisherName).toBeUndefined()
+    expect(result.genres).toEqual([])
   })
 })

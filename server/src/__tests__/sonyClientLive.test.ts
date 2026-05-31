@@ -91,6 +91,46 @@ describe('SonyClientLive classification', () => {
     ).toBe(false)
   })
 
+  it('keeps good items but logs an element-drift warning when one element is broken', async () => {
+    // Real-world failure mode: a single odd element must never empty the grid.
+    globalThis.fetch = vi.fn<typeof fetch>().mockResolvedValue(
+      jsonResponse({
+        data: {
+          categoryGridRetrieve: {
+            concepts: [
+              {
+                id: '1',
+                name: 'Good',
+                price: null,
+                products: [{ id: 'EP0001-PPSA00001_00-GOOD000000000000' }],
+              },
+              { id: { wrong: true }, name: 'Broken' },
+            ],
+          },
+        },
+      }),
+    )
+
+    const { exit, logs } = withCapturedLogs(
+      SonyClient.pipe(
+        Effect.flatMap((client) => client.fetchConceptsByFeature('new', 10)),
+      ),
+    )
+    const result = await exit
+
+    expect(Exit.isSuccess(result)).toBe(true)
+    if (Exit.isSuccess(result)) {
+      expect(result.value).toHaveLength(1)
+      expect(result.value[0]?.name).toBe('Good')
+    }
+    const elementDrift = logs.find(
+      (entry) =>
+        entry.level === 'WARN' &&
+        entry.text.includes('sony.categoryGrid.elementDrift'),
+    )
+    expect(elementDrift).toBeDefined()
+  })
+
   it('maps a persisted-query rotation to UpstreamQueryRotated', async () => {
     globalThis.fetch = vi.fn<typeof fetch>().mockResolvedValue(
       jsonResponse({

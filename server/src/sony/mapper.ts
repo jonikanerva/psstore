@@ -4,7 +4,7 @@ import type { Concept } from './types.js'
 const DEFAULT_DISCOUNT_DATE = ''
 const DEFAULT_RELEASE_DATE = ''
 
-const toIsoOrDefault = (value?: string): string => {
+const toIsoOrDefault = (value?: string | null): string => {
   if (!value) {
     return DEFAULT_RELEASE_DATE
   }

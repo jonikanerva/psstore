@@ -7,55 +7,69 @@ import { Either, Schema } from 'effect'
  *
  * Deliberately tolerant (STACK.md scope-at-the-boundary; this is a DEFENSIVE
  * boundary, not the scope filter), mirroring `productDetailSchema.ts`: every
- * field is optional and unknown keys are preserved (`onExcessProperty:
- * "preserve"`, the Effect equivalent of the previous loose object), so a Sony
- * shape change degrades to an empty list rather than corrupting the cache or
- * throwing. Only the fields the list mapper reads are described. Do NOT tighten
- * this — see the PDP precedent (devils-advocate correction #6).
+ * field is `optional(NullOr(...))` — it accepts an absent key, an explicit
+ * `null`, OR the typed value — and unknown keys are preserved
+ * (`onExcessProperty: "preserve"`). Sony's fi-fi store sends `null` liberally
+ * (e.g. the whole `concept.price` on an unpriced/announced UPCOMING game,
+ * `price.serviceBranding` on some DISCOUNTED products); a plain `optional`
+ * rejects a present `null` and — because `Schema.Array` fails wholesale on one
+ * bad element — a single null-bearing item would empty the entire list. Decode
+ * is therefore both null-tolerant AND per-element (see `parseCategoryGrid`), so
+ * one odd item is dropped, not the whole grid (VISION continuity over blankness
+ * at element granularity). Do NOT tighten this.
  */
 const mediaSchema = Schema.Struct({
-  url: Schema.optional(Schema.String),
-  role: Schema.optional(Schema.String),
-  type: Schema.optional(Schema.String),
+  url: Schema.optional(Schema.NullOr(Schema.String)),
+  role: Schema.optional(Schema.NullOr(Schema.String)),
+  type: Schema.optional(Schema.NullOr(Schema.String)),
 })
 
 const conceptPriceSchema = Schema.Struct({
-  basePrice: Schema.optional(Schema.String),
-  discountedPrice: Schema.optional(Schema.String),
+  basePrice: Schema.optional(Schema.NullOr(Schema.String)),
+  discountedPrice: Schema.optional(Schema.NullOr(Schema.String)),
   discountText: Schema.optional(Schema.NullOr(Schema.String)),
-  serviceBranding: Schema.optional(Schema.Array(Schema.String)),
-  upsellServiceBranding: Schema.optional(Schema.Array(Schema.String)),
+  serviceBranding: Schema.optional(Schema.NullOr(Schema.Array(Schema.String))),
+  upsellServiceBranding: Schema.optional(
+    Schema.NullOr(Schema.Array(Schema.String)),
+  ),
   upsellText: Schema.optional(Schema.NullOr(Schema.String)),
 })
 
 const conceptProductRefSchema = Schema.Struct({
-  id: Schema.optional(Schema.String),
-  releaseDate: Schema.optional(Schema.String),
-  providerName: Schema.optional(Schema.String),
-  genres: Schema.optional(Schema.Array(Schema.String)),
+  id: Schema.optional(Schema.NullOr(Schema.String)),
+  releaseDate: Schema.optional(Schema.NullOr(Schema.String)),
+  providerName: Schema.optional(Schema.NullOr(Schema.String)),
+  genres: Schema.optional(Schema.NullOr(Schema.Array(Schema.String))),
 })
 
 const conceptSchema = Schema.Struct({
-  id: Schema.optional(Schema.String),
-  name: Schema.optional(Schema.String),
-  media: Schema.optional(Schema.Array(mediaSchema)),
-  price: Schema.optional(conceptPriceSchema),
-  products: Schema.optional(Schema.Array(conceptProductRefSchema)),
+  id: Schema.optional(Schema.NullOr(Schema.String)),
+  name: Schema.optional(Schema.NullOr(Schema.String)),
+  media: Schema.optional(Schema.NullOr(Schema.Array(mediaSchema))),
+  price: Schema.optional(Schema.NullOr(conceptPriceSchema)),
+  products: Schema.optional(
+    Schema.NullOr(Schema.Array(conceptProductRefSchema)),
+  ),
 })
 
 const categoryGridProductSchema = Schema.Struct({
-  id: Schema.optional(Schema.String),
-  name: Schema.optional(Schema.String),
-  media: Schema.optional(Schema.Array(mediaSchema)),
-  price: Schema.optional(conceptPriceSchema),
-  platforms: Schema.optional(Schema.Array(Schema.String)),
-  storeDisplayClassification: Schema.optional(Schema.String),
-  npTitleId: Schema.optional(Schema.String),
+  id: Schema.optional(Schema.NullOr(Schema.String)),
+  name: Schema.optional(Schema.NullOr(Schema.String)),
+  media: Schema.optional(Schema.NullOr(Schema.Array(mediaSchema))),
+  price: Schema.optional(Schema.NullOr(conceptPriceSchema)),
+  platforms: Schema.optional(Schema.NullOr(Schema.Array(Schema.String))),
+  storeDisplayClassification: Schema.optional(Schema.NullOr(Schema.String)),
+  npTitleId: Schema.optional(Schema.NullOr(Schema.String)),
 })
 
+// The node shape used only for type derivation. The runtime decode is
+// per-element (below), but the *value types* the rest of the server reads are
+// still the element schemas' `.Type`, re-exported from `types.ts`.
 export const categoryGridRetrieveSchema = Schema.Struct({
-  concepts: Schema.optional(Schema.Array(conceptSchema)),
-  products: Schema.optional(Schema.Array(categoryGridProductSchema)),
+  concepts: Schema.optional(Schema.NullOr(Schema.Array(conceptSchema))),
+  products: Schema.optional(
+    Schema.NullOr(Schema.Array(categoryGridProductSchema)),
+  ),
 })
 
 /**
@@ -63,9 +77,8 @@ export const categoryGridRetrieveSchema = Schema.Struct({
  * single source of truth for the category-grid value types: `types.ts`
  * re-exports them under the canonical `Concept` / `CategoryGridProduct` / `Media`
  * / `ConceptPrice` / `ConceptProductRef` names, so the decoder and the value
- * types can never drift (a mismatch is a compile error — STACK.md §2). Consumers
- * read them through the `readonly`-tolerant mapper signatures
- * (`mapConceptsToGames` already takes `readonly Concept[]`).
+ * types can never drift (a mismatch is a compile error — STACK.md §2). Fields
+ * now widen with `| null`; consumers coalesce null away (see the mapper).
  */
 export type CategoryGridNode = typeof categoryGridRetrieveSchema.Type
 export type Media = typeof mediaSchema.Type
@@ -74,23 +87,82 @@ export type ConceptProductRef = typeof conceptProductRefSchema.Type
 export type Concept = typeof conceptSchema.Type
 export type CategoryGridProduct = typeof categoryGridProductSchema.Type
 
-const decode = Schema.decodeUnknownEither(categoryGridRetrieveSchema, {
+// Raw outer node: the two arrays may be absent, null, or arrays of *unknown*
+// elements. Element-level validation happens after this, so one bad element
+// can be dropped instead of failing the whole array.
+const categoryGridRawSchema = Schema.Struct({
+  concepts: Schema.optional(Schema.NullOr(Schema.Array(Schema.Unknown))),
+  products: Schema.optional(Schema.NullOr(Schema.Array(Schema.Unknown))),
+})
+
+const decodeRaw = Schema.decodeUnknownEither(categoryGridRawSchema, {
+  onExcessProperty: 'preserve',
+})
+const decodeConcept = Schema.decodeUnknownEither(conceptSchema, {
+  onExcessProperty: 'preserve',
+})
+const decodeProduct = Schema.decodeUnknownEither(categoryGridProductSchema, {
   onExcessProperty: 'preserve',
 })
 
 /**
- * Parse the `categoryGridRetrieve` node defensively. Returns the validated node,
- * or `null` when the payload is malformed — the caller distinguishes a genuine
- * drift (log a warning, degrade to an empty list) from an absent node; see
- * `extractCategoryGrid` in sonyClient.ts.
+ * Result of a per-element category-grid decode. `dropped` counts elements that
+ * individually failed to decode (and were skipped) so the caller can emit one
+ * element-drift signal without emptying the list.
  */
-export const parseCategoryGrid = (node: unknown): CategoryGridNode | null => {
+export interface ParsedCategoryGrid {
+  readonly concepts: Concept[]
+  readonly products: CategoryGridProduct[]
+  readonly dropped: number
+}
+
+const decodeEach = <A>(
+  items: ReadonlyArray<unknown>,
+  decode: (value: unknown) => Either.Either<A, unknown>,
+): { kept: A[]; dropped: number } => {
+  const kept: A[] = []
+  let dropped = 0
+  for (const item of items) {
+    const result = decode(item)
+    if (Either.isRight(result)) {
+      kept.push(result.right)
+    } else {
+      dropped += 1
+    }
+  }
+  return { kept, dropped }
+}
+
+/**
+ * Parse the `categoryGridRetrieve` node defensively and per-element. Returns
+ * `null` only when the node is absent or its outer shape is unintelligible
+ * (e.g. `concepts` is neither an array, null, nor absent) — the caller treats
+ * that as top-level drift (degrade to `[]` + warn). Otherwise returns the kept
+ * concepts/products with a `dropped` count; a non-zero `dropped` is the caller's
+ * signal to log an element-drift warning while still returning the good items.
+ */
+export const parseCategoryGrid = (node: unknown): ParsedCategoryGrid | null => {
   if (node === null || node === undefined) {
     return null
   }
 
-  const result = decode(node)
-  return Either.isRight(result) ? result.right : null
+  const raw = decodeRaw(node)
+  if (Either.isLeft(raw)) {
+    return null
+  }
+
+  const conceptResults = decodeEach(raw.right.concepts ?? [], (value) =>
+    decodeConcept(value),
+  )
+  const productResults = decodeEach(raw.right.products ?? [], (value) =>
+    decodeProduct(value),
+  )
+
+  return {
+    concepts: conceptResults.kept,
+    products: productResults.kept,
+    dropped: conceptResults.dropped + productResults.dropped,
+  }
 }
 
 /**
@@ -105,9 +177,11 @@ export const parseCategoryGrid = (node: unknown): CategoryGridNode | null => {
  */
 const envelopeSchema = Schema.Struct({
   data: Schema.optional(
-    Schema.Struct({
-      categoryGridRetrieve: Schema.optional(Schema.Unknown),
-    }),
+    Schema.NullOr(
+      Schema.Struct({
+        categoryGridRetrieve: Schema.optional(Schema.Unknown),
+      }),
+    ),
   ),
 })
 
