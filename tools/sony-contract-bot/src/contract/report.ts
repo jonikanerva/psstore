@@ -1,9 +1,23 @@
 import type { ManifestDiff } from './diff.js'
 
-export const renderDiffReport = (diff: ManifestDiff): string => {
+// Tri-state headline. The line a reviewer greps must NOT read "no" when nothing
+// was compared against a fresh capture: with no candidate manifest the diff
+// falls back to canonical-vs-canonical (always "no drift"), which would be a
+// false green. When `hasCandidate` is false we say UNKNOWN instead. `hasDrift`
+// itself stays a boolean (the `--ci` throw consumes it), so a clean checkout
+// with no candidate still exits 0 — see commands/diff.ts.
+export const renderDiffReport = (
+  diff: ManifestDiff,
+  hasCandidate: boolean,
+): string => {
   const lines: string[] = ['# Sony GraphQL Contract Drift Report', '']
 
-  lines.push(`- Drift detected: ${diff.hasDrift ? 'yes' : 'no'}`)
+  const headline = hasCandidate
+    ? diff.hasDrift
+      ? 'yes'
+      : 'no'
+    : 'UNKNOWN (no fresh capture — not checked against live Sony)'
+  lines.push(`- Drift detected: ${headline}`)
   lines.push(`- Added: ${String(diff.added.length)}`)
   lines.push(`- Removed: ${String(diff.removed.length)}`)
   lines.push(`- Changed: ${String(diff.changed.length)}`)
