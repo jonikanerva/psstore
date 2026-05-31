@@ -57,6 +57,39 @@ manual `sony:refresh` is therefore the **actual live-drift detector**.
 Do **not** automate this with a cron job or a GitHub Action — scheduled jobs are
 out of scope (STACK.md §10). The cadence is a deliberate human step.
 
+## Mandatory live check for boundary changes
+
+Any change that touches the Sony decode/mapping boundary — specifically:
+
+- `server/src/sony/**` (the client, the boundary Schemas, rotation/429 handling), or
+- `server/src/domain/listing.ts` (the mappers that turn decoded concepts into the
+  renderable game list — #62's symptom was a mapping/filter outcome)
+
+**MUST** run the live smoke suite against live fi-fi Sony and record the counts in
+the PR:
+
+```bash
+pnpm test:live
+```
+
+Paste into the PR the per-feature counts it logs (NEW / UPCOMING / DISCOUNTED
+concept counts) and the resolved PDP SKU. `pnpm test:live` is **not** part of
+`pnpm test-all` (it is network/uptime-coupled — keeping it in the build would
+make the build flaky).
+
+**Why this is mandatory:** `pnpm test-all` **cannot** catch live Sony drift — it
+decodes committed fixtures (`server/src/__tests__/fixtures/*.golden.json`) and
+compares the manifest against itself. Only `test:live` decodes a _fresh_ live
+response through the production boundary, so it is the standing guard for the
+#62-class regression (the null-tolerance bug that emptied UPCOMING/DISCOUNTED,
+shipped in a PASS-reviewed PR and caught in production).
+
+**Enforcement is the review gate, not automation** (owner ruling 2026-05-31:
+manual, no CI). The `/codereview` step is the gate: a PR that touches the paths
+above and does **not** include the `test:live` live counts should **FAIL**
+review. This runbook is the reference for what "the live counts" means; it does
+not imply any automated check closes the gap.
+
 ## CI checks
 
 CI runs:
