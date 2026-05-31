@@ -786,14 +786,20 @@ describe('upstream error propagation on all list tabs (issue #78)', () => {
   }
 
   it('getGameById for an upcoming/discounted id under outage fails with UpstreamError, not GameNotFound', async () => {
-    // Ripple of (A): findInFeature now propagates the upstream error, so a PDP
-    // lookup for an id only resolvable via upcoming/discounted surfaces an
-    // honest 502/503 instead of a misleading 404 on a Sony outage.
-    const exit = await runWith(
-      failingSony(new UpstreamUnavailable({ message: 'down' })),
-      // An id not present in the (also-failing) NEW base feed forces the
-      // upcoming/discounted lookup path.
-      (s) => s.getGameById('EP0001-PPSA09999_00-UPCOMINGONLY00000'),
+    // Ripple of (A): findInFeature now propagates the upstream error. NEW
+    // succeeds (empty) so getGameById clears `baseGames` and does NOT find the
+    // id there, then reaches the failing upcoming lookup — isolating the
+    // findInFeature path so the failure can't be attributed to baseGames. The
+    // PDP lookup thus surfaces an honest 502/503 instead of a misleading 404.
+    const NewOkFeaturesFail = Layer.succeed(SonyClient, {
+      fetchConceptsByFeature: (feature) =>
+        feature === 'new'
+          ? Effect.succeed<Concept[]>([])
+          : Effect.fail(new UpstreamUnavailable({ message: 'down' })),
+      fetchProductDetail: () => Effect.succeed({ genres: [], description: '' }),
+    })
+    const exit = await runWith(NewOkFeaturesFail, (s) =>
+      s.getGameById('EP0001-PPSA09999_00-UPCOMINGONLY00000'),
     )
     expect(Exit.isFailure(exit)).toBe(true)
     if (Exit.isFailure(exit)) {
