@@ -4,6 +4,7 @@ import { Effect, Layer } from 'effect'
 import { afterAll, describe, expect, it } from 'vitest'
 import { gamesApi } from '../api/gamesApi.js'
 import { gamesGroupLive } from '../api/gamesHandlers.js'
+import { UpstreamRateLimited, UpstreamUnavailable } from '../errors/errors.js'
 import { GamesServiceLive } from '../services/gamesService.js'
 import { SonyClient } from '../sony/sonyClient.js'
 import type { Concept } from '../sony/types.js'
@@ -50,8 +51,39 @@ const AppLive = HttpLayerRouter.addHttpApi(gamesApi).pipe(
 
 const { handler, dispose } = HttpLayerRouter.toWebHandler(AppLive)
 
+// Fail-only apps for the 502/503 mapping tests (issue #78). Each gets its OWN
+// toWebHandler + dispose, kept SEPARATE from the success `handler` above: the
+// 30s conceptsCache pins failures, so reusing/toggling a shared handler would
+// poison it across tests and risk a false pass.
+const failHandler = (
+  error: UpstreamUnavailable | UpstreamRateLimited,
+): {
+  handler: (req: Request) => Promise<Response>
+  dispose: () => Promise<void>
+} => {
+  const FailSony = Layer.succeed(SonyClient, {
+    fetchConceptsByFeature: () => Effect.fail(error),
+    fetchProductDetail: () => Effect.fail(error),
+  })
+  const FailApp = HttpLayerRouter.addHttpApi(gamesApi).pipe(
+    Layer.provide(gamesGroupLive),
+    Layer.provide(GamesServiceLive.pipe(Layer.provide(FailSony))),
+    Layer.provide(PlatformLive),
+  )
+  return HttpLayerRouter.toWebHandler(FailApp)
+}
+
+const unavailableApp = failHandler(
+  new UpstreamUnavailable({ message: 'sony down' }),
+)
+const rateLimitedApp = failHandler(
+  new UpstreamRateLimited({ message: 'rate limited', retryAfterSeconds: 3 }),
+)
+
 afterAll(async () => {
   await dispose()
+  await unavailableApp.dispose()
+  await rateLimitedApp.dispose()
 })
 
 describe('games HTTP API', () => {
@@ -83,5 +115,38 @@ describe('games HTTP API', () => {
     )
     expect(response.status).toBeGreaterThanOrEqual(400)
     expect(response.status).toBeLessThan(500)
+  })
+})
+
+describe('games HTTP API — honest upstream failure (issue #78)', () => {
+  // Upcoming/discounted no longer swallow a Sony outage into 200 + []; the typed
+  // error maps to its HTTP status (gamesApi.addError): UpstreamUnavailable → 502,
+  // UpstreamRateLimited → 503.
+  it('maps an upcoming-tab upstream outage to 502', async () => {
+    const response = await unavailableApp.handler(
+      new Request('http://localhost/api/games/upcoming'),
+    )
+    expect(response.status).toBe(502)
+  })
+
+  it('maps a discounted-tab upstream outage to 502', async () => {
+    const response = await unavailableApp.handler(
+      new Request('http://localhost/api/games/discounted'),
+    )
+    expect(response.status).toBe(502)
+  })
+
+  it('maps an upcoming-tab rate-limit to 503', async () => {
+    const response = await rateLimitedApp.handler(
+      new Request('http://localhost/api/games/upcoming'),
+    )
+    expect(response.status).toBe(503)
+  })
+
+  it('maps a discounted-tab rate-limit to 503', async () => {
+    const response = await rateLimitedApp.handler(
+      new Request('http://localhost/api/games/discounted'),
+    )
+    expect(response.status).toBe(503)
   })
 })

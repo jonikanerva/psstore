@@ -453,6 +453,31 @@ describe('gamesService', () => {
     ])
   })
 
+  it('discounted DELIBERATELY drops an unclassified row (enrichment-failure) while a sibling FULL_GAME survives', async () => {
+    // Issue #78 (B), owner-ruled kept: isolate the CLASSIFICATION drop, not the
+    // empty-date drop. The unclassified row has a VALID releaseDate (so the
+    // `Boolean(game.date)` gate would NOT drop it) but classification:null
+    // (storeDisplayClassification undefined — the shape a transiently-failed
+    // enrichment produces) → it is dropped by the allow-list filter, proving the
+    // deliberate VISION-safety drop is what's guarded. The sibling FULL_GAME row
+    // survives, so this is a per-row drop, not a whole-list failure.
+    detailFor = (productId) => ({
+      releaseDate: PAST_DATE,
+      genres: [],
+      description: '',
+      storeDisplayClassification: productId.includes('GOODGAME')
+        ? 'FULL_GAME'
+        : undefined,
+    })
+    conceptsFor = (feature) =>
+      feature === 'discounted'
+        ? [makeConcept('good-game'), makeConcept('unclassified')]
+        : []
+
+    const { games } = await run((s) => s.getDiscountedGames())
+    expect(games.map((g) => g.name)).toEqual(['good-game'])
+  })
+
   it('discounted keeps future-dated deals (no released date gate)', async () => {
     detailFor = () => ({
       releaseDate: FUTURE_DATE,
@@ -692,11 +717,14 @@ describe('getGameById detail enrichment', () => {
   })
 })
 
-describe('widened upstream error channel (issue #62)', () => {
-  // The Sony client can now surface UpstreamQueryRotated / UpstreamRateLimited
-  // in addition to UpstreamUnavailable. NEW + PDP propagate them honestly;
-  // upcoming/discounted keep degrading to [] via the untouched featureConcepts
-  // catchAll (devils-advocate cut 1).
+describe('upstream error propagation on all list tabs (issue #78)', () => {
+  // #78 (owner ruling 2026-05-31 (A)) makes upcoming/discounted PROPAGATE an
+  // upstream outage instead of swallowing it into []. This REVERSES #62's
+  // da-cut-1 continuity choice for the outage case: all three list tabs now
+  // surface UpstreamUnavailable / UpstreamQueryRotated / UpstreamRateLimited
+  // honestly (gamesApi maps them to 502/502/503). A genuinely-empty healthy
+  // response still returns [] via the SUCCESS channel — see the separate
+  // "returns empty result when no concepts exist" test (empty != error).
   const failingSony = (
     error: UpstreamQueryRotated | UpstreamRateLimited | UpstreamUnavailable,
   ) =>
@@ -716,53 +744,68 @@ describe('widened upstream error channel (issue #62)', () => {
       ),
     )
 
-  it('propagates UpstreamQueryRotated from getNewGames', async () => {
-    const exit = await runWith(
-      failingSony(
+  // Every (feature, error-tag) combination propagates as a typed failure.
+  const errorCases = [
+    {
+      tag: 'UpstreamUnavailable',
+      make: () => new UpstreamUnavailable({ message: 'down' }),
+    },
+    {
+      tag: 'UpstreamQueryRotated',
+      make: () =>
         new UpstreamQueryRotated({ message: 'rotated', operationName: 'op' }),
-      ),
-      (s) => s.getNewGames(),
+    },
+    {
+      tag: 'UpstreamRateLimited',
+      make: () => new UpstreamRateLimited({ message: 'limited' }),
+    },
+  ] as const
+
+  const listCases = [
+    { feature: 'new', call: (s: GamesServiceApi) => s.getNewGames() },
+    {
+      feature: 'upcoming',
+      call: (s: GamesServiceApi) => s.getUpcomingGames(),
+    },
+    {
+      feature: 'discounted',
+      call: (s: GamesServiceApi) => s.getDiscountedGames(),
+    },
+  ] as const
+
+  for (const { feature, call } of listCases) {
+    for (const { tag, make } of errorCases) {
+      it(`${feature} propagates ${tag} (no silent empty)`, async () => {
+        const exit = await runWith(failingSony(make()), call)
+        expect(Exit.isFailure(exit)).toBe(true)
+        if (Exit.isFailure(exit)) {
+          expect(JSON.stringify(exit.cause)).toContain(tag)
+        }
+      })
+    }
+  }
+
+  it('getGameById for an upcoming/discounted id under outage fails with UpstreamError, not GameNotFound', async () => {
+    // Ripple of (A): findInFeature now propagates the upstream error. NEW
+    // succeeds (empty) so getGameById clears `baseGames` and does NOT find the
+    // id there, then reaches the failing upcoming lookup — isolating the
+    // findInFeature path so the failure can't be attributed to baseGames. The
+    // PDP lookup thus surfaces an honest 502/503 instead of a misleading 404.
+    const NewOkFeaturesFail = Layer.succeed(SonyClient, {
+      fetchConceptsByFeature: (feature) =>
+        feature === 'new'
+          ? Effect.succeed<Concept[]>([])
+          : Effect.fail(new UpstreamUnavailable({ message: 'down' })),
+      fetchProductDetail: () => Effect.succeed({ genres: [], description: '' }),
+    })
+    const exit = await runWith(NewOkFeaturesFail, (s) =>
+      s.getGameById('EP0001-PPSA09999_00-UPCOMINGONLY00000'),
     )
     expect(Exit.isFailure(exit)).toBe(true)
     if (Exit.isFailure(exit)) {
-      expect(JSON.stringify(exit.cause)).toContain('UpstreamQueryRotated')
-    }
-  })
-
-  it('propagates UpstreamRateLimited from getGameById', async () => {
-    const exit = await runWith(
-      failingSony(
-        new UpstreamRateLimited({ message: 'limited', retryAfterSeconds: 3 }),
-      ),
-      (s) => s.getGameById('EP0001-PPSA00001_00-ALPHA00000000000'),
-    )
-    expect(Exit.isFailure(exit)).toBe(true)
-    if (Exit.isFailure(exit)) {
-      expect(JSON.stringify(exit.cause)).toContain('UpstreamRateLimited')
-    }
-  })
-
-  it('degrades upcoming to [] on UpstreamQueryRotated (catchAll kept)', async () => {
-    const exit = await runWith(
-      failingSony(
-        new UpstreamQueryRotated({ message: 'rotated', operationName: 'op' }),
-      ),
-      (s) => s.getUpcomingGames(),
-    )
-    expect(Exit.isSuccess(exit)).toBe(true)
-    if (Exit.isSuccess(exit)) {
-      expect(exit.value.games).toEqual([])
-    }
-  })
-
-  it('degrades discounted to [] on UpstreamRateLimited (catchAll kept)', async () => {
-    const exit = await runWith(
-      failingSony(new UpstreamRateLimited({ message: 'limited' })),
-      (s) => s.getDiscountedGames(),
-    )
-    expect(Exit.isSuccess(exit)).toBe(true)
-    if (Exit.isSuccess(exit)) {
-      expect(exit.value.games).toEqual([])
+      const cause = JSON.stringify(exit.cause)
+      expect(cause).toContain('UpstreamUnavailable')
+      expect(cause).not.toContain('GameNotFound')
     }
   })
 })

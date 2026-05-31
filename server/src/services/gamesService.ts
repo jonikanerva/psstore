@@ -25,9 +25,9 @@ const decodeGame = Schema.decodeUnknownSync(gameSchema)
 // The upstream error channel the Sony client can surface. Widened from the
 // single UpstreamUnavailable when issue #62 added rotation/rate-limit
 // classification; the compiler propagates this union through every list/PDP
-// path (STACK §2 — the compiler is the reviewer). NEW + PDP surface it honestly
-// (502/503); the upcoming/discounted call sites still degrade to [] (the
-// featureConcepts catchAll, kept per devils-advocate cut 1).
+// path (STACK §2 — the compiler is the reviewer). All three list tabs now
+// surface it honestly (502/502/503): NEW + PDP always did, and #78 made
+// upcoming/discounted consistent by propagating it instead of swallowing it.
 type UpstreamError =
   | UpstreamUnavailable
   | UpstreamQueryRotated
@@ -81,8 +81,12 @@ export const GamesServiceLive: Layer.Layer<GamesService, never, SonyClient> =
       // lookup is the side-effecting fetch; concurrent gets share a single fetch.
 
       // Concepts per feature. NEW uses the wider window; upcoming/discounted use
-      // the standard list size. Failures propagate as UpstreamUnavailable here;
-      // the upcoming/discounted call sites degrade to an empty list.
+      // the standard list size. Failures propagate up the typed error channel
+      // for all three features (see `featureConcepts` / `baseGames`). NOTE: Effect
+      // `Cache` pins a FAILED lookup for the full TTL (CACHE_TTL = 30s) the same
+      // as a success — NEW already behaved this way; #78 makes the ≤30s
+      // failure-pin-after-Sony-recovers apply to all three tabs (a deliberate
+      // trade documented in the PR, not a new mechanism).
       const conceptsCache = yield* Cache.make<
         'new' | 'upcoming' | 'discounted',
         Concept[],
@@ -126,18 +130,22 @@ export const GamesServiceLive: Layer.Layer<GamesService, never, SonyClient> =
           })),
         )
 
+      // Upcoming/discounted concept fetch. The upstream failure PROPAGATES (it is
+      // no longer swallowed into an empty list) so a Sony outage surfaces as an
+      // honest 502/503, exactly as NEW already does via `baseGames`. `tapError`
+      // keeps the operator warning firing without touching the error channel
+      // (owner ruling 2026-05-31 (A); reverses #62's da-cut-1 continuity choice
+      // for the outage case — see PR). A genuinely empty grid still returns `[]`
+      // through the SUCCESS channel, so "empty" stays distinct from "error".
       const featureConcepts = (
         feature: 'upcoming' | 'discounted',
-      ): Effect.Effect<Concept[]> =>
+      ): Effect.Effect<Concept[], UpstreamError> =>
         conceptsCache.get(feature).pipe(
-          Effect.catchAll((error) =>
-            Effect.logWarning(
-              'feature concept query failed; using empty fallback',
-              {
-                feature,
-                reason: error._tag,
-              },
-            ).pipe(Effect.as<Concept[]>([])),
+          Effect.tapError((error) =>
+            Effect.logWarning('feature concept query failed', {
+              feature,
+              reason: error._tag,
+            }),
           ),
         )
 
@@ -230,6 +238,15 @@ export const GamesServiceLive: Layer.Layer<GamesService, never, SonyClient> =
               { concurrency: 'unbounded' },
             ),
           ),
+          // DELIBERATE VISION-safety drop (owner ruling 2026-05-31 (B), kept as-is):
+          // a concept with an unknown/absent `storeDisplayClassification`
+          // (classification === null) is DROPPED, never shown. This guarantees a
+          // non-game SKU (DLC / currency / theme / edition) can never leak into
+          // the games-only grid. Accepted trade-off: a real discounted game whose
+          // per-product enrichment transiently FAILS also reads as
+          // classification:null and is dropped (rather than shown unclassified) —
+          // self-healing on the next request via the 6h productDetailCache. The
+          // `Boolean(game.date)` gate below is a separate (date-sort) drop.
           Effect.map((enriched) =>
             enriched
               .filter(
@@ -259,10 +276,14 @@ export const GamesServiceLive: Layer.Layer<GamesService, never, SonyClient> =
           ),
         )
 
+      // Propagates the upstream error (was silently `Effect<Game | null>` while
+      // featureConcepts swallowed failures): a PDP lookup for an
+      // upcoming/discounted id now surfaces an honest 502/503 on a Sony outage
+      // instead of a misleading 404 (#78, devils-advocate tightening 4).
       const findInFeature = (
         feature: 'upcoming' | 'discounted',
         id: string,
-      ): Effect.Effect<Game | null> =>
+      ): Effect.Effect<Game | null, UpstreamError> =>
         featureConcepts(feature).pipe(
           Effect.map((concepts) =>
             concepts.filter((concept) => conceptProductId(concept) === id),
