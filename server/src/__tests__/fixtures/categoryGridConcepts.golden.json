@@ -1,0 +1,373 @@
+{
+  "data": {
+    "categoryGridRetrieve": {
+      "concepts": [
+        {
+          "id": "10018784",
+          "name": "Into the Slimy Mines",
+          "price": {
+            "__typename": "SkuPrice",
+            "basePrice": "€12,95",
+            "discountText": null,
+            "discountedPrice": "€12,95",
+            "includesBundleOffer": false,
+            "isExclusive": false,
+            "isFree": false,
+            "isTiedToSubscription": false,
+            "serviceBranding": ["NONE"],
+            "upsellServiceBranding": ["PS_PLUS"],
+            "upsellText": "Säästä 10 %"
+          },
+          "products": [
+            {
+              "__typename": "Product",
+              "id": "EP4459-PPSA36364_00-SLIMYMINESPS5DEM"
+            },
+            {
+              "__typename": "Product",
+              "id": "EP4459-PPSA36363_00-SLIMYMINESPS5000"
+            },
+            {
+              "__typename": "Product",
+              "id": "EP4459-PPSA36363_00-0217203716655355"
+            }
+          ],
+          "media": [
+            {
+              "__typename": "Media",
+              "role": "GAMEHUB_COVER_ART",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202604/1513/842cfe987ad404f8e500c0cafc5e122d8665026fee0aa181.jpg"
+            },
+            {
+              "__typename": "Media",
+              "role": "PORTRAIT_BANNER",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202604/1513/e36d99746cfab17da81459bf914cc1667bf1950b327d9e9a.png"
+            },
+            {
+              "__typename": "Media",
+              "role": "SCREENSHOT",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202604/1513/d087cb0aa0b4b19ea5f4a6b9e11f720a910d2c7467870f57.jpg"
+            },
+            {
+              "__typename": "Media",
+              "role": "SCREENSHOT",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202604/1513/8508af6333a633b2dfb834a86be7aad70c0535cf126ad219.jpg"
+            }
+          ]
+        },
+        {
+          "id": "10019591",
+          "name": "Alien Cat Story",
+          "price": {
+            "__typename": "SkuPrice",
+            "basePrice": "€7,95",
+            "discountText": null,
+            "discountedPrice": "€7,95",
+            "includesBundleOffer": false,
+            "isExclusive": false,
+            "isFree": false,
+            "isTiedToSubscription": false,
+            "serviceBranding": ["NONE"],
+            "upsellServiceBranding": ["NONE"],
+            "upsellText": null
+          },
+          "products": [
+            {
+              "__typename": "Product",
+              "id": "UB0851-CUSA59323_00-ALIENCATSTORYPS4"
+            },
+            {
+              "__typename": "Product",
+              "id": "UB0851-PPSA37784_00-ALIENCATSTORYPS5"
+            }
+          ],
+          "media": [
+            {
+              "__typename": "Media",
+              "role": "GAMEHUB_COVER_ART",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202604/2710/5c9303e031224e187d936ed03f6390a477eab46ab3d5815f.jpg"
+            },
+            {
+              "__typename": "Media",
+              "role": "PORTRAIT_BANNER",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202604/2710/976d80f7c4fbaae74c2408c91c4e3832b475bf354f64f762.jpg"
+            },
+            {
+              "__typename": "Media",
+              "role": "SCREENSHOT",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202604/2710/0c778856aebee6fe19cf385a0d3c5eeaf611949439629171.jpg"
+            },
+            {
+              "__typename": "Media",
+              "role": "SCREENSHOT",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202604/2710/e44608fcc2f06a8615dad976a2c4783a711305a0d49f2bd5.jpg"
+            }
+          ]
+        },
+        {
+          "id": "10019496",
+          "name": "Bestial Reception",
+          "price": {
+            "__typename": "SkuPrice",
+            "basePrice": "€6,95",
+            "discountText": null,
+            "discountedPrice": "€6,95",
+            "includesBundleOffer": false,
+            "isExclusive": false,
+            "isFree": false,
+            "isTiedToSubscription": false,
+            "serviceBranding": ["NONE"],
+            "upsellServiceBranding": ["NONE"],
+            "upsellText": null
+          },
+          "products": [
+            {
+              "__typename": "Product",
+              "id": "UB0851-CUSA59237_00-BESTIALRECEPTION"
+            },
+            {
+              "__typename": "Product",
+              "id": "UB0851-PPSA37634_00-BESTIALRECEPTION"
+            }
+          ],
+          "media": [
+            {
+              "__typename": "Media",
+              "role": "GAMEHUB_COVER_ART",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202604/2712/801765662c15a0082afcc1f93cf598921536aff36cdb7f7a.jpg"
+            },
+            {
+              "__typename": "Media",
+              "role": "PORTRAIT_BANNER",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202604/2712/50d3b8bb670f6c7a50b9fcd6081f6f26b33872409055f6c2.jpg"
+            },
+            {
+              "__typename": "Media",
+              "role": "SCREENSHOT",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202604/2712/6710cefea71e8165a14301ef26e4ceaceac19ab773f8fe6c.jpg"
+            },
+            {
+              "__typename": "Media",
+              "role": "SCREENSHOT",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202604/2712/890d45081abaa9e6ba63ab5b45ef6c6244aa7e8455c4d27a.jpg"
+            }
+          ]
+        },
+        {
+          "id": "10019498",
+          "name": "Exodus: Creepy Time",
+          "price": {
+            "__typename": "SkuPrice",
+            "basePrice": "€7,95",
+            "discountText": null,
+            "discountedPrice": "€7,95",
+            "includesBundleOffer": false,
+            "isExclusive": false,
+            "isFree": false,
+            "isTiedToSubscription": false,
+            "serviceBranding": ["NONE"],
+            "upsellServiceBranding": ["NONE"],
+            "upsellText": null
+          },
+          "products": [
+            {
+              "__typename": "Product",
+              "id": "UB0851-CUSA59238_00-EXODUSCREEPYTIME"
+            },
+            {
+              "__typename": "Product",
+              "id": "UB0851-PPSA37635_00-EXODUSCREEPYTIME"
+            }
+          ],
+          "media": [
+            {
+              "__typename": "Media",
+              "role": "GAMEHUB_COVER_ART",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202604/2708/65602a246f87da82374aa1f747e6b6dd7139e627c4050ec8.jpg"
+            },
+            {
+              "__typename": "Media",
+              "role": "PORTRAIT_BANNER",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202604/2708/4edc0aefce8226862e9219a567eb5bb762a7fa79b93e9b81.jpg"
+            },
+            {
+              "__typename": "Media",
+              "role": "SCREENSHOT",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202604/2708/102d33a7b95a235827fbe4b19c22230dcd083e43675a7841.jpg"
+            },
+            {
+              "__typename": "Media",
+              "role": "SCREENSHOT",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202604/2708/14f93c368aa248fd6597c15d74d7efd9a859e2e4a9859416.jpg"
+            }
+          ]
+        },
+        {
+          "id": "10019284",
+          "name": "Mighty Aphid",
+          "price": {
+            "__typename": "SkuPrice",
+            "basePrice": "€4,95",
+            "discountText": null,
+            "discountedPrice": "€4,95",
+            "includesBundleOffer": false,
+            "isExclusive": false,
+            "isFree": false,
+            "isTiedToSubscription": false,
+            "serviceBranding": ["NONE"],
+            "upsellServiceBranding": ["NONE"],
+            "upsellText": null
+          },
+          "products": [
+            {
+              "__typename": "Product",
+              "id": "UB0108-PPSA37343_00-0841515938522662"
+            },
+            {
+              "__typename": "Product",
+              "id": "UB0108-CUSA59081_00-0510143571915422"
+            }
+          ],
+          "media": [
+            {
+              "__typename": "Media",
+              "role": "GAMEHUB_COVER_ART",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202604/1718/1bb76289a10c18e49999882270d7bccf65115e44917ed0f1.png"
+            },
+            {
+              "__typename": "Media",
+              "role": "PORTRAIT_BANNER",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202604/1718/e0efbe27b66b8cb09c6298e4c75a16c2cea97ebf315300db.png"
+            },
+            {
+              "__typename": "Media",
+              "role": "SCREENSHOT",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202604/1718/2862b90203131440cfc470b7515913e32f220fd3732e3db4.jpg"
+            },
+            {
+              "__typename": "Media",
+              "role": "SCREENSHOT",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202604/1718/e8184d4919db41665b54b06427d80d37782176e5fa67ebea.jpg"
+            }
+          ]
+        },
+        {
+          "id": "10018729",
+          "name": "RunNGun",
+          "price": null,
+          "products": [],
+          "media": [
+            {
+              "__typename": "Media",
+              "role": "GAMEHUB_COVER_ART",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202603/0813/8f962037062a62fee391775b86b4f499071b12c70e4a68d4.png"
+            },
+            {
+              "__typename": "Media",
+              "role": "SCREENSHOT",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202603/0813/9aff5b1025831615966fb7edb9cb5ac51971a1d8e5388213.jpg"
+            },
+            {
+              "__typename": "Media",
+              "role": "SCREENSHOT",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202603/0813/5cd6d16a4343f2720a09d81e0916d3e1ec5cbaeef5e5ddea.jpg"
+            },
+            {
+              "__typename": "Media",
+              "role": "MASTER",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202603/0813/039fa2862654dfc026cc9f4cea7ea80fca3d1043af62bed1.png"
+            }
+          ]
+        },
+        {
+          "id": "10019188",
+          "name": "Rat Protocol",
+          "price": null,
+          "products": [],
+          "media": [
+            {
+              "__typename": "Media",
+              "role": "GAMEHUB_COVER_ART",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202605/1206/64aac4ef5ae795ba7584fb2dec4c9548183c70690970b82a.png"
+            },
+            {
+              "__typename": "Media",
+              "role": "PORTRAIT_BANNER",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202605/1206/7ff311d15661c3975280b045cefe4a0599acde5ced4700b9.png"
+            },
+            {
+              "__typename": "Media",
+              "role": "SCREENSHOT",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202605/1206/e2ffb960138673d308c643f757a832448a282f3a3fdd3ade.jpg"
+            },
+            {
+              "__typename": "Media",
+              "role": "SCREENSHOT",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202605/1206/bb2086c6518c14c6893034163a321ffb4b705e7073dd3c13.jpg"
+            }
+          ]
+        },
+        {
+          "id": "10018733",
+          "name": "Casino Slot & Claw Machine: Lucky Claws",
+          "price": null,
+          "products": [],
+          "media": [
+            {
+              "__typename": "Media",
+              "role": "GAMEHUB_COVER_ART",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202605/2121/c5aa7556c502f0c73d994ffdde4dc9f311dd30b31fbc7540.png"
+            },
+            {
+              "__typename": "Media",
+              "role": "SCREENSHOT",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202604/1017/b6368c8eb6ad22bbf03e2b1433970b7519d5132715eda62e.jpg"
+            },
+            {
+              "__typename": "Media",
+              "role": "SCREENSHOT",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202604/1017/c7809338aa93f98f4fc5c9d126d21d0d3b78ed4176d48e2a.jpg"
+            },
+            {
+              "__typename": "Media",
+              "role": "MASTER",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202604/1017/ddb5b1a2988b1f9da84ecf80555af9033a67ed4bd8c388ff.png"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

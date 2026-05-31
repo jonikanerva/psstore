@@ -1,0 +1,64 @@
+{
+  "data": {
+    "productRetrieve": {
+      "id": "UB0851-CUSA59323_00-ALIENCATSTORYPS4",
+      "releaseDate": "2026-05-27T21:00:00Z",
+      "publisherName": "Brainium Games LLC",
+      "storeDisplayClassification": "FULL_GAME",
+      "subType": "FULL_GAME",
+      "backwardsCompatibilityCategory": null,
+      "descriptions": [
+        {
+          "__typename": "Description",
+          "type": "SHORT",
+          "value": "Pakeneminen kohtaloa"
+        },
+        {
+          "__typename": "Description",
+          "type": "LEGAL",
+          "value": "Jotta voisit pelata tätä peliä PS5-konsolilla, järjestelmäsi saattaa vaatia päivityksen käyttöjärjestelmän uusimpaan versioon. Vaikka tämä peli on pelattavissa PS5-konsolilla, jotkin sen PS4-konsolilla saatavilla olevat ominaisuudet saattavat puuttua. Katso lisätietoja osoitteessa PlayStation.com/bc."
+        },
+        {
+          "__typename": "Description",
+          "type": "LONG",
+          "value": "Valmistaudu uskomattomaan seikkailuun vieraalla planeetalla, täynnä vaaroja, pulmia ja odottamattomia liittolaisia. Vain sinä voit auttaa kissaa korjaamaan laivansa ja lähtemään tästä vaarallisesta maailmasta.\r<br/>\r<br/>Päähenkilö on kissa, pienen lentävän aluksen lentäjä. Onnettomuuden jälkeen hän joutuu tuntemattomalle planeetalle, jossa hänen tavoitteenaan on kerätä sytyttimiä laivan korjaamiseksi ja kotiinpaluuta varten.\r<br/>\r<br/>Matkalla kissa kohtaa erilaisia ​​vihollisia, vaikeita tasoja ja pulmia sekä liittolaisia. Peli on tyyliltään 2D-tasohyppelypeli, jossa sankari liikkuu tasojen läpi, hyppää, taistelee vihollisia vastaan ​​ja kerää tarvittavat esineet laivan korjaamiseksi. Ohjaimet ovat yksinkertaiset ja intuitiiviset, mikä tekee pelistä helppokäyttöisen sekä aloittelijoille että kokeneille pelaajille.\r<br/>\r<br/>Ylhäältä katsottuna: Joillakin tasoilla näkymä vaihtuu \"ylhäältä katsottuna\", ja sinun on ratkaistava pulmia päästäksesi seuraavaan vaiheeseen.\r<br/>Aluksen korjaus Tasojen välillä sankari palaa laivaansa, jossa hän käyttää kerättyjä diodeja sen korjaamiseen. Jokaisen uuden diodin myötä kissa pääsee askeleen lähemmäksi laivan korjaamista ja kotiinpaluuta.\r<br/>Loppusanat Valmistaudu uskomattomaan seikkailuun vieraalla planeetalla, täynnä vaaroja, pulmia ja odottamattomia liittolaisia. Vain sinä voit auttaa kissaa korjaamaan aluksensa ja poistumaan tästä vaarallisesta maailmasta.<br/>"
+        },
+        {
+          "__typename": "Description",
+          "type": "COMPATIBILITY_NOTICE",
+          "value": "Pelattavissa vain offline-tilassa<br/>1 pelaajaa"
+        },
+        {
+          "__typename": "Description",
+          "type": "LEGAL",
+          "value": "<br><br>Tämän tuotteen lataamista koskevat PlayStationin palveluehdot ja ohjelman käyttöehdot, sekä mahdolliset lisäehdot. Jos et hyväksy näitä ehtoja, älä lataa tätä tuotetta. Lisätietoja on palveluehdoissa.<br>"
+        },
+        {
+          "__typename": "Description",
+          "type": "LEGAL",
+          "value": "<br>Kertalisenssimaksu useisiin PS4-järjestelmiin lataamiseksi. Kirjautuminen PlayStationiin ei ole tarpeen tämän käyttämiseksi ensisijaisessa PS4:ssä, mutta on tarpeen muissa PS4-järjestelmissä käyttämiseksi.<br>"
+        },
+        {
+          "__typename": "Description",
+          "type": "LEGAL",
+          "value": "<br>Lue kohdasta <a href=\"https://www.playstation.com/legal/health-warning/\">Terveysvaroitukset</a> tärkeitä terveyteen liittyviä tietoja ennen kuin käytät tätä tuotetta.<br>"
+        },
+        {
+          "__typename": "Description",
+          "type": "LEGAL",
+          "value": "<br>Kirjasto-ohjelmat © Sony Interactive Entertainment Inc., lisensoitu yksinoikeudella Sony Interactive Entertainment Europelle. Käyttö on ohjelmiston käyttöehtojen alaista, täysimittaiset käyttöoikeudet ovat osoitteessa eu.playstation.com/legal.<br>"
+        }
+      ],
+      "combinedLocalizedGenres": [
+        {
+          "__typename": "LocalizedGenreSubGenre",
+          "value": "Pulmapeli"
+        },
+        {
+          "__typename": "LocalizedGenreSubGenre",
+          "value": "Tasohyppely"
+        }
+      ]
+    }
+  }
+}
