@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  extractCategoryGrid,
   extractProductDetail,
   extractReleaseDateFromProductResponse,
 } from '../sony/sonyClient.js'
@@ -162,5 +163,104 @@ describe('extractProductDetail', () => {
     expect(result.releaseDate).toBeUndefined()
     expect(result.genres).toEqual([])
     expect(result.description).toBe('')
+  })
+})
+
+describe('extractCategoryGrid', () => {
+  it('decodes a concepts payload (happy path, concepts-first selection)', () => {
+    const outcome = extractCategoryGrid({
+      data: {
+        categoryGridRetrieve: {
+          concepts: [
+            {
+              id: '1',
+              name: 'Alpha',
+              media: [{ type: 'IMAGE', role: 'MASTER', url: 'https://img/a' }],
+              price: { basePrice: '€29.95' },
+              products: [{ id: 'EP0001-PPSA00001_00-ALPHA00000000000' }],
+            },
+          ],
+          products: [{ id: 'EP0001-PPSA09999_00-IGNORED000000000' }],
+        },
+      },
+    })
+
+    expect(outcome.kind).toBe('ok')
+    if (outcome.kind === 'ok') {
+      // Concepts win over products when both are present.
+      expect(outcome.concepts).toHaveLength(1)
+      expect(outcome.concepts[0]?.name).toBe('Alpha')
+    }
+  })
+
+  it('maps products to concepts when no concepts are present', () => {
+    const outcome = extractCategoryGrid({
+      data: {
+        categoryGridRetrieve: {
+          products: [
+            {
+              id: 'EP0001-PPSA00002_00-BRAVO00000000000',
+              name: 'Bravo',
+              media: [],
+              price: { basePrice: '€19.95' },
+            },
+          ],
+        },
+      },
+    })
+
+    expect(outcome.kind).toBe('ok')
+    if (outcome.kind === 'ok') {
+      expect(outcome.concepts).toHaveLength(1)
+      expect(outcome.concepts[0]?.name).toBe('Bravo')
+      expect(outcome.concepts[0]?.products?.[0]?.id).toBe(
+        'EP0001-PPSA00002_00-BRAVO00000000000',
+      )
+    }
+  })
+
+  it('treats a present-but-empty grid as a legitimate empty list (no drift)', () => {
+    const empty = extractCategoryGrid({
+      data: { categoryGridRetrieve: { concepts: [], products: [] } },
+    })
+    expect(empty.kind).toBe('ok')
+    if (empty.kind === 'ok') {
+      expect(empty.concepts).toEqual([])
+    }
+
+    const noArrays = extractCategoryGrid({
+      data: { categoryGridRetrieve: {} },
+    })
+    expect(noArrays.kind).toBe('ok')
+    if (noArrays.kind === 'ok') {
+      expect(noArrays.concepts).toEqual([])
+    }
+  })
+
+  it('flags an absent categoryGridRetrieve node as drift', () => {
+    expect(extractCategoryGrid({ data: {} }).kind).toBe('drift')
+    expect(extractCategoryGrid({}).kind).toBe('drift')
+    expect(
+      extractCategoryGrid({ data: { categoryGridRetrieve: null } }).kind,
+    ).toBe('drift')
+  })
+
+  it('flags a drift-shaped (malformed) node as drift', () => {
+    // concepts is the wrong type — the inner schema rejects it, so the node is
+    // undecodable and the caller degrades to [] with a drift warning.
+    const malformed = {
+      data: {
+        categoryGridRetrieve: {
+          concepts: 'not-an-array',
+          products: 42,
+        },
+      },
+    }
+    expect(extractCategoryGrid(malformed).kind).toBe('drift')
+  })
+
+  it('flags a non-object body as drift', () => {
+    expect(extractCategoryGrid('boom').kind).toBe('drift')
+    expect(extractCategoryGrid(null).kind).toBe('drift')
   })
 })

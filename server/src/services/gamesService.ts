@@ -1,7 +1,12 @@
 import { gameSchema, type Game, type PageResult } from '@psstore/shared'
 import { Cache, Context, Duration, Effect, Layer, Schema } from 'effect'
 import { CACHE_TTL } from '../config/env.js'
-import { GameNotFound, type UpstreamUnavailable } from '../errors/errors.js'
+import {
+  GameNotFound,
+  type UpstreamQueryRotated,
+  type UpstreamRateLimited,
+  type UpstreamUnavailable,
+} from '../errors/errors.js'
 import { SonyClient, type ProductDetailResult } from '../sony/sonyClient.js'
 import type { Concept } from '../sony/types.js'
 import {
@@ -16,6 +21,17 @@ import {
 } from '../domain/listing.js'
 
 const decodeGame = Schema.decodeUnknownSync(gameSchema)
+
+// The upstream error channel the Sony client can surface. Widened from the
+// single UpstreamUnavailable when issue #62 added rotation/rate-limit
+// classification; the compiler propagates this union through every list/PDP
+// path (STACK §2 — the compiler is the reviewer). NEW + PDP surface it honestly
+// (502/503); the upcoming/discounted call sites still degrade to [] (the
+// featureConcepts catchAll, kept per devils-advocate cut 1).
+type UpstreamError =
+  | UpstreamUnavailable
+  | UpstreamQueryRotated
+  | UpstreamRateLimited
 
 // NEW fetches a wider window than the other features. With the
 // `conceptReleaseDate:last_thirty_days` facet the released PS5 candidate set is
@@ -35,18 +51,18 @@ export interface GamesServiceApi {
   readonly getNewGames: (
     offset?: number,
     size?: number,
-  ) => Effect.Effect<PageResult, UpstreamUnavailable>
+  ) => Effect.Effect<PageResult, UpstreamError>
   readonly getUpcomingGames: (
     offset?: number,
     size?: number,
-  ) => Effect.Effect<PageResult, UpstreamUnavailable>
+  ) => Effect.Effect<PageResult, UpstreamError>
   readonly getDiscountedGames: (
     offset?: number,
     size?: number,
-  ) => Effect.Effect<PageResult, UpstreamUnavailable>
+  ) => Effect.Effect<PageResult, UpstreamError>
   readonly getGameById: (
     id: string,
-  ) => Effect.Effect<Game, GameNotFound | UpstreamUnavailable>
+  ) => Effect.Effect<Game, GameNotFound | UpstreamError>
 }
 
 export class GamesService extends Context.Tag('GamesService')<
@@ -70,7 +86,7 @@ export const GamesServiceLive: Layer.Layer<GamesService, never, SonyClient> =
       const conceptsCache = yield* Cache.make<
         'new' | 'upcoming' | 'discounted',
         Concept[],
-        UpstreamUnavailable
+        UpstreamError
       >({
         capacity: 16,
         timeToLive: listTtl,
@@ -130,7 +146,7 @@ export const GamesServiceLive: Layer.Layer<GamesService, never, SonyClient> =
           Effect.map((meta) => ({ ...game, date: meta.date })),
         )
 
-      const baseGames = (): Effect.Effect<Game[], UpstreamUnavailable> =>
+      const baseGames = (): Effect.Effect<Game[], UpstreamError> =>
         conceptsCache
           .get('new')
           .pipe(Effect.map((concepts) => mapConceptsToGames(concepts)))
@@ -155,7 +171,7 @@ export const GamesServiceLive: Layer.Layer<GamesService, never, SonyClient> =
       const getNewGames = (
         offset = 0,
         size = 60,
-      ): Effect.Effect<PageResult, UpstreamUnavailable> =>
+      ): Effect.Effect<PageResult, UpstreamError> =>
         baseGames().pipe(
           Effect.flatMap((games) =>
             enrichedListing(games, 'date-desc', 'released', offset, size),
@@ -173,7 +189,7 @@ export const GamesServiceLive: Layer.Layer<GamesService, never, SonyClient> =
       const getUpcomingGames = (
         offset = 0,
         size = 60,
-      ): Effect.Effect<PageResult, UpstreamUnavailable> =>
+      ): Effect.Effect<PageResult, UpstreamError> =>
         featureConcepts('upcoming').pipe(
           Effect.map((concepts) => mapUpcomingConceptsToGames(concepts)),
           Effect.flatMap((games) =>
@@ -198,7 +214,7 @@ export const GamesServiceLive: Layer.Layer<GamesService, never, SonyClient> =
       const getDiscountedGames = (
         offset = 0,
         size = 60,
-      ): Effect.Effect<PageResult, UpstreamUnavailable> =>
+      ): Effect.Effect<PageResult, UpstreamError> =>
         featureConcepts('discounted').pipe(
           Effect.map((concepts) => mapConceptsToGames(concepts)),
           Effect.flatMap((games) =>
@@ -261,7 +277,7 @@ export const GamesServiceLive: Layer.Layer<GamesService, never, SonyClient> =
 
       const getGameById = (
         id: string,
-      ): Effect.Effect<Game, GameNotFound | UpstreamUnavailable> =>
+      ): Effect.Effect<Game, GameNotFound | UpstreamError> =>
         Effect.gen(function* () {
           const games = yield* baseGames()
           const base = games.find((item) => item.id === id)

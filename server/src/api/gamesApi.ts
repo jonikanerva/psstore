@@ -2,6 +2,8 @@ import { HttpApi, HttpApiEndpoint, HttpApiGroup } from '@effect/platform'
 import { gameSchema, pageResultSchema } from '@psstore/shared'
 import {
   GameNotFound,
+  UpstreamQueryRotated,
+  UpstreamRateLimited,
   UpstreamUnavailable,
   ValidationError,
 } from '../errors/errors.js'
@@ -22,6 +24,8 @@ const listEndpoint = <const Name extends string>(name: Name) =>
     .addSuccess(pageResultSchema)
     .addError(ValidationError, { status: 400 })
     .addError(UpstreamUnavailable, { status: 502 })
+    .addError(UpstreamQueryRotated, { status: 502 })
+    .addError(UpstreamRateLimited, { status: 503 })
 
 const getByIdEndpoint = HttpApiEndpoint.get('getById', '/:id')
   .setPath(gameIdParamSchema)
@@ -29,6 +33,8 @@ const getByIdEndpoint = HttpApiEndpoint.get('getById', '/:id')
   .addError(ValidationError, { status: 400 })
   .addError(GameNotFound, { status: 404 })
   .addError(UpstreamUnavailable, { status: 502 })
+  .addError(UpstreamQueryRotated, { status: 502 })
+  .addError(UpstreamRateLimited, { status: 503 })
 
 export const gamesGroup = HttpApiGroup.make('games')
   .add(listEndpoint('new'))

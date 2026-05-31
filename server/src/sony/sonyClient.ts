@@ -7,8 +7,17 @@ import {
   SONY_RETRY_COUNT,
   SONY_TIMEOUT_MS,
 } from '../config/env.js'
-import { UpstreamUnavailable } from '../errors/errors.js'
-import { fetchWithRetry } from '../lib/http.js'
+import {
+  UpstreamQueryRotated,
+  UpstreamRateLimited,
+  UpstreamUnavailable,
+} from '../errors/errors.js'
+import { fetchWithRetry, RateLimitedError } from '../lib/http.js'
+import {
+  extractCategoryGridNode,
+  parseCategoryGrid,
+} from './categoryGridSchema.js'
+import { detectPersistedQueryRotation } from './graphqlErrors.js'
 import { parseProductRetrieve } from './productDetailSchema.js'
 import {
   buildStrategies,
@@ -17,7 +26,6 @@ import {
 } from './queryStrategies.js'
 import type {
   CategoryGridProduct,
-  CategoryGridRetrieveResponse,
   Concept,
   ProductRetrieveResponse,
 } from './types.js'
@@ -118,12 +126,47 @@ export const extractProductDetail = (
   }
 }
 
+/**
+ * The outcome of decoding a category-grid response, distinguishing the two
+ * empty-list cases the drift policy requires (devils-advocate cut 3):
+ *  - `drift`: the `data.categoryGridRetrieve` node was absent or undecodable —
+ *    a corrupt grid. The caller degrades to `[]` AND logs a warning so the
+ *    operator sees an honest signal.
+ *  - `ok`: the node was present and decoded (its concepts/products may be
+ *    legitimately empty) — the caller returns the selection silently.
+ */
+export type CategoryGridOutcome =
+  | { readonly kind: 'drift' }
+  | { readonly kind: 'ok'; readonly concepts: readonly Concept[] }
+
+/**
+ * Pure category-grid extraction (exported for unit tests; parallels
+ * `extractProductDetail`). Decodes the envelope and the inner node defensively,
+ * then applies the concepts-first selection (a concept list wins; otherwise the
+ * product list mapped to concepts) — unchanged from the previous inline logic.
+ */
+export const extractCategoryGrid = (json: unknown): CategoryGridOutcome => {
+  const node = extractCategoryGridNode(json)
+  if (node === undefined || node === null) {
+    return { kind: 'drift' }
+  }
+
+  const grid = parseCategoryGrid(node)
+  if (grid === null) {
+    return { kind: 'drift' }
+  }
+
+  const concepts = grid.concepts ?? []
+  const products = (grid.products ?? []).map(productToConcept)
+  return { kind: 'ok', concepts: concepts.length > 0 ? concepts : products }
+}
+
 // ---- SonyClient service (the network boundary) -----------------------------
 
-const requestConceptsPromise = async (
+const requestConceptsRaw = async (
   feature: SonyFeature,
   context: StrategyContext,
-): Promise<Concept[]> => {
+): Promise<unknown> => {
   const strategy = buildStrategies()[feature]
   const variables = strategy.buildVariables(context)
 
@@ -151,16 +194,14 @@ const requestConceptsPromise = async (
     SONY_RETRY_COUNT,
   )
 
-  const json = (await response.json()) as CategoryGridRetrieveResponse
-  const grid = json.data?.categoryGridRetrieve
-  const concepts = grid?.concepts ?? []
-  const products = (grid?.products ?? []).map(productToConcept)
-  return concepts.length > 0 ? concepts : products
+  // Untrusted until decoded — returned as `unknown`; rotation detection and the
+  // Schema decode run in the Effect layer below.
+  return response.json()
 }
 
-const requestProductDetailPromise = async (
+const requestProductDetailRaw = async (
   productId: string,
-): Promise<ProductDetailResult> => {
+): Promise<ProductRetrieveResponse> => {
   const query = new URLSearchParams({
     operationName: SONY_PRODUCT_OPERATION_NAME,
     variables: JSON.stringify({ productId }),
@@ -186,25 +227,51 @@ const requestProductDetailPromise = async (
     SONY_RETRY_COUNT,
   )
 
-  const json = (await response.json()) as ProductRetrieveResponse
-  return extractProductDetail(json)
+  // The product boundary is decoded downstream by `parseProductRetrieve` inside
+  // `extractProductDetail`; this cast only shapes the envelope it reads and is
+  // left in place per issue #62 scope (the category-grid cast is the one this
+  // change removes). Rotation detection runs on the raw body in the Effect layer.
+  return (await response.json()) as ProductRetrieveResponse
 }
 
-const upstream = (error: unknown): UpstreamUnavailable =>
-  new UpstreamUnavailable({
+// Map a transport-layer rejection onto the typed error channel. The rate-limit
+// sentinel (structured `RateLimitedError` from lib/http.ts) is pattern-matched
+// by instance — never by message string — and becomes UpstreamRateLimited;
+// everything else is a generic UpstreamUnavailable.
+const mapTransportError = (
+  error: unknown,
+): UpstreamRateLimited | UpstreamUnavailable => {
+  if (error instanceof RateLimitedError) {
+    const retryAfterSeconds =
+      error.retryAfterMs === null
+        ? undefined
+        : Math.ceil(error.retryAfterMs / 1000)
+    return new UpstreamRateLimited({
+      message: 'Sony upstream rate limited the request (HTTP 429)',
+      ...(retryAfterSeconds === undefined ? {} : { retryAfterSeconds }),
+    })
+  }
+  return new UpstreamUnavailable({
     message:
       error instanceof Error ? error.message : 'Sony upstream unavailable',
   })
+}
 
 export interface SonyClientApi {
   readonly fetchConceptsByFeature: (
     feature: SonyFeature,
     size?: number,
     offset?: number,
-  ) => Effect.Effect<Concept[], UpstreamUnavailable>
+  ) => Effect.Effect<
+    Concept[],
+    UpstreamUnavailable | UpstreamQueryRotated | UpstreamRateLimited
+  >
   readonly fetchProductDetail: (
     productId: string,
-  ) => Effect.Effect<ProductDetailResult, UpstreamUnavailable>
+  ) => Effect.Effect<
+    ProductDetailResult,
+    UpstreamUnavailable | UpstreamQueryRotated | UpstreamRateLimited
+  >
 }
 
 export class SonyClient extends Context.Tag('SonyClient')<
@@ -217,13 +284,55 @@ export const SonyClientLive: Layer.Layer<SonyClient> = Layer.succeed(
   SonyClient.of({
     fetchConceptsByFeature: (feature, size = 300, offset = 0) =>
       Effect.tryPromise({
-        try: () => requestConceptsPromise(feature, { size, offset }),
-        catch: upstream,
-      }),
+        try: () => requestConceptsRaw(feature, { size, offset }),
+        catch: mapTransportError,
+      }).pipe(
+        // A persisted-query rotation (HTTP 200 + Apollo errors[]) is a distinct,
+        // operator-actionable failure → 502 UpstreamQueryRotated, not a silent
+        // empty grid (issue #62 / Sony runbook).
+        Effect.flatMap((json) =>
+          detectPersistedQueryRotation(json)
+            ? Effect.fail(
+                new UpstreamQueryRotated({
+                  message:
+                    'Sony rejected the persisted query (hash rotated); re-run pnpm sony:refresh',
+                  operationName: buildStrategies()[feature].operationName,
+                }),
+              )
+            : Effect.succeed(json),
+        ),
+        Effect.flatMap((json) => {
+          const outcome = extractCategoryGrid(json)
+          if (outcome.kind === 'drift') {
+            // Corrupt-or-absent grid: degrade to [] for the user (VISION
+            // continuity over blankness) but emit an honest operator signal so a
+            // schema drift is never mistaken for a legitimately empty grid
+            // (STACK §9 structured log — feature/operation context only, no PII).
+            return Effect.logWarning('sony category grid drift', {
+              event: 'sony.categoryGrid.drift',
+              feature,
+              operationName: buildStrategies()[feature].operationName,
+            }).pipe(Effect.as<Concept[]>([]))
+          }
+          return Effect.succeed<Concept[]>([...outcome.concepts])
+        }),
+      ),
     fetchProductDetail: (productId) =>
       Effect.tryPromise({
-        try: () => requestProductDetailPromise(productId),
-        catch: upstream,
-      }),
+        try: () => requestProductDetailRaw(productId),
+        catch: mapTransportError,
+      }).pipe(
+        Effect.flatMap((json) =>
+          detectPersistedQueryRotation(json)
+            ? Effect.fail(
+                new UpstreamQueryRotated({
+                  message:
+                    'Sony rejected the persisted query (hash rotated); re-run pnpm sony:refresh',
+                  operationName: SONY_PRODUCT_OPERATION_NAME,
+                }),
+              )
+            : Effect.succeed(extractProductDetail(json)),
+        ),
+      ),
   }),
 )

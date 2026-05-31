@@ -22,6 +22,14 @@ export const SONY_LOCALE = 'fi-fi'
 export const SONY_RETRY_COUNT = 1
 export const SONY_TIMEOUT_MS = 6000
 
+// Upper bound on how long a 429 `Retry-After` may pause the request hot path
+// before the single retry. Derived from (and equal to) the per-attempt timeout
+// so the honoured delay can never exceed the request's existing budget: an
+// upstream sending a multi-minute `Retry-After` must not stall an interactive
+// request (CLAUDE.md → Responsiveness). Seconds, never minutes — a larger
+// upstream value is clamped to this ceiling.
+export const SONY_RETRY_AFTER_MAX_MS = SONY_TIMEOUT_MS
+
 // List cache TTL, pinned at 30000 ms exactly. Intentionally asymmetric with the
 // per-product DETAIL_TTL (Duration.hours(6)) in gamesService: list windows
 // refresh far more often than individual product metadata.

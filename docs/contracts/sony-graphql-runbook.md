@@ -56,3 +56,5 @@ Drift in CI is a hard failure.
 - Scope filtering removes all records: verify capture really includes fi-fi + PS5 + EUR signals.
 - Validation mismatch: update manifest and backend mapping together.
 - Drift detected: inspect `docs/contracts/reports/latest-diff.md` and triage operation changes.
+- **PersistedQueryNotFound / `UpstreamQueryRotated` (HTTP 502):** Sony shipped a new store build and the persisted-query hash rotated (Sony answers HTTP 200 + a top-level GraphQL `errors[]`; the backend classifies it as `UpstreamQueryRotated`). The hash is stale. Re-capture via `pnpm sony:refresh`, then commit the updated `server/src/config/env.ts` hash constants together with the refreshed `docs/contracts/sony-graphql-manifest.json`.
+- **`UpstreamRateLimited` (HTTP 503):** Sony answered HTTP 429 and the single bounded retry did not clear it. Transient; no manifest action. The backend honours a clamped `Retry-After` (capped at the request timeout budget) — no token bucket is added (STACK.md §5 budget is TBD).
