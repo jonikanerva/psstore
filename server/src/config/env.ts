@@ -11,7 +11,7 @@ import { Duration } from 'effect'
 export const SONY_GRAPHQL_URL =
   'https://web.np.playstation.com/api/graphql/v1/op'
 export const SONY_CATEGORY_GRID_HASH =
-  '257713466fc3264850aa473409a29088e3a4115e6e69e9fb3e061c8dd5b9f5c6'
+  '4e41660b6732f35c99fc5541926b7502a09557924e8c2cfebd1beb1a5c8c8f81'
 export const SONY_CATEGORY_ID = 'd0446d4b-dc9a-4f1e-86ec-651f099c9b29'
 export const SONY_DEALS_CATEGORY_ID = '3f772501-f6f8-49b7-abac-874a88ca4897'
 export const SONY_OPERATION_NAME = 'categoryGridRetrieve'
