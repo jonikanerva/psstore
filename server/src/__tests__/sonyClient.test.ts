@@ -4,27 +4,10 @@ import {
   extractReleaseDateFromProductResponse,
 } from '../sony/sonyClient.js'
 import { buildStrategies } from '../sony/queryStrategies.js'
-import type { AppConfig } from '../config/env.js'
-
-const config: AppConfig = {
-  NODE_ENV: 'test',
-  PORT: 3000,
-  SONY_GRAPHQL_URL: 'https://web.np.playstation.com/api/graphql/v1/op',
-  SONY_CATEGORY_GRID_HASH: 'hash',
-  SONY_CATEGORY_ID: 'category',
-  SONY_DEALS_CATEGORY_ID: 'deals',
-  SONY_OPERATION_NAME: 'categoryGridRetrieve',
-  SONY_PRODUCT_OPERATION_NAME: 'metGetProductById',
-  SONY_PRODUCT_BY_ID_HASH: 'producthash',
-  SONY_LOCALE: 'fi-fi',
-  SONY_RETRY_COUNT: 1,
-  SONY_TIMEOUT_MS: 6000,
-  CACHE_TTL_MS: 30000,
-}
 
 describe('buildStrategies.new', () => {
   it('filters NEW to PS5 and Sony\'s released "last_thirty_days" facet', () => {
-    const variables = buildStrategies(config).new.buildVariables({})
+    const variables = buildStrategies().new.buildVariables({})
     expect(variables.filterBy).toEqual([
       'targetPlatforms:PS5',
       'conceptReleaseDate:last_thirty_days',
@@ -32,7 +15,7 @@ describe('buildStrategies.new', () => {
   })
 
   it('keeps NEW sorted conceptReleaseDate descending', () => {
-    const variables = buildStrategies(config).new.buildVariables({})
+    const variables = buildStrategies().new.buildVariables({})
     expect(variables.sortBy).toEqual({
       name: 'conceptReleaseDate',
       isAscending: false,

@@ -1,6 +1,12 @@
 import { Context, Effect, Layer } from 'effect'
-import { Env } from '../config/env.js'
-import type { AppConfig } from '../config/env.js'
+import {
+  SONY_GRAPHQL_URL,
+  SONY_LOCALE,
+  SONY_PRODUCT_BY_ID_HASH,
+  SONY_PRODUCT_OPERATION_NAME,
+  SONY_RETRY_COUNT,
+  SONY_TIMEOUT_MS,
+} from '../config/env.js'
 import { UpstreamUnavailable } from '../errors/errors.js'
 import { fetchWithRetry } from '../lib/http.js'
 import { parseProductRetrieve } from './productDetailSchema.js'
@@ -115,11 +121,10 @@ export const extractProductDetail = (
 // ---- SonyClient service (the network boundary) -----------------------------
 
 const requestConceptsPromise = async (
-  config: AppConfig,
   feature: SonyFeature,
   context: StrategyContext,
 ): Promise<Concept[]> => {
-  const strategy = buildStrategies(config)[feature]
+  const strategy = buildStrategies()[feature]
   const variables = strategy.buildVariables(context)
 
   const extensions = {
@@ -133,17 +138,17 @@ const requestConceptsPromise = async (
   }).toString()
 
   const response = await fetchWithRetry(
-    `${config.SONY_GRAPHQL_URL}?${query}`,
+    `${SONY_GRAPHQL_URL}?${query}`,
     {
       method: 'GET',
       headers: {
         Accept: 'application/json',
         'x-apollo-operation-name': strategy.operationName,
-        'x-psn-store-locale-override': localeOverride(config.SONY_LOCALE),
+        'x-psn-store-locale-override': localeOverride(SONY_LOCALE),
       },
     },
-    config.SONY_TIMEOUT_MS,
-    config.SONY_RETRY_COUNT,
+    SONY_TIMEOUT_MS,
+    SONY_RETRY_COUNT,
   )
 
   const json = (await response.json()) as CategoryGridRetrieveResponse
@@ -154,32 +159,31 @@ const requestConceptsPromise = async (
 }
 
 const requestProductDetailPromise = async (
-  config: AppConfig,
   productId: string,
 ): Promise<ProductDetailResult> => {
   const query = new URLSearchParams({
-    operationName: config.SONY_PRODUCT_OPERATION_NAME,
+    operationName: SONY_PRODUCT_OPERATION_NAME,
     variables: JSON.stringify({ productId }),
     extensions: JSON.stringify({
       persistedQuery: {
         version: 1,
-        sha256Hash: config.SONY_PRODUCT_BY_ID_HASH,
+        sha256Hash: SONY_PRODUCT_BY_ID_HASH,
       },
     }),
   }).toString()
 
   const response = await fetchWithRetry(
-    `${config.SONY_GRAPHQL_URL}?${query}`,
+    `${SONY_GRAPHQL_URL}?${query}`,
     {
       method: 'GET',
       headers: {
         Accept: 'application/json',
-        'x-apollo-operation-name': config.SONY_PRODUCT_OPERATION_NAME,
-        'x-psn-store-locale-override': localeOverride(config.SONY_LOCALE),
+        'x-apollo-operation-name': SONY_PRODUCT_OPERATION_NAME,
+        'x-psn-store-locale-override': localeOverride(SONY_LOCALE),
       },
     },
-    config.SONY_TIMEOUT_MS,
-    config.SONY_RETRY_COUNT,
+    SONY_TIMEOUT_MS,
+    SONY_RETRY_COUNT,
   )
 
   const json = (await response.json()) as ProductRetrieveResponse
@@ -208,21 +212,18 @@ export class SonyClient extends Context.Tag('SonyClient')<
   SonyClientApi
 >() {}
 
-export const SonyClientLive: Layer.Layer<SonyClient, never, Env> = Layer.effect(
+export const SonyClientLive: Layer.Layer<SonyClient> = Layer.succeed(
   SonyClient,
-  Effect.gen(function* () {
-    const config = yield* Env
-    return SonyClient.of({
-      fetchConceptsByFeature: (feature, size = 300, offset = 0) =>
-        Effect.tryPromise({
-          try: () => requestConceptsPromise(config, feature, { size, offset }),
-          catch: upstream,
-        }),
-      fetchProductDetail: (productId) =>
-        Effect.tryPromise({
-          try: () => requestProductDetailPromise(config, productId),
-          catch: upstream,
-        }),
-    })
+  SonyClient.of({
+    fetchConceptsByFeature: (feature, size = 300, offset = 0) =>
+      Effect.tryPromise({
+        try: () => requestConceptsPromise(feature, { size, offset }),
+        catch: upstream,
+      }),
+    fetchProductDetail: (productId) =>
+      Effect.tryPromise({
+        try: () => requestProductDetailPromise(productId),
+        catch: upstream,
+      }),
   }),
 )

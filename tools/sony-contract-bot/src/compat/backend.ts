@@ -7,16 +7,13 @@ export interface CompatibilityContext {
   serviceText: string
 }
 
-// The server env was migrated from zod (`default('x')`) to Effect Config
-// (`Config.withDefault('x')`). Anchor on the `Config.<reader>('ENV_NAME')`
-// call (the quoted env name), then read the resolved literal of the following
-// `withDefault('…')`. Anchoring on the quoted name avoids matching the env key
-// in the `AppConfig` interface declaration that precedes the config block.
-const extractDefault = (source: string, envName: string): string | null => {
-  const pattern = new RegExp(
-    `'${envName}'\\)[\\s\\S]*?withDefault\\('([^']+)'\\)`,
-    'm',
-  )
+// The fixed Sony-contract values are plain code constants (issue #72), no
+// longer env-driven `Config.withDefault('x')` values. Anchor on the exported
+// constant assignment `NAME = 'literal'` and read the quoted literal. The
+// constants are at module scope with no preceding interface declaration to
+// collide with.
+const extractDefault = (source: string, constName: string): string | null => {
+  const pattern = new RegExp(`${constName}\\s*=\\s*'([^']+)'`, 'm')
   const match = source.match(pattern)
   return match?.[1] ?? null
 }

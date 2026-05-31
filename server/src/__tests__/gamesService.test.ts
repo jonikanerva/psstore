@@ -1,6 +1,5 @@
 import { Effect, Exit, Layer } from 'effect'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { EnvLive } from '../config/env.js'
 import { UpstreamUnavailable } from '../errors/errors.js'
 import {
   GamesService,
@@ -37,20 +36,14 @@ const FakeSony = Layer.succeed(SonyClient, {
 const run = <A, E>(
   use: (svc: GamesServiceApi) => Effect.Effect<A, E>,
 ): Promise<A> => {
-  const Services = GamesServiceLive.pipe(
-    Layer.provide(FakeSony),
-    Layer.provide(EnvLive),
-  )
+  const Services = GamesServiceLive.pipe(Layer.provide(FakeSony))
   return Effect.runPromise(
     GamesService.pipe(Effect.flatMap(use), Effect.provide(Services)),
   )
 }
 
 const runExit = <A, E>(use: (svc: GamesServiceApi) => Effect.Effect<A, E>) => {
-  const Services = GamesServiceLive.pipe(
-    Layer.provide(FakeSony),
-    Layer.provide(EnvLive),
-  )
+  const Services = GamesServiceLive.pipe(Layer.provide(FakeSony))
   return Effect.runPromiseExit(
     GamesService.pipe(Effect.flatMap(use), Effect.provide(Services)),
   )
@@ -610,10 +603,7 @@ describe('gamesService', () => {
       fetchProductDetail: () =>
         Effect.succeed({ releaseDate: PAST_DATE, genres: [], description: '' }),
     })
-    const Services = GamesServiceLive.pipe(
-      Layer.provide(CapturingSony),
-      Layer.provide(EnvLive),
-    )
+    const Services = GamesServiceLive.pipe(Layer.provide(CapturingSony))
     await Effect.runPromise(
       GamesService.pipe(
         Effect.flatMap((s) => s.getNewGames()),
@@ -673,10 +663,7 @@ describe('getGameById detail enrichment', () => {
         Effect.sync(() => (feature === 'new' ? [makeConcept('degraded')] : [])),
       fetchProductDetail: () => Effect.fail(upstream('boom')),
     })
-    const Services = GamesServiceLive.pipe(
-      Layer.provide(FlakySony),
-      Layer.provide(EnvLive),
-    )
+    const Services = GamesServiceLive.pipe(Layer.provide(FlakySony))
 
     const game = await Effect.runPromise(
       GamesService.pipe(

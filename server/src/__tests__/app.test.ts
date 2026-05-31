@@ -7,7 +7,6 @@ import { gamesGroupLive } from '../api/gamesHandlers.js'
 import { GamesServiceLive } from '../services/gamesService.js'
 import { SonyClient } from '../sony/sonyClient.js'
 import type { Concept } from '../sony/types.js'
-import { EnvLive } from '../config/env.js'
 
 // A fake SonyClient: NEW returns one valid product SKU; product detail returns a
 // past release date so the released gate keeps it. No network, no real env.
@@ -35,10 +34,7 @@ const FakeSony = Layer.succeed(SonyClient, {
     }),
 })
 
-const Services = GamesServiceLive.pipe(
-  Layer.provide(FakeSony),
-  Layer.provide(EnvLive),
-)
+const Services = GamesServiceLive.pipe(Layer.provide(FakeSony))
 
 const PlatformLive = Layer.mergeAll(
   HttpPlatform.layer.pipe(Layer.provide(NodeContext.layer)),
