@@ -1,55 +1,15 @@
-export interface Media {
-  url?: string | undefined
-  role?: string | undefined
-  type?: string | undefined
-}
-
-export interface ConceptPrice {
-  basePrice?: string | undefined
-  discountedPrice?: string | undefined
-  discountText?: string | null | undefined
-  serviceBranding?: string[] | undefined
-  upsellServiceBranding?: string[] | undefined
-  upsellText?: string | null | undefined
-}
-
-export interface ConceptProductRef {
-  id?: string | undefined
-  releaseDate?: string | undefined
-  providerName?: string | undefined
-  genres?: string[] | undefined
-}
-
-export interface Concept {
-  id?: string | undefined
-  name?: string | undefined
-  media?: Media[] | undefined
-  price?: ConceptPrice | undefined
-  products?: ConceptProductRef[] | undefined
-}
-
-export interface CategoryGridProduct {
-  id?: string | undefined
-  name?: string | undefined
-  media?: Media[] | undefined
-  price?: ConceptPrice | undefined
-  platforms?: string[] | undefined
-  storeDisplayClassification?: string | undefined
-  npTitleId?: string | undefined
-}
-
-export interface CategoryGridRetrieveResponse {
-  data?:
-    | {
-        categoryGridRetrieve?:
-          | {
-              concepts?: Concept[] | undefined
-              products?: CategoryGridProduct[] | undefined
-            }
-          | undefined
-      }
-    | undefined
-}
+// Category-grid value types are derived from the Effect Schema boundary
+// (categoryGridSchema.ts) and re-exported here under their canonical names, so
+// the decoder and the value types stay in lockstep (a drift is a compile error
+// — STACK.md §2). The product-detail value types below remain hand-written and
+// pair with productDetailSchema.ts.
+export type {
+  CategoryGridProduct,
+  Concept,
+  ConceptPrice,
+  ConceptProductRef,
+  Media,
+} from './categoryGridSchema.js'
 
 export interface SonyDescription {
   type?: string | undefined

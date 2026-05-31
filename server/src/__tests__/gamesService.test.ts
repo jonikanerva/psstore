@@ -1,6 +1,10 @@
 import { Effect, Exit, Layer } from 'effect'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { UpstreamUnavailable } from '../errors/errors.js'
+import {
+  UpstreamQueryRotated,
+  UpstreamRateLimited,
+  UpstreamUnavailable,
+} from '../errors/errors.js'
 import {
   GamesService,
   GamesServiceLive,
@@ -684,6 +688,81 @@ describe('getGameById detail enrichment', () => {
     if (game) {
       expect(game.description).toBe('')
       expect(game.genres).toEqual([])
+    }
+  })
+})
+
+describe('widened upstream error channel (issue #62)', () => {
+  // The Sony client can now surface UpstreamQueryRotated / UpstreamRateLimited
+  // in addition to UpstreamUnavailable. NEW + PDP propagate them honestly;
+  // upcoming/discounted keep degrading to [] via the untouched featureConcepts
+  // catchAll (devils-advocate cut 1).
+  const failingSony = (
+    error: UpstreamQueryRotated | UpstreamRateLimited | UpstreamUnavailable,
+  ) =>
+    Layer.succeed(SonyClient, {
+      fetchConceptsByFeature: () => Effect.fail(error),
+      fetchProductDetail: () => Effect.fail(error),
+    })
+
+  const runWith = <A, E>(
+    layer: Layer.Layer<SonyClient>,
+    use: (svc: GamesServiceApi) => Effect.Effect<A, E>,
+  ) =>
+    Effect.runPromiseExit(
+      GamesService.pipe(
+        Effect.flatMap(use),
+        Effect.provide(GamesServiceLive.pipe(Layer.provide(layer))),
+      ),
+    )
+
+  it('propagates UpstreamQueryRotated from getNewGames', async () => {
+    const exit = await runWith(
+      failingSony(
+        new UpstreamQueryRotated({ message: 'rotated', operationName: 'op' }),
+      ),
+      (s) => s.getNewGames(),
+    )
+    expect(Exit.isFailure(exit)).toBe(true)
+    if (Exit.isFailure(exit)) {
+      expect(JSON.stringify(exit.cause)).toContain('UpstreamQueryRotated')
+    }
+  })
+
+  it('propagates UpstreamRateLimited from getGameById', async () => {
+    const exit = await runWith(
+      failingSony(
+        new UpstreamRateLimited({ message: 'limited', retryAfterSeconds: 3 }),
+      ),
+      (s) => s.getGameById('EP0001-PPSA00001_00-ALPHA00000000000'),
+    )
+    expect(Exit.isFailure(exit)).toBe(true)
+    if (Exit.isFailure(exit)) {
+      expect(JSON.stringify(exit.cause)).toContain('UpstreamRateLimited')
+    }
+  })
+
+  it('degrades upcoming to [] on UpstreamQueryRotated (catchAll kept)', async () => {
+    const exit = await runWith(
+      failingSony(
+        new UpstreamQueryRotated({ message: 'rotated', operationName: 'op' }),
+      ),
+      (s) => s.getUpcomingGames(),
+    )
+    expect(Exit.isSuccess(exit)).toBe(true)
+    if (Exit.isSuccess(exit)) {
+      expect(exit.value.games).toEqual([])
+    }
+  })
+
+  it('degrades discounted to [] on UpstreamRateLimited (catchAll kept)', async () => {
+    const exit = await runWith(
+      failingSony(new UpstreamRateLimited({ message: 'limited' })),
+      (s) => s.getDiscountedGames(),
+    )
+    expect(Exit.isSuccess(exit)).toBe(true)
+    if (Exit.isSuccess(exit)) {
+      expect(exit.value.games).toEqual([])
     }
   })
 })

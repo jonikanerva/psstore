@@ -11,7 +11,7 @@ import { Duration } from 'effect'
 export const SONY_GRAPHQL_URL =
   'https://web.np.playstation.com/api/graphql/v1/op'
 export const SONY_CATEGORY_GRID_HASH =
-  '257713466fc3264850aa473409a29088e3a4115e6e69e9fb3e061c8dd5b9f5c6'
+  '4e41660b6732f35c99fc5541926b7502a09557924e8c2cfebd1beb1a5c8c8f81'
 export const SONY_CATEGORY_ID = 'd0446d4b-dc9a-4f1e-86ec-651f099c9b29'
 export const SONY_DEALS_CATEGORY_ID = '3f772501-f6f8-49b7-abac-874a88ca4897'
 export const SONY_OPERATION_NAME = 'categoryGridRetrieve'
@@ -21,6 +21,14 @@ export const SONY_PRODUCT_BY_ID_HASH =
 export const SONY_LOCALE = 'fi-fi'
 export const SONY_RETRY_COUNT = 1
 export const SONY_TIMEOUT_MS = 6000
+
+// Upper bound on how long a 429 `Retry-After` may pause the request hot path
+// before the single retry. Derived from (and equal to) the per-attempt timeout
+// so the honoured delay can never exceed the request's existing budget: an
+// upstream sending a multi-minute `Retry-After` must not stall an interactive
+// request (CLAUDE.md → Responsiveness). Seconds, never minutes — a larger
+// upstream value is clamped to this ceiling.
+export const SONY_RETRY_AFTER_MAX_MS = SONY_TIMEOUT_MS
 
 // List cache TTL, pinned at 30000 ms exactly. Intentionally asymmetric with the
 // per-product DETAIL_TTL (Duration.hours(6)) in gamesService: list windows
