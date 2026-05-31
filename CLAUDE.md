@@ -33,7 +33,7 @@ Everything in the repo or on GitHub is in English (code, comments, commits, bran
 
 ## Verification
 
-Run `$VERIFY_CMD` (from `STACK.md`) before every commit and PR; it must pass with no new warnings, and CI runs it as the PR gate. Always go through the named commands (`$FORMAT_CMD`, `$LINT_CMD`, `$BUILD_CMD`, `$TEST_CMD`, `$VERIFY_CMD`); never invoke the underlying tools directly.
+Run `$VERIFY_CMD` (from `STACK.md`) before every commit and PR; it must pass with no new warnings. Always go through the named commands (`$FORMAT_CMD`, `$LINT_CMD`, `$BUILD_CMD`, `$TEST_CMD`, `$VERIFY_CMD`); never invoke the underlying tools directly.
 
 ---
 
