@@ -53,4 +53,22 @@ describe('filterOperationsByFinnishPs5EurScope', () => {
 
     expect(filterOperationsByFinnishPs5EurScope(operations)).toHaveLength(0)
   })
+
+  it('keeps the product-id-addressed PDP op AND still drops a PS4 grid op', () => {
+    // Cut 2: the PDP op carries no platform token, so it must survive the
+    // pass-through; an explicit out-of-scope platform (PS4) must still be
+    // dropped. Filtering both together proves the deny-list, not a PS5
+    // requirement, enforces scope here.
+    const operations = [
+      makeOperation({ productId: 'string' }, { productId: 'x' }),
+      makeOperation(
+        { filterBy: ['targetPlatforms:PS4'] },
+        { filterBy: ['targetPlatforms:PS4'] },
+      ),
+    ]
+
+    const result = filterOperationsByFinnishPs5EurScope(operations)
+    expect(result).toHaveLength(1)
+    expect(result[0]?.variables_schema).toEqual({ productId: 'string' })
+  })
 })
