@@ -16,30 +16,16 @@
   "operations": [
     {
       "feature": "details",
-      "operation_name": "categoryGridRetrieve",
-      "persisted_query_hash": "4e41660b6732f35c99fc5541926b7502a09557924e8c2cfebd1beb1a5c8c8f81",
+      "operation_name": "metGetProductById",
+      "persisted_query_hash": "a128042177bd93dd831164103d53b73ef790d56f51dae647064cb8f9d9fc9d1a",
       "required_headers": ["x-apollo-operation-name"],
       "variables_schema": {
-        "facetOptions": [],
-        "filterBy": ["string"],
-        "id": "string",
-        "pageArgs": {
-          "offset": "number",
-          "size": "number"
-        },
-        "sortBy": "null"
+        "productId": "string"
       },
       "sample_variables": {
-        "id": "d0446d4b-dc9a-4f1e-86ec-651f099c9b29",
-        "pageArgs": {
-          "size": 24,
-          "offset": 0
-        },
-        "sortBy": null,
-        "filterBy": ["targetPlatforms:PS5"],
-        "facetOptions": []
+        "productId": "EP9000-PPSA01341_00-DEMONSSOULS00000"
       },
-      "response_path": "data.categoryGridRetrieve.products",
+      "response_path": "data.productRetrieve",
       "observed_status_codes": [200]
     },
     {

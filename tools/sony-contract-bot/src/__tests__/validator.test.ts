@@ -1,11 +1,35 @@
 import { describe, expect, it } from 'vitest'
 import type {
   ContractFeature,
+  ContractOperation,
   SonyContractManifest,
 } from '../contract/types.js'
 import { validateManifest } from '../contract/validator.js'
 
-const features: ContractFeature[] = ['new', 'upcoming', 'discounted', 'details']
+const gridFeatures: ContractFeature[] = ['new', 'upcoming', 'discounted']
+
+const gridOperation = (feature: ContractFeature): ContractOperation => ({
+  feature,
+  operation_name: 'categoryGridRetrieve',
+  persisted_query_hash: 'a'.repeat(64),
+  required_headers: ['x-apollo-operation-name'],
+  variables_schema: { id: 'string' },
+  sample_variables: { id: 'x' },
+  response_path: 'data.categoryGridRetrieve.products',
+  observed_status_codes: [200],
+})
+
+// The `details` feature now MEANS the PDP operation `metGetProductById`.
+const pdpOperation: ContractOperation = {
+  feature: 'details',
+  operation_name: 'metGetProductById',
+  persisted_query_hash: 'b'.repeat(64),
+  required_headers: ['x-apollo-operation-name'],
+  variables_schema: { productId: 'string' },
+  sample_variables: { productId: 'EP9000-PPSA01341_00-DEMONSSOULS00000' },
+  response_path: 'data.productRetrieve',
+  observed_status_codes: [200],
+}
 
 const validManifest: SonyContractManifest = {
   version: 1,
@@ -22,16 +46,7 @@ const validManifest: SonyContractManifest = {
     url: 'https://web.np.playstation.com/api/graphql/v1/op',
     method: 'GET',
   },
-  operations: features.map((feature) => ({
-    feature,
-    operation_name: 'categoryGridRetrieve',
-    persisted_query_hash: 'a'.repeat(64),
-    required_headers: ['x-apollo-operation-name'],
-    variables_schema: { id: 'string' },
-    sample_variables: { id: 'x' },
-    response_path: 'data.categoryGridRetrieve.products',
-    observed_status_codes: [200],
-  })),
+  operations: [...gridFeatures.map(gridOperation), pdpOperation],
 }
 
 describe('validateManifest', () => {
