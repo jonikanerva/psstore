@@ -3,8 +3,8 @@
 A fast, utilitarian view of the Finnish PlayStation Store. It shows new, upcoming, and
 discounted **PS5 games** in the Finnish store, priced in **EUR** with both the standard and
 **PS Plus** price visible — without the carousels, mixed platforms, and non-game products of
-`store.playstation.com`. Open the page, see what's new, click out to Sony to buy. No accounts,
-no preferences, no tracking.
+`store.playstation.com`. Open the page, see what's new, click out to Sony to buy. No
+preferences, no tracking.
 
 The backend proxies and normalises Sony's public GraphQL API into a clean REST surface scoped
 to PS5 / Finland / EUR; the frontend renders what the backend returns.
