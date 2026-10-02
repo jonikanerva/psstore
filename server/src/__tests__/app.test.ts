@@ -1,6 +1,6 @@
 import { Effect, Layer } from 'effect'
 import { HttpRouter, HttpServer } from 'effect/http'
-import { HttpApiBuilder } from 'effect/http-api'
+import { HttpApiBuilder, OpenApi } from 'effect/http-api'
 import { afterAll, describe, expect, it } from 'vitest'
 import { gamesApi } from '../api/gamesApi.js'
 import { gamesGroupLive } from '../api/gamesHandlers.js'
@@ -129,6 +129,15 @@ describe('games HTTP API', () => {
       new Request('http://localhost/api/games/new?size=500'),
     )
     expect(response.status).toBe(400)
+    expect(await response.text()).toBe('')
+  })
+
+  it('rejects a whitespace-only game id with an empty 400', async () => {
+    const response = await handler(
+      new Request('http://localhost/api/games/%20'),
+    )
+    expect(response.status).toBe(400)
+    expect(await response.text()).toBe('')
   })
 
   it('rejects a negative offset and a non-numeric size with 400', async () => {
@@ -140,6 +149,29 @@ describe('games HTTP API', () => {
     )
     expect(negative.status).toBe(400)
     expect(nonNumeric.status).toBe(400)
+    expect(await nonNumeric.text()).toBe('')
+  })
+})
+
+describe('games OpenAPI document', () => {
+  it('declares the 400 response without a body or error schema', () => {
+    const spec = OpenApi.fromApi(gamesApi)
+    const paths = [
+      '/api/games/new',
+      '/api/games/upcoming',
+      '/api/games/discounted',
+      '/api/games/{id}',
+    ]
+    for (const path of paths) {
+      const bad = spec.paths[path]?.get?.responses['400']
+      expect(bad, path).toBeDefined()
+      expect(bad).not.toHaveProperty('content')
+    }
+    expect(
+      Object.keys(spec.components.schemas).filter((name) =>
+        name.includes('ValidationError'),
+      ),
+    ).toEqual([])
   })
 })
 

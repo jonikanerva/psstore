@@ -2,6 +2,7 @@ import { gameSchema, pageResultSchema } from '@psstore/shared'
 import {
   HttpApi,
   HttpApiEndpoint,
+  HttpApiError,
   HttpApiGroup,
   HttpApiSchema,
 } from 'effect/http-api'
@@ -10,7 +11,6 @@ import {
   UpstreamQueryRotated,
   UpstreamRateLimited,
   UpstreamUnavailable,
-  ValidationError,
 } from '../errors/errors.js'
 import {
   gameIdParamSchema,
@@ -18,8 +18,11 @@ import {
 } from '../validation/schemas.js'
 
 // The typed REST surface. The endpoint schemas validate path / query at the
-// boundary; the typed error channel maps each tagged error to its HTTP status
-// (no hand-rolled error-to-response glue — STACK.md §8). This file is one of the
+// boundary. A failed decode reaches the client as an empty 400 (runtime
+// HttpApiSchemaError), not through the typed error channel; the 400 entries
+// below declare that empty body in OpenAPI. The typed error channel maps each
+// tagged error to its HTTP status (no hand-rolled error-to-response glue —
+// STACK.md §8). This file is one of the
 // exactly three modules permitted to import `effect/http-api` (enforced by the
 // server-scoped no-restricted-imports lint rule).
 
@@ -33,14 +36,14 @@ const listEndpoint = <const Name extends string>(name: Name) =>
   HttpApiEndpoint.get(name, `/${name}`, {
     query: paginationQuerySchema,
     success: pageResultSchema,
-    error: [ValidationError.pipe(HttpApiSchema.status(400)), ...upstreamErrors],
+    error: [HttpApiError.BadRequestNoContent, ...upstreamErrors],
   })
 
 const getByIdEndpoint = HttpApiEndpoint.get('getById', '/:id', {
   params: gameIdParamSchema,
   success: gameSchema,
   error: [
-    ValidationError.pipe(HttpApiSchema.status(400)),
+    HttpApiError.BadRequestNoContent,
     GameNotFound.pipe(HttpApiSchema.status(404)),
     ...upstreamErrors,
   ],

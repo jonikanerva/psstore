@@ -4,7 +4,7 @@ import { GamesService } from '../services/gamesService.js'
 import { gamesApi } from './gamesApi.js'
 
 // Thin handlers: take decoded input, call the GamesService, return its Effect.
-// The typed error channel (GameNotFound / UpstreamUnavailable / ValidationError)
+// The typed error channel (GameNotFound / UpstreamUnavailable)
 // is mapped to HTTP status by the endpoint definitions in gamesApi.ts. One of
 // the three modules permitted to import `effect/http-api`.
 
