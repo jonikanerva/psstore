@@ -82,9 +82,8 @@ describe('validateBackendCompatibility', () => {
   })
 
   it("rejects today's all-grid manifest where details is still categoryGridRetrieve", () => {
-    // Regression guard for issue #77: the bot used to be green by construction
-    // because no entry matched the PDP operation. With `details` wired to the
-    // grid op, the PDP coverage is missing and compat must fail.
+    // With `details` wired to the grid op, no entry matches the PDP operation,
+    // so the PDP coverage is missing and compat must fail.
     const allGrid: SonyContractManifest = {
       ...manifest,
       operations: [...GRID_FEATURES, 'details' as const].map(gridOperation),

@@ -14,13 +14,12 @@ import conceptsGolden from './fixtures/categoryGridConcepts.golden.json' with { 
 import productsGolden from './fixtures/categoryGridProducts.golden.json' with { type: 'json' }
 import productGolden from './fixtures/productDetail.golden.json' with { type: 'json' }
 
-// REGRESSION GUARD for the #62 null-tolerance bug (shipped in PASS-reviewed PR
-// #79, caught in production, not by tests). These fixtures are TRIMMED REAL Sony
-// captures (fi-fi, 2026-05-31; see fixtures/README.md) that PRESERVE every live
-// `null` — `concept.price: null`, `price.serviceBranding: null`, etc. Reverting
-// the boundary to the pre-#79 `Schema.optional(X)` (no NullOr) or to a
-// whole-array decode makes these FAIL. Do not "tighten" the schema without
-// re-confirming against live data via `pnpm test:live`.
+// REGRESSION GUARD for null tolerance at the Sony boundary. These fixtures are
+// TRIMMED REAL Sony captures (fi-fi; see fixtures/README.md) that PRESERVE every
+// live `null` — `concept.price: null`, `price.serviceBranding: null`, etc. A
+// boundary that uses `Schema.optional(X)` without NullOr, or a whole-array
+// decode, makes these FAIL. Do not "tighten" the schema without re-confirming
+// against live data via `pnpm test:live`.
 
 describe('golden decode — categoryGrid concepts envelope (real fi-fi capture)', () => {
   it('decodes with no dropped elements and maps to >= 1 renderable game', () => {
@@ -43,7 +42,7 @@ describe('golden decode — categoryGrid concepts envelope (real fi-fi capture)'
       const games = mapUpcomingConceptsToGames(outcome.concepts)
       const conceptCard = games.find((game) => game.idKind === 'concept')
       // A price:null announced game must survive decode AND map to a concept
-      // card (the exact UPCOMING shape #62 emptied).
+      // card (the UPCOMING shape that a plain `optional` empties).
       expect(conceptCard).toBeDefined()
       expect(conceptCard?.price).toBe('')
     }
@@ -71,15 +70,15 @@ describe('golden decode — categoryGrid products envelope (DISCOUNTED, real cap
   })
 })
 
-describe('golden decode — per-element tolerance (the actual #62 fix)', () => {
+describe('golden decode — per-element tolerance', () => {
   it('keeps good elements and drops only the synthetic broken one', () => {
     const good = extractCategoryGrid(conceptsGolden)
     const broken = extractCategoryGrid(brokenGolden)
 
     expect(broken.kind).toBe('ok')
     if (broken.kind === 'ok' && good.kind === 'ok') {
-      // One synthetic broken element was added to the concepts fixture; exactly
-      // it is dropped, the rest survive (the whole list is NOT emptied).
+      // The broken fixture is the concepts fixture plus one synthetic broken
+      // element; exactly it is dropped, the rest survive (the whole list is NOT emptied).
       expect(broken.dropped).toBeGreaterThanOrEqual(1)
       expect(broken.concepts.length).toBe(good.concepts.length)
     }

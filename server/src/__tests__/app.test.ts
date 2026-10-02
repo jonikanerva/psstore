@@ -49,7 +49,7 @@ const AppLive = HttpApiBuilder.layer(gamesApi).pipe(
 
 const { handler, dispose } = HttpRouter.toWebHandler(AppLive)
 
-// Fail-only apps for the 502/503 mapping tests (issue #78). Each gets its OWN
+// Fail-only apps for the 502/503 mapping tests. Each gets its OWN
 // toWebHandler + dispose, kept SEPARATE from the success `handler` above: the
 // 30s conceptsCache pins failures, so reusing/toggling a shared handler would
 // poison it across tests and risk a false pass.
@@ -175,8 +175,8 @@ describe('games OpenAPI document', () => {
   })
 })
 
-describe('games HTTP API — honest upstream failure (issue #78)', () => {
-  // Upcoming/discounted no longer swallow a Sony outage into 200 + []; the typed
+describe('games HTTP API — honest upstream failure', () => {
+  // Upcoming/discounted must not swallow a Sony outage into 200 + []; the typed
   // error maps to its HTTP status (gamesApi.addError): UpstreamUnavailable → 502,
   // UpstreamRateLimited → 503.
   it('maps an upcoming-tab upstream outage to 502', async () => {

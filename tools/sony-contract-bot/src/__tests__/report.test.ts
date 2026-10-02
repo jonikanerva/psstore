@@ -40,7 +40,7 @@ describe('renderDiffReport tri-state headline', () => {
   it('reads UNKNOWN when no candidate was compared (no fresh capture)', () => {
     // The regression guard: with no candidate the diff falls back to
     // canonical-vs-canonical (hasDrift === false), but the headline must NOT
-    // read "no" — that was the false-green this fix removes.
+    // read "no": that would be a false green.
     const line = headline(renderDiffReport(noDrift, false))
     expect(line).toBe(
       '- Drift detected: UNKNOWN (no fresh capture — not checked against live Sony)',

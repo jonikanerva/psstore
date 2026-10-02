@@ -265,10 +265,10 @@ describe('extractCategoryGrid', () => {
     expect(extractCategoryGrid(null).kind).toBe('drift')
   })
 
-  // ---- Regression: Sony sends `null` liberally (PR #79 emptied the lists) ----
-  // These assert the boundary tolerates the REAL null shapes confirmed live
-  // against fi-fi. They FAIL on the plain-`optional` schema (the bug) and PASS
-  // with `optional(NullOr(...))` + per-element decode.
+  // ---- Sony sends `null` liberally ----
+  // These assert the boundary tolerates the REAL null shapes seen live. They
+  // FAIL on a plain-`optional` schema and PASS with `optional(NullOr(...))` +
+  // per-element decode.
 
   it('keeps an UPCOMING concept whose whole price object is null', () => {
     // Real shape: unpriced/announced upcoming games carry `price: null`.
@@ -385,7 +385,7 @@ describe('extractCategoryGrid', () => {
   })
 })
 
-describe('parseProductRetrieve null tolerance (PR #79 latent defect)', () => {
+describe('parseProductRetrieve null tolerance', () => {
   it('returns the node when releaseDate / publisherName are null', () => {
     const node = parseProductRetrieve({
       id: 'UP0001-PPSA00001_00-GAME000000000000',

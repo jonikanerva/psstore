@@ -18,16 +18,16 @@ import {
   extractCategoryGrid,
 } from '../sony/sonyClient.js'
 
-// LIVE Sony smoke suite — the standing guard for the #62-class regression
-// (UPCOMING/DISCOUNTED silently emptied). Gated by SMOKE=1 so it never runs in
-// `pnpm test` / `pnpm test-all` (network/uptime coupling -> flaky build); run it
-// explicitly with `pnpm test:live`. It decodes REAL live responses through the
+// LIVE Sony smoke suite — the standing guard against a list that Sony drift
+// empties without an error (UPCOMING/DISCOUNTED). Gated by SMOKE=1 so it never
+// runs in `pnpm test` / `pnpm test-all` (network/uptime coupling -> flaky
+// build); run it explicitly with `pnpm test:live`. It decodes REAL live responses through the
 // production boundary (`extractCategoryGrid`) and maps via the production
 // mappers (`listing.ts`), so a live Sony drift that drops/empties a list reds
 // this suite — which `test-all` cannot, since it only decodes committed fixtures
 // and diffs the manifest against itself.
 //
-// Load fence (devils-advocate cut 4): exactly one raw fetch per feature + one
+// Load fence: exactly one raw fetch per feature + one
 // PDP fetch. NEVER drive GamesServiceLive (its enrichment fans out at
 // concurrency:'unbounded' -> dozens-to-hundreds of real calls = a load test).
 
@@ -72,11 +72,9 @@ const fetchRawGrid = async (feature: SonyFeature): Promise<unknown> => {
 
 type Mapper = typeof mapConceptsToGames
 
-// CUT 1 assertion (OVERRIDES the issue body's "non-empty" wording — recorded as
-// a deliberate deviation in the PR): assert NO SILENT DROPS, not non-empty. A
-// legitimately empty day must not red the suite (a false-RED erodes trust the
-// same way the #62 false-GREEN did). `dropped === 0` + the conditional
-// "concepts present => they map to >= 1 game" is the honest invariant.
+// Assert NO SILENT DROPS, not non-empty. A legitimately empty day must not red
+// the suite. `dropped === 0` + the conditional "concepts present => they map to
+// >= 1 game" is the invariant.
 const assertNoSilentDrops = (raw: unknown, map: Mapper): number => {
   const outcome = extractCategoryGrid(raw)
   expect(outcome.kind).toBe('ok')
@@ -88,47 +86,50 @@ const assertNoSilentDrops = (raw: unknown, map: Mapper): number => {
   return outcome.concepts.length
 }
 
-describeSmoke('Sony live smoke (SMOKE=1) — #62 regression guard', () => {
-  it('NEW decodes with no drops and maps to renderable games', async () => {
-    const raw = await fetchRawGrid('new')
-    const count = assertNoSilentDrops(raw, mapConceptsToGames)
-    // NEW is the default view and near-certainly populated; soft-assert > 0.
-    expect(count).toBeGreaterThan(0)
-    globalThis.console.log(`[test:live] NEW concepts=${String(count)}`)
-  }, 20_000)
+describeSmoke(
+  'Sony live smoke (SMOKE=1) — null-tolerance regression guard',
+  () => {
+    it('NEW decodes with no drops and maps to renderable games', async () => {
+      const raw = await fetchRawGrid('new')
+      const count = assertNoSilentDrops(raw, mapConceptsToGames)
+      // NEW is the default view and near-certainly populated; soft-assert > 0.
+      expect(count).toBeGreaterThan(0)
+      globalThis.console.log(`[test:live] NEW concepts=${String(count)}`)
+    }, 20_000)
 
-  it('UPCOMING decodes with no drops (may be empty on a quiet day)', async () => {
-    const raw = await fetchRawGrid('upcoming')
-    const count = assertNoSilentDrops(raw, mapUpcomingConceptsToGames)
-    globalThis.console.log(`[test:live] UPCOMING concepts=${String(count)}`)
-  }, 20_000)
+    it('UPCOMING decodes with no drops (may be empty on a quiet day)', async () => {
+      const raw = await fetchRawGrid('upcoming')
+      const count = assertNoSilentDrops(raw, mapUpcomingConceptsToGames)
+      globalThis.console.log(`[test:live] UPCOMING concepts=${String(count)}`)
+    }, 20_000)
 
-  it('DISCOUNTED decodes with no drops (may be empty on a quiet day)', async () => {
-    const raw = await fetchRawGrid('discounted')
-    const count = assertNoSilentDrops(raw, mapConceptsToGames)
-    globalThis.console.log(`[test:live] DISCOUNTED concepts=${String(count)}`)
-  }, 20_000)
+    it('DISCOUNTED decodes with no drops (may be empty on a quiet day)', async () => {
+      const raw = await fetchRawGrid('discounted')
+      const count = assertNoSilentDrops(raw, mapConceptsToGames)
+      globalThis.console.log(`[test:live] DISCOUNTED concepts=${String(count)}`)
+    }, 20_000)
 
-  it('PDP: fetchProductDetail resolves for one SKU from the NEW result', async () => {
-    const raw = await fetchRawGrid('new')
-    const outcome = extractCategoryGrid(raw)
-    expect(outcome.kind).toBe('ok')
-    if (outcome.kind !== 'ok') return
-    const games = mapConceptsToGames(outcome.concepts)
-    const sku = games[0]?.id
-    expect(sku).toBeTruthy()
-    if (!sku) return
+    it('PDP: fetchProductDetail resolves for one SKU from the NEW result', async () => {
+      const raw = await fetchRawGrid('new')
+      const outcome = extractCategoryGrid(raw)
+      expect(outcome.kind).toBe('ok')
+      if (outcome.kind !== 'ok') return
+      const games = mapConceptsToGames(outcome.concepts)
+      const sku = games[0]?.id
+      expect(sku).toBeTruthy()
+      if (!sku) return
 
-    const detail = await Effect.runPromise(
-      SonyClient.pipe(
-        Effect.flatMap((client) => client.fetchProductDetail(sku)),
-        Effect.provide(SonyClientLive),
-      ),
-    )
-    expect(detail).toBeDefined()
-    expect(typeof detail.description).toBe('string')
-    globalThis.console.log(
-      `[test:live] PDP sku=${sku} genres=${String(detail.genres.length)} descLen=${String(detail.description.length)}`,
-    )
-  }, 20_000)
-})
+      const detail = await Effect.runPromise(
+        SonyClient.pipe(
+          Effect.flatMap((client) => client.fetchProductDetail(sku)),
+          Effect.provide(SonyClientLive),
+        ),
+      )
+      expect(detail).toBeDefined()
+      expect(typeof detail.description).toBe('string')
+      globalThis.console.log(
+        `[test:live] PDP sku=${sku} genres=${String(detail.genres.length)} descLen=${String(detail.description.length)}`,
+      )
+    }, 20_000)
+  },
+)
