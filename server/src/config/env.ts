@@ -17,7 +17,9 @@ export const SONY_OPERATION_NAME = 'categoryGridRetrieve'
 export const SONY_PRODUCT_OPERATION_NAME = 'metGetProductById'
 export const SONY_PRODUCT_BY_ID_HASH =
   'a128042177bd93dd831164103d53b73ef790d56f51dae647064cb8f9d9fc9d1a'
-export const SONY_LOCALE = 'fi-fi'
+// Content language and store region in one tag: English content from the
+// Finnish store (EUR). Fixed constant: never derived from the visitor.
+export const SONY_LOCALE = 'en-fi'
 export const SONY_RETRY_COUNT = 1
 export const SONY_TIMEOUT_MS = 6000
 

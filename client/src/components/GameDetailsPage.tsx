@@ -11,7 +11,7 @@ interface GameDetailsPageProps {
 }
 
 const storeUrl = (id: string): string =>
-  `https://store.playstation.com/fi-fi/product/${id}`
+  `https://store.playstation.com/en-fi/product/${id}`
 
 const formatDate = (value: string): string => {
   const parsed = DateTime.fromISO(value)
@@ -19,7 +19,9 @@ const formatDate = (value: string): string => {
     return 'Unknown'
   }
 
-  return parsed.toLocaleString(DateTime.DATE_MED)
+  return parsed.toLocaleString(DateTime.DATE_MED, {
+    locale: 'en-GB',
+  })
 }
 
 const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {

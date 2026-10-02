@@ -33,6 +33,7 @@ if (container) {
       persistOptions={{
         persister,
         maxAge: 1000 * 60 * 30,
+        buster: 'sony-en-fi',
         dehydrateOptions: {
           // Persist ONLY Sony payload caches (games lists + game detail). Nothing
           // else ever enters the query cache, but the explicit allow-list keeps

@@ -30,7 +30,7 @@ import type {
   ProductRetrieveResponse,
 } from './types.js'
 
-const localeOverride = (locale: string): string =>
+export const localeOverride = (locale: string): string =>
   locale.replace(
     /^([a-z]{2})-([a-z]{2})$/i,
     (_match: string, language: string, region: string) =>

@@ -13,7 +13,11 @@ const formatDate = (value: string): string => {
   }
 
   const parsed = DateTime.fromISO(value)
-  return parsed.isValid ? parsed.toLocaleString(DateTime.DATE_MED) : ''
+  return parsed.isValid
+    ? parsed.toLocaleString(DateTime.DATE_MED, {
+        locale: 'en-GB',
+      })
+    : ''
 }
 
 // Concept-only UPCOMING cards (idKind === 'concept') have no internal PDP and

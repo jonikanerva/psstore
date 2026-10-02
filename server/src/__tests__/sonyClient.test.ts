@@ -3,9 +3,28 @@ import {
   extractCategoryGrid,
   extractProductDetail,
   extractReleaseDateFromProductResponse,
+  localeOverride,
 } from '../sony/sonyClient.js'
+import { SONY_LOCALE } from '../config/env.js'
 import { parseProductRetrieve } from '../sony/productDetailSchema.js'
 import { buildStrategies } from '../sony/queryStrategies.js'
+
+describe('Sony content locale', () => {
+  it('requests English content from the Finnish store', () => {
+    expect(SONY_LOCALE).toBe('en-fi')
+  })
+
+  it('sends the locale override header as language-REGION', () => {
+    expect(localeOverride(SONY_LOCALE)).toBe('en-FI')
+  })
+
+  it('carries the locale in the variables of every strategy', () => {
+    const strategies = buildStrategies()
+    expect(strategies.new.buildVariables({}).locale).toBe('en-fi')
+    expect(strategies.upcoming.buildVariables({}).locale).toBe('en-fi')
+    expect(strategies.discounted.buildVariables({}).locale).toBe('en-fi')
+  })
+})
 
 describe('buildStrategies.new', () => {
   it('filters NEW to PS5 and Sony\'s released "last_thirty_days" facet', () => {

@@ -44,7 +44,7 @@ const strategy = (
 
 export const buildStrategies = (): Record<SonyFeature, SonyQueryStrategy> => ({
   // NEW uses Sony's released-twin facet of UPCOMING's `next_thirty_days` token.
-  // `conceptReleaseDate:last_thirty_days` ("Juuri julkaistut") bounds the grid to
+  // `conceptReleaseDate:last_thirty_days` bounds the grid to
   // the released PS5 window, so no recent release falls outside a day-granular
   // prefix. Keeps the `conceptReleaseDate`-desc sort from baseVariables.
   new: strategy('new', 'base', (context) => ({

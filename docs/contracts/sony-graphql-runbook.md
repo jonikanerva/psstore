@@ -5,9 +5,12 @@
 This tooling always targets the public Finnish storefront with fixed scope:
 
 - region: `fi`
-- locale: `fi-fi`
 - currency: `EUR`
 - platform: `PS5`
+
+The contract is the Finnish store. The contract bot captures from the `fi-fi` public
+storefront. The server requests data with `en-fi` (English content, same store). The
+response shapes are identical. To check this by hand, run `pnpm test:live`.
 
 No authentication/sign-in workflow is used.
 
@@ -19,7 +22,7 @@ pnpm run sony:refresh
 
 Pipeline:
 
-1. capture traffic from public fi-fi routes
+1. capture traffic from public `fi-fi` routes
 2. normalize into candidate manifest
 3. filter non-PS5 / non-EUR operations
 4. validate schema + backend compatibility
@@ -65,7 +68,7 @@ Any change that touches the Sony decode/mapping boundary — specifically:
 - `server/src/domain/listing.ts` (the mappers that turn decoded concepts into the
   renderable game list — #62's symptom was a mapping/filter outcome)
 
-**MUST** run the live smoke suite against live fi-fi Sony and record the counts in
+**MUST** run the live smoke suite against live Sony (`en-fi` requests) and record the counts in
 the PR:
 
 ```bash
@@ -111,7 +114,7 @@ Drift in CI is a hard failure.
 ## Failure handling
 
 - Capture returns zero records: verify storefront reachability.
-- Scope filtering removes all records: verify capture really includes fi-fi + PS5 + EUR signals.
+- Scope filtering removes all records: verify capture really includes `fi-fi` + PS5 + EUR signals.
 - Validation mismatch: update manifest and backend mapping together.
 - Drift detected: inspect `docs/contracts/reports/latest-diff.md` and triage operation changes.
 - **PersistedQueryNotFound / `UpstreamQueryRotated` (HTTP 502):** Sony shipped a new store build and the persisted-query hash rotated (Sony answers HTTP 200 + a top-level GraphQL `errors[]`; the backend classifies it as `UpstreamQueryRotated`). The hash is stale. Re-capture via `pnpm sony:refresh`, then commit the updated `server/src/config/env.ts` hash constants together with the refreshed `docs/contracts/sony-graphql-manifest.json`.
