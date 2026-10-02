@@ -29,9 +29,7 @@ const decodeGame = Schema.decodeUnknownSync(gameSchema)
 // surface it honestly (502/502/503): NEW + PDP always did, and #78 made
 // upcoming/discounted consistent by propagating it instead of swallowing it.
 type UpstreamError =
-  | UpstreamUnavailable
-  | UpstreamQueryRotated
-  | UpstreamRateLimited
+  UpstreamUnavailable | UpstreamQueryRotated | UpstreamRateLimited
 
 // NEW fetches a wider window than the other features. With the
 // `conceptReleaseDate:last_thirty_days` facet the released PS5 candidate set is
@@ -264,16 +262,13 @@ export const GamesServiceLive: Layer.Layer<GamesService, never, SonyClient> =
 
       const enrichWithDetail = (game: Game): Effect.Effect<Game> =>
         productDetailCache.get(game.id).pipe(
-          Effect.map(
-            (detail): Game => ({
-              ...game,
-              date: detail.releaseDate ?? game.date,
-              genres:
-                detail.genres.length > 0 ? [...detail.genres] : game.genres,
-              description: detail.description || game.description,
-              studio: detail.publisherName || game.studio,
-            }),
-          ),
+          Effect.map((detail): Game => ({
+            ...game,
+            date: detail.releaseDate ?? game.date,
+            genres: detail.genres.length > 0 ? [...detail.genres] : game.genres,
+            description: detail.description || game.description,
+            studio: detail.publisherName || game.studio,
+          })),
         )
 
       // Propagates the upstream error (was silently `Effect<Game | null>` while
