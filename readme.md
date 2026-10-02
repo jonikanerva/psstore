@@ -30,9 +30,9 @@ pnpm install
 pnpm run dev
 ```
 
-Do not use Corepack or a global pnpm. The pnpm 12 npm package installs only a placeholder
-bin. `pmOnFail: error` stops pnpm when its version does not match the pinned version.
-`STACK.md → 1. Language & Runtime` lists the versions and the files that mirror them.
+Do not use Corepack or a global pnpm. `mise install` provides the pinned pnpm, and
+`pmOnFail: error` stops any other pnpm version. `STACK.md → 1. Language & Runtime` lists the
+versions and the files that mirror them.
 
 - Client runs on `http://localhost:5173`
 - Server runs on `http://localhost:3000`
