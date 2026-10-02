@@ -105,11 +105,8 @@ export const parseCaptureRecordToOperation = (
     feature,
     operation_name: operationName,
     persisted_query_hash: parseHash(url),
-    // The required-headers contract signal is fixed (see REQUIRED_HEADERS). The
-    // previous code computed a filtered list then discarded it for this same
-    // literal whenever an operation name was present (always true for our
-    // scoped operations) — simplified honestly to the constant. Byte-identical
-    // output, so the committed manifest's `required_headers` is unchanged.
+    // The required-headers contract signal is fixed (see REQUIRED_HEADERS) and
+    // does not depend on the captured request.
     required_headers: [...REQUIRED_HEADERS],
     variables_schema: variablesSchema,
     sample_variables: variables,

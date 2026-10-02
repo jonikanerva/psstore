@@ -7,8 +7,7 @@ export interface CompatibilityContext {
   serviceText: string
 }
 
-// The fixed Sony-contract values are plain code constants (issue #72), no
-// longer env-driven `Config.withDefault('x')` values. Anchor on the exported
+// The fixed Sony-contract values are plain code constants. Anchor on the exported
 // constant assignment `NAME = 'literal'` and read the quoted literal. The
 // constants are at module scope with no preceding interface declaration to
 // collide with.
@@ -103,11 +102,9 @@ export const validateBackendCompatibility = (
     )
   }
 
-  // The contract gate's whole point for issue #77: require a manifest entry that
-  // matches the PDP operation name AND the server's current persisted-query
-  // hash. A rotated PDP hash (server `env.ts` updated, manifest stale, or vice
-  // versa) fails here — closing the green-by-construction gap where the bot
-  // never knew about `metGetProductById`.
+  // Require a manifest entry that matches the PDP operation name AND the
+  // server's current persisted-query hash. A rotated PDP hash (server `env.ts`
+  // updated, manifest stale, or vice versa) fails here.
   if (
     !manifest.operations.some(
       (operation) =>
@@ -133,10 +130,9 @@ export const validateBackendCompatibility = (
       )
     }
 
-    // Path allowlist is keyed by operation name (not a generic rule-table —
-    // YAGNI; issue #64 extends the same per-operation guard style). The grid op
-    // accepts the two category-grid roots; the PDP op accepts `data.productRetrieve`
-    // ONLY; anything else throws.
+    // Path allowlist is keyed by operation name, not a generic rule table. The
+    // grid op accepts the two category-grid roots; the PDP op accepts
+    // `data.productRetrieve` ONLY; anything else throws.
     if (operation.operation_name === expectedOperationName) {
       if (
         operation.response_path !== 'data.categoryGridRetrieve.products' &&
