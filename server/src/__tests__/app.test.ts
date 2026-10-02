@@ -28,9 +28,21 @@ const concept: Concept = {
   products: [{ id: productId }],
 }
 
+const monthlyProductId = 'UP7742-PPSA29413_00-0632159817352246'
+
 const FakeSony = Layer.succeed(SonyClient, {
   fetchConceptsByFeature: (feature) =>
     Effect.succeed(feature === 'new' ? [concept] : []),
+  fetchPlusMonthly: () =>
+    Effect.succeed([
+      {
+        productId: monthlyProductId,
+        name: 'Wobbly Life',
+        imageUrl: 'https://img/wobbly',
+        releaseDate: '2025-09-18T17:00:00Z',
+        genres: ['Adventure'],
+      },
+    ]),
   fetchProductPrice: () => Effect.succeed(null),
   fetchProductDetail: () =>
     Effect.succeed({
@@ -62,6 +74,10 @@ const failHandler = (
 } => {
   const FailSony = Layer.succeed(SonyClient, {
     fetchConceptsByFeature: () => Effect.fail(error),
+    fetchPlusMonthly: () =>
+      error._tag === 'UpstreamQueryRotated'
+        ? Effect.succeed([])
+        : Effect.fail(error),
     fetchProductPrice: () => Effect.succeed(null),
     fetchProductDetail: () => Effect.fail(error),
   })
@@ -116,6 +132,30 @@ describe('games HTTP API', () => {
     expect(response.status).toBe(404)
   })
 
+  it('serves the MONTHLY list as typed JSON', async () => {
+    const response = await handler(
+      new Request('http://localhost/api/games/monthly'),
+    )
+    expect(response.status).toBe(200)
+    const body = (await response.json()) as {
+      games: { id: string; price: string; plusOffer: unknown }[]
+      totalCount: number
+    }
+    expect(body.totalCount).toBe(1)
+    expect(body.games[0]).toMatchObject({
+      id: monthlyProductId,
+      price: '',
+      plusOffer: null,
+    })
+  })
+
+  it('resolves a monthly-only game on the product detail route', async () => {
+    const response = await handler(
+      new Request(`http://localhost/api/games/${monthlyProductId}`),
+    )
+    expect(response.status).toBe(200)
+  })
+
   it('serves the product detail as typed JSON', async () => {
     const response = await handler(
       new Request(`http://localhost/api/games/${productId}`),
@@ -162,6 +202,7 @@ describe('games OpenAPI document', () => {
       '/api/games/new',
       '/api/games/upcoming',
       '/api/games/discounted',
+      '/api/games/monthly',
       '/api/games/{id}',
     ]
     for (const path of paths) {
@@ -186,6 +227,20 @@ describe('games HTTP API — honest upstream failure', () => {
       new Request('http://localhost/api/games/upcoming'),
     )
     expect(response.status).toBe(502)
+  })
+
+  it('maps a monthly-tab upstream outage to 502', async () => {
+    const response = await unavailableApp.handler(
+      new Request('http://localhost/api/games/monthly'),
+    )
+    expect(response.status).toBe(502)
+  })
+
+  it('maps a monthly-tab rate-limit to 503', async () => {
+    const response = await rateLimitedApp.handler(
+      new Request('http://localhost/api/games/monthly'),
+    )
+    expect(response.status).toBe(503)
   })
 
   it('maps a discounted-tab upstream outage to 502', async () => {

@@ -19,6 +19,7 @@ import {
   conceptProductId,
   DISCOUNTED_GAME_CLASSIFICATIONS,
   mapConceptsToGames,
+  mapMonthlyToGames,
   mapUpcomingConceptsToGames,
   paginate,
   sortByDate,
@@ -42,6 +43,8 @@ const LIST_PAGE_SIZE = 120
 const DETAIL_TTL = Duration.hours(6)
 const PRICE_TTL = Duration.minutes(10)
 const PRICE_FAILURE_TTL = Duration.seconds(30)
+const MONTHLY_TTL = Duration.hours(1)
+const MONTHLY_FAILURE_TTL = Duration.seconds(30)
 
 interface ProductMeta {
   readonly date: string
@@ -58,6 +61,10 @@ export interface GamesServiceApi {
     size?: number,
   ) => Effect.Effect<PageResult, UpstreamError>
   readonly getDiscountedGames: (
+    offset?: number,
+    size?: number,
+  ) => Effect.Effect<PageResult, UpstreamError>
+  readonly getMonthlyGames: (
     offset?: number,
     size?: number,
   ) => Effect.Effect<PageResult, UpstreamError>
@@ -131,6 +138,37 @@ export const GamesServiceLive: Layer.Layer<GamesService, never, SonyClient> =
             Exit.isSuccess(exit) ? PRICE_TTL : PRICE_FAILURE_TTL,
         },
       )
+
+      // The whole monthly list under one key; a failure is cached briefly so an
+      // outage is not retried on every request.
+      const monthlyCache = yield* Cache.makeWith<
+        'monthly',
+        Game[],
+        UpstreamError
+      >(
+        () =>
+          sony
+            .fetchPlusMonthly()
+            .pipe(Effect.map((entries) => mapMonthlyToGames(entries))),
+        {
+          capacity: 1,
+          timeToLive: (exit) =>
+            Exit.isSuccess(exit) ? MONTHLY_TTL : MONTHLY_FAILURE_TTL,
+        },
+      )
+
+      const getMonthlyGames = (
+        offset = 0,
+        size = 60,
+      ): Effect.Effect<PageResult, UpstreamError> =>
+        Cache.get(monthlyCache, 'monthly').pipe(
+          Effect.tapError((error) =>
+            Effect.logWarning('monthly games query failed', {
+              reason: error._tag,
+            }),
+          ),
+          Effect.map((games) => paginate(games, offset, size)),
+        )
 
       const plusOfferFor = (game: Game): Effect.Effect<PlusOffer | null> =>
         game.idKind === 'product'
@@ -329,6 +367,13 @@ export const GamesServiceLive: Layer.Layer<GamesService, never, SonyClient> =
             }
           }
 
+          const monthlyGame = (yield* Cache.get(monthlyCache, 'monthly')).find(
+            (item) => item.id === id,
+          )
+          if (monthlyGame) {
+            return decodeGame(yield* enrichWithDetail(monthlyGame))
+          }
+
           return yield* Effect.fail(new GameNotFound({ id }))
         })
 
@@ -336,6 +381,7 @@ export const GamesServiceLive: Layer.Layer<GamesService, never, SonyClient> =
         getNewGames,
         getUpcomingGames,
         getDiscountedGames,
+        getMonthlyGames,
         getGameById,
       })
     }),

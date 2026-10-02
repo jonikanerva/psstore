@@ -1,4 +1,5 @@
 import type { Game } from '@psstore/shared'
+import type { PlusMonthlyEntry } from './plusMonthlySchema.js'
 import type { Concept } from './types.js'
 
 const DEFAULT_DISCOUNT_DATE = ''
@@ -126,3 +127,23 @@ export const conceptToGame = (concept: Concept): Game => {
 }
 
 export const defaultDiscountDate = DEFAULT_DISCOUNT_DATE
+
+export const monthlyEntryToGame = (entry: PlusMonthlyEntry): Game => ({
+  id: entry.productId,
+  name: entry.name,
+  date: toIsoOrDefault(entry.releaseDate),
+  url: entry.imageUrl,
+  price: '',
+  originalPrice: '',
+  discountText: '',
+  discountDate: DEFAULT_DISCOUNT_DATE,
+  screenshots: [],
+  videos: [],
+  genres: [...entry.genres],
+  description: '',
+  studio: '',
+  preOrder: false,
+  plusUpsellText: null,
+  plusOffer: null,
+  idKind: 'product',
+})

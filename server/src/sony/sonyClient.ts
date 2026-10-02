@@ -3,6 +3,8 @@ import { Context, Effect, Layer } from 'effect'
 import {
   SONY_GRAPHQL_URL,
   SONY_LOCALE,
+  SONY_PLUS_MONTHLY_CATEGORY,
+  SONY_PLUS_MONTHLY_URL,
   SONY_PRODUCT_BY_ID_HASH,
   SONY_PRODUCT_OPERATION_NAME,
   SONY_PRODUCT_PRICE_HASH,
@@ -22,6 +24,7 @@ import {
 } from './categoryGridSchema.js'
 import { detectPersistedQueryRotation } from './graphqlErrors.js'
 import { parseProductRetrieve } from './productDetailSchema.js'
+import { parsePlusMonthly, type PlusMonthlyEntry } from './plusMonthlySchema.js'
 import { parsePlusOffer } from './productPriceSchema.js'
 import {
   buildStrategies,
@@ -273,6 +276,22 @@ const requestProductPriceRaw = async (productId: string): Promise<unknown> => {
   return response.json()
 }
 
+const requestPlusMonthlyRaw = async (): Promise<unknown> => {
+  const query = new URLSearchParams({
+    locale: SONY_LOCALE,
+    categoryList: SONY_PLUS_MONTHLY_CATEGORY,
+  }).toString()
+
+  const response = await fetchWithRetry(
+    `${SONY_PLUS_MONTHLY_URL}?${query}`,
+    { method: 'GET', headers: { Accept: 'application/json' } },
+    SONY_TIMEOUT_MS,
+    SONY_RETRY_COUNT,
+  )
+
+  return response.json()
+}
+
 // Map a transport-layer rejection onto the typed error channel. The rate-limit
 // sentinel (structured `RateLimitedError` from lib/http.ts) is pattern-matched
 // by instance — never by message string — and becomes UpstreamRateLimited;
@@ -316,6 +335,10 @@ export interface SonyClientApi {
   ) => Effect.Effect<
     PlusOffer | null,
     UpstreamUnavailable | UpstreamQueryRotated | UpstreamRateLimited
+  >
+  readonly fetchPlusMonthly: () => Effect.Effect<
+    readonly PlusMonthlyEntry[],
+    UpstreamUnavailable | UpstreamRateLimited
   >
 }
 
@@ -390,6 +413,44 @@ export const SonyClientLive: Layer.Layer<SonyClient> = Layer.succeed(
               )
             : Effect.succeed(extractProductDetail(json)),
         ),
+      ),
+    fetchPlusMonthly: () =>
+      Effect.tryPromise({
+        try: requestPlusMonthlyRaw,
+        catch: mapTransportError,
+      }).pipe(
+        Effect.flatMap((json) => {
+          const outcome = parsePlusMonthly(json)
+          if (outcome.kind === 'drift') {
+            return Effect.logWarning('plus monthly list drift', {
+              event: 'sony.plusMonthly.drift',
+            }).pipe(
+              Effect.andThen(
+                Effect.fail(
+                  new UpstreamUnavailable({
+                    message: 'PS Plus monthly list has an unexpected shape',
+                  }),
+                ),
+              ),
+            )
+          }
+          const log =
+            outcome.entries.length === 0
+              ? Effect.logWarning('plus monthly list has no PS5 games', {
+                  event: 'sony.plusMonthly.empty',
+                })
+              : outcome.dropped > 0
+                ? Effect.logWarning('plus monthly list element drift', {
+                    event: 'sony.plusMonthly.elementDrift',
+                    dropped: outcome.dropped,
+                    kept: outcome.entries.length,
+                  })
+                : Effect.logDebug('plus monthly list decoded', {
+                    outOfScope: outcome.outOfScope,
+                    kept: outcome.entries.length,
+                  })
+          return log.pipe(Effect.as(outcome.entries))
+        }),
       ),
     fetchProductPrice: (productId) =>
       Effect.tryPromise({

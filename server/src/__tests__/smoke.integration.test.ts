@@ -103,6 +103,19 @@ describeSmoke(
       globalThis.console.log(`[test:live] DISCOUNTED concepts=${String(count)}`)
     }, 20_000)
 
+    it('MONTHLY: the PS Plus monthly list decodes to at least one PS5 game', async () => {
+      const entries = await Effect.runPromise(
+        SonyClient.pipe(
+          Effect.flatMap((client) => client.fetchPlusMonthly()),
+          Effect.provide(SonyClientLive),
+        ),
+      )
+      expect(entries.length).toBeGreaterThanOrEqual(1)
+      globalThis.console.log(
+        `[test:live] MONTHLY entries=${String(entries.length)}`,
+      )
+    }, 20_000)
+
     it('PDP: fetchProductDetail resolves for one SKU from the NEW result', async () => {
       const raw = await fetchRawGrid('new')
       const outcome = extractCategoryGrid(raw)

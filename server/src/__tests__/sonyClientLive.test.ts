@@ -337,4 +337,90 @@ describe('SonyClientLive classification', () => {
       expect(JSON.stringify(result.cause)).toContain('UpstreamUnavailable')
     }
   })
+
+  it('requests the monthly list anonymously with the content locale', async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(
+        jsonResponse([{ catalogKey: 'A', count: 0, games: [] }]),
+      )
+    globalThis.fetch = fetchMock
+
+    const { exit, logs } = withCapturedLogs(
+      SonyClient.pipe(Effect.flatMap((client) => client.fetchPlusMonthly())),
+    )
+    const result = await exit
+
+    expect(Exit.isSuccess(result)).toBe(true)
+    const [url, init] = fetchMock.mock.calls[0] ?? []
+    const parsed = new URL(typeof url === 'string' ? url : '')
+    expect(parsed.origin + parsed.pathname).toBe(
+      'https://www.playstation.com/bin/imagic/gameslist',
+    )
+    expect(parsed.searchParams.get('locale')).toBe('en-fi')
+    expect(parsed.searchParams.get('categoryList')).toBe(
+      'plus-monthly-games-list',
+    )
+    const headers = new Headers(init?.headers)
+    expect(headers.get('cookie')).toBeNull()
+    expect(headers.get('authorization')).toBeNull()
+    expect(
+      logs.some((entry) => entry.text.includes('sony.plusMonthly.empty')),
+    ).toBe(true)
+  })
+
+  it('fails with UpstreamUnavailable and a drift warning for a non-list body', async () => {
+    globalThis.fetch = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(jsonResponse({ unexpected: true }))
+
+    const { exit, logs } = withCapturedLogs(
+      SonyClient.pipe(Effect.flatMap((client) => client.fetchPlusMonthly())),
+    )
+    const result = await exit
+
+    expect(Exit.isFailure(result)).toBe(true)
+    if (Exit.isFailure(result)) {
+      expect(JSON.stringify(result.cause)).toContain('UpstreamUnavailable')
+    }
+    expect(
+      logs.some(
+        (entry) =>
+          entry.level === 'Warn' &&
+          entry.text.includes('sony.plusMonthly.drift'),
+      ),
+    ).toBe(true)
+  })
+
+  it('maps a persistent 429 on the monthly path to UpstreamRateLimited', async () => {
+    globalThis.fetch = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response('rate limited', { status: 429 }))
+
+    const { exit } = withCapturedLogs(
+      SonyClient.pipe(Effect.flatMap((client) => client.fetchPlusMonthly())),
+    )
+    const result = await exit
+
+    expect(Exit.isFailure(result)).toBe(true)
+    if (Exit.isFailure(result)) {
+      expect(JSON.stringify(result.cause)).toContain('UpstreamRateLimited')
+    }
+  })
+
+  it('maps a non-2xx on the monthly path to UpstreamUnavailable', async () => {
+    globalThis.fetch = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response('boom', { status: 500 }))
+
+    const { exit } = withCapturedLogs(
+      SonyClient.pipe(Effect.flatMap((client) => client.fetchPlusMonthly())),
+    )
+    const result = await exit
+
+    expect(Exit.isFailure(result)).toBe(true)
+    if (Exit.isFailure(result)) {
+      expect(JSON.stringify(result.cause)).toContain('UpstreamUnavailable')
+    }
+  })
 })

@@ -1,6 +1,7 @@
 import { gamesSchema, type Game, type PageResult } from '@psstore/shared'
 import { Schema } from 'effect'
-import { conceptToGame } from '../sony/mapper.js'
+import { conceptToGame, monthlyEntryToGame } from '../sony/mapper.js'
+import type { PlusMonthlyEntry } from '../sony/plusMonthlySchema.js'
 import type { Concept } from '../sony/types.js'
 
 // Pure domain core: sorting, pagination, scope filtering, and concept→game
@@ -81,6 +82,13 @@ export const mapConceptsToGames = (concepts: readonly Concept[]): Game[] => {
   // decode returns a readonly array; copy to a mutable one for callers.
   return [...decodeGames(mapped)]
 }
+
+// MONTHLY order is the game's release date, newest first: the feed carries no
+// date the game was added to PS Plus.
+export const mapMonthlyToGames = (
+  entries: readonly PlusMonthlyEntry[],
+): Game[] =>
+  sortByDate([...decodeGames(entries.map(monthlyEntryToGame))], 'date-desc')
 
 // UPCOMING-only mapping. Unlike `mapConceptsToGames` (used VERBATIM by
 // NEW / DISCOUNTED), this keeps concept-only announcements that Sony does not
