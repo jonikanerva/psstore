@@ -3,8 +3,8 @@
 A fast, utilitarian view of the Finnish PlayStation Store. It shows new, upcoming, and
 discounted **PS5 games** in the Finnish store, priced in **EUR** with both the standard and
 **PS Plus** price visible — without the carousels, mixed platforms, and non-game products of
-`store.playstation.com`. Open the page, see what's new, click out to Sony to buy. No accounts,
-no preferences, no tracking.
+`store.playstation.com`. Open the page, see what's new, click out to Sony to buy. No
+preferences, no tracking.
 
 The backend proxies and normalises Sony's public GraphQL API into a clean REST surface scoped
 to PS5 / Finland / EUR; the frontend renders what the backend returns.
@@ -12,7 +12,7 @@ to PS5 / Finland / EUR; the frontend renders what the backend returns.
 ## Architecture
 
 - `client/` — Vite + React SPA (TanStack Router, TanStack Query, Tailwind CSS)
-- `server/` — `@effect/platform` HttpApi backend on Effect (typed REST + in-memory Effect `Cache`), Railway runtime
+- `server/` — `@effect/platform` HttpApi backend on Effect (typed REST + in-memory Effect `Cache`)
 - `shared/` — Effect Schema types, schemas, and utilities shared across server and client
 - `tools/sony-contract-bot/` — captures and validates Sony's GraphQL contract
 
@@ -21,10 +21,18 @@ narrows the data at the Schema boundary, and serves the normalised result.
 
 ## Development
 
+Prerequisite: [mise](https://mise.jdx.dev/). The `mise.toml` file pins the Node and pnpm
+versions.
+
 ```bash
+mise install
 pnpm install
 pnpm run dev
 ```
+
+Do not use Corepack or a global pnpm. `mise install` provides the pinned pnpm, and
+`pmOnFail: error` stops any other pnpm version. `STACK.md → 1. Language & Runtime` lists the
+versions and the files that mirror them.
 
 - Client runs on `http://localhost:5173`
 - Server runs on `http://localhost:3000`
@@ -51,8 +59,8 @@ pnpm run build
 
 ## Sony Contract Tooling (Hardcoded Scope)
 
-Tooling scope is fixed and immutable: region `fi`, locale `fi-fi`, currency `EUR`, platform
-`PS5`. No sign-in is required.
+Tooling scope today: region `fi`, locale `fi-fi`, currency `EUR`, platform `PS5`. No
+sign-in is required.
 
 ```bash
 # capture + normalize + validate + diff
@@ -65,7 +73,16 @@ pnpm run sony:validate
 pnpm run sony:diff -- --ci
 ```
 
-## Production / Railway
+`sony:refresh` drives a Playwright browser. After a Playwright version bump, install the
+matching browser once before the next `sony:refresh`:
+
+```bash
+pnpm --filter @psstore/sony-contract-bot exec playwright install chromium
+```
+
+## Production build
+
+The project has no production deployment. To run a production build locally:
 
 ```bash
 pnpm install
@@ -73,24 +90,16 @@ pnpm run build
 pnpm run start
 ```
 
-Railway runs the Node server (`pnpm run start`). In production the server serves
-`client/build` and handles SPA fallback routing.
+The server serves `client/build` and handles SPA fallback routing.
 
 ## Environment Variables
 
-- `PORT` (default: `3000`)
-- `NODE_ENV` (`development|test|production`)
-- `SONY_GRAPHQL_URL` (default: `https://web.np.playstation.com/api/graphql/v1/op`)
-- `SONY_CATEGORY_GRID_HASH`
-- `SONY_CATEGORY_ID`
-- `SONY_DEALS_CATEGORY_ID`
-- `SONY_OPERATION_NAME`
-- `SONY_PRODUCT_OPERATION_NAME`
-- `SONY_PRODUCT_BY_ID_HASH`
-- `SONY_LOCALE`
-- `SONY_RETRY_COUNT`
-- `SONY_TIMEOUT_MS`
-- `CACHE_TTL_MS`
+- `PORT` (default: `3000`). The Vite dev proxy in `client/vite.config.ts` targets port
+  `3000`. If you change `PORT` in development, change the proxy target too.
+
+The Sony contract values are code constants in `server/src/config/env.ts`. They are not
+environment variables. `pnpm run sony:refresh` rotates the persisted-query hashes in that
+file.
 
 ## Sony GraphQL Contract Update Workflow
 

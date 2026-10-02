@@ -1,0 +1,5 @@
+# Source of truth for the toolchain. Update the mirrors in the same commit;
+# see STACK.md → 1. Language & Runtime.
+[tools]
+node = "24.21.0"
+pnpm = "12.8.1"
