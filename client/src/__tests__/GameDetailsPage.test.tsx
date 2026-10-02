@@ -1,4 +1,5 @@
 import { cleanup, screen, waitFor } from '@testing-library/react'
+import { Settings } from 'luxon'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Game } from '@psstore/shared'
 import GameDetailsPage from '../components/GameDetailsPage'
@@ -32,9 +33,11 @@ vi.mock('../modules/psnStore', () => ({
 describe('GameDetailsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    Settings.defaultZone = 'UTC'
   })
 
   afterEach(() => {
+    Settings.defaultZone = 'system'
     cleanup()
   })
 
@@ -108,7 +111,7 @@ describe('GameDetailsPage', () => {
     const { fetchGame } = await import('../modules/psnStore')
     vi.mocked(fetchGame).mockResolvedValue({
       ...baseGame,
-      plusUpsellText: 'Säästä 10 %',
+      plusUpsellText: 'Save 10%',
     })
 
     await renderWithRouter(<GameDetailsPage gameId={baseGame.id} />)
@@ -117,7 +120,7 @@ describe('GameDetailsPage', () => {
       expect(screen.getByText('PS Plus')).toBeInTheDocument()
     })
 
-    expect(screen.getByText('Säästä 10 %')).toBeInTheDocument()
+    expect(screen.getByText('Save 10%')).toBeInTheDocument()
   })
 
   it('omits the PS Plus row when plusUpsellText is null', async () => {
@@ -131,5 +134,49 @@ describe('GameDetailsPage', () => {
     })
 
     expect(screen.queryByText('PS Plus')).not.toBeInTheDocument()
+  })
+
+  it('renders the release date as day, abbreviated month, year (en-GB)', async () => {
+    const { fetchGame } = await import('../modules/psnStore')
+    vi.mocked(fetchGame).mockResolvedValue({
+      ...baseGame,
+      date: '2025-06-15T23:59:59Z',
+    })
+
+    await renderWithRouter(<GameDetailsPage gameId={baseGame.id} />)
+
+    await waitFor(() => {
+      expect(screen.getByText('15 Jun 2025')).toBeInTheDocument()
+    })
+  })
+
+  it('renders Unknown for an empty release date', async () => {
+    const { fetchGame } = await import('../modules/psnStore')
+    vi.mocked(fetchGame).mockResolvedValue({ ...baseGame, date: '' })
+
+    await renderWithRouter(<GameDetailsPage gameId={baseGame.id} />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Unknown')).toBeInTheDocument()
+    })
+  })
+
+  it('links to the English Finnish-store product page', async () => {
+    const { fetchGame } = await import('../modules/psnStore')
+    vi.mocked(fetchGame).mockResolvedValue(baseGame)
+
+    await renderWithRouter(<GameDetailsPage gameId={baseGame.id} />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Detail Game')).toBeInTheDocument()
+    })
+
+    const link = document.querySelector(
+      'a[href^="https://store.playstation.com"]',
+    )
+    expect(link).toHaveAttribute(
+      'href',
+      `https://store.playstation.com/en-fi/product/${baseGame.id}`,
+    )
   })
 })

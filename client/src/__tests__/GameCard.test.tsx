@@ -1,5 +1,6 @@
 import { cleanup, screen } from '@testing-library/react'
-import { afterEach, describe, expect, it } from 'vitest'
+import { Settings } from 'luxon'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { Game } from '@psstore/shared'
 import GameCard from '../components/GameCard'
 import { renderWithRouter } from './testRouter'
@@ -24,7 +25,12 @@ const game: Game = {
 }
 
 describe('GameCard', () => {
+  beforeEach(() => {
+    Settings.defaultZone = 'UTC'
+  })
+
   afterEach(() => {
+    Settings.defaultZone = 'system'
     cleanup()
   })
 
@@ -33,7 +39,7 @@ describe('GameCard', () => {
 
     expect(screen.getByText('Test Game')).toBeInTheDocument()
     expect(screen.getByText('69,99 €')).toBeInTheDocument()
-    expect(screen.getByText(/15 Jun 2025|Jun 15, 2025/)).toBeInTheDocument()
+    expect(screen.getByText('15 Jun 2025')).toBeInTheDocument()
   })
 
   it('links to the game detail page', async () => {
@@ -69,10 +75,10 @@ describe('GameCard', () => {
 
   it('renders the PS+ indicator with Sony upsellText verbatim when set', async () => {
     await renderWithRouter(
-      <GameCard game={{ ...game, plusUpsellText: 'Säästä 10 %' }} />,
+      <GameCard game={{ ...game, plusUpsellText: 'Save 10%' }} />,
     )
 
-    expect(screen.getByText('PS+ Säästä 10 %')).toBeInTheDocument()
+    expect(screen.getByText('PS+ Save 10%')).toBeInTheDocument()
   })
 
   it('omits the PS+ indicator when plusUpsellText is null', async () => {
@@ -115,5 +121,36 @@ describe('GameCard', () => {
     expect(link).toHaveAttribute('target', '_blank')
     expect(link).toHaveAttribute('rel', 'noopener noreferrer')
     expect(screen.getByText('Unknown')).toBeInTheDocument()
+  })
+
+  it('renders the date as day, abbreviated month, year (en-GB)', async () => {
+    await renderWithRouter(
+      <GameCard game={{ ...game, date: '2025-12-03T10:00:00Z' }} />,
+    )
+
+    expect(screen.getByText('3 Dec 2025')).toBeInTheDocument()
+  })
+
+  it('keeps a date one second before midnight UTC on the same day', async () => {
+    await renderWithRouter(
+      <GameCard game={{ ...game, date: '2025-06-15T23:59:59Z' }} />,
+    )
+
+    expect(screen.getByText('15 Jun 2025')).toBeInTheDocument()
+  })
+
+  it('converts the instant to the viewer zone (next day in Auckland)', async () => {
+    Settings.defaultZone = 'Pacific/Auckland'
+    await renderWithRouter(
+      <GameCard game={{ ...game, date: '2025-06-15T13:00:00Z' }} />,
+    )
+
+    expect(screen.getByText('16 Jun 2025')).toBeInTheDocument()
+  })
+
+  it('renders no date text for an empty date', async () => {
+    await renderWithRouter(<GameCard game={{ ...game, date: '' }} />)
+
+    expect(screen.queryByText(/\d{4}/)).not.toBeInTheDocument()
   })
 })
