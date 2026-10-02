@@ -63,10 +63,10 @@ export interface GamesServiceApi {
   ) => Effect.Effect<Game, GameNotFound | UpstreamError>
 }
 
-export class GamesService extends Context.Tag('GamesService')<
+export class GamesService extends Context.Service<
   GamesService,
   GamesServiceApi
->() {}
+>()('GamesService') {}
 
 export const GamesServiceLive: Layer.Layer<GamesService, never, SonyClient> =
   Layer.effect(
@@ -110,7 +110,7 @@ export const GamesServiceLive: Layer.Layer<GamesService, never, SonyClient> =
           timeToLive: DETAIL_TTL,
           lookup: (productId) =>
             sony.fetchProductDetail(productId).pipe(
-              Effect.catchAll(() =>
+              Effect.catch(() =>
                 Effect.succeed<ProductDetailResult>({
                   genres: [],
                   description: '',
@@ -121,7 +121,7 @@ export const GamesServiceLive: Layer.Layer<GamesService, never, SonyClient> =
       )
 
       const productMeta = (productId: string): Effect.Effect<ProductMeta> =>
-        productDetailCache.get(productId).pipe(
+        Cache.get(productDetailCache, productId).pipe(
           Effect.map((detail) => ({
             date: detail.releaseDate ?? '',
             classification: detail.storeDisplayClassification ?? null,
@@ -138,7 +138,7 @@ export const GamesServiceLive: Layer.Layer<GamesService, never, SonyClient> =
       const featureConcepts = (
         feature: 'upcoming' | 'discounted',
       ): Effect.Effect<Concept[], UpstreamError> =>
-        conceptsCache.get(feature).pipe(
+        Cache.get(conceptsCache, feature).pipe(
           Effect.tapError((error) =>
             Effect.logWarning('feature concept query failed', {
               feature,
@@ -153,9 +153,9 @@ export const GamesServiceLive: Layer.Layer<GamesService, never, SonyClient> =
         )
 
       const baseGames = (): Effect.Effect<Game[], UpstreamError> =>
-        conceptsCache
-          .get('new')
-          .pipe(Effect.map((concepts) => mapConceptsToGames(concepts)))
+        Cache.get(conceptsCache, 'new').pipe(
+          Effect.map((concepts) => mapConceptsToGames(concepts)),
+        )
 
       const enrichedListing = (
         games: Game[],
@@ -261,7 +261,7 @@ export const GamesServiceLive: Layer.Layer<GamesService, never, SonyClient> =
         )
 
       const enrichWithDetail = (game: Game): Effect.Effect<Game> =>
-        productDetailCache.get(game.id).pipe(
+        Cache.get(productDetailCache, game.id).pipe(
           Effect.map((detail): Game => ({
             ...game,
             date: detail.releaseDate ?? game.date,

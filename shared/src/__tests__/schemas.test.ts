@@ -1,4 +1,4 @@
-import { Either, Schema } from 'effect'
+import { Result, Schema } from 'effect'
 import { describe, expect, it } from 'vitest'
 import { gameSchema } from '../schemas/game.js'
 
@@ -21,17 +21,33 @@ const baseGame = {
 }
 
 const decode = Schema.decodeUnknownSync(gameSchema)
-const decodeEither = Schema.decodeUnknownEither(gameSchema)
+const decodeResult = Schema.decodeUnknownResult(gameSchema)
+const encode = Schema.encodeSync(gameSchema)
 
 describe('game schema', () => {
   it('rejects invalid payload', () => {
-    const result = decodeEither({ id: '1' })
-    expect(Either.isLeft(result)).toBe(true)
+    const result = decodeResult({ id: '1' })
+    expect(Result.isFailure(result)).toBe(true)
   })
 
   it('defaults idKind to "product" when absent (back-compat)', () => {
     const parsed = decode(baseGame)
     expect(parsed.idKind).toBe('product')
+  })
+
+  it('defaults idKind to "product" when explicitly undefined', () => {
+    const parsed = decode({ ...baseGame, idKind: undefined })
+    expect(parsed.idKind).toBe('product')
+  })
+
+  it('rejects an unknown idKind', () => {
+    expect(
+      Result.isFailure(decodeResult({ ...baseGame, idKind: 'bundle' })),
+    ).toBe(true)
+  })
+
+  it('encodes the defaulted idKind into the wire value', () => {
+    expect(encode(decode(baseGame)).idKind).toBe('product')
   })
 
   it('round-trips an explicit concept idKind', () => {

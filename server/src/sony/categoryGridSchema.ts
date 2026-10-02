@@ -1,4 +1,4 @@
-import { Either, Schema } from 'effect'
+import { Result, Schema } from 'effect'
 
 /**
  * Effect Schema boundary schema for Sony's `data.categoryGridRetrieve` node
@@ -8,8 +8,8 @@ import { Either, Schema } from 'effect'
  * Deliberately tolerant (STACK.md scope-at-the-boundary; this is a DEFENSIVE
  * boundary, not the scope filter), mirroring `productDetailSchema.ts`: every
  * field is `optional(NullOr(...))` — it accepts an absent key, an explicit
- * `null`, OR the typed value — and unknown keys are preserved
- * (`onExcessProperty: "preserve"`). Sony's fi-fi store sends `null` liberally
+ * `null`, OR the typed value — and unknown keys are ignored
+ * (never an error). Sony's fi-fi store sends `null` liberally
  * (e.g. the whole `concept.price` on an unpriced/announced UPCOMING game,
  * `price.serviceBranding` on some DISCOUNTED products); a plain `optional`
  * rejects a present `null` and — because `Schema.Array` fails wholesale on one
@@ -95,15 +95,9 @@ const categoryGridRawSchema = Schema.Struct({
   products: Schema.optional(Schema.NullOr(Schema.Array(Schema.Unknown))),
 })
 
-const decodeRaw = Schema.decodeUnknownEither(categoryGridRawSchema, {
-  onExcessProperty: 'preserve',
-})
-const decodeConcept = Schema.decodeUnknownEither(conceptSchema, {
-  onExcessProperty: 'preserve',
-})
-const decodeProduct = Schema.decodeUnknownEither(categoryGridProductSchema, {
-  onExcessProperty: 'preserve',
-})
+const decodeRaw = Schema.decodeUnknownResult(categoryGridRawSchema)
+const decodeConcept = Schema.decodeUnknownResult(conceptSchema)
+const decodeProduct = Schema.decodeUnknownResult(categoryGridProductSchema)
 
 /**
  * Result of a per-element category-grid decode. `dropped` counts elements that
@@ -118,14 +112,14 @@ export interface ParsedCategoryGrid {
 
 const decodeEach = <A>(
   items: ReadonlyArray<unknown>,
-  decode: (value: unknown) => Either.Either<A, unknown>,
+  decode: (value: unknown) => Result.Result<A, unknown>,
 ): { kept: A[]; dropped: number } => {
   const kept: A[] = []
   let dropped = 0
   for (const item of items) {
     const result = decode(item)
-    if (Either.isRight(result)) {
-      kept.push(result.right)
+    if (Result.isSuccess(result)) {
+      kept.push(result.success)
     } else {
       dropped += 1
     }
@@ -147,14 +141,14 @@ export const parseCategoryGrid = (node: unknown): ParsedCategoryGrid | null => {
   }
 
   const raw = decodeRaw(node)
-  if (Either.isLeft(raw)) {
+  if (Result.isFailure(raw)) {
     return null
   }
 
-  const conceptResults = decodeEach(raw.right.concepts ?? [], (value) =>
+  const conceptResults = decodeEach(raw.success.concepts ?? [], (value) =>
     decodeConcept(value),
   )
-  const productResults = decodeEach(raw.right.products ?? [], (value) =>
+  const productResults = decodeEach(raw.success.products ?? [], (value) =>
     decodeProduct(value),
   )
 
@@ -168,7 +162,7 @@ export const parseCategoryGrid = (node: unknown): ParsedCategoryGrid | null => {
 /**
  * Zero-cast envelope decode for the category-grid response. Mirrors the shape
  * `{ data?: { categoryGridRetrieve?: unknown } }` defensively (all optional,
- * excess preserved) so the untrusted body is narrowed before the inner node is
+ * excess keys ignored) so the untrusted body is narrowed before the inner node is
  * read — replacing the previous `as CategoryGridRetrieveResponse` cast.
  *
  * Returns the inner `categoryGridRetrieve` value as `unknown` (or `undefined`
@@ -185,13 +179,11 @@ const envelopeSchema = Schema.Struct({
   ),
 })
 
-const decodeEnvelope = Schema.decodeUnknownEither(envelopeSchema, {
-  onExcessProperty: 'preserve',
-})
+const decodeEnvelope = Schema.decodeUnknownResult(envelopeSchema)
 
 export const extractCategoryGridNode = (json: unknown): unknown => {
   const result = decodeEnvelope(json)
-  return Either.isRight(result)
-    ? result.right.data?.categoryGridRetrieve
+  return Result.isSuccess(result)
+    ? result.success.data?.categoryGridRetrieve
     : undefined
 }

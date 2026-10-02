@@ -11,7 +11,7 @@ const opIdentity = (
   `${operation.feature}:${operation.operation_name}:${operation.persisted_query_hash ?? ''}`
 
 export const validateManifest = (manifest: SonyContractManifest): void => {
-  // Decode throws a ParseError on a malformed manifest (the previous zod
+  // Decode throws a SchemaError on a malformed manifest (the previous zod
   // `.parse` contract), which the CLI surfaces as a validation failure.
   decodeManifest(manifest)
 

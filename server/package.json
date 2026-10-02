@@ -15,8 +15,7 @@
     "test:live": "SMOKE=1 vitest run src/__tests__/smoke.integration.test.ts"
   },
   "dependencies": {
-    "@effect/platform": "0.97.2",
-    "@effect/platform-node": "0.108.2",
+    "@effect/platform-node": "4.0.0",
     "@psstore/shared": "workspace:*",
     "effect": "catalog:"
   },

@@ -25,12 +25,12 @@ const withCapturedLogs = <A, E>(
 ): { exit: Promise<Exit.Exit<A, E>>; logs: CapturedLog[] } => {
   const logs: CapturedLog[] = []
   const capturing = Logger.make(({ logLevel, message }) => {
-    logs.push({ level: logLevel.label, text: JSON.stringify(message) })
+    logs.push({ level: logLevel, text: JSON.stringify(message) })
   })
   const exit = Effect.runPromiseExit(
     effect.pipe(
       Effect.provide(SonyClientLive),
-      Effect.provide(Logger.replace(Logger.defaultLogger, capturing)),
+      Effect.provide(Logger.layer([capturing])),
     ),
   )
   return { exit, logs }
@@ -62,7 +62,7 @@ describe('SonyClientLive classification', () => {
     // The operator gets an honest signal: a WARN carrying the drift marker.
     const driftWarn = logs.find(
       (entry) =>
-        entry.level === 'WARN' &&
+        entry.level === 'Warn' &&
         entry.text.includes('sony.categoryGrid.drift'),
     )
     expect(driftWarn).toBeDefined()
@@ -125,7 +125,7 @@ describe('SonyClientLive classification', () => {
     }
     const elementDrift = logs.find(
       (entry) =>
-        entry.level === 'WARN' &&
+        entry.level === 'Warn' &&
         entry.text.includes('sony.categoryGrid.elementDrift'),
     )
     expect(elementDrift).toBeDefined()

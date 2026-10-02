@@ -12,7 +12,7 @@ to PS5 / Finland / EUR; the frontend renders what the backend returns.
 ## Architecture
 
 - `client/` — Vite + React SPA (TanStack Router, TanStack Query, Tailwind CSS)
-- `server/` — `@effect/platform` HttpApi backend on Effect (typed REST + in-memory Effect `Cache`)
+- `server/` — `effect/http-api` HttpApi backend on Effect (typed REST + in-memory Effect `Cache`)
 - `shared/` — Effect Schema types, schemas, and utilities shared across server and client
 - `tools/sony-contract-bot/` — captures and validates Sony's GraphQL contract
 

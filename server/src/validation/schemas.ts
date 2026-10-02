@@ -1,4 +1,4 @@
-import { Schema } from 'effect'
+import { Effect, Schema } from 'effect'
 
 // Path / query parameter schemas for the HttpApi endpoints (api/gamesApi.ts).
 // URL params arrive as strings, so numeric fields decode from string
@@ -6,21 +6,27 @@ import { Schema } from 'effect'
 // schemas: offset ≥ 0 default 0; size in [1, 120] default 60.
 
 export const gameIdParamSchema = Schema.Struct({
-  id: Schema.Trim.pipe(Schema.minLength(1)),
+  id: Schema.Trim.check(Schema.isMinLength(1)),
 })
 
-const offsetFromString = Schema.NumberFromString.pipe(
-  Schema.int(),
-  Schema.greaterThanOrEqualTo(0),
+const offsetFromString = Schema.NumberFromString.check(
+  Schema.isInt(),
+  Schema.isGreaterThanOrEqualTo(0),
 )
 
-const sizeFromString = Schema.NumberFromString.pipe(
-  Schema.int(),
-  Schema.greaterThanOrEqualTo(1),
-  Schema.lessThanOrEqualTo(120),
+const sizeFromString = Schema.NumberFromString.check(
+  Schema.isInt(),
+  Schema.isGreaterThanOrEqualTo(1),
+  Schema.isLessThanOrEqualTo(120),
 )
 
 export const paginationQuerySchema = Schema.Struct({
-  offset: Schema.optionalWith(offsetFromString, { default: () => 0 }),
-  size: Schema.optionalWith(sizeFromString, { default: () => 60 }),
+  offset: offsetFromString.pipe(
+    Schema.optional,
+    Schema.withDecodingDefaultType(Effect.succeed(0)),
+  ),
+  size: sizeFromString.pipe(
+    Schema.optional,
+    Schema.withDecodingDefaultType(Effect.succeed(60)),
+  ),
 })

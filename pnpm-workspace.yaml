@@ -10,6 +10,11 @@ allowBuilds:
   '@swc/core': true
   esbuild: true
   msgpackr-extract: false
+packageExtensions:
+  '@effect/platform-node@4.0.0':
+    peerDependenciesMeta:
+      redis:
+        optional: true
 catalog:
   '@eslint/js': '^9.39.5'
   '@types/node': '^24.19.0'
@@ -18,7 +23,7 @@ catalog:
   '@typescript-eslint/eslint-plugin': '^8.71.0'
   '@typescript-eslint/parser': '^8.71.0'
   '@vitejs/plugin-react-swc': '^4.3.3'
-  'effect': '3.22.2'
+  'effect': '4.0.0'
   'eslint': '^9.39.5'
   'eslint-plugin-react': '^7.37.5'
   'tsx': '^4.23.15'

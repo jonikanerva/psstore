@@ -1,4 +1,4 @@
-import { Either, Schema } from 'effect'
+import { Result, Schema } from 'effect'
 
 /**
  * Sony's GraphQL endpoint answers HTTP 200 even when a persisted query hash no
@@ -7,7 +7,7 @@ import { Either, Schema } from 'effect'
  * invisible to `response.ok` (STACK boundary: external data is untrusted until
  * decoded), so both the list and product paths must inspect the decoded body.
  *
- * Defensive boundary envelope: every field optional, unknown keys preserved.
+ * Defensive boundary envelope: every field optional, unknown keys ignored.
  */
 const graphqlErrorSchema = Schema.Struct({
   message: Schema.optional(Schema.String),
@@ -22,9 +22,7 @@ const graphqlErrorEnvelopeSchema = Schema.Struct({
   errors: Schema.optional(Schema.Array(graphqlErrorSchema)),
 })
 
-const decodeEnvelope = Schema.decodeUnknownEither(graphqlErrorEnvelopeSchema, {
-  onExcessProperty: 'preserve',
-})
+const decodeEnvelope = Schema.decodeUnknownResult(graphqlErrorEnvelopeSchema)
 
 // The canonical Apollo Persisted Query Protocol code.
 const PERSISTED_QUERY_NOT_FOUND = 'PERSISTED_QUERY_NOT_FOUND'
@@ -43,10 +41,10 @@ const PERSISTED_QUERY_NOT_FOUND = 'PERSISTED_QUERY_NOT_FOUND'
  */
 export const detectPersistedQueryRotation = (json: unknown): boolean => {
   const result = decodeEnvelope(json)
-  if (Either.isLeft(result)) {
+  if (Result.isFailure(result)) {
     return false
   }
-  const errors = result.right.errors ?? []
+  const errors = result.success.errors ?? []
   return errors.some((error) => {
     if (error.extensions?.code === PERSISTED_QUERY_NOT_FOUND) {
       return true

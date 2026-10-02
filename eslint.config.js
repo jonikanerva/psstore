@@ -65,9 +65,9 @@ module.exports = [
     },
   },
   {
-    // The `@effect/platform` HttpApi surface is confined to exactly three server
-    // modules (the typed API definition, its handlers, and the HTTP composition
-    // root). Everything else — domain, services, the Sony client — stays
+    // The `effect/http` and `effect/http-api` surface (and the Node platform
+    // adapter) is confined to exactly three server modules (the typed API
+    // definition, its handlers, and the HTTP composition root). Everything else — domain, services, the Sony client — stays
     // framework-free so the interface layer never couples to transport
     // internals (CLAUDE.md → Architecture; STACK.md §0 layering). CI gate.
     files: ['server/src/**/*.ts'],
@@ -75,7 +75,7 @@ module.exports = [
       'server/src/api/gamesApi.ts',
       'server/src/api/gamesHandlers.ts',
       'server/src/http/server.ts',
-      // The app integration test boots the API through the platform web handler.
+      // The app integration test boots the API through the HTTP web handler.
       'server/src/__tests__/app.test.ts',
     ],
     rules: {
@@ -85,13 +85,15 @@ module.exports = [
           patterns: [
             {
               group: [
-                '@effect/platform',
-                '@effect/platform/*',
+                'effect/http',
+                'effect/http/*',
+                'effect/http-api',
+                'effect/http-api/*',
                 '@effect/platform-node',
                 '@effect/platform-node/*',
               ],
               message:
-                'Import @effect/platform only from api/gamesApi.ts, api/gamesHandlers.ts, or http/server.ts (HttpApi is confined to the interface layer).',
+                'Import effect/http, effect/http-api, and @effect/platform-node only from api/gamesApi.ts, api/gamesHandlers.ts, or http/server.ts (HttpApi is confined to the interface layer).',
             },
           ],
         },
