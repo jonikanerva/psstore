@@ -12,7 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "effect": "3.21.2"
+    "effect": "3.22.2"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",

@@ -15,10 +15,10 @@
     "test:live": "SMOKE=1 vitest run src/__tests__/smoke.integration.test.ts"
   },
   "dependencies": {
-    "@effect/platform": "0.96.1",
-    "@effect/platform-node": "0.106.0",
+    "@effect/platform": "0.97.2",
+    "@effect/platform-node": "0.108.2",
     "@psstore/shared": "workspace:*",
-    "effect": "3.21.2"
+    "effect": "3.22.2"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
