@@ -16,6 +16,7 @@ import {
   SonyClient,
   SonyClientLive,
   extractCategoryGrid,
+  localeOverride,
 } from '../sony/sonyClient.js'
 
 // LIVE Sony smoke suite — the standing guard against a list that Sony drift
@@ -33,13 +34,6 @@ import {
 
 const SMOKE = process.env['SMOKE'] === '1'
 const describeSmoke = SMOKE ? describe : describe.skip
-
-const localeOverride = (locale: string): string =>
-  locale.replace(
-    /^([a-z]{2})-([a-z]{2})$/i,
-    (_m: string, l: string, r: string) =>
-      `${l.toLowerCase()}-${r.toUpperCase()}`,
-  )
 
 // One raw GET per feature, mirroring the production SonyClient request, so the
 // suite can assert `extractCategoryGrid`'s `dropped` count (which the decoded

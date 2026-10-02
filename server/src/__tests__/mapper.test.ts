@@ -86,12 +86,12 @@ describe('concept mapper', () => {
           basePrice: '€30',
           discountedPrice: '€30',
           upsellServiceBranding: ['PS_PLUS'],
-          upsellText: 'Säästä 10 %',
+          upsellText: 'Save 10%',
         },
         products: [{ id: 'prod-id' }],
       })
 
-      expect(game.plusUpsellText).toBe('Säästä 10 %')
+      expect(game.plusUpsellText).toBe('Save 10%')
     })
 
     it('returns null when PS_PLUS branding has empty-string upsellText', () => {
@@ -116,7 +116,7 @@ describe('concept mapper', () => {
           basePrice: '€30',
           discountedPrice: '€30',
           upsellServiceBranding: ['NONE'],
-          upsellText: 'Säästä 10 %',
+          upsellText: 'Save 10%',
         },
         products: [{ id: 'prod-no-plus' }],
       })
