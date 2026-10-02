@@ -10,11 +10,9 @@ import { Result, Schema } from 'effect'
  * keys are ignored, never an error. Sony's fi-fi store sends
  * `null` liberally; a plain `optional` rejects a present `null`, and because
  * `Schema.Array` fails wholesale on one bad element a single null-bearing entry
- * would fail the whole decode. (This defect was latent here — a failed PDP
- * decode degrades quietly to empty description/genres via the productDetailCache
- * catch — but it is the same bug class that emptied the list views, so it is
- * fixed here too.) Only the fields the PDP enrichment reads are described. Do
- * NOT tighten this.
+ * would fail the whole decode. A failed PDP decode degrades quietly to empty
+ * description/genres via the productDetailCache catch. Only the fields the PDP
+ * enrichment reads are described. Do NOT tighten this.
  */
 const sonyDescriptionSchema = Schema.Struct({
   type: Schema.optional(Schema.NullOr(Schema.String)),

@@ -67,8 +67,8 @@ module.exports = [
   {
     // The `effect/http` and `effect/http-api` surface (and the Node platform
     // adapter) is confined to exactly three server modules (the typed API
-    // definition, its handlers, and the HTTP composition root). Everything else — domain, services, the Sony client — stays
-    // framework-free so the interface layer never couples to transport
+    // definition, its handlers, and the HTTP composition root). Everything
+    // else — domain, services, the Sony client — stays framework-free so the interface layer never couples to transport
     // internals (CLAUDE.md → Architecture; STACK.md §0 layering). CI gate.
     files: ['server/src/**/*.ts'],
     ignores: [

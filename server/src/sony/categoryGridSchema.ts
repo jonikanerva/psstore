@@ -162,8 +162,8 @@ export const parseCategoryGrid = (node: unknown): ParsedCategoryGrid | null => {
 /**
  * Zero-cast envelope decode for the category-grid response. Mirrors the shape
  * `{ data?: { categoryGridRetrieve?: unknown } }` defensively (all optional,
- * excess keys ignored) so the untrusted body is narrowed before the inner node is
- * read — replacing the previous `as CategoryGridRetrieveResponse` cast.
+ * excess keys ignored) so the untrusted body is narrowed before the inner node
+ * is read, with no cast.
  *
  * Returns the inner `categoryGridRetrieve` value as `unknown` (or `undefined`
  * when absent / the body is not an object); the caller hands it to
