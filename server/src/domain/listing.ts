@@ -28,7 +28,7 @@ const DATE_ASC_SENTINEL = Number.POSITIVE_INFINITY
  * order (the server's `conceptReleaseDate`-desc grid order) as a STABLE
  * tiebreaker. Without this, equal or unparseable dates reorder
  * nondeterministically across requests; the tiebreaker keeps the official
- * grid order Sony already returns for ties (see the spike doc, section B).
+ * grid order Sony already returns for ties.
  */
 export const sortByDate = (
   games: readonly Game[],
@@ -88,8 +88,8 @@ export const mapConceptsToGames = (concepts: readonly Concept[]): Game[] => {
 // entries, not the SKU-less ones. `idKind` is derived HERE, once, so the shared
 // mapper and the NEW / DISCOUNTED output stay byte-identical — a `product` id
 // matches the existing `PRODUCT_ID_PATTERN` (internal PDP); anything else is a
-// bare concept id that links out to Sony's concept page (owner ruling
-// 2026-05-29). Owner-authorised, UPCOMING-scoped exception (VISION.md).
+// bare concept id that links out to Sony's concept page. This UPCOMING-scoped
+// exception is allowed by VISION.md; do not extend it to other features.
 export const mapUpcomingConceptsToGames = (
   concepts: readonly Concept[],
 ): Game[] => {

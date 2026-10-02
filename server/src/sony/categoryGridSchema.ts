@@ -9,7 +9,7 @@ import { Result, Schema } from 'effect'
  * boundary, not the scope filter), mirroring `productDetailSchema.ts`: every
  * field is `optional(NullOr(...))` — it accepts an absent key, an explicit
  * `null`, OR the typed value — and unknown keys are ignored
- * (never an error). Sony's fi-fi store sends `null` liberally
+ * (never an error). Sony sends `null` liberally
  * (e.g. the whole `concept.price` on an unpriced/announced UPCOMING game,
  * `price.serviceBranding` on some DISCOUNTED products); a plain `optional`
  * rejects a present `null` and — because `Schema.Array` fails wholesale on one
@@ -78,7 +78,7 @@ export const categoryGridRetrieveSchema = Schema.Struct({
  * re-exports them under the canonical `Concept` / `CategoryGridProduct` / `Media`
  * / `ConceptPrice` / `ConceptProductRef` names, so the decoder and the value
  * types can never drift (a mismatch is a compile error — STACK.md §2). Fields
- * now widen with `| null`; consumers coalesce null away (see the mapper).
+ * widen with `| null`; consumers coalesce null away (see the mapper).
  */
 export type CategoryGridNode = typeof categoryGridRetrieveSchema.Type
 export type Media = typeof mediaSchema.Type

@@ -7,10 +7,10 @@ import { Result, Schema } from 'effect'
  * Deliberately tolerant (STACK.md scope-at-the-boundary; this is a DEFENSIVE
  * boundary, not the scope filter): every field is `optional(NullOr(...))` — it
  * accepts an absent key, an explicit `null`, OR the typed value — and unknown
- * keys are ignored, never an error. Sony's fi-fi store sends
- * `null` liberally; a plain `optional` rejects a present `null`, and because
- * `Schema.Array` fails wholesale on one bad element a single null-bearing entry
- * would fail the whole decode. A failed PDP decode degrades quietly to empty
+ * keys are ignored, never an error. Sony sends `null` liberally; a plain
+ * `optional` rejects a present `null`, and because `Schema.Array` fails
+ * wholesale on one bad element a single null-bearing entry would fail the
+ * whole decode. A failed PDP decode degrades quietly to empty
  * description/genres via the productDetailCache catch. Only the fields the PDP
  * enrichment reads are described. Do NOT tighten this.
  */
