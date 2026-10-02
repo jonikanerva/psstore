@@ -17,6 +17,7 @@
 .yarn
 **/.vite
 .pnpm-store/
+.vitest
 
 # sony contract local runtime artifacts
 .sony-contract/

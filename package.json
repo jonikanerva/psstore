@@ -22,8 +22,9 @@
     "sony:refresh": "pnpm run sony -- refresh"
   },
   "engines": {
-    "node": ">=24.0.0"
+    "node": "^24.21.0"
   },
+  "packageManager": "pnpm@12.8.1",
   "devDependencies": {
     "@eslint/js": "^9.39.4",
     "@types/node": "^24.12.4",

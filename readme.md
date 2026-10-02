@@ -21,10 +21,18 @@ narrows the data at the Schema boundary, and serves the normalised result.
 
 ## Development
 
+Prerequisite: [mise](https://mise.jdx.dev/). The `mise.toml` file pins the Node and pnpm
+versions.
+
 ```bash
+mise install
 pnpm install
 pnpm run dev
 ```
+
+Do not use Corepack or a global pnpm. The pnpm 12 npm package installs only a placeholder
+bin. `pmOnFail: error` stops pnpm when its version does not match the pinned version.
+`STACK.md → 1. Language & Runtime` lists the versions and the files that mirror them.
 
 - Client runs on `http://localhost:5173`
 - Server runs on `http://localhost:3000`

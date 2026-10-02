@@ -3,6 +3,9 @@ packages:
   - 'server'
   - 'shared'
   - 'tools/*'
+pmOnFail: error
 allowBuilds:
+  '@parcel/watcher': false
   '@swc/core': true
   esbuild: true
+  msgpackr-extract: false
