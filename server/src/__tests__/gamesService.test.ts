@@ -1,4 +1,5 @@
-import { Effect, Exit, Layer } from 'effect'
+import { Duration, Effect, Exit, Layer } from 'effect'
+import { TestClock } from 'effect/testing'
 import { beforeEach, describe, expect, it } from 'vitest'
 import {
   UpstreamQueryRotated,
@@ -807,5 +808,131 @@ describe('upstream error propagation on all list tabs (issue #78)', () => {
       expect(cause).toContain('UpstreamUnavailable')
       expect(cause).not.toContain('GameNotFound')
     }
+  })
+})
+
+// The list cache keeps both a success and a failure for CACHE_TTL (30 000 ms);
+// the detail cache keeps a product for 6 hours. TestClock drives expiry, so no
+// test waits on wall time. TestClock.layer is provided outermost so the caches
+// built inside GamesServiceLive read the test clock.
+describe('gamesService cache TTL (TestClock)', () => {
+  const LIST_TTL_MS = 30_000
+  const DETAIL_TTL_MS = 6 * 60 * 60 * 1000
+
+  interface Counters {
+    concepts: number
+    details: number
+  }
+
+  const runTimed = <A, E>(
+    counters: Counters,
+    sony: {
+      concepts: () => Effect.Effect<Concept[], UpstreamUnavailable>
+      detail?: () => Effect.Effect<ProductDetailResult>
+    },
+    use: (svc: GamesServiceApi) => Effect.Effect<A, E>,
+  ): Promise<A> => {
+    const CountingSony = Layer.succeed(SonyClient, {
+      fetchConceptsByFeature: () =>
+        Effect.suspend(() => {
+          counters.concepts += 1
+          return sony.concepts()
+        }),
+      fetchProductDetail: () =>
+        Effect.suspend(() => {
+          counters.details += 1
+          return (
+            sony.detail?.() ??
+            Effect.succeed<ProductDetailResult>({
+              releaseDate: PAST_DATE,
+              genres: [],
+              description: '',
+              storeDisplayClassification: 'FULL_GAME',
+            })
+          )
+        }),
+    })
+    const Services = GamesServiceLive.pipe(Layer.provide(CountingSony))
+    return Effect.runPromise(
+      GamesService.pipe(
+        Effect.flatMap(use),
+        Effect.provide(Services),
+        Effect.provide(TestClock.layer()),
+      ),
+    )
+  }
+
+  it('serves the list from cache until the TTL elapses, then refetches', async () => {
+    const counters: Counters = { concepts: 0, details: 0 }
+    const concept = makeConcept('alpha')
+    await runTimed(
+      counters,
+      { concepts: () => Effect.succeed([concept]) },
+      (svc) =>
+        Effect.gen(function* () {
+          yield* svc.getNewGames()
+          yield* svc.getNewGames()
+          expect(counters.concepts).toBe(1)
+
+          yield* TestClock.adjust(Duration.millis(LIST_TTL_MS - 1))
+          yield* svc.getNewGames()
+          expect(counters.concepts).toBe(1)
+
+          yield* TestClock.adjust(Duration.millis(1))
+          yield* svc.getNewGames()
+          expect(counters.concepts).toBe(2)
+        }),
+    )
+  })
+
+  it('pins a failed list lookup for the TTL, then retries', async () => {
+    const counters: Counters = { concepts: 0, details: 0 }
+    const concept = makeConcept('alpha')
+    await runTimed(
+      counters,
+      {
+        concepts: () =>
+          counters.concepts === 1
+            ? Effect.fail(upstream('sony down'))
+            : Effect.succeed([concept]),
+      },
+      (svc) =>
+        Effect.gen(function* () {
+          const first = yield* Effect.exit(svc.getNewGames())
+          expect(Exit.isFailure(first)).toBe(true)
+
+          yield* TestClock.adjust(Duration.millis(LIST_TTL_MS - 1))
+          const pinned = yield* Effect.exit(svc.getNewGames())
+          expect(Exit.isFailure(pinned)).toBe(true)
+          expect(counters.concepts).toBe(1)
+
+          yield* TestClock.adjust(Duration.millis(1))
+          const recovered = yield* svc.getNewGames()
+          expect(counters.concepts).toBe(2)
+          expect(recovered.games).toHaveLength(1)
+        }),
+    )
+  })
+
+  it('serves a product detail from cache for 6 hours', async () => {
+    const counters: Counters = { concepts: 0, details: 0 }
+    const concept = makeConcept('alpha')
+    await runTimed(
+      counters,
+      { concepts: () => Effect.succeed([concept]) },
+      (svc) =>
+        Effect.gen(function* () {
+          yield* svc.getNewGames()
+          expect(counters.details).toBe(1)
+
+          yield* TestClock.adjust(Duration.millis(LIST_TTL_MS))
+          yield* svc.getNewGames()
+          expect(counters.details).toBe(1)
+
+          yield* TestClock.adjust(Duration.millis(DETAIL_TTL_MS))
+          yield* svc.getNewGames()
+          expect(counters.details).toBe(2)
+        }),
+    )
   })
 })

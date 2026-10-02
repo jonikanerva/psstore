@@ -282,10 +282,9 @@ export interface SonyClientApi {
   >
 }
 
-export class SonyClient extends Context.Tag('SonyClient')<
-  SonyClient,
-  SonyClientApi
->() {}
+export class SonyClient extends Context.Service<SonyClient, SonyClientApi>()(
+  'SonyClient',
+) {}
 
 export const SonyClientLive: Layer.Layer<SonyClient> = Layer.succeed(
   SonyClient,

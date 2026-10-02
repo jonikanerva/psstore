@@ -1,4 +1,4 @@
-import { Schema } from 'effect'
+import { Effect, Schema } from 'effect'
 
 export const gameSchema = Schema.Struct({
   id: Schema.String,
@@ -21,12 +21,11 @@ export const gameSchema = Schema.Struct({
   // priced SKU anonymously. The default keeps every existing producer
   // (NEW / DISCOUNTED, caches, fixtures) decoding as `product` unchanged; only
   // the UPCOMING concept-card path sets `concept`. See gamesService.ts. The
-  // default decodes to a NON-optional field — matching the previous zod
-  // `.default('product')` exactly — and fires whether `idKind` is absent or
-  // explicitly `undefined`.
-  idKind: Schema.optionalWith(Schema.Literal('product', 'concept'), {
-    default: () => 'product' as const,
-  }),
+  // default decodes to a NON-optional field and fires whether `idKind` is
+  // absent or explicitly `undefined`.
+  idKind: Schema.Literals(['product', 'concept']).pipe(
+    Schema.withDecodingDefaultType(Effect.succeed('product' as const)),
+  ),
 })
 
 export const gamesSchema = Schema.Array(gameSchema)

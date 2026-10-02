@@ -1,4 +1,4 @@
-import { Either, Schema } from 'effect'
+import { Result, Schema } from 'effect'
 
 /**
  * Effect Schema boundary schema for Sony's `data.productRetrieve` node
@@ -7,14 +7,12 @@ import { Either, Schema } from 'effect'
  * Deliberately tolerant (STACK.md scope-at-the-boundary; this is a DEFENSIVE
  * boundary, not the scope filter): every field is `optional(NullOr(...))` — it
  * accepts an absent key, an explicit `null`, OR the typed value — and unknown
- * keys are preserved (`onExcessProperty: "preserve"`). Sony's fi-fi store sends
+ * keys are ignored, never an error. Sony's fi-fi store sends
  * `null` liberally; a plain `optional` rejects a present `null`, and because
  * `Schema.Array` fails wholesale on one bad element a single null-bearing entry
- * would fail the whole decode. (This defect was latent here — a failed PDP
- * decode degrades quietly to empty description/genres via the productDetailCache
- * catchAll — but it is the same bug class that emptied the list views, so it is
- * fixed here too.) Only the fields the PDP enrichment reads are described. Do
- * NOT tighten this.
+ * would fail the whole decode. A failed PDP decode degrades quietly to empty
+ * description/genres via the productDetailCache catch. Only the fields the PDP
+ * enrichment reads are described. Do NOT tighten this.
  */
 const sonyDescriptionSchema = Schema.Struct({
   type: Schema.optional(Schema.NullOr(Schema.String)),
@@ -41,9 +39,7 @@ export const productRetrieveSchema = Schema.Struct({
 
 export type ProductRetrieveNode = typeof productRetrieveSchema.Type
 
-const decode = Schema.decodeUnknownEither(productRetrieveSchema, {
-  onExcessProperty: 'preserve',
-})
+const decode = Schema.decodeUnknownResult(productRetrieveSchema)
 
 /**
  * Parse the `productRetrieve` node defensively. Returns the validated node, or
@@ -58,5 +54,5 @@ export const parseProductRetrieve = (
   }
 
   const result = decode(node)
-  return Either.isRight(result) ? result.right : null
+  return Result.isSuccess(result) ? result.success : null
 }

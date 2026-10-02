@@ -1,12 +1,12 @@
-import { HttpApiBuilder } from '@effect/platform'
 import { Effect } from 'effect'
+import { HttpApiBuilder } from 'effect/http-api'
 import { GamesService } from '../services/gamesService.js'
 import { gamesApi } from './gamesApi.js'
 
 // Thin handlers: take decoded input, call the GamesService, return its Effect.
 // The typed error channel (GameNotFound / UpstreamUnavailable / ValidationError)
 // is mapped to HTTP status by the endpoint definitions in gamesApi.ts. One of
-// the three modules permitted to import `@effect/platform`.
+// the three modules permitted to import `effect/http-api`.
 
 export const gamesGroupLive = HttpApiBuilder.group(
   gamesApi,
@@ -14,16 +14,13 @@ export const gamesGroupLive = HttpApiBuilder.group(
   (handlers) =>
     Effect.gen(function* () {
       const games = yield* GamesService
-      return handlers
-        .handle('new', ({ urlParams }) =>
-          games.getNewGames(urlParams.offset, urlParams.size),
-        )
-        .handle('upcoming', ({ urlParams }) =>
-          games.getUpcomingGames(urlParams.offset, urlParams.size),
-        )
-        .handle('discounted', ({ urlParams }) =>
-          games.getDiscountedGames(urlParams.offset, urlParams.size),
-        )
-        .handle('getById', ({ path }) => games.getGameById(path.id))
+      return handlers.handleAll({
+        new: ({ query }) => games.getNewGames(query.offset, query.size),
+        upcoming: ({ query }) =>
+          games.getUpcomingGames(query.offset, query.size),
+        discounted: ({ query }) =>
+          games.getDiscountedGames(query.offset, query.size),
+        getById: ({ params }) => games.getGameById(params.id),
+      })
     }),
 )
