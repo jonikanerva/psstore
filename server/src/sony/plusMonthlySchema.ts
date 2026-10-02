@@ -39,7 +39,7 @@ export type PlusMonthlyOutcome =
       readonly entries: readonly PlusMonthlyEntry[]
       // Elements that failed decode or lacked an id or name.
       readonly dropped: number
-      // Decoded entries outside the product scope (not PS5, or not a PS5 SKU).
+      // Decoded entries skipped: `device` lacks PS5, or the id is not a valid product id.
       readonly outOfScope: number
     }
 
@@ -55,7 +55,7 @@ const strings = (
   )
 
 /**
- * Flatten the buckets and keep PS5 entries with a valid product id. The first
+ * Flatten the buckets and keep entries whose `device` includes PS5 and whose id is a valid product id. The first
  * entry per product id wins. A body that is not a list of bucket objects is
  * `drift`; a list with no usable entry is a successful empty result.
  */
