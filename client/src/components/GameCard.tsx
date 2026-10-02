@@ -17,10 +17,9 @@ const formatDate = (value: string): string => {
 }
 
 // Concept-only UPCOMING cards (idKind === 'concept') have no internal PDP and
-// no anonymously-available price. They link OUT to Sony's concept page (the
-// `en-fi` locale segment is confirmed to resolve anonymously) and show
-// "Unknown" in the price slot. Everything else (default `product`) keeps the
-// internal PDP Link and normal price rendering, unchanged.
+// no anonymously-available price. They link OUT to Sony's concept page and
+// show "Unknown" in the price slot. Everything else (default `product`) keeps
+// the internal PDP Link and normal price rendering.
 const conceptHref = (id: string): string =>
   `https://store.playstation.com/en-fi/concept/${id}`
 

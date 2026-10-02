@@ -37,8 +37,7 @@ if (container) {
           // Persist ONLY Sony payload caches (games lists + game detail). Nothing
           // else ever enters the query cache, but the explicit allow-list keeps
           // the guarantee structural: no search / view / sort / scroll / behaviour
-          // state is ever written to localStorage (VISION privacy posture,
-          // ux condition 1, da #4).
+          // state is ever written to localStorage (VISION privacy posture).
           shouldDehydrateQuery: (query) => {
             const key = query.queryKey[0]
             return key === 'games' || key === 'game'
