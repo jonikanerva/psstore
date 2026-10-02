@@ -1,14 +1,10 @@
 import { Schema } from 'effect'
 import { CORE_FEATURES } from './constants.js'
+import { operationIdentity } from './operationIdentity.js'
 import { sonyContractManifestSchema } from './schema.js'
 import type { SonyContractManifest } from './types.js'
 
 const decodeManifest = Schema.decodeUnknownSync(sonyContractManifestSchema)
-
-const opIdentity = (
-  operation: SonyContractManifest['operations'][number],
-): string =>
-  `${operation.feature}:${operation.operation_name}:${operation.persisted_query_hash ?? ''}`
 
 export const validateManifest = (manifest: SonyContractManifest): void => {
   // Decode throws a SchemaError on a malformed manifest. The CLI surfaces it
@@ -25,7 +21,7 @@ export const validateManifest = (manifest: SonyContractManifest): void => {
 
   const seen = new Set<string>()
   for (const operation of manifest.operations) {
-    const identity = opIdentity(operation)
+    const identity = operationIdentity(operation)
     if (seen.has(identity)) {
       throw new Error(`Duplicate operation identity detected: ${identity}`)
     }

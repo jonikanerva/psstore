@@ -80,6 +80,15 @@ export const validateBackendCompatibility = (
     'SONY_PRODUCT_BY_ID_HASH',
   )
 
+  const expectedPriceOperationName = extractDefault(
+    context.serverEnvText,
+    'SONY_PRODUCT_PRICE_OPERATION_NAME',
+  )
+  const expectedPriceHash = extractDefault(
+    context.serverEnvText,
+    'SONY_PRODUCT_PRICE_HASH',
+  )
+
   if (!expectedOperationName || !expectedEndpoint) {
     throw new Error(
       'Unable to read server env defaults for compatibility checks',
@@ -89,6 +98,12 @@ export const validateBackendCompatibility = (
   if (!expectedProductOperationName || !expectedProductHash) {
     throw new Error(
       'Unable to read server PDP env defaults (SONY_PRODUCT_OPERATION_NAME / SONY_PRODUCT_BY_ID_HASH) for compatibility checks',
+    )
+  }
+
+  if (!expectedPriceOperationName || !expectedPriceHash) {
+    throw new Error(
+      'Unable to read server price env defaults (SONY_PRODUCT_PRICE_OPERATION_NAME / SONY_PRODUCT_PRICE_HASH) for compatibility checks',
     )
   }
 
@@ -117,6 +132,18 @@ export const validateBackendCompatibility = (
     )
   }
 
+  if (
+    !manifest.operations.some(
+      (operation) =>
+        operation.operation_name === expectedPriceOperationName &&
+        operation.persisted_query_hash === expectedPriceHash,
+    )
+  ) {
+    throw new Error(
+      `Manifest missing price operation compatible with server: ${expectedPriceOperationName} @ ${expectedPriceHash}`,
+    )
+  }
+
   if (manifest.endpoint.url !== expectedEndpoint) {
     throw new Error(
       `Manifest endpoint mismatch. expected=${expectedEndpoint} actual=${manifest.endpoint.url}`,
@@ -142,7 +169,10 @@ export const validateBackendCompatibility = (
           `Operation ${operation.feature} response path incompatible: ${operation.response_path}`,
         )
       }
-    } else if (operation.operation_name === expectedProductOperationName) {
+    } else if (
+      operation.operation_name === expectedProductOperationName ||
+      operation.operation_name === expectedPriceOperationName
+    ) {
       if (operation.response_path !== 'data.productRetrieve') {
         throw new Error(
           `PDP operation ${operation.feature} response path incompatible: ${operation.response_path}`,

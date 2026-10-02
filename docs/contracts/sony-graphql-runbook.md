@@ -28,6 +28,22 @@ Pipeline:
 4. validate schema + backend compatibility
 5. generate diff report
 
+## Tracked operations
+
+The manifest holds only the operations the server calls:
+`categoryGridRetrieve`, `metGetProductById`, and `productRetrieveForCtasWithPrice`.
+The normalizer drops every other operation Sony fires on a captured page.
+The list lives in `tools/sony-contract-bot/src/contract/trackedOperations.ts`.
+
+The scope filter drops a grid request whose `filterBy` has no PS5 token.
+Sony fires the category grid twice per page, once with an empty `filterBy`
+and once with `targetPlatforms:PS5`. Only the PS5 request reaches the manifest.
+
+The details route capture does not always include `metGetProductById`.
+The compatibility check still requires it. If `pnpm sony:refresh` fails on this
+point, keep the existing `metGetProductById` entry in the manifest and check
+the hash by hand against live Sony.
+
 ## Apply candidate as canonical manifest
 
 ```bash

@@ -2,6 +2,7 @@ import fs from 'node:fs/promises'
 import { CORE_FEATURES } from '../contract/constants.js'
 import { createManifest } from '../contract/manifest.js'
 import { normalizeOperations } from '../contract/normalizer.js'
+import { filterTrackedOperations } from '../contract/trackedOperations.js'
 import { filterOperationsByFinnishPs5EurScope } from '../contract/scopeFilter.js'
 import type { CaptureRecord, ContractFeature } from '../contract/types.js'
 import { parseCaptureRecordToOperation } from '../capture/parser.js'
@@ -36,8 +37,9 @@ export const runNormalize = async (writeManifest: boolean): Promise<void> => {
     ),
   )
 
-  const scopedOperations =
-    filterOperationsByFinnishPs5EurScope(parsedOperations)
+  const scopedOperations = filterOperationsByFinnishPs5EurScope(
+    filterTrackedOperations(parsedOperations),
+  )
 
   if (scopedOperations.length === 0) {
     throw new Error(

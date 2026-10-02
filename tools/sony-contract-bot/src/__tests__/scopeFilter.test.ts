@@ -72,3 +72,17 @@ describe('filterOperationsByFinnishPs5EurScope', () => {
     expect(result[0]?.variables_schema).toEqual({ productId: 'string' })
   })
 })
+
+describe('filterOperationsByFinnishPs5EurScope filterBy rule', () => {
+  it('drops a grid request whose filterBy has no PS5 token', () => {
+    const unfiltered = makeOperation({ filterBy: [] }, { filterBy: [] })
+    const otherFacet = makeOperation(
+      { filterBy: ['string'] },
+      { filterBy: ['storeDisplayClassification:FULL_GAME'] },
+    )
+
+    expect(
+      filterOperationsByFinnishPs5EurScope([unfiltered, otherFacet]),
+    ).toHaveLength(0)
+  })
+})
