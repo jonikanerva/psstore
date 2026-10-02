@@ -54,4 +54,29 @@ describe('game schema', () => {
     const parsed = decode({ ...baseGame, idKind: 'concept' })
     expect(parsed.idKind).toBe('concept')
   })
+
+  it('defaults plusOffer to null when absent (back-compat)', () => {
+    expect(decode(baseGame).plusOffer).toBeNull()
+  })
+
+  it('defaults plusOffer to null when explicitly undefined', () => {
+    expect(decode({ ...baseGame, plusOffer: undefined }).plusOffer).toBeNull()
+  })
+
+  it('round-trips a price offer and an included offer', () => {
+    const price = { kind: 'price', price: '€44,95' }
+    expect(decode({ ...baseGame, plusOffer: price }).plusOffer).toEqual(price)
+    const included = { kind: 'included' }
+    expect(decode({ ...baseGame, plusOffer: included }).plusOffer).toEqual(
+      included,
+    )
+  })
+
+  it('rejects an unknown plusOffer kind', () => {
+    expect(
+      Result.isFailure(
+        decodeResult({ ...baseGame, plusOffer: { kind: 'free' } }),
+      ),
+    ).toBe(true)
+  })
 })

@@ -210,4 +210,131 @@ describe('SonyClientLive classification', () => {
       expect(JSON.stringify(result.cause)).toContain('UpstreamUnavailable')
     }
   })
+
+  it('requests the price operation with its name, hash and locale header', async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(
+        jsonResponse({ data: { productRetrieve: { webctas: [] } } }),
+      )
+    globalThis.fetch = fetchMock
+
+    const { exit } = withCapturedLogs(
+      SonyClient.pipe(
+        Effect.flatMap((client) => client.fetchProductPrice('EP0001-X')),
+      ),
+    )
+    const result = await exit
+
+    expect(Exit.isSuccess(result)).toBe(true)
+    const [url, init] = fetchMock.mock.calls[0] ?? []
+    const parsed = new URL(typeof url === 'string' ? url : '')
+    expect(parsed.searchParams.get('operationName')).toBe(
+      'productRetrieveForCtasWithPrice',
+    )
+    expect(parsed.searchParams.get('variables')).toBe(
+      '{"productId":"EP0001-X"}',
+    )
+    expect(parsed.searchParams.get('extensions')).toContain(
+      '1f0ca607e170abbfb7d67bd76c9bbc97f21fe2e807be49e5fe764e14566cb605',
+    )
+    expect(new Headers(init?.headers).get('x-apollo-operation-name')).toBe(
+      'productRetrieveForCtasWithPrice',
+    )
+    expect(new Headers(init?.headers).get('x-psn-store-locale-override')).toBe(
+      'en-FI',
+    )
+  })
+
+  it('decodes the Plus offer from a price response', async () => {
+    globalThis.fetch = vi.fn<typeof fetch>().mockResolvedValue(
+      jsonResponse({
+        data: {
+          productRetrieve: {
+            webctas: [
+              {
+                type: 'UPSELL_PS_PLUS_DISCOUNT',
+                price: {
+                  applicability: 'UPSELL',
+                  serviceBranding: ['PS_PLUS'],
+                  isTiedToSubscription: false,
+                  discountedPrice: '€44,95',
+                },
+              },
+            ],
+          },
+        },
+      }),
+    )
+
+    const { exit } = withCapturedLogs(
+      SonyClient.pipe(
+        Effect.flatMap((client) => client.fetchProductPrice('EP0001-X')),
+      ),
+    )
+    const result = await exit
+
+    expect(Exit.isSuccess(result)).toBe(true)
+    if (Exit.isSuccess(result)) {
+      expect(result.value).toEqual({ kind: 'price', price: '€44,95' })
+    }
+  })
+
+  it('maps a rotation on the price path to UpstreamQueryRotated with its operation name', async () => {
+    globalThis.fetch = vi.fn<typeof fetch>().mockResolvedValue(
+      jsonResponse({
+        errors: [{ extensions: { code: 'PERSISTED_QUERY_NOT_FOUND' } }],
+      }),
+    )
+
+    const { exit } = withCapturedLogs(
+      SonyClient.pipe(
+        Effect.flatMap((client) => client.fetchProductPrice('EP0001-X')),
+      ),
+    )
+    const result = await exit
+
+    expect(Exit.isFailure(result)).toBe(true)
+    if (Exit.isFailure(result)) {
+      const cause = JSON.stringify(result.cause)
+      expect(cause).toContain('UpstreamQueryRotated')
+      expect(cause).toContain('productRetrieveForCtasWithPrice')
+    }
+  })
+
+  it('maps a persistent 429 on the price path to UpstreamRateLimited', async () => {
+    globalThis.fetch = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response('rate limited', { status: 429 }))
+
+    const { exit } = withCapturedLogs(
+      SonyClient.pipe(
+        Effect.flatMap((client) => client.fetchProductPrice('EP0001-X')),
+      ),
+    )
+    const result = await exit
+
+    expect(Exit.isFailure(result)).toBe(true)
+    if (Exit.isFailure(result)) {
+      expect(JSON.stringify(result.cause)).toContain('UpstreamRateLimited')
+    }
+  })
+
+  it('maps a generic failure on the price path to UpstreamUnavailable', async () => {
+    globalThis.fetch = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response('boom', { status: 500 }))
+
+    const { exit } = withCapturedLogs(
+      SonyClient.pipe(
+        Effect.flatMap((client) => client.fetchProductPrice('EP0001-X')),
+      ),
+    )
+    const result = await exit
+
+    expect(Exit.isFailure(result)).toBe(true)
+    if (Exit.isFailure(result)) {
+      expect(JSON.stringify(result.cause)).toContain('UpstreamUnavailable')
+    }
+  })
 })

@@ -24,5 +24,25 @@ minimal. `goldenDecode.test.ts` asserts the boundary decodes + maps them.
 | `categoryGridBrokenElement.golden.json` | `concepts` + 1 synthetic                | the concepts fixture plus ONE synthetic deliberately-broken element (id of the wrong type) so the per-element `dropped > 0` path is asserted   |
 | `productDetail.golden.json`             | `productRetrieve` (`metGetProductById`) | real LONG/SHORT/LEGAL/COMPATIBILITY_NOTICE descriptions + genres + a real `null` field (`backwardsCompatibilityCategory`)                      |
 
+## Price operation fixtures
+
+The `productPrice*.golden.json` files are lightly-trimmed real anonymous
+responses of the price operation (`productRetrieveForCtasWithPrice`), captured
+on 2026-10-02 with locale `en-FI`. Trimming kept only `id`, `name`, and for each CTA its `type`,
+`meta.upSellService`, and `price`. Inside `price` it dropped `telemetryData`,
+`qualifications`, `campaignId`, and `rewardId`. Every remaining price field is
+kept as captured, including non-breaking spaces. No synthetic fixture
+files exist for this operation. The synthetic malformed cases are inline in
+`productPrice.test.ts` and are marked synthetic there.
+
+| File                                        | Product                        | Shape preserved                                                                       |
+| ------------------------------------------- | ------------------------------ | ------------------------------------------------------------------------------------- |
+| `productPriceDiscountPreorder.golden.json`  | ANOMALITH                      | `UPSELL_PS_PLUS_DISCOUNT` (`€44,95`) plus a `PREORDER` CTA                            |
+| `productPriceDiscountReleased.golden.json`  | RetroSpace (DISCOUNTED view)   | `UPSELL_PS_PLUS_DISCOUNT` (`€17,95`) plus an `ADD_TO_CART` CTA                        |
+| `productPriceIncluded.golden.json`          | Sniper Elite: Resistance       | `UPSELL_PS_PLUS_FREE`, `isTiedToSubscription` true, `Included`, plus `ADD_TO_CART`    |
+| `productPricePlusOnly.golden.json`          | MLB The Show 26 (Plus edition) | `UPSELL_PS_PLUS_FREE` only, no standard CTA                                           |
+| `productPriceTrial.golden.json`             | IRON GUARD: Day Zero           | `UPSELL_PS_PLUS_TRIAL`, tied to the subscription, price text `Game Trial`             |
+| `productPriceOtherSubscription.golden.json` | EA SPORTS FC 25                | `UPSELL_EA_ACCESS_FREE`, `EA_ACCESS` branding, `Included` (must never map to PS Plus) |
+
 To re-capture, repeat the live fetch with the current `config/env.ts` hashes and
 re-trim, preserving nulls.

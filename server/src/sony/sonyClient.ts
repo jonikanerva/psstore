@@ -1,9 +1,12 @@
+import type { PlusOffer } from '@psstore/shared'
 import { Context, Effect, Layer } from 'effect'
 import {
   SONY_GRAPHQL_URL,
   SONY_LOCALE,
   SONY_PRODUCT_BY_ID_HASH,
   SONY_PRODUCT_OPERATION_NAME,
+  SONY_PRODUCT_PRICE_HASH,
+  SONY_PRODUCT_PRICE_OPERATION_NAME,
   SONY_RETRY_COUNT,
   SONY_TIMEOUT_MS,
 } from '../config/env.js'
@@ -19,6 +22,7 @@ import {
 } from './categoryGridSchema.js'
 import { detectPersistedQueryRotation } from './graphqlErrors.js'
 import { parseProductRetrieve } from './productDetailSchema.js'
+import { parsePlusOffer } from './productPriceSchema.js'
 import {
   buildStrategies,
   type SonyFeature,
@@ -240,6 +244,35 @@ const requestProductDetailRaw = async (
   return (await response.json()) as ProductRetrieveResponse
 }
 
+const requestProductPriceRaw = async (productId: string): Promise<unknown> => {
+  const query = new URLSearchParams({
+    operationName: SONY_PRODUCT_PRICE_OPERATION_NAME,
+    variables: JSON.stringify({ productId }),
+    extensions: JSON.stringify({
+      persistedQuery: {
+        version: 1,
+        sha256Hash: SONY_PRODUCT_PRICE_HASH,
+      },
+    }),
+  }).toString()
+
+  const response = await fetchWithRetry(
+    `${SONY_GRAPHQL_URL}?${query}`,
+    {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+        'x-apollo-operation-name': SONY_PRODUCT_PRICE_OPERATION_NAME,
+        'x-psn-store-locale-override': localeOverride(SONY_LOCALE),
+      },
+    },
+    SONY_TIMEOUT_MS,
+    SONY_RETRY_COUNT,
+  )
+
+  return response.json()
+}
+
 // Map a transport-layer rejection onto the typed error channel. The rate-limit
 // sentinel (structured `RateLimitedError` from lib/http.ts) is pattern-matched
 // by instance — never by message string — and becomes UpstreamRateLimited;
@@ -276,6 +309,12 @@ export interface SonyClientApi {
     productId: string,
   ) => Effect.Effect<
     ProductDetailResult,
+    UpstreamUnavailable | UpstreamQueryRotated | UpstreamRateLimited
+  >
+  readonly fetchProductPrice: (
+    productId: string,
+  ) => Effect.Effect<
+    PlusOffer | null,
     UpstreamUnavailable | UpstreamQueryRotated | UpstreamRateLimited
   >
 }
@@ -350,6 +389,23 @@ export const SonyClientLive: Layer.Layer<SonyClient> = Layer.succeed(
                 }),
               )
             : Effect.succeed(extractProductDetail(json)),
+        ),
+      ),
+    fetchProductPrice: (productId) =>
+      Effect.tryPromise({
+        try: () => requestProductPriceRaw(productId),
+        catch: mapTransportError,
+      }).pipe(
+        Effect.flatMap((json) =>
+          detectPersistedQueryRotation(json)
+            ? Effect.fail(
+                new UpstreamQueryRotated({
+                  message:
+                    'Sony rejected the persisted query (hash rotated); re-run pnpm sony:refresh',
+                  operationName: SONY_PRODUCT_PRICE_OPERATION_NAME,
+                }),
+              )
+            : Effect.succeed(parsePlusOffer(json)),
         ),
       ),
   }),

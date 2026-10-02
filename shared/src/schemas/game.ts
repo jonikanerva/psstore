@@ -1,5 +1,12 @@
 import { Effect, Schema } from 'effect'
 
+// PS Plus offer on the game page. `price` carries Sony's verbatim price string;
+// `included` means the game is part of a PS Plus subscription tier.
+export const plusOfferSchema = Schema.Union([
+  Schema.Struct({ kind: Schema.Literal('price'), price: Schema.String }),
+  Schema.Struct({ kind: Schema.Literal('included') }),
+])
+
 export const gameSchema = Schema.Struct({
   id: Schema.String,
   name: Schema.String,
@@ -16,6 +23,11 @@ export const gameSchema = Schema.Struct({
   studio: Schema.String,
   preOrder: Schema.Boolean,
   plusUpsellText: Schema.NullOr(Schema.String),
+  // Set only by the game page lookup; list payloads and older payloads decode
+  // to null.
+  plusOffer: Schema.NullOr(plusOfferSchema).pipe(
+    Schema.withDecodingDefaultType(Effect.succeed(null)),
+  ),
   // `product` → internal product SKU with a PDP and (usually) a price;
   // `concept` → an announced UPCOMING title Sony does not yet expose as a
   // priced SKU anonymously. The default keeps every existing producer

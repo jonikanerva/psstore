@@ -1,7 +1,7 @@
 {
   "version": 1,
   "metadata": {
-    "captured_at": "2026-05-31T08:08:43.552Z",
+    "captured_at": "2026-10-02T17:17:37.314Z",
     "captured_by": "calmdonut",
     "region": "fi",
     "locale": "fi-fi",
@@ -29,9 +29,23 @@
       "observed_status_codes": [200]
     },
     {
+      "feature": "details",
+      "operation_name": "productRetrieveForCtasWithPrice",
+      "persisted_query_hash": "1f0ca607e170abbfb7d67bd76c9bbc97f21fe2e807be49e5fe764e14566cb605",
+      "required_headers": ["x-apollo-operation-name"],
+      "variables_schema": {
+        "productId": "string"
+      },
+      "sample_variables": {
+        "productId": "EP9000-PPSA01341_00-DEMONSSOULS00000"
+      },
+      "response_path": "data.productRetrieve",
+      "observed_status_codes": [200]
+    },
+    {
       "feature": "discounted",
       "operation_name": "categoryGridRetrieve",
-      "persisted_query_hash": "4e41660b6732f35c99fc5541926b7502a09557924e8c2cfebd1beb1a5c8c8f81",
+      "persisted_query_hash": "88c0b9a1273c6d320c51cd73e390924e21ae28bf09f01cde8b84b1034b16cd03",
       "required_headers": ["x-apollo-operation-name"],
       "variables_schema": {
         "facetOptions": [],
@@ -59,7 +73,7 @@
     {
       "feature": "new",
       "operation_name": "categoryGridRetrieve",
-      "persisted_query_hash": "4e41660b6732f35c99fc5541926b7502a09557924e8c2cfebd1beb1a5c8c8f81",
+      "persisted_query_hash": "88c0b9a1273c6d320c51cd73e390924e21ae28bf09f01cde8b84b1034b16cd03",
       "required_headers": ["x-apollo-operation-name"],
       "variables_schema": {
         "facetOptions": [],
@@ -87,7 +101,7 @@
     {
       "feature": "upcoming",
       "operation_name": "categoryGridRetrieve",
-      "persisted_query_hash": "4e41660b6732f35c99fc5541926b7502a09557924e8c2cfebd1beb1a5c8c8f81",
+      "persisted_query_hash": "88c0b9a1273c6d320c51cd73e390924e21ae28bf09f01cde8b84b1034b16cd03",
       "required_headers": ["x-apollo-operation-name"],
       "variables_schema": {
         "facetOptions": [],

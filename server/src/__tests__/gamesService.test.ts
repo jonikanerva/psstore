@@ -33,6 +33,7 @@ let detailFor: DetailFn = () => ({
 // An in-memory service boundary, not a module mock.
 const FakeSony = Layer.succeed(SonyClient, {
   fetchConceptsByFeature: (feature) => Effect.sync(() => conceptsFor(feature)),
+  fetchProductPrice: () => Effect.succeed(null),
   fetchProductDetail: (productId) => Effect.sync(() => detailFor(productId)),
 })
 
@@ -628,6 +629,7 @@ describe('gamesService', () => {
           }
           return []
         }),
+      fetchProductPrice: () => Effect.succeed(null),
       fetchProductDetail: () =>
         Effect.succeed({ releaseDate: PAST_DATE, genres: [], description: '' }),
     })
@@ -689,6 +691,7 @@ describe('getGameById detail enrichment', () => {
     const FlakySony = Layer.succeed(SonyClient, {
       fetchConceptsByFeature: (feature) =>
         Effect.sync(() => (feature === 'new' ? [makeConcept('degraded')] : [])),
+      fetchProductPrice: () => Effect.succeed(null),
       fetchProductDetail: () => Effect.fail(upstream('boom')),
     })
     const Services = GamesServiceLive.pipe(Layer.provide(FlakySony))
@@ -728,6 +731,7 @@ describe('upstream error propagation on all list tabs', () => {
   ) =>
     Layer.succeed(SonyClient, {
       fetchConceptsByFeature: () => Effect.fail(error),
+      fetchProductPrice: () => Effect.succeed(null),
       fetchProductDetail: () => Effect.fail(error),
     })
 
@@ -793,6 +797,7 @@ describe('upstream error propagation on all list tabs', () => {
         feature === 'new'
           ? Effect.succeed<Concept[]>([])
           : Effect.fail(new UpstreamUnavailable({ message: 'down' })),
+      fetchProductPrice: () => Effect.succeed(null),
       fetchProductDetail: () => Effect.succeed({ genres: [], description: '' }),
     })
     const exit = await runWith(NewOkFeaturesFail, (s) =>
@@ -834,6 +839,7 @@ describe('gamesService cache TTL (TestClock)', () => {
           counters.concepts += 1
           return sony.concepts()
         }),
+      fetchProductPrice: () => Effect.succeed(null),
       fetchProductDetail: () =>
         Effect.suspend(() => {
           counters.details += 1
