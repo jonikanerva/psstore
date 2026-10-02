@@ -133,6 +133,8 @@ Default answer to "should we add a library?" is **no**. Track the latest **stabl
 
 New entries require a `STACK.md` PR with rationale, approver, and date.
 
+**Version hold — ESLint 9:** `eslint` and `@eslint/js` stay on 9.x. `eslint-plugin-react` 7.37.5 declares the peer `eslint ^9.7` and crashes under ESLint 10 when the React version is `'detect'`. Move to ESLint 10 when an `eslint-plugin-react` release supports ESLint 10. npm marks ESLint 9.39.5 as deprecated (no longer supported), so `pnpm install` shows a deprecation warning until that move.
+
 **Tooling (not product runtime deps):** `playwright@1.60.0` is a devDependency of the Sony contract bot (`tools/sony-contract-bot`) used to capture the GraphQL contract during `pnpm sony:refresh`. It never ships in the server or client runtime and is intentionally excluded from the product-dependency table above.
 mise is the toolchain bootstrap (§1), not a package dependency. Approved user/pm 2026-10-02.
 

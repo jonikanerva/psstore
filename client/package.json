@@ -24,22 +24,22 @@
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.4",
-    "@tailwindcss/vite": "^4.0.0",
+    "@eslint/js": "^9.39.5",
+    "@tailwindcss/vite": "^4.3.3",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/luxon": "^3.6.2",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
-    "@typescript-eslint/eslint-plugin": "^8.60.0",
-    "@typescript-eslint/parser": "^8.60.0",
-    "@vitejs/plugin-react-swc": "^4.3.1",
-    "eslint": "^9.39.4",
-    "eslint-plugin-react": "^7.37.4",
+    "@typescript-eslint/eslint-plugin": "^8.71.0",
+    "@typescript-eslint/parser": "^8.71.0",
+    "@vitejs/plugin-react-swc": "^4.3.3",
+    "eslint": "^9.39.5",
+    "eslint-plugin-react": "^7.37.5",
     "jsdom": "^28.1.0",
-    "tailwindcss": "^4.0.0",
+    "tailwindcss": "^4.3.3",
     "typescript": "^6.0.3",
-    "vite": "^8.0.14",
+    "vite": "^8.3.2",
     "vitest": "^4.1.7"
   }
 }
