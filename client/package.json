@@ -8,7 +8,6 @@
     "build": "vite build --outDir=build",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "lint": "eslint src",
     "test": "vitest run"
   },
   "dependencies": {
@@ -24,7 +23,6 @@
     "react-dom": "^19.3.0"
   },
   "devDependencies": {
-    "@eslint/js": "catalog:",
     "@tailwindcss/vite": "^4.3.3",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/jest-dom": "^7.0.1",
@@ -32,11 +30,7 @@
     "@types/luxon": "^3.7.6",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
-    "@typescript-eslint/eslint-plugin": "catalog:",
-    "@typescript-eslint/parser": "catalog:",
     "@vitejs/plugin-react-swc": "catalog:",
-    "eslint": "catalog:",
-    "eslint-plugin-react": "catalog:",
     "jsdom": "^30.1.1",
     "tailwindcss": "^4.3.3",
     "typescript": "catalog:",

@@ -10,7 +10,6 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "lint": "eslint src",
     "test": "vitest run",
     "test:live": "SMOKE=1 vitest run src/__tests__/smoke.integration.test.ts"
   },
@@ -20,11 +19,7 @@
     "effect": "catalog:"
   },
   "devDependencies": {
-    "@eslint/js": "catalog:",
     "@types/node": "catalog:",
-    "@typescript-eslint/eslint-plugin": "catalog:",
-    "@typescript-eslint/parser": "catalog:",
-    "eslint": "catalog:",
     "tsx": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
