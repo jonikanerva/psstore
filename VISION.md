@@ -2,11 +2,11 @@
 
 ## Vision
 
-An easy-to-use PS5 store. Open the page and see the PS5 games that matter to you — new, upcoming, discounted, or already purchased — without the marketing layer of `store.playstation.com`. Purchases still happen in Sony's store.
+An easy-to-use PS5 store. Open the page and see the PS5 games that matter to you — new, upcoming, discounted, monthly PS Plus, or already purchased — without the marketing layer of `store.playstation.com`. Purchases still happen in Sony's store.
 
 ## Goal
 
-Let a Finnish PS5 owner find new, upcoming, discounted, and purchased PS5 games in as few clicks as possible, with the standard and PS Plus prices side by side.
+Let a Finnish PS5 owner find new, upcoming, discounted, monthly PS Plus, and purchased PS5 games in as few clicks as possible, with the standard and PS Plus prices side by side.
 
 ## Core Principles
 
@@ -18,7 +18,7 @@ Let a Finnish PS5 owner find new, upcoming, discounted, and purchased PS5 games 
 ## Product Shape
 
 1. The site opens on NEW: PS5 games, newest release first.
-2. Four views: NEW, UPCOMING, DISCOUNTED, PURCHASED. One search field filters the current view by name.
+2. Five views: NEW, UPCOMING, DISCOUNTED, MONTHLY, PURCHASED. One search field filters the current view by name.
 3. A game card opens the game page: artwork, description, details, both prices, and a link to buy in Sony's store.
 
 ## Non-Goals
@@ -28,6 +28,7 @@ Let a Finnish PS5 owner find new, upcoming, discounted, and purchased PS5 games 
 - A community or social surface.
 - A multi-region, multi-currency, or multi-platform catalogue.
 - A configurable product — no settings, themes, or remembered preferences.
+- A PS Plus membership manager or claim tracking.
 - A tracking or analytics product.
 
 ## Decision Filter
@@ -44,6 +45,7 @@ If any answer is "no", the change must not be added.
 - I see only what is relevant to me: PS5, Finland, EUR.
 - I see today's new releases the moment the page loads.
 - I see the PS Plus price and the standard price side by side.
+- I see this month's PS Plus games in one view.
 - I find a game I already own by typing part of its name.
 - The page is fast and calm.
 

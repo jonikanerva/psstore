@@ -16,6 +16,12 @@ Product scope (from `VISION.md`) is enforced **structurally at the Schema layer,
 
 ---
 
+## External sources outside the GraphQL contract
+
+The MONTHLY view reads one other anonymous host: `https://www.playstation.com/bin/imagic/gameslist` with `locale=en-fi` and `categoryList=plus-monthly-games-list`. It returns public JSON. Its response sets a country cookie. The server never stores, forwards, or sends cookies or credentials to it. The Sony contract tooling does not capture this feed. The drift guard is the golden fixture `server/src/__tests__/fixtures/plusMonthly.golden.json` plus the MONTHLY count in `pnpm test:live`. Decode and scope it at the boundary like any other external data (`plusMonthlySchema.ts`).
+
+---
+
 ## 1. Language & Runtime
 
 - **Primary language:** TypeScript 6.x (strict).
@@ -85,7 +91,7 @@ The `package.json` scripts are the single source of truth. Never invoke `tsc`, `
 
 | Check               | Trigger                                                                                                                | Who runs it                                                                                                  | Evidence in the PR                                                                                                        |
 | ------------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm test:live`    | The diff touches `server/src/sony/**` or `server/src/domain/listing.ts`.                                               | The PR author (`lead-dev`), on the pushed head.                                                              | The per-feature counts (NEW / UPCOMING / DISCOUNTED) and the resolved PDP SKU. A PR without them fails review.            |
+| `pnpm test:live`    | The diff touches `server/src/sony/**` or `server/src/domain/listing.ts`.                                               | The PR author (`lead-dev`), on the pushed head.                                                              | The per-feature counts (NEW / UPCOMING / DISCOUNTED / MONTHLY) and the resolved PDP SKU. A PR without them fails review.  |
 | `pnpm sony:refresh` | No diff trigger. The owner runs it weekly. A persisted-query hash rotation also needs it (runbook → Failure handling). | Owner-run. An agent runs it only when the owner asks in the current task or the task is a hash-rotation fix. | On drift: the refreshed `docs/contracts/sony-graphql-manifest.json` and the hash constants in `server/src/config/env.ts`. |
 
 Never schedule or automate either check (§10).

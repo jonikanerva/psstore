@@ -44,6 +44,14 @@ The compatibility check still requires it. If `pnpm sony:refresh` fails on this
 point, keep the existing `metGetProductById` entry in the manifest and check
 the hash by hand against live Sony.
 
+## PS Plus monthly feed
+
+The MONTHLY view reads `https://www.playstation.com/bin/imagic/gameslist`, not the GraphQL
+endpoint. The contract tooling does not capture it. A shape change shows as a
+drift warning in the server log and as a failing MONTHLY step in `pnpm test:live`.
+To refresh the golden fixture, download the feed anonymously and replace
+`server/src/__tests__/fixtures/plusMonthly.golden.json`. Do not store the response headers.
+
 ## Apply candidate as canonical manifest
 
 ```bash
@@ -91,7 +99,7 @@ the PR:
 pnpm test:live
 ```
 
-Paste into the PR the per-feature counts it logs (NEW / UPCOMING / DISCOUNTED
+Paste into the PR the per-feature counts it logs (NEW / UPCOMING / DISCOUNTED / MONTHLY
 concept counts) and the resolved PDP SKU. `pnpm test:live` is **not** part of
 `pnpm test-all` (it is network/uptime-coupled — keeping it in the build would
 make the build flaky).
