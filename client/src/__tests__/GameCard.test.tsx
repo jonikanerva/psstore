@@ -21,6 +21,7 @@ const game: Game = {
   studio: 'Test Studio',
   preOrder: false,
   plusUpsellText: null,
+  plusOffer: null,
   idKind: 'product',
 }
 
