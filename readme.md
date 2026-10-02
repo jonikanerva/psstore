@@ -12,7 +12,7 @@ to PS5 / Finland / EUR; the frontend renders what the backend returns.
 ## Architecture
 
 - `client/` — Vite + React SPA (TanStack Router, TanStack Query, Tailwind CSS)
-- `server/` — `@effect/platform` HttpApi backend on Effect (typed REST + in-memory Effect `Cache`), Railway runtime
+- `server/` — `@effect/platform` HttpApi backend on Effect (typed REST + in-memory Effect `Cache`)
 - `shared/` — Effect Schema types, schemas, and utilities shared across server and client
 - `tools/sony-contract-bot/` — captures and validates Sony's GraphQL contract
 
@@ -59,8 +59,8 @@ pnpm run build
 
 ## Sony Contract Tooling (Hardcoded Scope)
 
-Tooling scope is fixed and immutable: region `fi`, locale `fi-fi`, currency `EUR`, platform
-`PS5`. No sign-in is required.
+Tooling scope today: region `fi`, locale `fi-fi`, currency `EUR`, platform `PS5`. No
+sign-in is required.
 
 ```bash
 # capture + normalize + validate + diff
@@ -80,7 +80,9 @@ matching browser once before the next `sony:refresh`:
 pnpm --filter @psstore/sony-contract-bot exec playwright install chromium
 ```
 
-## Production / Railway
+## Production build
+
+The project has no production deployment. To run a production build locally:
 
 ```bash
 pnpm install
@@ -88,24 +90,16 @@ pnpm run build
 pnpm run start
 ```
 
-Railway runs the Node server (`pnpm run start`). In production the server serves
-`client/build` and handles SPA fallback routing.
+The server serves `client/build` and handles SPA fallback routing.
 
 ## Environment Variables
 
-- `PORT` (default: `3000`)
-- `NODE_ENV` (`development|test|production`)
-- `SONY_GRAPHQL_URL` (default: `https://web.np.playstation.com/api/graphql/v1/op`)
-- `SONY_CATEGORY_GRID_HASH`
-- `SONY_CATEGORY_ID`
-- `SONY_DEALS_CATEGORY_ID`
-- `SONY_OPERATION_NAME`
-- `SONY_PRODUCT_OPERATION_NAME`
-- `SONY_PRODUCT_BY_ID_HASH`
-- `SONY_LOCALE`
-- `SONY_RETRY_COUNT`
-- `SONY_TIMEOUT_MS`
-- `CACHE_TTL_MS`
+- `PORT` (default: `3000`). The Vite dev proxy in `client/vite.config.ts` targets port
+  `3000`. If you change `PORT` in development, change the proxy target too.
+
+The Sony contract values are code constants in `server/src/config/env.ts`. They are not
+environment variables. `pnpm run sony:refresh` rotates the persisted-query hashes in that
+file.
 
 ## Sony GraphQL Contract Update Workflow
 
