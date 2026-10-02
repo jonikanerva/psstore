@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "effect": "3.22.2",
-    "playwright": "^1.51.1"
+    "playwright": "^1.63.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",

@@ -73,6 +73,13 @@ pnpm run sony:validate
 pnpm run sony:diff -- --ci
 ```
 
+`sony:refresh` drives a Playwright browser. After a Playwright version bump, install the
+matching browser once before the next `sony:refresh`:
+
+```bash
+pnpm --filter @psstore/sony-contract-bot exec playwright install chromium
+```
+
 ## Production / Railway
 
 ```bash
