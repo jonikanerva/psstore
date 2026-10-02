@@ -18,7 +18,7 @@ Product scope (from `VISION.md`) is enforced **structurally at the Schema layer,
 
 ## 1. Language & Runtime
 
-- **Primary language:** TypeScript 6.x (strict).
+- **Primary language:** TypeScript 7.x (strict, native compiler).
 - **Strictness mode (non-negotiable `tsconfig`):** `"strict": true`, `"noUncheckedIndexedAccess": true`, `"exactOptionalPropertyTypes": true`, `"noImplicitOverride": true`.
 - **Target runtime:** Node.js 24 LTS, pinned to 24.21.0 for development.
 - **Minimum runtime version:** Node 24.21.0 (no back-deployment).
@@ -117,7 +117,7 @@ Default answer to "should we add a library?" is **no**. Track the latest **stabl
 | ----------------------------------- | ----------------------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `effect` (+ Schema, Cache, HttpApi) | `4.0.0`                                   | `/effect-ts/effect`, `/websites/effect_website_v4` | Backbone: typed effects, errors, DI; also the HTTP and HttpApi modules (`effect/http`, `effect/http-api`)                                                                                        |
 | `@effect/platform-node`             | `4.0.0`                                   | `/effect-ts/effect`                                | Node HttpServer and runtime adapter for HttpApi. Pinned exact to the same version as `effect`. Import by subpath; do not install the `redis` peer.                                               |
-| `typescript`                        | `6.x`                                     | `/microsoft/typescript`                            | Language                                                                                                                                                                                         |
+| `typescript`                        | `7.x`                                     | `/microsoft/typescript`                            | Language                                                                                                                                                                                         |
 | `react`                             | `19.x`                                    | `/facebook/react`                                  | Frontend UI                                                                                                                                                                                      |
 | `vite`                              | latest                                    | `/vitejs/vite`                                     | Frontend build tool                                                                                                                                                                              |
 | `@tanstack/react-router` (+ Start)  | `1.x`                                     | `/tanstack/router`                                 | Type-safe routing                                                                                                                                                                                |
