@@ -23,6 +23,13 @@ const Navigation = () => (
     >
       Discounted
     </Link>
+    <Link
+      to="/monthly"
+      className="navigation--link"
+      activeProps={{ className: 'navigation--link navigation--active' }}
+    >
+      Monthly
+    </Link>
   </nav>
 )
 

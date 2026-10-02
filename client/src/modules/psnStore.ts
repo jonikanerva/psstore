@@ -26,6 +26,11 @@ export const fetchDiscountedGames = async (
   size: number,
 ): Promise<PageResult> =>
   getJson(`/api/games/discounted?offset=${String(offset)}&size=${String(size)}`)
+export const fetchMonthlyGames = async (
+  offset: number,
+  size: number,
+): Promise<PageResult> =>
+  getJson(`/api/games/monthly?offset=${String(offset)}&size=${String(size)}`)
 export const fetchGame = async (gameId: string): Promise<Game> =>
   getJson(`/api/games/${encodeURIComponent(gameId)}`)
 

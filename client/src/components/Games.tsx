@@ -11,7 +11,7 @@ import Loading from './Spinner'
 const PAGE_SIZE = 60
 
 interface GamesProps {
-  feature: 'new' | 'upcoming' | 'discounted'
+  feature: 'new' | 'upcoming' | 'discounted' | 'monthly'
   fetch: (offset: number, size: number) => Promise<PageResult>
   emptyMessage?: string
 }
@@ -84,7 +84,11 @@ const Games = ({
       <div className="games--content">
         <div className="games--grid" data-label={feature}>
           {filtered.map((game) => (
-            <GameCard key={game.id} game={game} />
+            <GameCard
+              key={game.id}
+              game={game}
+              showPrice={feature !== 'monthly'}
+            />
           ))}
         </div>
         <div ref={sentinelRef} className="games--sentinel">

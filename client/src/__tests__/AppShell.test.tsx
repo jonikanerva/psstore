@@ -6,7 +6,13 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import AppShell from '../components/AppShell'
 import { useSearchQuery } from '../modules/searchContext'
@@ -53,6 +59,30 @@ describe('AppShell', () => {
     expect(screen.getByRole('link', { name: 'New' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Upcoming' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Discounted' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Monthly' })).toBeInTheDocument()
+  })
+
+  it('lists the views in the agreed order', async () => {
+    await renderShellAt('/new')
+
+    const nav = screen.getByRole('navigation', { name: 'Top navigation' })
+    expect(
+      within(nav)
+        .getAllByRole('link')
+        .map((link) => link.textContent),
+    ).toEqual(['New', 'Upcoming', 'Discounted', 'Monthly'])
+  })
+
+  it('marks the current view with aria-current', async () => {
+    await renderShellAt('/new')
+
+    expect(screen.getByRole('link', { name: 'New' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+    expect(screen.getByRole('link', { name: 'Monthly' })).not.toHaveAttribute(
+      'aria-current',
+    )
   })
 
   it('renders a search input with the agreed a11y attributes', async () => {
