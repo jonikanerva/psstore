@@ -11,17 +11,17 @@
     "sony": "tsx src/cli.ts"
   },
   "dependencies": {
-    "effect": "3.22.2",
+    "effect": "catalog:",
     "playwright": "^1.63.0"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.5",
-    "@types/node": "^24.19.0",
-    "@typescript-eslint/eslint-plugin": "^8.71.0",
-    "@typescript-eslint/parser": "^8.71.0",
-    "eslint": "^9.39.5",
-    "tsx": "^4.23.15",
-    "typescript": "^6.0.3",
-    "vitest": "^5.0.3"
+    "@eslint/js": "catalog:",
+    "@types/node": "catalog:",
+    "@typescript-eslint/eslint-plugin": "catalog:",
+    "@typescript-eslint/parser": "catalog:",
+    "eslint": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }

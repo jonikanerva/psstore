@@ -133,6 +133,8 @@ Default answer to "should we add a library?" is **no**. Track the latest **stabl
 
 New entries require a `STACK.md` PR with rationale, approver, and date.
 
+**Shared versions.** The `catalog:` block in `pnpm-workspace.yaml` is the single version source for any dependency that more than one workspace manifest declares. Manifests reference it with the `catalog:` specifier. Pins stay exact where this table pins them exactly.
+
 **Version hold — ESLint 9:** `eslint` and `@eslint/js` stay on 9.x. `eslint-plugin-react` 7.37.5 declares the peer `eslint ^9.7` and crashes under ESLint 10 when the React version is `'detect'`. Move to ESLint 10 when an `eslint-plugin-react` release supports ESLint 10. npm marks ESLint 9.39.5 as deprecated (no longer supported), so `pnpm install` shows a deprecation warning until that move.
 
 **Tooling (not product runtime deps):** `playwright@1.63.0` is a devDependency of the Sony contract bot (`tools/sony-contract-bot`) used to capture the GraphQL contract during `pnpm sony:refresh`. It never ships in the server or client runtime and is intentionally excluded from the product-dependency table above.

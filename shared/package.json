@@ -12,14 +12,14 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "effect": "3.22.2"
+    "effect": "catalog:"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.5",
-    "@typescript-eslint/eslint-plugin": "^8.71.0",
-    "@typescript-eslint/parser": "^8.71.0",
-    "eslint": "^9.39.5",
-    "typescript": "^6.0.3",
-    "vitest": "^5.0.3"
+    "@eslint/js": "catalog:",
+    "@typescript-eslint/eslint-plugin": "catalog:",
+    "@typescript-eslint/parser": "catalog:",
+    "eslint": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }
