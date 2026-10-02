@@ -1,11 +1,9 @@
 @import 'tailwindcss';
 
 /*
- * Tailwind CSS v4 is the styling pipeline (loaded via @tailwindcss/vite). The
- * surface is a faithful 1:1 port of the previous per-component stylesheets,
- * consolidated into this single entry sheet — same selectors, same pixels, no
- * redesign and no new chrome (ux condition 4). Tailwind utilities are available
- * for any future work; the existing markup keeps its semantic class names.
+ * Tailwind CSS v4 is the styling pipeline (loaded via @tailwindcss/vite). This
+ * single entry sheet holds the shared selectors; the markup keeps its semantic
+ * class names. Tailwind utilities are available for new work.
  */
 
 * {

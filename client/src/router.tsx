@@ -15,8 +15,8 @@ import {
 
 // Code-based route tree. Root renders the AppShell (header + Outlet). The index
 // redirects to /new so the default entry is always NEW, newest-first (VISION);
-// no last-view is remembered (ux condition 3). A splat route catches any unknown
-// path and redirects to /new.
+// never remember the last view. A splat route catches any unknown path and
+// redirects to /new.
 
 const rootRoute = createRootRoute({
   component: AppShell,

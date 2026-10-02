@@ -85,7 +85,7 @@ export const conceptToGame = (concept: Concept): Game => {
 
   // Sony's anonymous GraphQL exposes a `Concept.price.upsellText` string for
   // PS Plus members (e.g. "Säästä 10 %"). We surface the string verbatim —
-  // no translation, no regex parsing, no euro derivation (decision #37).
+  // no translation, no regex parsing, no euro derivation.
   // An empty string is coerced to null here so the renderer never sees "".
   const plusUpsellText: string | null = ((): string | null => {
     const hasPlus = (concept.price?.upsellServiceBranding ?? []).some(

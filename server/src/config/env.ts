@@ -1,12 +1,11 @@
 import { Duration } from 'effect'
 
 // Fixed Sony-contract configuration. These values are part of the contract with
-// Sony's public GraphQL endpoint, not deployment knobs — they were never meant
-// to vary by environment (see issue #72). They are therefore plain code
-// constants, not env-driven `Config` values. The only genuinely
-// environment-driven setting (`PORT`) is read directly from `process.env` at
-// the HTTP composition root (server.ts). The persisted-query hashes are rotated
-// by the contract bot via `pnpm sony:refresh`, which edits this same file.
+// Sony's public GraphQL endpoint, not deployment knobs. They must not vary by
+// environment: keep them as plain code constants, not env-driven `Config`
+// values. The only environment-driven setting (`PORT`) is read directly from
+// `process.env` at the HTTP composition root (server.ts). The contract bot
+// edits the persisted-query hashes in this file during `pnpm sony:refresh`.
 
 export const SONY_GRAPHQL_URL =
   'https://web.np.playstation.com/api/graphql/v1/op'

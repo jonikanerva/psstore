@@ -32,7 +32,7 @@ export const sonyContractManifestSchema = Schema.Struct({
     playwright_profile: Schema.String.check(Schema.isMinLength(1)),
   }),
   endpoint: Schema.Struct({
-    // Equivalent to the previous `z.url()`: a syntactically valid http(s) URL.
+    // A syntactically valid http(s) URL.
     url: Schema.String.check(Schema.isPattern(/^https?:\/\/[^\s]+$/)),
     method: Schema.String.check(Schema.isMinLength(1)),
   }),

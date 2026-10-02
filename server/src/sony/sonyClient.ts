@@ -128,8 +128,7 @@ export const extractProductDetail = (
 
 /**
  * The outcome of decoding a category-grid response. The drift policy
- * (devils-advocate cut 3) distinguishes the empty-list cases, now at two
- * granularities:
+ * distinguishes the empty-list cases at two granularities:
  *  - `drift`: the `data.categoryGridRetrieve` node was absent or its outer shape
  *    was unintelligible — a corrupt grid. The caller degrades to `[]` AND logs a
  *    warning so the operator sees an honest signal.
@@ -137,7 +136,7 @@ export const extractProductDetail = (
  *    may be legitimately empty). `dropped` counts individual elements that
  *    failed per-element decode and were skipped; a non-zero `dropped` is an
  *    element-drift signal the caller logs WITHOUT emptying the list — one odd
- *    item never nukes the whole grid (the regression this fixes).
+ *    item never empties the whole grid.
  */
 export type CategoryGridOutcome =
   | { readonly kind: 'drift' }
@@ -236,9 +235,8 @@ const requestProductDetailRaw = async (
   )
 
   // The product boundary is decoded downstream by `parseProductRetrieve` inside
-  // `extractProductDetail`; this cast only shapes the envelope it reads and is
-  // left in place per issue #62 scope (the category-grid cast is the one this
-  // change removes). Rotation detection runs on the raw body in the Effect layer.
+  // `extractProductDetail`; this cast only shapes the envelope it reads.
+  // Rotation detection runs on the raw body in the Effect layer.
   return (await response.json()) as ProductRetrieveResponse
 }
 
@@ -295,8 +293,8 @@ export const SonyClientLive: Layer.Layer<SonyClient> = Layer.succeed(
         catch: mapTransportError,
       }).pipe(
         // A persisted-query rotation (HTTP 200 + Apollo errors[]) is a distinct,
-        // operator-actionable failure → 502 UpstreamQueryRotated, not a silent
-        // empty grid (issue #62 / Sony runbook).
+        // operator-actionable failure → 502 UpstreamQueryRotated, not an empty
+        // grid (docs/contracts/sony-graphql-runbook.md).
         Effect.flatMap((json) =>
           detectPersistedQueryRotation(json)
             ? Effect.fail(

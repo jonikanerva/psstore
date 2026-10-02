@@ -26,9 +26,8 @@ const Games = ({
 
   // Query key is feature only (pagination flows through pageParam); the search
   // text is never part of the key, so the persisted cache carries no search or
-  // behaviour state (da #4, ux condition 1). useInfiniteQuery accumulates pages
-  // and preserves the previous append-vs-replace + nextOffset semantics: each
-  // page's `nextOffset` becomes the next pageParam, or undefined to stop.
+  // behaviour state. useInfiniteQuery accumulates pages: each page's
+  // `nextOffset` becomes the next pageParam, or undefined to stop.
   const {
     data,
     isPending,

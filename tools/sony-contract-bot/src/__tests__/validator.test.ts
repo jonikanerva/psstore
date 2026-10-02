@@ -19,7 +19,7 @@ const gridOperation = (feature: ContractFeature): ContractOperation => ({
   observed_status_codes: [200],
 })
 
-// The `details` feature now MEANS the PDP operation `metGetProductById`.
+// The `details` feature means the PDP operation `metGetProductById`.
 const pdpOperation: ContractOperation = {
   feature: 'details',
   operation_name: 'metGetProductById',

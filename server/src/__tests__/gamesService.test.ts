@@ -30,8 +30,7 @@ let detailFor: DetailFn = () => ({
 })
 
 // A fake SonyClient driven by the per-test `conceptsFor` / `detailFor` closures.
-// Replaces the previous vi.mock of the sonyClient module — the in-memory service
-// boundary the doctrine prefers over heavyweight mocking.
+// An in-memory service boundary, not a module mock.
 const FakeSony = Layer.succeed(SonyClient, {
   fetchConceptsByFeature: (feature) => Effect.sync(() => conceptsFor(feature)),
   fetchProductDetail: (productId) => Effect.sync(() => detailFor(productId)),
@@ -455,8 +454,7 @@ describe('gamesService', () => {
   })
 
   it('discounted DELIBERATELY drops an unclassified row (enrichment-failure) while a sibling FULL_GAME survives', async () => {
-    // Issue #78 (B), owner-ruled kept: isolate the CLASSIFICATION drop, not the
-    // empty-date drop. The unclassified row has a VALID releaseDate (so the
+    // Isolate the CLASSIFICATION drop, not the empty-date drop. The unclassified row has a VALID releaseDate (so the
     // `Boolean(game.date)` gate would NOT drop it) but classification:null
     // (storeDisplayClassification undefined — the shape a transiently-failed
     // enrichment produces) → it is dropped by the allow-list filter, proving the
@@ -718,12 +716,11 @@ describe('getGameById detail enrichment', () => {
   })
 })
 
-describe('upstream error propagation on all list tabs (issue #78)', () => {
-  // #78 (owner ruling 2026-05-31 (A)) makes upcoming/discounted PROPAGATE an
-  // upstream outage instead of swallowing it into []. This REVERSES #62's
-  // da-cut-1 continuity choice for the outage case: all three list tabs now
-  // surface UpstreamUnavailable / UpstreamQueryRotated / UpstreamRateLimited
-  // honestly (gamesApi maps them to 502/502/503). A genuinely-empty healthy
+describe('upstream error propagation on all list tabs', () => {
+  // Upcoming/discounted PROPAGATE an upstream outage; they must not swallow it
+  // into []. All three list tabs surface UpstreamUnavailable /
+  // UpstreamQueryRotated / UpstreamRateLimited (gamesApi maps them to
+  // 502/502/503). A genuinely-empty healthy
   // response still returns [] via the SUCCESS channel — see the separate
   // "returns empty result when no concepts exist" test (empty != error).
   const failingSony = (
@@ -787,11 +784,10 @@ describe('upstream error propagation on all list tabs (issue #78)', () => {
   }
 
   it('getGameById for an upcoming/discounted id under outage fails with UpstreamError, not GameNotFound', async () => {
-    // Ripple of (A): findInFeature now propagates the upstream error. NEW
-    // succeeds (empty) so getGameById clears `baseGames` and does NOT find the
-    // id there, then reaches the failing upcoming lookup — isolating the
-    // findInFeature path so the failure can't be attributed to baseGames. The
-    // PDP lookup thus surfaces an honest 502/503 instead of a misleading 404.
+    // findInFeature propagates the upstream error. NEW succeeds (empty) so
+    // getGameById clears `baseGames` and does NOT find the id there, then
+    // reaches the failing upcoming lookup — isolating the findInFeature path
+    // from baseGames. The PDP lookup surfaces a 502/503, never a 404.
     const NewOkFeaturesFail = Layer.succeed(SonyClient, {
       fetchConceptsByFeature: (feature) =>
         feature === 'new'

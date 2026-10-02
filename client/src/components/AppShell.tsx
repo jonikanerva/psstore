@@ -10,7 +10,7 @@ const AppShell = () => {
   })
 
   // Clear the search when the route changes — the search is per-view and never
-  // remembered (ux condition 3).
+  // remembered.
   useEffect(() => {
     setQuery('')
   }, [pathname])
