@@ -11,7 +11,7 @@ import { SONY_RETRY_AFTER_MAX_MS } from '../config/env.js'
 // string) and maps it to the typed `UpstreamRateLimited` error.
 export class RateLimitedError extends Error {
   // `as const` is a const assertion (narrowing), not a type-bypassing cast —
-  // ESLint's prefer-as-const requires this form over a literal annotation.
+  // The lint rule prefer-as-const requires this form over a literal annotation.
   readonly kind = 'rate-limited' as const
   readonly retryAfterMs: number | null
   constructor(retryAfterMs: number | null) {

@@ -40,7 +40,7 @@ Product scope (from `VISION.md`) is enforced **structurally at the Schema layer,
 | Client cache        | TanStack Query                                                | TTL, background refetch, persisted to `localStorage`/IndexedDB via the official persister |
 | Styling             | Tailwind CSS v4                                               | Utilitarian; no decorative chrome                                                         |
 | Tests               | Vitest                                                        | Pure functions + Effect test `Layer`s                                                     |
-| Lint                | ESLint + typescript-eslint                                    | `no-explicit-any` + `no-unsafe-*` as CI gates                                             |
+| Lint                | Oxlint + tsgolint (type-aware)                                | `no-explicit-any` + `no-unsafe-*` as CI gates                                             |
 
 ### Effect conventions (binding)
 
@@ -70,12 +70,12 @@ Product scope (from `VISION.md`) is enforced **structurally at the Schema layer,
 | Variable      | Command                                                                                                    |
 | ------------- | ---------------------------------------------------------------------------------------------------------- |
 | `$FORMAT_CMD` | `pnpm format`                                                                                              |
-| `$LINT_CMD`   | `pnpm lint` (ESLint; the gates below fail the build, not warn)                                             |
+| `$LINT_CMD`   | `pnpm lint` (Oxlint, type-aware; the gates below fail the build, not warn)                                 |
 | `$BUILD_CMD`  | `pnpm build`                                                                                               |
 | `$TEST_CMD`   | `pnpm test` (Vitest)                                                                                       |
 | `$VERIFY_CMD` | `pnpm test-all` (format check → type-check → lint → build → tests → `sony:validate` → `sony:diff -- --ci`) |
 
-The `package.json` scripts are the single source of truth. Never invoke `tsc`, `eslint`, `vitest`, or `vite` directly from commits, CI, or agent scripts.
+The `package.json` scripts are the single source of truth. Never invoke `tsc`, `oxlint`, `vitest`, or `vite` directly from commits, CI, or agent scripts.
 
 **Narrow test selector** (for the mutation check): `pnpm --filter <workspace package> test <test file>`, for example `pnpm --filter @psstore/server test src/__tests__/mapper.test.ts`. The path is relative to the workspace package.
 
@@ -124,7 +124,8 @@ Default answer to "should we add a library?" is **no**. Track the latest **stabl
 | `@tanstack/react-query`             | `5.x`                                     | `/tanstack/query`                                  | Client cache                                                                                                                                                                                     |
 | `tailwindcss`                       | `4.x`                                     | `/tailwindlabs/tailwindcss`                        | Utilitarian styling                                                                                                                                                                              |
 | `vitest`                            | latest                                    | `/vitest-dev/vitest`                               | Test runner                                                                                                                                                                                      |
-| `typescript-eslint`                 | latest                                    | `/typescript-eslint/typescript-eslint`             | Typed lint gates                                                                                                                                                                                 |
+| `oxlint`                            | latest                                    | `/oxc-project/oxc`                                 | Linter. Reads `.oxlintrc.json`. Approved user 2026-10-02.                                                                                                                                        |
+| `oxlint-tsgolint`                   | latest                                    | `/oxc-project/tsgolint`                            | Type-aware lint rules. Bundles its own typescript-go, so the lint does not depend on the `typescript` package version. Approved user 2026-10-02.                                                 |
 | `pnpm`                              | `12.8.1` (`mise.toml` + `packageManager`) | `/pnpm/pnpm`                                       | Package manager (runtime: Node 24 LTS, `/nodejs/node`)                                                                                                                                           |
 | `dompurify`                         | `3.4.16`                                  | `/cure53/dompurify`                                | Client XSS control: sanitizes Sony-authored description HTML before `dangerouslySetInnerHTML` (`GameDetailsPage.tsx`). No platform equivalent. Approved pm/team 2026-05-31.                      |
 | `luxon`                             | `3.7.2`                                   | `/moment/luxon`                                    | Client ISO date parse + localized formatting (`GameCard.tsx`, `GameDetailsPage.tsx`). Kept; an `Intl.DateTimeFormat` swap is a deferred follow-up, not this change. Approved pm/team 2026-05-31. |
@@ -134,7 +135,7 @@ New entries require a `STACK.md` PR with rationale, approver, and date.
 
 **Shared versions.** The `catalog:` block in `pnpm-workspace.yaml` is the single version source for any dependency that more than one workspace manifest declares. Manifests reference it with the `catalog:` specifier. Pins stay exact where this table pins them exactly.
 
-**Version hold — ESLint 9:** `eslint` and `@eslint/js` stay on 9.x. `eslint-plugin-react` 7.37.5 declares the peer `eslint ^9.7` and crashes under ESLint 10 when the React version is `'detect'`. Move to ESLint 10 when an `eslint-plugin-react` release supports ESLint 10. npm marks ESLint 9.39.5 as deprecated (no longer supported), so `pnpm install` shows a deprecation warning until that move.
+**Lint tooling.** `.oxlintrc.json` is the single lint config. It replaces `eslint.config.js`. Oxlint does not support `ignores` inside `overrides`. The Effect HTTP import restriction therefore applies to `server/src/**/*.ts`, and a later override turns it off for the exempt files.
 
 **Tooling (not product runtime deps):** `playwright@1.63.0` is a devDependency of the Sony contract bot (`tools/sony-contract-bot`) used to capture the GraphQL contract during `pnpm sony:refresh`. It never ships in the server or client runtime and is intentionally excluded from the product-dependency table above.
 mise is the toolchain bootstrap (§1), not a package dependency. Approved user/pm 2026-10-02.
@@ -143,7 +144,7 @@ mise is the toolchain bootstrap (§1), not a package dependency. Approved user/p
 
 ## 8. Stack-specific reject-list additions
 
-- **`any`** — explicit or implicit. `@typescript-eslint/no-explicit-any` and `no-unsafe-assignment` / `no-unsafe-call` / `no-unsafe-member-access` are **CI gates (build fails, not warns)**.
+- **`any`** — explicit or implicit. `no-explicit-any` and `no-unsafe-assignment` / `no-unsafe-call` / `no-unsafe-member-access` are **CI gates (build fails, not warns)**.
 - **`throw` in domain logic** — model failures in the Effect error channel as tagged errors.
 - **I/O imported directly into the pure core** (fetch, cache, clock) — provide them as Effect services / `Layer`s.
 - **Untyped external data** reaching code before it is decoded and narrowed with Effect Schema.
@@ -178,7 +179,7 @@ mise is the toolchain bootstrap (§1), not a package dependency. Approved user/p
 
 ## 11. Definition-of-done additions
 
-On top of `CLAUDE.md → Definition of done`, this stack also requires: `tsc` zero errors; ESLint zero errors (the §8 `no-any` / `no-unsafe-*` gates); no I/O imported into the pure core; no `throw` in domain logic; any new package usage grounded in §3 Context7-retrieved, version-pinned docs; and no Sony credential or signed-in data in a log, cache, persisted storage, or committed file (§14). The compiler and this checklist are the review — design code so the checklist _can_ catch mistakes.
+On top of `CLAUDE.md → Definition of done`, this stack also requires: `tsc` zero errors; Oxlint zero errors and zero warnings (the §8 `no-any` / `no-unsafe-*` gates); no I/O imported into the pure core; no `throw` in domain logic; any new package usage grounded in §3 Context7-retrieved, version-pinned docs; and no Sony credential or signed-in data in a log, cache, persisted storage, or committed file (§14). The compiler and this checklist are the review — design code so the checklist _can_ catch mistakes.
 
 ---
 

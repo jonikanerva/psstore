@@ -8,17 +8,12 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "lint": "eslint src",
     "test": "vitest run"
   },
   "dependencies": {
     "effect": "catalog:"
   },
   "devDependencies": {
-    "@eslint/js": "catalog:",
-    "@typescript-eslint/eslint-plugin": "catalog:",
-    "@typescript-eslint/parser": "catalog:",
-    "eslint": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }
