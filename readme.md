@@ -59,8 +59,9 @@ pnpm run build
 
 ## Sony Contract Tooling (Hardcoded Scope)
 
-Tooling scope today: region `fi`, locale `fi-fi`, currency `EUR`, platform `PS5`. No
-sign-in is required.
+Tooling scope today: region `fi`, currency `EUR`, platform `PS5`. The contract bot
+captures from the `fi-fi` public storefront. The server requests data with `en-fi`.
+The response shapes are identical. No sign-in is required.
 
 ```bash
 # capture + normalize + validate + diff
@@ -103,6 +104,6 @@ file.
 
 ## Sony GraphQL Contract Update Workflow
 
-1. Run `pnpm run sony:refresh` against the public fi-fi storefront.
+1. Run `pnpm run sony:refresh` against the public `fi-fi` storefront.
 2. Keep only PS5/EUR relevant operations via built-in scope filtering.
 3. Verify with `pnpm run sony:validate` and `pnpm run sony:diff -- --ci`.

@@ -1,7 +1,7 @@
 # Golden decode fixtures (real Sony captures)
 
 These `*.golden.json` files are **lightly-trimmed real responses** captured from
-live Sony (`web.np.playstation.com`, locale `fi-fi`) via the production
+live Sony (`web.np.playstation.com`, locale `fi-fi`; the server now requests `en-fi`, which returns the same shapes) via the production
 persisted-query GET path (the same request `server/src/sony/sonyClient.ts`
 issues; hashes from `server/src/config/env.ts`).
 
