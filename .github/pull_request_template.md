@@ -1,11 +1,14 @@
 <!--
 Fill every section. Remove this comment before saving.
 The /implement skill drafts this for you. Verify, then ship.
+Use Simplified Technical English.
+Write short sentences.
+Use active voice and plain terms.
 -->
 
 ## Why
 
-`<One-paragraph motivation. What problem is this PR solving and which VISION.md / CLAUDE.md / STACK.md rule is at play.>`
+`<One-paragraph motivation. What problem is this PR solving and which VISION.md / operating-contract / STACK.md rule is at play.>`
 
 Closes #`<issue number, if this PR resolves a GitHub issue>`
 
@@ -30,16 +33,17 @@ If any answer is `no`, this PR documents the conflict in the **Why** section abo
 
 ## Rules involved
 
-- `CLAUDE.md → <rule by name>` — `<one-line how this PR honours it>`
+- `<CLAUDE.md or AGENTS.md> → <rule by name>` — `<one-line how this PR honours it>`
 - `STACK.md → <section>` — `<one-line>`
 
 ## Verification
 
-- [ ] `$VERIFY_CMD` (per `STACK.md → Build & verify commands`) ran and is green.
+- [ ] `$VERIFY_CMD` (per `STACK.md → Build & verify commands`) ran once on the pushed head and is green: `<summary line, or the stamp line when STACK.md defines one>`.
 - [ ] `$FORMAT_CMD` is idempotent (re-running produces no diff).
 - [ ] Tests added or updated for new logic.
 - [ ] Previews / stories / fixtures cover the new states.
 - [ ] Privacy declaration updated if a new required-reason / required-data API was adopted.
+- [ ] Owner-run checks (per `STACK.md`): `none triggered`, `none declared`, or each triggered check as `ran on <SHA>: PASS` or `triggered, pending owner run`.
 - [ ] The issue this PR resolves is linked with `Closes #<N>` above. Any binding decision introduced (if any) is stated in plain language in this description and the issue.
 
 ## States handled
@@ -60,4 +64,4 @@ For changes that affect a user- or caller-facing surface, list every state it re
 
 ---
 
-**Next step:** run `/codereview` on this branch. The autonomous flow runs it automatically; if you opened this PR by hand, run it yourself before requesting merge.
+**Next step:** run `/codereview` in Claude or `$codereview` in Codex on this branch. The autonomous flow runs it automatically; if you opened this PR by hand, run the matching host skill before requesting merge.
