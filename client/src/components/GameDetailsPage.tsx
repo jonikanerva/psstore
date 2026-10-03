@@ -1,11 +1,11 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import DOMPurify from 'dompurify'
 import { DateTime } from 'luxon'
+import { findCachedGame } from '../modules/cachedGame'
 import { fetchGame, metacriticLink, type Game } from '../modules/psnStore'
 import Error from './Error'
 import Image from './Image'
 import Offline from './Offline'
-import Spinner from './Spinner'
 
 interface GameDetailsPageProps {
   gameId: string
@@ -35,20 +35,41 @@ const plusValueFor = (game: Game): string | null => {
   return game.plusUpsellText
 }
 
+const DetailsSkeleton = () => (
+  <article className="details-page" aria-busy="true">
+    <div role="status" className="sr-only">
+      Loading
+    </div>
+    <section className="details-page--hero">
+      <div className="details-page--cover" />
+      <div className="details-page--info">
+        <div className="skeleton skeleton--title" />
+        <div className="skeleton skeleton--block" />
+        <div className="skeleton skeleton--line" />
+        <div className="skeleton skeleton--line" />
+      </div>
+    </section>
+  </article>
+)
+
 const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
+  const queryClient = useQueryClient()
   const {
     data: game,
     isPending,
     isError,
+    isPlaceholderData,
     fetchStatus,
   } = useQuery({
     queryKey: ['game', gameId],
     queryFn: () => fetchGame(gameId),
     enabled: gameId !== '',
+    // List views already hold the name, cover, and prices: paint them at once.
+    placeholderData: () => findCachedGame(queryClient, gameId),
   })
 
   if (isPending) {
-    return fetchStatus === 'paused' ? <Offline /> : <Spinner />
+    return fetchStatus === 'paused' ? <Offline /> : <DetailsSkeleton />
   }
 
   if (isError) {
@@ -57,57 +78,105 @@ const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
 
   const plusValue = plusValueFor(game)
   const hasDescription = game.description.trim().length > 0
-  const hasScreenshots = game.screenshots.length > 0
-  const hasVideos = game.videos.length > 0
+  const hasMedia = game.screenshots.length > 0 || game.videos.length > 0
+  const hasDiscount =
+    game.originalPrice !== '' && game.originalPrice !== game.price
 
   return (
-    <article className="details-page">
-      <section className="details-page--summary">
+    <article className="details-page" aria-busy={isPlaceholderData}>
+      <section className="details-page--hero">
         <div className="details-page--cover">
-          <Image url={game.url} name={game.name} />
+          <Image url={game.url} name={game.name} priority />
         </div>
         <div className="details-page--info">
           <h1 className="details-page--title">{game.name}</h1>
-          <dl className="details-page--meta-list">
+
+          <div className="details-page--prices">
             {game.price && (
-              <>
-                <dt>Standard</dt>
-                <dd>{game.price}</dd>
-              </>
+              <div className="details-page--price">
+                <span className="details-page--price-label">Standard</span>
+                <span className="details-page--price-value">
+                  {hasDiscount && <s>{game.originalPrice}</s>}
+                  {game.price}
+                </span>
+              </div>
             )}
             {plusValue !== null && (
-              <>
-                <dt>PS Plus</dt>
-                <dd>{plusValue}</dd>
-              </>
+              <div className="details-page--price">
+                <span className="details-page--price-label">PS Plus</span>
+                <span className="details-page--price-value">{plusValue}</span>
+              </div>
             )}
-            <dt>Release</dt>
-            <dd>{formatDate(game.date)}</dd>
-            {game.studio && (
-              <>
-                <dt>Publisher</dt>
-                <dd>{game.studio}</dd>
-              </>
-            )}
-            {game.genres.length > 0 && (
-              <>
-                <dt>Genre</dt>
-                <dd>{game.genres.join(', ')}</dd>
-              </>
-            )}
-          </dl>
+          </div>
+
           <div className="details-page--actions">
-            <a className="details-page--link" href={storeUrl(game.id)}>
+            <a
+              className="details-page--link details-page--link-primary"
+              href={storeUrl(game.id)}
+            >
               Open In Store
             </a>
             <a className="details-page--link" href={metacriticLink(game.name)}>
               Metacritic
             </a>
           </div>
+
+          <dl className="details-page--meta-list">
+            <dt>Release</dt>
+            <dd>{formatDate(game.date)}</dd>
+            {isPlaceholderData ? (
+              <>
+                <dt>Publisher</dt>
+                <dd>
+                  <span className="skeleton skeleton--inline" />
+                </dd>
+                <dt>Genre</dt>
+                <dd>
+                  <span className="skeleton skeleton--inline" />
+                </dd>
+              </>
+            ) : (
+              <>
+                {game.studio && (
+                  <>
+                    <dt>Publisher</dt>
+                    <dd>{game.studio}</dd>
+                  </>
+                )}
+                {game.genres.length > 0 && (
+                  <>
+                    <dt>Genre</dt>
+                    <dd>{game.genres.join(', ')}</dd>
+                  </>
+                )}
+              </>
+            )}
+          </dl>
+
+          {isPlaceholderData && (
+            <div className="details-page--description" role="status">
+              <span className="sr-only">Loading</span>
+              <div className="skeleton skeleton--line" />
+              <div className="skeleton skeleton--line" />
+              <div className="skeleton skeleton--line skeleton--short" />
+            </div>
+          )}
+          {hasDescription && (
+            <div className="details-page--description">
+              <h2>Description</h2>
+              {/* XSS boundary: Sony's description HTML is untrusted and is sanitised
+                  with DOMPurify before injection. Do not remove or reorder (da #5). */}
+              <div
+                dangerouslySetInnerHTML={{
+                  __html: DOMPurify.sanitize(game.description),
+                }}
+              />
+            </div>
+          )}
         </div>
       </section>
 
-      {(hasScreenshots || hasVideos) && (
+      {hasMedia && (
         <section className="details-page--section">
           <h2>Media</h2>
           <div className="details-page--media-grid">
@@ -127,19 +196,6 @@ const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
               />
             ))}
           </div>
-        </section>
-      )}
-
-      {hasDescription && (
-        <section className="details-page--section">
-          <h2>Description</h2>
-          {/* XSS boundary: Sony's description HTML is untrusted and is sanitised
-              with DOMPurify before injection. Do not remove or reorder (da #5). */}
-          <div
-            dangerouslySetInnerHTML={{
-              __html: DOMPurify.sanitize(game.description),
-            }}
-          />
         </section>
       )}
     </article>
