@@ -8,39 +8,47 @@ export const SORT_FIELD_LABELS = {
 
 export interface SortConfig {
   readonly fields: readonly SortField[]
-  // The sort that describes the order the server returns. A view at its
-  // default sort is neither loaded in full nor re-sorted.
   readonly defaultSort: GameSort
+  // True when the server order is exactly `defaultSort`: the view then shows
+  // that order as it is, without loading every page or re-sorting. False means
+  // the view always sorts on the client, at the default too.
+  readonly serverOrdered: boolean
 }
 
 // Only a field that most entries of the view fill in is offered. UPCOMING
 // concept entries have no price, MONTHLY has none, and PURCHASED has no date.
-// PURCHASED arrives in Sony's activation-date order, which no offered field
-// describes, so Name stands in as its default label.
+// PURCHASED and WISHLIST arrive in Sony's own order, which no offered field
+// describes, so they sort on the client by their default field from the start.
 const CONFIG_BY_PATH: Readonly<Record<string, SortConfig>> = {
   '/new': {
     fields: ['date', 'price', 'name'],
     defaultSort: { field: 'date', direction: 'desc' },
+    serverOrdered: true,
   },
   '/upcoming': {
     fields: ['date', 'name'],
     defaultSort: { field: 'date', direction: 'asc' },
+    serverOrdered: true,
   },
   '/discounted': {
     fields: ['date', 'price', 'name'],
     defaultSort: { field: 'date', direction: 'desc' },
+    serverOrdered: true,
   },
   '/monthly': {
     fields: ['date', 'name'],
     defaultSort: { field: 'date', direction: 'desc' },
+    serverOrdered: true,
   },
   '/purchased': {
     fields: ['name'],
     defaultSort: { field: 'name', direction: 'asc' },
+    serverOrdered: false,
   },
   '/wishlist': {
     fields: ['date', 'price', 'name'],
     defaultSort: { field: 'date', direction: 'desc' },
+    serverOrdered: false,
   },
 }
 

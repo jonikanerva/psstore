@@ -3,18 +3,19 @@ import { isSameSort, sortConfigForPath } from '../modules/sortFields'
 
 describe('sortConfigForPath', () => {
   it.each([
-    ['/new', ['date', 'price', 'name'], 'date', 'desc'],
-    ['/upcoming', ['date', 'name'], 'date', 'asc'],
-    ['/discounted', ['date', 'price', 'name'], 'date', 'desc'],
-    ['/monthly', ['date', 'name'], 'date', 'desc'],
-    ['/purchased', ['name'], 'name', 'asc'],
-    ['/wishlist', ['date', 'price', 'name'], 'date', 'desc'],
+    ['/new', ['date', 'price', 'name'], 'date', 'desc', true],
+    ['/upcoming', ['date', 'name'], 'date', 'asc', true],
+    ['/discounted', ['date', 'price', 'name'], 'date', 'desc', true],
+    ['/monthly', ['date', 'name'], 'date', 'desc', true],
+    ['/purchased', ['name'], 'name', 'asc', false],
+    ['/wishlist', ['date', 'price', 'name'], 'date', 'desc', false],
   ])(
     'offers the fields and default of %s',
-    (path, fields, field, direction) => {
+    (path, fields, field, direction, serverOrdered) => {
       expect(sortConfigForPath(path)).toEqual({
         fields,
         defaultSort: { field, direction },
+        serverOrdered,
       })
     },
   )

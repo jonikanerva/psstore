@@ -182,35 +182,35 @@ describe('AppShell', () => {
 
   describe('sort bar', () => {
     const pillNames = () =>
-      within(screen.getByRole('group', { name: 'Sort' }))
+      within(screen.getByRole('group', { name: 'Sort:' }))
         .getAllByRole('button')
         .map((button) => button.textContent)
 
     it('offers the fields of the current route', async () => {
       await renderShellAt('/upcoming')
-      expect(pillNames()).toEqual(['Default', 'Date ↑', 'Name'])
+      expect(pillNames()).toEqual(['Reset', 'Date ↑', 'Name'])
       cleanup()
 
       await renderShellAt('/discounted')
-      expect(pillNames()).toEqual(['Default', 'Date ↓', 'Price', 'Name'])
+      expect(pillNames()).toEqual(['Reset', 'Date ↓', 'Price', 'Name'])
     })
 
     it('is hidden on the search route', async () => {
       await renderShellAt('/search')
       expect(
-        screen.queryByRole('group', { name: 'Sort' }),
+        screen.queryByRole('group', { name: 'Sort:' }),
       ).not.toBeInTheDocument()
     })
 
     it('is hidden on PURCHASED until the library list exists', async () => {
       await renderShellAt('/purchased')
       expect(
-        screen.queryByRole('group', { name: 'Sort' }),
+        screen.queryByRole('group', { name: 'Sort:' }),
       ).not.toBeInTheDocument()
     })
 
     const pressedPills = () =>
-      within(screen.getByRole('group', { name: 'Sort' }))
+      within(screen.getByRole('group', { name: 'Sort:' }))
         .getAllByRole('button')
         .filter((button) => button.getAttribute('aria-pressed') === 'true')
         .map((button) => button.textContent)
@@ -229,10 +229,10 @@ describe('AppShell', () => {
       },
     )
 
-    it('gives the Default pill no pressed state', async () => {
+    it('gives the Reset pill no pressed state', async () => {
       await renderShellAt('/discounted')
       expect(
-        screen.getByRole('button', { name: 'Default' }),
+        screen.getByRole('button', { name: 'Reset sort to the default order' }),
       ).not.toHaveAttribute('aria-pressed')
     })
 
@@ -279,16 +279,20 @@ describe('AppShell', () => {
       expect(pressedPills()).toEqual(['Name ↓'])
     })
 
-    it('restores the route default with the Default pill', async () => {
+    it('restores the route default with the Reset pill', async () => {
       await renderShellAt('/upcoming')
       fireEvent.click(screen.getByRole('button', { name: 'Sort by name' }))
       expect(pressedPills()).toEqual(['Name ↑'])
 
-      fireEvent.click(screen.getByRole('button', { name: 'Default' }))
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Reset sort to the default order' }),
+      )
       expect(screen.getByTestId('probe-sort')).toHaveTextContent('default')
       expect(pressedPills()).toEqual(['Date ↑'])
 
-      fireEvent.click(screen.getByRole('button', { name: 'Default' }))
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Reset sort to the default order' }),
+      )
       expect(screen.getByTestId('probe-sort')).toHaveTextContent('default')
       expect(pressedPills()).toEqual(['Date ↑'])
     })

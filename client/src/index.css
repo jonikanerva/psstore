@@ -717,6 +717,12 @@ body {
   background: var(--surface-color);
 }
 
+.sort-bar--label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted-text-color);
+}
+
 .sort-bar--pill {
   min-height: 24px;
   padding: 0 10px;

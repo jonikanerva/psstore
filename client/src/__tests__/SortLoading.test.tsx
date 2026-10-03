@@ -180,7 +180,7 @@ describe('sorting a paged view', () => {
     expect(fetchNewGames).toHaveBeenCalledTimes(2)
   })
 
-  it('keeps the server order and loads nothing when Default is chosen', async () => {
+  it('keeps the server order and loads nothing when Reset is chosen', async () => {
     vi.mocked(fetchNewGames).mockResolvedValueOnce(
       page(
         [
@@ -198,12 +198,14 @@ describe('sorting a paged view', () => {
       expect(cardNames()).toEqual(['Alpha', 'Charlie'])
     })
 
-    fireEvent.click(screen.getByRole('button', { name: 'Default' }))
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Reset sort to the default order' }),
+    )
     expect(cardNames()).toEqual(['Charlie', 'Alpha'])
     expect(fetchNewGames).toHaveBeenCalledTimes(1)
   })
 
-  it('stops loading when Default is chosen while pages are loading', async () => {
+  it('stops loading when Reset is chosen while pages are loading', async () => {
     const second = deferred()
     vi.mocked(fetchNewGames)
       .mockResolvedValueOnce(page([game('1', 'Charlie')], 60))
@@ -216,7 +218,9 @@ describe('sorting a paged view', () => {
     await waitFor(() => {
       expect(fetchNewGames).toHaveBeenCalledTimes(2)
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Default' }))
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Reset sort to the default order' }),
+    )
     await act(async () => {
       second.resolve(page([game('2', 'Alpha')], 120))
       await Promise.resolve()

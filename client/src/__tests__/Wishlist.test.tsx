@@ -209,7 +209,7 @@ describe('Wishlist', () => {
     }
   })
 
-  it('sorts by date and price, with entries lacking a value last', async () => {
+  it('applies the default date sort at once and sorts by every pill, entries lacking a value last', async () => {
     stubFetch(() =>
       Response.json(
         library([
@@ -237,7 +237,9 @@ describe('Wishlist', () => {
         (element) => element.textContent,
       )
     await screen.findByText('Alpha')
-    expect(names()).toEqual(['Alpha', 'Bravo', 'Gamma'])
+    // Sony's order here is Alpha, Bravo, Gamma. The default pill is Date
+    // descending, so the list is already sorted that way.
+    expect(names()).toEqual(['Gamma', 'Alpha', 'Bravo'])
     expect(screen.getByRole('link', { name: /Gamma/ })).toHaveTextContent(
       '15 Jan 2026',
     )
@@ -253,15 +255,29 @@ describe('Wishlist', () => {
     fireEvent.click(
       screen.getByRole('button', { name: 'Sort by date, ascending' }),
     )
-    expect(names()).toEqual(['Alpha', 'Bravo', 'Gamma'])
+    expect(names()).toEqual(['Gamma', 'Alpha', 'Bravo'])
 
     fireEvent.click(screen.getByRole('button', { name: 'Sort by price' }))
     expect(names()).toEqual(['Gamma', 'Alpha', 'Bravo'])
-
     fireEvent.click(
       screen.getByRole('button', { name: 'Sort by price, ascending' }),
     )
     expect(names()).toEqual(['Alpha', 'Gamma', 'Bravo'])
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sort by name' }))
+    expect(names()).toEqual(['Alpha', 'Bravo', 'Gamma'])
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Sort by name, ascending' }),
+    )
+    expect(names()).toEqual(['Gamma', 'Bravo', 'Alpha'])
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Reset sort to the default order' }),
+    )
+    expect(names()).toEqual(['Gamma', 'Alpha', 'Bravo'])
+    expect(
+      screen.getByRole('button', { name: 'Sort by date, descending' }),
+    ).toHaveAttribute('aria-pressed', 'true')
   })
 
   it('says so when the wishlist is empty', async () => {

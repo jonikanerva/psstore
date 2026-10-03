@@ -60,12 +60,16 @@ const AppShell = () => {
 
   const sortConfig = sortConfigForPath(pathname)
 
-  // `null` is the route default: the server order, with no pages loaded on
-  // purpose. Any other sort needs every page, so choosing one loads the
-  // remaining pages of the open view.
+  // `null` is the route default of a server-ordered view: the server order,
+  // with no pages loaded on purpose. Any other sort needs every page, so
+  // choosing one loads the remaining pages of the open view. A view that is not
+  // server-ordered keeps its default as an applied sort.
   const applySort = (next: GameSort) => {
     loadRef.current?.abort()
-    if (sortConfig === undefined || isSameSort(next, sortConfig.defaultSort)) {
+    if (sortConfig === undefined) {
+      return
+    }
+    if (isSameSort(next, sortConfig.defaultSort)) {
       setSortState({ pathname, sort: null })
       return
     }
@@ -83,6 +87,7 @@ const AppShell = () => {
   }
 
   const activeSort = sort ?? sortConfig?.defaultSort
+  const appliedSort = sortConfig?.serverOrdered === false ? activeSort : sort
 
   const clickField = (field: SortField) => {
     if (activeSort === undefined) {
@@ -174,7 +179,7 @@ const AppShell = () => {
       )}
       <main className="app-shell--main">
         <SearchContext.Provider value={onSearchRoute ? '' : query}>
-          <SortContext.Provider value={sort}>
+          <SortContext.Provider value={appliedSort ?? null}>
             <Outlet />
           </SortContext.Provider>
         </SearchContext.Provider>

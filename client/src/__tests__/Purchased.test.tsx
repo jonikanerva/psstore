@@ -189,13 +189,13 @@ describe('Purchased', () => {
         .getAllByRole('link')
         .map((link) => link.textContent)
         .filter((text) => ['Charlie', 'alpha', 'Bravo'].includes(text))
-    expect(names()).toEqual(['Charlie', 'alpha', 'Bravo'])
+    expect(names()).toEqual(['alpha', 'Bravo', 'Charlie'])
 
     expect(
-      within(screen.getByRole('group', { name: 'Sort' }))
+      within(screen.getByRole('group', { name: 'Sort:' }))
         .getAllByRole('button')
         .map((button) => button.textContent),
-    ).toEqual(['Default', 'Name ↑'])
+    ).toEqual(['Reset', 'Name ↑'])
     expect(
       screen.queryByRole('button', { name: /Sort by date/ }),
     ).not.toBeInTheDocument()
@@ -205,8 +205,10 @@ describe('Purchased', () => {
     )
     expect(names()).toEqual(['Charlie', 'Bravo', 'alpha'])
 
-    fireEvent.click(screen.getByRole('button', { name: 'Default' }))
-    expect(names()).toEqual(['Charlie', 'alpha', 'Bravo'])
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Reset sort to the default order' }),
+    )
+    expect(names()).toEqual(['alpha', 'Bravo', 'Charlie'])
   })
 
   it('posts the token, clears the field and loads the library', async () => {
