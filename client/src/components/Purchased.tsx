@@ -53,7 +53,6 @@ const Purchased = () => {
       games={filtered}
       label="purchased"
       showPrice={false}
-      outbound
       trailing={term === '' ? null : <SearchAllCard term={term} />}
       hasNextPage={false}
       isFetchingNextPage={false}

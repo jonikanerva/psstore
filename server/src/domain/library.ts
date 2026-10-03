@@ -1,17 +1,15 @@
-import { isValidProductId, type Game } from '@psstore/shared'
+import type { Game } from '@psstore/shared'
 import type { PurchasedEntry } from '../sony/purchasedSchema.js'
 
 // Pure mapping of the signed-in library to cards. Sony's order is kept: the
-// list carries no release date and no price. The id is the concept id when Sony
-// gives one, else the product id; `idKind` follows the id, as in the monthly
-// mapper.
+// list carries no release date and no price. The id is always the product id:
+// the internal game page resolves product ids only.
 export const mapPurchasedToGames = (
   entries: readonly PurchasedEntry[],
 ): Game[] =>
   entries.map((entry): Game => {
-    const id = entry.conceptId ?? entry.productId
     return {
-      id,
+      id: entry.productId,
       name: entry.name,
       date: '',
       url: entry.imageUrl,
@@ -27,6 +25,6 @@ export const mapPurchasedToGames = (
       preOrder: false,
       plusUpsellText: null,
       plusOffer: null,
-      idKind: isValidProductId(id) ? 'product' : 'concept',
+      idKind: 'product',
     }
   })
