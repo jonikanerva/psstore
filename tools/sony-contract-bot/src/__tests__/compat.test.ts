@@ -11,6 +11,7 @@ const GRID_HASH = 'a'.repeat(64)
 const PDP_HASH = 'b'.repeat(64)
 const PRICE_HASH = 'd'.repeat(64)
 const SEARCH_HASH = 'f'.repeat(64)
+const PURCHASED_HASH = '9'.repeat(64)
 
 const gridOperation = (feature: ContractFeature): ContractOperation => ({
   feature,
@@ -66,6 +67,31 @@ const searchOperation = (): ContractOperation => ({
   observed_status_codes: [200],
 })
 
+const purchasedOperation = (): ContractOperation => ({
+  feature: 'purchased',
+  operation_name: 'getPurchasedGameList',
+  persisted_query_hash: PURCHASED_HASH,
+  required_headers: ['x-apollo-operation-name'],
+  variables_schema: {
+    isActive: 'boolean',
+    platform: ['string'],
+    size: 'number',
+    sortBy: 'string',
+    sortDirection: 'string',
+    start: 'number',
+  },
+  sample_variables: {
+    isActive: true,
+    platform: ['ps5'],
+    size: 100,
+    sortBy: 'ACTIVE_DATE',
+    sortDirection: 'desc',
+    start: 0,
+  },
+  response_path: 'data.purchasedTitlesRetrieve.games',
+  observed_status_codes: [],
+})
+
 const baseMetadata = {
   captured_at: '2026-02-17T00:00:00.000Z',
   captured_by: 'codex',
@@ -91,6 +117,7 @@ const manifest: SonyContractManifest = {
     pdpOperation(),
     priceOperation(),
     searchOperation(),
+    purchasedOperation(),
   ],
 }
 
@@ -106,12 +133,14 @@ const serverEnvText = [
   `export const SONY_PRODUCT_PRICE_HASH =\n  '${PRICE_HASH}'`,
   "export const SONY_SEARCH_OPERATION_NAME = 'getSearchResults'",
   `export const SONY_SEARCH_HASH =\n  '${SEARCH_HASH}'`,
+  "export const SONY_PURCHASED_OPERATION_NAME = 'getPurchasedGameList'",
+  `export const SONY_PURCHASED_HASH =\n  '${PURCHASED_HASH}'`,
 ].join('\n')
 
 const context = {
   serverEnvText,
   sonyClientText:
-    "headers: { 'x-apollo-operation-name': strategy.operationName }\nreturn json.data?.categoryGridRetrieve?.concepts ?? []\nconst product = json.data?.productRetrieve\nconst search = json.data?.universalSearch",
+    "headers: { 'x-apollo-operation-name': strategy.operationName }\nreturn json.data?.categoryGridRetrieve?.concepts ?? []\nconst product = json.data?.productRetrieve\nconst search = json.data?.universalSearch\nsha256Hash: SONY_PURCHASED_HASH",
   mapperText: 'export const conceptToGame = (concept) => concept',
   serviceText: "await fetchConceptsByFeature('new', 300)",
 }
@@ -162,6 +191,7 @@ describe('validateBackendCompatibility', () => {
         },
         priceOperation(),
         searchOperation(),
+        purchasedOperation(),
       ],
     }
 
@@ -178,6 +208,7 @@ describe('validateBackendCompatibility', () => {
         { ...pdpOperation(), variables_schema: { conceptId: 'string' } },
         priceOperation(),
         searchOperation(),
+        purchasedOperation(),
       ],
     }
 
@@ -333,5 +364,97 @@ describe('validateBackendCompatibility', () => {
     expect(() => {
       validateBackendCompatibility(manifest, withoutSearchEnv)
     }).toThrow(/SONY_SEARCH_OPERATION_NAME/)
+  })
+  const withoutPurchased = () =>
+    manifest.operations.filter((op) => op.feature !== 'purchased')
+
+  it('accepts the library operation', () => {
+    expect(manifest.operations.some((op) => op.feature === 'purchased')).toBe(
+      true,
+    )
+    expect(() => {
+      validateBackendCompatibility(manifest, context)
+    }).not.toThrow()
+  })
+
+  it('rejects a manifest without the library operation', () => {
+    expect(() => {
+      validateBackendCompatibility(
+        { ...manifest, operations: withoutPurchased() },
+        context,
+      )
+    }).toThrow(/Manifest missing library operation/)
+  })
+
+  it('rejects a library operation whose hash does not match the server', () => {
+    expect(() => {
+      validateBackendCompatibility(
+        {
+          ...manifest,
+          operations: [
+            ...withoutPurchased(),
+            { ...purchasedOperation(), persisted_query_hash: '8'.repeat(64) },
+          ],
+        },
+        context,
+      )
+    }).toThrow(/Manifest missing library operation/)
+  })
+
+  it('rejects a library operation with the wrong response_path', () => {
+    expect(() => {
+      validateBackendCompatibility(
+        {
+          ...manifest,
+          operations: [
+            ...withoutPurchased(),
+            { ...purchasedOperation(), response_path: 'data.productRetrieve' },
+          ],
+        },
+        context,
+      )
+    }).toThrow(/Library operation .* response path incompatible/)
+  })
+
+  it('rejects a library operation with the wrong variables_schema', () => {
+    expect(() => {
+      validateBackendCompatibility(
+        {
+          ...manifest,
+          operations: [
+            ...withoutPurchased(),
+            {
+              ...purchasedOperation(),
+              variables_schema: { size: 'number' },
+            },
+          ],
+        },
+        context,
+      )
+    }).toThrow(/Library operation .* variables_schema incompatible/)
+  })
+
+  it('rejects when sonyClient no longer sends the library hash constant', () => {
+    expect(() => {
+      validateBackendCompatibility(manifest, {
+        ...context,
+        sonyClientText: context.sonyClientText.replace(
+          'SONY_PURCHASED_HASH',
+          '',
+        ),
+      })
+    }).toThrow(/SONY_PURCHASED_HASH/)
+  })
+
+  it('rejects when the server library env constants are unreadable', () => {
+    expect(() => {
+      validateBackendCompatibility(manifest, {
+        ...context,
+        serverEnvText: serverEnvText
+          .split('\n')
+          .filter((line) => !line.includes('SONY_PURCHASED_OPERATION_NAME'))
+          .join('\n'),
+      })
+    }).toThrow(/SONY_PURCHASED_OPERATION_NAME/)
   })
 })

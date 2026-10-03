@@ -7,6 +7,7 @@ export const TRACKED_OPERATIONS: readonly string[] = [
   'metGetProductById',
   'productRetrieveForCtasWithPrice',
   'getSearchResults',
+  'getPurchasedGameList',
 ]
 
 export const filterTrackedOperations = (
