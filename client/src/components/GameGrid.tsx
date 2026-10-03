@@ -1,5 +1,5 @@
 import type { Game } from '@psstore/shared'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import GameCard from './GameCard'
 import ScrollToTopOnMount from './ScrollToTopOnMount'
 import Loading from './Spinner'
@@ -8,6 +8,7 @@ interface GameGridProps {
   games: readonly Game[]
   label: string
   showPrice?: boolean
+  trailing?: ReactNode
   hasNextPage: boolean
   isFetchingNextPage: boolean
   fetchNextPage: () => unknown
@@ -19,6 +20,7 @@ const GameGrid = ({
   games,
   label,
   showPrice = true,
+  trailing = null,
   hasNextPage,
   isFetchingNextPage,
   fetchNextPage,
@@ -54,6 +56,7 @@ const GameGrid = ({
           {games.map((game) => (
             <GameCard key={game.id} game={game} showPrice={showPrice} />
           ))}
+          {trailing}
         </div>
         <div ref={sentinelRef} className="games--sentinel">
           {isFetchingNextPage && <Loading loading />}

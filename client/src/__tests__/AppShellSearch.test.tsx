@@ -64,8 +64,6 @@ const submit = () => {
   fireEvent.submit(screen.getByRole('search'))
 }
 
-const rowName = (term: string) => `Search all PS5 games for "${term}"`
-
 afterEach(() => {
   cleanup()
 })
@@ -78,25 +76,19 @@ describe('AppShell global search', () => {
     expect(field()).toHaveAttribute('maxlength', '100')
   })
 
-  it('shows the link row for a non-empty term and keeps the live filter', async () => {
+  it('keeps the header unchanged while typing and searching', async () => {
     await renderAt('/new')
+    const header = screen.getByRole('banner')
+    const before = header.innerHTML.replace(/value="[^"]*"/, '')
 
     type('elden')
 
-    const row = screen.getByRole('link', { name: rowName('elden') })
-    expect(row).toHaveAttribute('href', '/search?q=elden')
+    expect(header.innerHTML.replace(/value="[^"]*"/, '')).toBe(before)
+    expect(screen.queryByRole('link', { name: /Search all/ })).toBeNull()
     expect(screen.getByTestId('filter')).toHaveTextContent('elden')
   })
 
-  it('shows no row for an empty or whitespace-only term', async () => {
-    await renderAt('/new')
-
-    expect(screen.queryByRole('link', { name: /Search all/ })).toBeNull()
-    type('   ')
-    expect(screen.queryByRole('link', { name: /Search all/ })).toBeNull()
-  })
-
-  it('submits to the same destination as the row', async () => {
+  it('submits to the search route on Enter', async () => {
     const router = await renderAt('/new')
 
     type('  elden  ')
@@ -168,7 +160,7 @@ describe('AppShell global search', () => {
     expect(field().value).toBe('')
   })
 
-  it('caps an over-long term at 100 characters in the row and the URL', async () => {
+  it('caps an over-long term at 100 characters in the URL', async () => {
     const router = await renderAt('/new')
     const long = 'a'.repeat(120)
 
@@ -179,17 +171,6 @@ describe('AppShell global search', () => {
     })
 
     expect(readSearchTerm(router.state.location.search)).toBe('a'.repeat(100))
-  })
-
-  it('renders special characters in the row as literal text', async () => {
-    await renderAt('/new')
-    const term = '<b>x</b> & "y"'
-
-    type(term)
-
-    const row = screen.getByRole('link', { name: rowName(term) })
-    expect(row.querySelector('b')).toBeNull()
-    expect(row.textContent).toBe(rowName(term))
   })
 
   it('keeps a numeric-looking term a string through the URL', async () => {

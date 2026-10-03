@@ -1,5 +1,5 @@
 import { onlineManager } from '@tanstack/react-query'
-import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, screen } from '@testing-library/react'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import type { Game, PageResult } from '@psstore/shared'
 import SearchResults from '../components/SearchResults'
@@ -93,18 +93,24 @@ describe('SearchResults', () => {
     expect(url.searchParams.get('size')).toBe('50')
   })
 
-  it('renders the term as literal text', async () => {
-    stubFetch(() => respond(page([], null)))
+  it('renders the term as literal text in the heading and the empty message', async () => {
     const term = '<b>x</b> & "y"'
-    const { container } = await renderWithRouter(<SearchResults term={term} />)
+    stubFetch(() => respond(page([game('EP1-A', 'Alpha')], null)))
+    const found = await renderWithRouter(<SearchResults term={term} />)
+
+    expect((await screen.findByRole('heading', { level: 1 })).textContent).toBe(
+      `Results for "${term}"`,
+    )
+    expect(found.container.querySelector('b')).toBeNull()
+    found.unmount()
+
+    stubFetch(() => respond(page([], null)))
+    const none = await renderWithRouter(<SearchResults term={term} />)
 
     expect(
       await screen.findByText(`No PS5 games found for "${term}"`),
     ).toBeInTheDocument()
-    expect(container.querySelector('b')).toBeNull()
-    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
-      `Search results for "${term}"`,
-    )
+    expect(none.container.querySelector('b')).toBeNull()
   })
 
   it('shows the empty state for a last page without games', async () => {
@@ -143,15 +149,39 @@ describe('SearchResults', () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
-  it('moves focus to the heading on landing', async () => {
+  it('never moves focus and keeps the heading out of the tab order', async () => {
     stubFetch(() => respond(page([game('EP1-A', 'Alpha')], null)))
     await renderWithRouter(<SearchResults term="alp" />)
 
-    const heading = screen.getByRole('heading', { level: 1 })
-    await waitFor(() => {
-      expect(heading).toHaveFocus()
-    })
-    expect(heading).toHaveAttribute('tabindex', '-1')
+    const heading = await screen.findByRole('heading', { level: 1 })
+    expect(heading).not.toHaveFocus()
+    expect(heading).not.toHaveAttribute('tabindex')
+    expect(document.body).toHaveFocus()
+  })
+
+  it('has one heading with the term and announces the count in a live region', async () => {
+    stubFetch(() => respond(page([game('EP1-A', 'Alpha')], null)))
+    await renderWithRouter(<SearchResults term="alp" />)
+
+    await screen.findByText('Alpha')
+    expect(screen.getAllByRole('heading')).toHaveLength(1)
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
+      'Results for "alp"',
+    )
+    expect(screen.getByRole('status')).toHaveTextContent('1 PS5 game found')
+  })
+
+  it('shows one plain message and no heading when nothing matches', async () => {
+    stubFetch(() => respond(page([], null)))
+    const { container } = await renderWithRouter(
+      <SearchResults term="sniperss" />,
+    )
+
+    const message = await screen.findByText('No PS5 games found for "sniperss"')
+    expect(message).toBeInTheDocument()
+    expect(screen.queryByRole('heading')).toBeNull()
+    expect(screen.getByRole('status')).toContainElement(message)
+    expect(container.textContent.split('sniperss')).toHaveLength(2)
   })
 
   it('stops at a null nextOffset even when the page holds fewer than 50 games', async () => {

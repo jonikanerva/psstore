@@ -1,9 +1,4 @@
-import {
-  Link,
-  Outlet,
-  useNavigate,
-  useRouterState,
-} from '@tanstack/react-router'
+import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { SearchContext } from '../modules/searchContext'
 import {
@@ -64,15 +59,6 @@ const AppShell = () => {
               setQuery(e.currentTarget.value)
             }}
           />
-          {term !== '' && !onSearchRoute && (
-            <Link
-              to={SEARCH_PATH}
-              search={{ q: term }}
-              className="app-shell--search-all"
-            >
-              Search all PS5 games for &quot;{term}&quot;
-            </Link>
-          )}
         </form>
       </header>
       <main className="app-shell--main">

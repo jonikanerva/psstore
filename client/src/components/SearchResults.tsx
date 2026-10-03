@@ -1,6 +1,6 @@
 import type { Game } from '@psstore/shared'
 import { useInfiniteQuery } from '@tanstack/react-query'
-import { useEffect, useRef } from 'react'
+import { useEffect } from 'react'
 import { fetchSearchGames } from '../modules/psnStore'
 import Error from './Error'
 import GameGrid from './GameGrid'
@@ -29,10 +29,9 @@ const countLabel = (count: number, more: boolean): string =>
 
 // Results of the global search. The term in the URL is the only source of
 // truth. The query key stays outside the persister allow-list, so a term never
-// reaches localStorage.
+// reaches localStorage. The live region stays mounted so that a screen reader
+// announces each outcome; focus never moves.
 const SearchResults = ({ term }: SearchResultsProps) => {
-  const headingRef = useRef<HTMLHeadingElement>(null)
-
   const {
     data,
     isPending,
@@ -51,10 +50,6 @@ const SearchResults = ({ term }: SearchResultsProps) => {
     gcTime: SEARCH_GC_TIME_MS,
   })
 
-  useEffect(() => {
-    headingRef.current?.focus()
-  }, [term])
-
   const games =
     data === undefined
       ? []
@@ -68,12 +63,6 @@ const SearchResults = ({ term }: SearchResultsProps) => {
     }
   }, [awaitingMore, isFetchingNextPage, isFetchNextPageError, fetchNextPage])
 
-  const heading = (
-    <h1 ref={headingRef} tabIndex={-1} className="search-results--heading">
-      Search results for &quot;{term}&quot;
-    </h1>
-  )
-
   const retry = (action: () => unknown) => (
     <button
       type="button"
@@ -86,55 +75,35 @@ const SearchResults = ({ term }: SearchResultsProps) => {
     </button>
   )
 
-  if (isPending && fetchStatus === 'paused') {
-    return (
-      <div className="search-results">
-        {heading}
-        <Error message="You are offline. Search needs a connection." />
-        {retry(refetch)}
-      </div>
-    )
-  }
+  const offline = isPending && fetchStatus === 'paused'
+  const failed = isError && data === undefined
+  const empty = data !== undefined && games.length === 0 && !hasNextPage
+  const showResults = games.length > 0
 
-  if (isPending) {
-    return (
-      <div className="search-results">
-        {heading}
-        <Loading loading />
-      </div>
-    )
-  }
-
-  if (isError && data === undefined) {
-    return (
-      <div className="search-results">
-        {heading}
-        <Error message="Search failed" />
-        {retry(refetch)}
-      </div>
-    )
-  }
-
-  if (games.length === 0 && !hasNextPage) {
-    return (
-      <div className="search-results">
-        {heading}
-        <div role="status">
-          <Error message={`No PS5 games found for "${term}"`} />
-        </div>
-      </div>
-    )
-  }
+  const status = offline ? (
+    <Error message="You are offline. Search needs a connection." />
+  ) : failed ? (
+    <Error message="Search failed" />
+  ) : empty ? (
+    <Error message={`No PS5 games found for "${term}"`} />
+  ) : showResults ? (
+    countLabel(games.length, hasNextPage)
+  ) : null
 
   return (
     <div className="search-results">
-      {heading}
-      <p role="status" className="search-results--count">
-        {games.length === 0 ? '' : countLabel(games.length, hasNextPage)}
-      </p>
-      {games.length === 0 ? (
-        <Loading loading={!isFetchNextPageError} />
-      ) : (
+      {showResults && (
+        <h1 className="search-results--heading">
+          Results for &quot;{term}&quot;
+        </h1>
+      )}
+      <div role="status" className="search-results--status">
+        {status}
+      </div>
+      {(offline || failed) && retry(refetch)}
+      {isPending && !offline && <Loading loading />}
+      {awaitingMore && !isFetchNextPageError && <Loading loading />}
+      {showResults && (
         <GameGrid
           games={games}
           label="search"

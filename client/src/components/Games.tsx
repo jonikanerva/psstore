@@ -3,7 +3,9 @@ import { filterGamesByName } from '@psstore/shared'
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { useSearchQuery } from '../modules/searchContext'
 import Error from './Error'
+import { normalizeSearchTerm } from '../modules/searchTerm'
 import GameGrid from './GameGrid'
+import SearchAllCard from './SearchAllCard'
 import Loading from './Spinner'
 
 const PAGE_SIZE = 60
@@ -50,7 +52,9 @@ const Games = ({
   const games = data.pages.flatMap((page) => page.games)
   const filtered = filterGamesByName(games, query)
 
-  if (filtered.length === 0) {
+  const term = normalizeSearchTerm(query)
+
+  if (filtered.length === 0 && term === '') {
     return <Error message={emptyMessage} />
   }
 
@@ -59,6 +63,7 @@ const Games = ({
       games={filtered}
       label={feature}
       showPrice={feature !== 'monthly'}
+      trailing={term === '' ? null : <SearchAllCard term={term} />}
       hasNextPage={hasNextPage}
       isFetchingNextPage={isFetchingNextPage}
       fetchNextPage={fetchNextPage}
