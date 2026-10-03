@@ -1,4 +1,5 @@
 import { Result, Schema } from 'effect'
+import { mediaSchema } from './categoryGridSchema.js'
 
 /**
  * Effect Schema boundary schema for Sony's `data.productRetrieve` node
@@ -26,6 +27,8 @@ const sonyLocalizedGenreSchema = Schema.Struct({
 
 export const productRetrieveSchema = Schema.Struct({
   id: Schema.optional(Schema.NullOr(Schema.String)),
+  name: Schema.optional(Schema.NullOr(Schema.String)),
+  media: Schema.optional(Schema.NullOr(Schema.Array(mediaSchema))),
   releaseDate: Schema.optional(Schema.NullOr(Schema.String)),
   publisherName: Schema.optional(Schema.NullOr(Schema.String)),
   storeDisplayClassification: Schema.optional(Schema.NullOr(Schema.String)),

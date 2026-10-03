@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { parsePlusOffer } from '../sony/productPriceSchema.js'
+import {
+  parsePlusOffer,
+  parseProductPrice,
+} from '../sony/productPriceSchema.js'
 import discountPreorder from './fixtures/productPriceDiscountPreorder.golden.json' with { type: 'json' }
 import discountReleased from './fixtures/productPriceDiscountReleased.golden.json' with { type: 'json' }
 import included from './fixtures/productPriceIncluded.golden.json' with { type: 'json' }
@@ -139,5 +142,118 @@ describe('parsePlusOffer on synthetic malformed input', () => {
       kind: 'price',
       price: nbsp,
     })
+  })
+})
+
+describe('parseProductPrice', () => {
+  const cta = (
+    price: Record<string, unknown>,
+    type = 'ADD_TO_CART',
+  ): unknown => ({
+    type,
+    price: {
+      applicability: 'APPLICABLE',
+      basePrice: '€39,99',
+      discountedPrice: '€39,99',
+      displayDiscountText: null,
+      isTiedToSubscription: false,
+      serviceBranding: ['NONE'],
+      ...price,
+    },
+  })
+
+  it('reads the standard price next to a Plus discount on real captures', () => {
+    expect(parseProductPrice(discountReleased)).toEqual({
+      plusOffer: { kind: 'price', price: '€17,95' },
+      standard: {
+        basePrice: '€19,95',
+        discountedPrice: '€19,95',
+        discountText: '',
+      },
+    })
+    expect(parseProductPrice(discountPreorder).standard).toEqual({
+      basePrice: '€49,95',
+      discountedPrice: '€49,95',
+      discountText: '',
+    })
+  })
+
+  it('reads a real standard sale from the trial capture', () => {
+    expect(parseProductPrice(trial)).toEqual({
+      plusOffer: null,
+      standard: {
+        basePrice: '€4,95',
+        discountedPrice: '€3,96',
+        discountText: '',
+      },
+    })
+  })
+
+  it('has no standard price when only subscription CTAs exist', () => {
+    expect(parseProductPrice(included).plusOffer).toEqual({ kind: 'included' })
+    expect(parseProductPrice(plusOnly)).toEqual({
+      plusOffer: { kind: 'included' },
+      standard: null,
+    })
+    expect(parseProductPrice(otherSubscription)).toEqual({
+      plusOffer: null,
+      standard: null,
+    })
+  })
+
+  it('has no standard price without webctas or on a malformed body', () => {
+    const none = { plusOffer: null, standard: null }
+    expect(parseProductPrice(wrap(undefined))).toEqual(none)
+    expect(parseProductPrice(wrap(null))).toEqual(none)
+    expect(parseProductPrice(wrap([]))).toEqual(none)
+    expect(parseProductPrice(null)).toEqual(none)
+    expect(parseProductPrice({ data: { productRetrieve: null } })).toEqual(none)
+  })
+
+  it('ignores a lone UPSELL CTA', () => {
+    expect(parseProductPrice(wrap([plusCta({})])).standard).toBeNull()
+  })
+
+  it('reads a normal ADD_TO_CART CTA', () => {
+    expect(parseProductPrice(wrap([cta({})])).standard).toEqual({
+      basePrice: '€39,99',
+      discountedPrice: '€39,99',
+      discountText: '',
+    })
+  })
+
+  it('keeps the Sony strings of a standard sale', () => {
+    const body = wrap([
+      cta({
+        basePrice: '€39,99',
+        discountedPrice: '€19,99',
+        displayDiscountText: '-50%',
+      }),
+    ])
+    expect(parseProductPrice(body).standard).toEqual({
+      basePrice: '€39,99',
+      discountedPrice: '€19,99',
+      discountText: '-50%',
+    })
+  })
+
+  it('keeps the Free strings of a free game', () => {
+    const body = wrap([
+      cta({ basePrice: 'Free', discountedPrice: 'Free' }, 'DOWNLOAD'),
+    ])
+    expect(parseProductPrice(body).standard).toEqual({
+      basePrice: 'Free',
+      discountedPrice: 'Free',
+      discountText: '',
+    })
+  })
+
+  it('skips a subscription-tied CTA and a CTA without price strings', () => {
+    const body = wrap([
+      cta({ isTiedToSubscription: true }),
+      cta({ basePrice: null, discountedPrice: null }),
+      cta({ basePrice: '€5,00', discountedPrice: '€5,00' }),
+    ])
+    expect(parseProductPrice(body).standard?.basePrice).toBe('€5,00')
   })
 })

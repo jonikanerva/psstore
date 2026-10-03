@@ -7,10 +7,12 @@ import {
   SONY_TIMEOUT_MS,
 } from '../config/env.js'
 import {
+  isPs5Game,
   mapConceptsToGames,
   mapUpcomingConceptsToGames,
 } from '../domain/listing.js'
 import { fetchWithRetry } from '../lib/http.js'
+import { productDetailToGame } from '../sony/mapper.js'
 import { buildStrategies, type SonyFeature } from '../sony/queryStrategies.js'
 import {
   SonyClient,
@@ -29,7 +31,8 @@ import {
 // and diffs the manifest against itself.
 //
 // Load fence: exactly one raw fetch per feature + one PDP fetch + one search
-// page per term. NEVER drive GamesServiceLive (its enrichment fans out at
+// page per term + two product-id lookups (detail and price for one search-only
+// PS5 id, detail for one PS4-only id). NEVER drive GamesServiceLive (its enrichment fans out at
 // concurrency:'unbounded' -> dozens-to-hundreds of real calls = a load test).
 
 const SMOKE = process.env['SMOKE'] === '1'
@@ -175,16 +178,57 @@ describeSmoke(
 
     it('PRICE: fetchProductPrice resolves the Plus offer for a known SKU', async () => {
       const sku = 'EP2640-PPSA29380_00-0000000000000000'
-      const offer = await Effect.runPromise(
+      const price = await Effect.runPromise(
         SonyClient.pipe(
           Effect.flatMap((client) => client.fetchProductPrice(sku)),
           Effect.provide(SonyClientLive),
         ),
       )
       globalThis.console.log(
-        `[test:live] PRICE sku=${sku} offer=${JSON.stringify(offer)}`,
+        `[test:live] PRICE sku=${sku} price=${JSON.stringify(price)}`,
       )
-      expect(offer).not.toBeUndefined()
+      expect(price.plusOffer).not.toBeUndefined()
+      expect(price.standard).not.toBeUndefined()
+    }, 20_000)
+
+    it('PRODUCT-ID: a search-only cross-generation id resolves to a PS5 game with a name and a cover', async () => {
+      const id = 'EP0002-PPSA02410_00-DESTINYTHEGAME02'
+      const [detail, price] = await Effect.runPromise(
+        SonyClient.pipe(
+          Effect.flatMap((client) =>
+            Effect.all([
+              client.fetchProductDetail(id),
+              client.fetchProductPrice(id),
+            ]),
+          ),
+          Effect.provide(SonyClientLive),
+        ),
+      )
+      expect(
+        isPs5Game(detail.platforms, detail.storeDisplayClassification),
+      ).toBe(true)
+      const game = productDetailToGame(id, detail, price.standard)
+      expect(game.name).not.toBe('')
+      expect(game.url).not.toBe('')
+      globalThis.console.log(
+        `[test:live] PRODUCT-ID sku=${id} name=${game.name} platforms=${JSON.stringify(detail.platforms)} price=${game.price}`,
+      )
+    }, 20_000)
+
+    it('PRODUCT-ID: a PS4-only id is not a PS5 game', async () => {
+      const id = 'EP9000-CUSA00207_00-BLOODBORNE0000EU'
+      const detail = await Effect.runPromise(
+        SonyClient.pipe(
+          Effect.flatMap((client) => client.fetchProductDetail(id)),
+          Effect.provide(SonyClientLive),
+        ),
+      )
+      expect(
+        isPs5Game(detail.platforms, detail.storeDisplayClassification),
+      ).toBe(false)
+      globalThis.console.log(
+        `[test:live] PRODUCT-ID sku=${id} platforms=${JSON.stringify(detail.platforms)}`,
+      )
     }, 20_000)
   },
 )

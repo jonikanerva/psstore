@@ -276,7 +276,10 @@ describe('SonyClientLive classification', () => {
 
     expect(Exit.isSuccess(result)).toBe(true)
     if (Exit.isSuccess(result)) {
-      expect(result.value).toEqual({ kind: 'price', price: '€44,95' })
+      expect(result.value.plusOffer).toEqual({
+        kind: 'price',
+        price: '€44,95',
+      })
     }
   })
 

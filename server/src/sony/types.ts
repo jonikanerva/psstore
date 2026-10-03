@@ -3,6 +3,8 @@
 // the decoder and the value types stay in lockstep (a drift is a compile error
 // — STACK.md §2). The product-detail value types below remain hand-written and
 // pair with productDetailSchema.ts.
+import type { Media } from './categoryGridSchema.js'
+
 export type {
   CategoryGridProduct,
   Concept,
@@ -23,6 +25,8 @@ export interface SonyLocalizedGenre {
 
 export interface ProductDetail {
   id?: string | undefined
+  name?: string | undefined
+  media?: Media[] | undefined
   releaseDate?: string | undefined
   publisherName?: string | undefined
   storeDisplayClassification?: string | undefined

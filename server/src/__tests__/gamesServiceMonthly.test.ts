@@ -47,6 +47,7 @@ const harness = (
     fetchProductDetail: () =>
       Effect.succeed({
         releaseDate: '2025-01-01T00:00:00Z',
+        media: [],
         genres: ['Action'],
         description: 'long text',
       }),
@@ -62,7 +63,10 @@ const harness = (
         counts.price += 1
         return opts.priceFails === true
           ? Effect.fail(new UpstreamUnavailable({ message: 'price down' }))
-          : Effect.succeed({ kind: 'included' as const })
+          : Effect.succeed({
+              plusOffer: { kind: 'included' as const },
+              standard: null,
+            })
       }),
   })
   const capture = Logger.make(({ logLevel, message }) => {

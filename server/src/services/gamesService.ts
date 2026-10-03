@@ -8,11 +8,12 @@ import { Cache, Context, Duration, Effect, Exit, Layer, Schema } from 'effect'
 import { CACHE_TTL, SONY_SEARCH_MAX_PAGE_SIZE } from '../config/env.js'
 import {
   GameNotFound,
+  UpstreamUnavailable,
   type UpstreamQueryRotated,
   type UpstreamRateLimited,
-  type UpstreamUnavailable,
 } from '../errors/errors.js'
-import { conceptToGame } from '../sony/mapper.js'
+import { conceptToGame, productDetailToGame } from '../sony/mapper.js'
+import type { ProductPrice } from '../sony/productPriceSchema.js'
 import { SonyClient, type ProductDetailResult } from '../sony/sonyClient.js'
 import type { Concept } from '../sony/types.js'
 import {
@@ -20,6 +21,7 @@ import {
   conceptProductId,
   DISCOUNTED_GAME_CLASSIFICATIONS,
   isPs5Game,
+  isValidProductId,
   mapConceptsToGames,
   mapMonthlyToGames,
   mapUpcomingConceptsToGames,
@@ -46,6 +48,11 @@ const LIST_PAGE_SIZE = 120
 const DETAIL_TTL = Duration.hours(6)
 const PRICE_TTL = Duration.minutes(10)
 const PRICE_FAILURE_TTL = Duration.seconds(30)
+// Detail read only by the product-id fallback. An id Sony does not know
+// answers 200 with no data; that miss is cached shorter than a real product.
+const STRICT_DETAIL_TTL = Duration.hours(6)
+const STRICT_DETAIL_MISS_TTL = Duration.minutes(5)
+const STRICT_DETAIL_FAILURE_TTL = Duration.seconds(30)
 const MONTHLY_TTL = Duration.hours(1)
 const MONTHLY_FAILURE_TTL = Duration.seconds(30)
 // Raw search pages read for one request when pages narrow to zero games.
@@ -134,6 +141,7 @@ export const GamesServiceLive: Layer.Layer<GamesService, never, SonyClient> =
             sony.fetchProductDetail(productId).pipe(
               Effect.catch(() =>
                 Effect.succeed<ProductDetailResult>({
+                  media: [],
                   genres: [],
                   description: '',
                 }),
@@ -153,6 +161,25 @@ export const GamesServiceLive: Layer.Layer<GamesService, never, SonyClient> =
             Exit.isSuccess(exit) ? PRICE_TTL : PRICE_FAILURE_TTL,
         },
       )
+
+      // Product detail for the product-id fallback. Unlike productDetailCache a
+      // failure stays in the error channel, so an outage is never read as
+      // "no such game".
+      const strictDetailCache = yield* Cache.makeWith<
+        string,
+        ProductDetailResult,
+        UpstreamError
+      >((productId) => sony.fetchProductDetail(productId), {
+        capacity: 1_000,
+        timeToLive: (exit) => {
+          if (Exit.isFailure(exit)) {
+            return STRICT_DETAIL_FAILURE_TTL
+          }
+          return (exit.value.platforms ?? []).length === 0
+            ? STRICT_DETAIL_MISS_TTL
+            : STRICT_DETAIL_TTL
+        },
+      })
 
       // The whole monthly list under one key; a failure is cached briefly so an
       // outage is not retried on every request.
@@ -188,6 +215,7 @@ export const GamesServiceLive: Layer.Layer<GamesService, never, SonyClient> =
       const plusOfferFor = (game: Game): Effect.Effect<PlusOffer | null> =>
         game.idKind === 'product'
           ? Cache.get(productPriceCache, game.id).pipe(
+              Effect.map((price) => price.plusOffer),
               Effect.catch((error) =>
                 Effect.logWarning('plus offer lookup failed', {
                   reason: error._tag,
@@ -430,6 +458,59 @@ export const GamesServiceLive: Layer.Layer<GamesService, never, SonyClient> =
           ),
         )
 
+      // The price of a game found by product id only. A failed price lookup
+      // leaves the game without a price instead of failing the page.
+      const priceOrNone = (productId: string): Effect.Effect<ProductPrice> =>
+        Cache.get(productPriceCache, productId).pipe(
+          Effect.catch((error) =>
+            Effect.logWarning('product price lookup failed', {
+              reason: error._tag,
+            }).pipe(
+              Effect.as<ProductPrice>({ plusOffer: null, standard: null }),
+            ),
+          ),
+        )
+
+      // Runs only after every list missed. Upstream failure propagates; only a
+      // valid id that Sony proves is not a PS5 game is GameNotFound.
+      const fromProductId = (
+        id: string,
+      ): Effect.Effect<Game, GameNotFound | UpstreamError> =>
+        Effect.gen(function* () {
+          if (!isValidProductId(id)) {
+            return yield* Effect.fail(new GameNotFound({ id }))
+          }
+
+          const [detail, price] = yield* Effect.all(
+            [Cache.get(strictDetailCache, id), priceOrNone(id)],
+            { concurrency: 'unbounded' },
+          )
+
+          if (
+            (detail.platforms ?? []).length === 0 ||
+            !isPs5Game(detail.platforms, detail.storeDisplayClassification)
+          ) {
+            return yield* Effect.fail(new GameNotFound({ id }))
+          }
+
+          if (!detail.name) {
+            yield* Effect.logWarning('product detail without a name', {
+              reason: 'empty_name',
+            })
+            return yield* Effect.fail(
+              new UpstreamUnavailable({
+                message: 'Sony returned a PS5 product without a name',
+              }),
+            )
+          }
+
+          return decodeGame({
+            ...productDetailToGame(id, detail, price.standard),
+            description: detail.description,
+            plusOffer: price.plusOffer,
+          })
+        })
+
       const getGameById = (
         id: string,
       ): Effect.Effect<Game, GameNotFound | UpstreamError> =>
@@ -454,7 +535,7 @@ export const GamesServiceLive: Layer.Layer<GamesService, never, SonyClient> =
             return decodeGame(yield* enrichWithDetail(monthlyGame))
           }
 
-          return yield* Effect.fail(new GameNotFound({ id }))
+          return yield* fromProductId(id)
         })
 
       return GamesService.of({

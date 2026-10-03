@@ -24,6 +24,13 @@ minimal. `goldenDecode.test.ts` asserts the boundary decodes + maps them.
 | `categoryGridBrokenElement.golden.json` | `concepts` + 1 synthetic                | the concepts fixture plus ONE synthetic deliberately-broken element (id of the wrong type) so the per-element `dropped > 0` path is asserted   |
 | `productDetail.golden.json`             | `productRetrieve` (`metGetProductById`) | real LONG/SHORT/LEGAL/COMPATIBILITY_NOTICE descriptions + genres + a real `null` field (`backwardsCompatibilityCategory`)                      |
 
+## Synthetic product fixture
+
+`productDetailCrossGen.synthetic.json` is a hand-written `metGetProductById`
+response with the live shape: `name`, `platforms` with PS4 and PS5, and a flat
+top-level `media` list whose entries may hold a nested `media` list. It holds
+only synthetic values and `example.invalid` URLs. No real capture is involved.
+
 ## Search fixture
 
 `searchResults.golden.json` is a trimmed response of the search operation

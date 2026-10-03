@@ -9,6 +9,8 @@ import { Result, Schema } from 'effect'
  */
 const ctaPriceSchema = Schema.Struct({
   applicability: Schema.optional(Schema.NullOr(Schema.String)),
+  basePrice: Schema.optional(Schema.NullOr(Schema.String)),
+  displayDiscountText: Schema.optional(Schema.NullOr(Schema.String)),
   discountedPrice: Schema.optional(Schema.NullOr(Schema.String)),
   isTiedToSubscription: Schema.optional(Schema.NullOr(Schema.Boolean)),
   serviceBranding: Schema.optional(
@@ -77,33 +79,81 @@ const offerFromCta = (cta: Cta): PlusOffer | null => {
 }
 
 /**
- * Derive the PS Plus offer from a full GraphQL response body. Returns `null`
- * for a missing or malformed `data.productRetrieve` node and when no CTA is a
- * PS Plus offer. The price text is Sony's string, never recomputed.
+ * The standard (non-subscription) price of a product, as Sony's verbatim
+ * strings. An absent value is the empty string.
  */
-export const parsePlusOffer = (json: unknown): PlusOffer | null => {
+export interface StandardPrice {
+  readonly basePrice: string
+  readonly discountedPrice: string
+  readonly discountText: string
+}
+
+export interface ProductPrice {
+  readonly plusOffer: PlusOffer | null
+  readonly standard: StandardPrice | null
+}
+
+const text = (value: string | null | undefined): string => value ?? ''
+
+const standardFromCta = (cta: Cta): StandardPrice | null => {
+  const price = cta.price
+  if (
+    price === null ||
+    price === undefined ||
+    price.applicability === 'UPSELL' ||
+    price.isTiedToSubscription === true
+  ) {
+    return null
+  }
+
+  const standard: StandardPrice = {
+    basePrice: text(price.basePrice),
+    discountedPrice: text(price.discountedPrice),
+    discountText: text(price.displayDiscountText),
+  }
+  return standard.basePrice === '' && standard.discountedPrice === ''
+    ? null
+    : standard
+}
+
+const decodedCtas = (json: unknown): readonly Cta[] => {
   const envelope = decodeEnvelope(json)
   const node = Result.isSuccess(envelope)
     ? envelope.success.data?.productRetrieve
     : null
   if (node === null || node === undefined) {
-    return null
+    return []
   }
 
   const decoded = decodeNode(node)
   if (Result.isFailure(decoded)) {
-    return null
+    return []
   }
 
-  for (const entry of decoded.success.webctas ?? []) {
+  return (decoded.success.webctas ?? []).flatMap((entry) => {
     const cta = decodeCta(entry)
-    if (Result.isSuccess(cta)) {
-      const offer = offerFromCta(cta.success)
-      if (offer !== null) {
-        return offer
-      }
-    }
-  }
-
-  return null
+    return Result.isSuccess(cta) ? [cta.success] : []
+  })
 }
+
+/**
+ * Derive the PS Plus offer and the standard price from a full GraphQL
+ * response body. The standard price is the first CTA that is neither a
+ * subscription upsell nor tied to a subscription. A missing or malformed node
+ * gives no offer and no standard price.
+ */
+export const parseProductPrice = (json: unknown): ProductPrice => {
+  const ctas = decodedCtas(json)
+  return {
+    plusOffer: ctas.map(offerFromCta).find((offer) => offer !== null) ?? null,
+    standard: ctas.map(standardFromCta).find((price) => price !== null) ?? null,
+  }
+}
+
+/**
+ * Derive the PS Plus offer from a full GraphQL response body. Returns `null`
+ * for a missing or malformed `data.productRetrieve` node and when no CTA is a
+ * PS Plus offer. The price text is Sony's string, never recomputed.
+ */
+export const parsePlusOffer = (json: unknown): PlusOffer | null =>
+  parseProductPrice(json).plusOffer
