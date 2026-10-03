@@ -191,19 +191,22 @@ describe('Purchased', () => {
         .filter((text) => ['Charlie', 'alpha', 'Bravo'].includes(text))
     expect(names()).toEqual(['Charlie', 'alpha', 'Bravo'])
 
-    const pill = await screen.findByRole('button', { name: 'Sort by name' })
     expect(
       within(screen.getByRole('group', { name: 'Sort' }))
         .getAllByRole('button')
         .map((button) => button.textContent),
-    ).toEqual(['Default', 'Name'])
-    fireEvent.click(pill)
-    expect(names()).toEqual(['alpha', 'Bravo', 'Charlie'])
+    ).toEqual(['Default', 'Name ↑'])
+    expect(
+      screen.queryByRole('button', { name: /Sort by date/ }),
+    ).not.toBeInTheDocument()
 
     fireEvent.click(
-      screen.getByRole('button', { name: 'Sort by name, ascending' }),
+      await screen.findByRole('button', { name: 'Sort by name, ascending' }),
     )
     expect(names()).toEqual(['Charlie', 'Bravo', 'alpha'])
+
+    fireEvent.click(screen.getByRole('button', { name: 'Default' }))
+    expect(names()).toEqual(['Charlie', 'alpha', 'Bravo'])
   })
 
   it('posts the token, clears the field and loads the library', async () => {

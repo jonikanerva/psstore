@@ -1,21 +1,51 @@
 import { describe, expect, it } from 'vitest'
-import { sortFieldsForPath } from '../modules/sortFields'
+import { isSameSort, sortConfigForPath } from '../modules/sortFields'
 
-describe('sortFieldsForPath', () => {
+describe('sortConfigForPath', () => {
   it.each([
-    ['/new', ['date', 'price', 'name']],
-    ['/discounted', ['date', 'price', 'name']],
-    ['/upcoming', ['date', 'name']],
-    ['/monthly', ['date', 'name']],
-    ['/purchased', ['name']],
-  ])('offers the agreed fields on %s', (path, fields) => {
-    expect(sortFieldsForPath(path)).toEqual(fields)
+    ['/new', ['date', 'price', 'name'], 'date', 'desc'],
+    ['/upcoming', ['date', 'name'], 'date', 'asc'],
+    ['/discounted', ['date', 'price', 'name'], 'date', 'desc'],
+    ['/monthly', ['date', 'name'], 'date', 'desc'],
+    ['/purchased', ['name'], 'name', 'asc'],
+    ['/wishlist', ['date', 'price', 'name'], 'date', 'desc'],
+  ])(
+    'offers the fields and default of %s',
+    (path, fields, field, direction) => {
+      expect(sortConfigForPath(path)).toEqual({
+        fields,
+        defaultSort: { field, direction },
+      })
+    },
+  )
+
+  it('has a default field that the view offers', () => {
+    for (const path of [
+      '/new',
+      '/upcoming',
+      '/discounted',
+      '/monthly',
+      '/purchased',
+      '/wishlist',
+    ]) {
+      const config = sortConfigForPath(path)
+      expect(config?.fields).toContain(config?.defaultSort.field)
+    }
   })
 
   it.each(['/search', '/g/EP0001', '/', '/unknown'])(
     'offers no sort on %s',
     (path) => {
-      expect(sortFieldsForPath(path)).toEqual([])
+      expect(sortConfigForPath(path)).toBeUndefined()
     },
   )
+})
+
+describe('isSameSort', () => {
+  it('compares field and direction', () => {
+    const base = { field: 'date', direction: 'desc' } as const
+    expect(isSameSort(base, { ...base })).toBe(true)
+    expect(isSameSort(base, { ...base, direction: 'asc' })).toBe(false)
+    expect(isSameSort(base, { ...base, field: 'name' })).toBe(false)
+  })
 })

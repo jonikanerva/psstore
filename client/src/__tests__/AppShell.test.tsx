@@ -58,6 +58,11 @@ const renderShellAt = async (initial: string) => {
     path: 'search',
     component: QueryProbe,
   })
+  const monthlyRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: 'monthly',
+    component: QueryProbe,
+  })
   const wishlistRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: 'wishlist',
@@ -71,6 +76,7 @@ const renderShellAt = async (initial: string) => {
       purchasedRoute,
       searchRoute,
       wishlistRoute,
+      monthlyRoute,
     ]),
     history: createMemoryHistory({ initialEntries: [initial] }),
   })
@@ -182,11 +188,11 @@ describe('AppShell', () => {
 
     it('offers the fields of the current route', async () => {
       await renderShellAt('/upcoming')
-      expect(pillNames()).toEqual(['Default', 'Date', 'Name'])
+      expect(pillNames()).toEqual(['Default', 'Date ↑', 'Name'])
       cleanup()
 
       await renderShellAt('/discounted')
-      expect(pillNames()).toEqual(['Default', 'Date', 'Price', 'Name'])
+      expect(pillNames()).toEqual(['Default', 'Date ↓', 'Price', 'Name'])
     })
 
     it('is hidden on the search route', async () => {
@@ -203,78 +209,98 @@ describe('AppShell', () => {
       ).not.toBeInTheDocument()
     })
 
-    it('starts with only the Default pill pressed', async () => {
+    const pressedPills = () =>
+      within(screen.getByRole('group', { name: 'Sort' }))
+        .getAllByRole('button')
+        .filter((button) => button.getAttribute('aria-pressed') === 'true')
+        .map((button) => button.textContent)
+
+    it.each([
+      ['/new', 'Date ↓'],
+      ['/upcoming', 'Date ↑'],
+      ['/discounted', 'Date ↓'],
+      ['/monthly', 'Date ↓'],
+    ])(
+      'shows the route default as the one active pill on %s',
+      async (path, pill) => {
+        await renderShellAt(path)
+        expect(pressedPills()).toEqual([pill])
+        expect(screen.getByTestId('probe-sort')).toHaveTextContent('default')
+      },
+    )
+
+    it('gives the Default pill no pressed state', async () => {
       await renderShellAt('/discounted')
-      const buttons = within(
-        screen.getByRole('group', { name: 'Sort' }),
-      ).getAllByRole('button')
       expect(
-        buttons.map((button) => button.getAttribute('aria-pressed')),
-      ).toEqual(['true', 'false', 'false', 'false'])
-      expect(screen.getByTestId('probe-sort')).toHaveTextContent('default')
+        screen.getByRole('button', { name: 'Default' }),
+      ).not.toHaveAttribute('aria-pressed')
     })
 
-    it('activates a pill at its natural direction in one click', async () => {
+    it('activates an inactive pill at its natural direction', async () => {
       await renderShellAt('/discounted')
       fireEvent.click(screen.getByRole('button', { name: 'Sort by price' }))
       expect(screen.getByTestId('probe-sort')).toHaveTextContent('price asc')
+      expect(pressedPills()).toEqual(['Price ↑'])
       cleanup()
 
-      await renderShellAt('/discounted')
-      fireEvent.click(screen.getByRole('button', { name: 'Sort by date' }))
-      expect(screen.getByTestId('probe-sort')).toHaveTextContent('date desc')
-    })
-
-    it('flips between two directions, and Default restores the order', async () => {
       await renderShellAt('/upcoming')
       fireEvent.click(screen.getByRole('button', { name: 'Sort by name' }))
+      expect(screen.getByTestId('probe-sort')).toHaveTextContent('name asc')
+    })
+
+    it('flips the active default pill and returns to the default state', async () => {
+      await renderShellAt('/upcoming')
       const pill = screen.getByRole('button', {
-        name: 'Sort by name, ascending',
+        name: 'Sort by date, ascending',
       })
-      expect(pill).toHaveAttribute('aria-pressed', 'true')
-      expect(pill).toHaveTextContent('Name ↑')
+      expect(pill).toHaveTextContent('Date ↑')
 
       fireEvent.click(pill)
-      expect(screen.getByTestId('probe-sort')).toHaveTextContent('name desc')
-      const flipped = screen.getByRole('button', {
-        name: 'Sort by name, descending',
-      })
-      expect(flipped).toHaveTextContent('Name ↓')
+      expect(screen.getByTestId('probe-sort')).toHaveTextContent('date desc')
+      expect(
+        screen.getByRole('button', { name: 'Sort by date, descending' }),
+      ).toHaveTextContent('Date ↓')
 
-      fireEvent.click(flipped)
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Sort by date, descending' }),
+      )
+      expect(screen.getByTestId('probe-sort')).toHaveTextContent('default')
+      expect(pressedPills()).toEqual(['Date ↑'])
+    })
+
+    it('flips a picked pill between two directions', async () => {
+      await renderShellAt('/new')
+      fireEvent.click(screen.getByRole('button', { name: 'Sort by name' }))
       expect(screen.getByTestId('probe-sort')).toHaveTextContent('name asc')
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Sort by name, ascending' }),
+      )
+      expect(screen.getByTestId('probe-sort')).toHaveTextContent('name desc')
+      expect(pressedPills()).toEqual(['Name ↓'])
+    })
+
+    it('restores the route default with the Default pill', async () => {
+      await renderShellAt('/upcoming')
+      fireEvent.click(screen.getByRole('button', { name: 'Sort by name' }))
+      expect(pressedPills()).toEqual(['Name ↑'])
 
       fireEvent.click(screen.getByRole('button', { name: 'Default' }))
       expect(screen.getByTestId('probe-sort')).toHaveTextContent('default')
-      expect(screen.getByRole('button', { name: 'Default' })).toHaveAttribute(
-        'aria-pressed',
-        'true',
-      )
-      expect(
-        screen.getByRole('button', { name: 'Sort by name' }),
-      ).toHaveAttribute('aria-pressed', 'false')
-    })
+      expect(pressedPills()).toEqual(['Date ↑'])
 
-    it('moves the sort to another pill', async () => {
-      await renderShellAt('/upcoming')
-      fireEvent.click(screen.getByRole('button', { name: 'Sort by name' }))
-      fireEvent.click(screen.getByRole('button', { name: 'Sort by date' }))
-      expect(screen.getByTestId('probe-sort')).toHaveTextContent('date desc')
-      expect(
-        screen.getByRole('button', { name: 'Sort by name' }),
-      ).toHaveAttribute('aria-pressed', 'false')
+      fireEvent.click(screen.getByRole('button', { name: 'Default' }))
+      expect(screen.getByTestId('probe-sort')).toHaveTextContent('default')
+      expect(pressedPills()).toEqual(['Date ↑'])
     })
 
     it('resets when the route changes, also when coming back', async () => {
       await renderShellAt('/upcoming')
-      fireEvent.click(screen.getByRole('button', { name: 'Sort by date' }))
-      expect(screen.getByTestId('probe-sort')).toHaveTextContent('date desc')
+      fireEvent.click(screen.getByRole('button', { name: 'Sort by name' }))
+      expect(screen.getByTestId('probe-sort')).toHaveTextContent('name asc')
 
       fireEvent.click(screen.getByRole('link', { name: 'Discounted' }))
       expect(screen.getByTestId('probe-sort')).toHaveTextContent('default')
-      expect(
-        screen.getByRole('button', { name: 'Sort by date' }),
-      ).toHaveAttribute('aria-pressed', 'false')
+      expect(pressedPills()).toEqual(['Date ↓'])
 
       fireEvent.click(screen.getByRole('link', { name: 'Upcoming' }))
       expect(screen.getByTestId('probe-sort')).toHaveTextContent('default')

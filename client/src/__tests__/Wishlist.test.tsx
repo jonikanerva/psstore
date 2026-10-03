@@ -209,6 +209,61 @@ describe('Wishlist', () => {
     }
   })
 
+  it('sorts by date and price, with entries lacking a value last', async () => {
+    stubFetch(() =>
+      Response.json(
+        library([
+          {
+            ...game('EP0001-PPSA00001_00-SYNTHETICALPHA00', 'Alpha', 'product'),
+            date: '2025-03-01T00:00:00.000Z',
+            price: '€59,99',
+          },
+          game('10000002', 'Bravo', 'concept'),
+          {
+            ...game(
+              'EP0001-PPSA00003_00-SYNTHETICGAMMA000',
+              'Gamma',
+              'product',
+            ),
+            date: '2026-01-15T00:00:00.000Z',
+            price: '€19,99',
+          },
+        ]),
+      ),
+    )
+    await renderWishlist()
+    const names = () =>
+      Array.from(document.querySelectorAll('.game-card--name')).map(
+        (element) => element.textContent,
+      )
+    await screen.findByText('Alpha')
+    expect(names()).toEqual(['Alpha', 'Bravo', 'Gamma'])
+    expect(screen.getByRole('link', { name: /Gamma/ })).toHaveTextContent(
+      '15 Jan 2026',
+    )
+    expect(screen.getByRole('link', { name: /Bravo/ })).not.toHaveTextContent(
+      /\d{4}/u,
+    )
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Sort by date, descending' }),
+    )
+    expect(names()).toEqual(['Alpha', 'Gamma', 'Bravo'])
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Sort by date, ascending' }),
+    )
+    expect(names()).toEqual(['Alpha', 'Bravo', 'Gamma'])
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sort by price' }))
+    expect(names()).toEqual(['Gamma', 'Alpha', 'Bravo'])
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Sort by price, ascending' }),
+    )
+    expect(names()).toEqual(['Alpha', 'Gamma', 'Bravo'])
+  })
+
   it('says so when the wishlist is empty', async () => {
     stubFetch(() => Response.json(library([])))
     await renderWishlist()
