@@ -1,4 +1,4 @@
-import { Effect, Exit, Layer, Redacted } from 'effect'
+import { Deferred, Effect, Exit, Fiber, Layer, Redacted } from 'effect'
 import { describe, expect, it, vi } from 'vitest'
 import {
   SessionRejected,
@@ -104,7 +104,7 @@ describe('AccountService', () => {
     expect(library).not.toHaveBeenCalled()
   })
 
-  it('exchanges the NPSSO again on every call (no cache)', async () => {
+  it('exchanges the NPSSO again for each sequential call', async () => {
     const { exchange, exit } = run({}, (service) =>
       Effect.gen(function* () {
         yield* service.getPurchasedGames(npsso)
@@ -120,5 +120,223 @@ describe('AccountService', () => {
     const { exit } = run({}, (service) => service.verifyNpsso(npsso))
     const result = await exit
     expect(Exit.isSuccess(result) && result.value).toBeUndefined()
+  })
+})
+
+const settle = Effect.forEach(
+  Array.from({ length: 30 }, (_, index) => index),
+  () => Effect.yieldNow,
+  { discard: true },
+)
+
+const sameValueNpsso = () => Redacted.make('synthetic-npsso-0123456789')
+
+describe('AccountService in-flight sharing', () => {
+  const harness = (
+    exchangeFor: (
+      calls: number,
+      npsso: Redacted.Redacted,
+    ) => Effect.Effect<
+      Redacted.Redacted,
+      SessionRejected | UpstreamUnavailable
+    >,
+    fetchGames: SonyAccountClientApi['fetchPurchasedGames'] = () =>
+      Effect.succeed([entry]),
+  ) => {
+    let calls = 0
+    const sony: SonyAccountClientApi = {
+      exchangeNpsso: (value) => {
+        calls += 1
+        return exchangeFor(calls, value)
+      },
+      fetchPurchasedGames: fetchGames,
+    }
+    const layer = AccountServiceLive.pipe(
+      Layer.provide(Layer.succeed(SonyAccountClient, sony)),
+    )
+    return {
+      calls: () => calls,
+      run: <A, E>(
+        use: (service: AccountService['Service']) => Effect.Effect<A, E>,
+      ) =>
+        Effect.runPromise(
+          Effect.gen(function* () {
+            return yield* use(yield* AccountService)
+          }).pipe(Effect.provide(layer)),
+        ),
+    }
+  }
+
+  it('shares one exchange between concurrent calls with equal NPSSO values', async () => {
+    const gate = Deferred.makeUnsafe<null>()
+    const h = harness(() =>
+      Effect.gen(function* () {
+        yield* Deferred.await(gate)
+        return Redacted.make('synthetic-token')
+      }),
+    )
+    await h.run((service) =>
+      Effect.gen(function* () {
+        const first = yield* Effect.forkChild(
+          service.getPurchasedGames(sameValueNpsso()),
+        )
+        const second = yield* Effect.forkChild(
+          service.verifyNpsso(sameValueNpsso()),
+        )
+        yield* settle
+        expect(h.calls()).toBe(1)
+        yield* Deferred.succeed(gate, null)
+        yield* Fiber.join(first)
+        yield* Fiber.join(second)
+      }),
+    )
+    expect(h.calls()).toBe(1)
+  })
+
+  it('exchanges separately for different NPSSO values', async () => {
+    const gate = Deferred.makeUnsafe<null>()
+    const h = harness(() =>
+      Effect.gen(function* () {
+        yield* Deferred.await(gate)
+        return Redacted.make('synthetic-token')
+      }),
+    )
+    await h.run((service) =>
+      Effect.gen(function* () {
+        const first = yield* Effect.forkChild(
+          service.verifyNpsso(Redacted.make('synthetic-npsso-aaaaaaaaaa')),
+        )
+        const second = yield* Effect.forkChild(
+          service.verifyNpsso(Redacted.make('synthetic-npsso-bbbbbbbbbb')),
+        )
+        yield* settle
+        expect(h.calls()).toBe(2)
+        yield* Deferred.succeed(gate, null)
+        yield* Fiber.join(first)
+        yield* Fiber.join(second)
+      }),
+    )
+  })
+
+  it('exchanges anew after the earlier exchange completed', async () => {
+    const h = harness(() => Effect.succeed(Redacted.make('synthetic-token')))
+    await h.run((service) =>
+      Effect.gen(function* () {
+        yield* service.verifyNpsso(sameValueNpsso())
+        yield* service.verifyNpsso(sameValueNpsso())
+      }),
+    )
+    expect(h.calls()).toBe(2)
+  })
+
+  it('shares a failing exchange, then retries on a later call', async () => {
+    const gate = Deferred.makeUnsafe<null>()
+    const h = harness((calls) =>
+      Effect.gen(function* () {
+        if (calls === 1) {
+          yield* Deferred.await(gate)
+          return yield* new UpstreamUnavailable({ message: 'down' })
+        }
+        return Redacted.make('synthetic-token')
+      }),
+    )
+    await h.run((service) =>
+      Effect.gen(function* () {
+        const first = yield* Effect.forkChild(
+          Effect.exit(service.verifyNpsso(sameValueNpsso())),
+        )
+        const second = yield* Effect.forkChild(
+          Effect.exit(service.verifyNpsso(sameValueNpsso())),
+        )
+        yield* settle
+        yield* Deferred.succeed(gate, null)
+        const exits = [yield* Fiber.join(first), yield* Fiber.join(second)]
+        expect(exits.every(Exit.isFailure)).toBe(true)
+        expect(h.calls()).toBe(1)
+        yield* service.verifyNpsso(sameValueNpsso())
+        expect(h.calls()).toBe(2)
+      }),
+    )
+  })
+
+  it('lets the other waiter succeed when one waiter is interrupted', async () => {
+    const gate = Deferred.makeUnsafe<null>()
+    const h = harness(() =>
+      Effect.gen(function* () {
+        yield* Deferred.await(gate)
+        return Redacted.make('synthetic-token')
+      }),
+    )
+    await h.run((service) =>
+      Effect.gen(function* () {
+        const first = yield* Effect.forkChild(
+          service.verifyNpsso(sameValueNpsso()),
+        )
+        const second = yield* Effect.forkChild(
+          service.verifyNpsso(sameValueNpsso()),
+        )
+        yield* settle
+        yield* Fiber.interrupt(first)
+        yield* Deferred.succeed(gate, null)
+        const exit = yield* Fiber.await(second)
+        expect(Exit.isSuccess(exit)).toBe(true)
+        expect(h.calls()).toBe(1)
+      }),
+    )
+  })
+
+  it('interrupts the exchange when every waiter is interrupted', async () => {
+    let interrupted = false
+    const h = harness(() =>
+      Effect.never.pipe(
+        Effect.onInterrupt(() =>
+          Effect.sync(() => {
+            interrupted = true
+          }),
+        ),
+      ),
+    )
+    await h.run((service) =>
+      Effect.gen(function* () {
+        const first = yield* Effect.forkChild(
+          service.verifyNpsso(sameValueNpsso()),
+        )
+        const second = yield* Effect.forkChild(
+          service.verifyNpsso(sameValueNpsso()),
+        )
+        yield* settle
+        yield* Fiber.interrupt(first)
+        yield* settle
+        expect(interrupted).toBe(false)
+        yield* Fiber.interrupt(second)
+        yield* settle
+        expect(interrupted).toBe(true)
+      }),
+    )
+  })
+
+  it('closes the shared entry before the library crawl', async () => {
+    const gate = Deferred.makeUnsafe<null>()
+    const h = harness(
+      () => Effect.succeed(Redacted.make('synthetic-token')),
+      () =>
+        Effect.gen(function* () {
+          yield* Deferred.await(gate)
+          return [entry]
+        }),
+    )
+    await h.run((service) =>
+      Effect.gen(function* () {
+        const crawl = yield* Effect.forkChild(
+          service.getPurchasedGames(sameValueNpsso()),
+        )
+        yield* settle
+        expect(h.calls()).toBe(1)
+        yield* service.verifyNpsso(sameValueNpsso())
+        expect(h.calls()).toBe(2)
+        yield* Deferred.succeed(gate, null)
+        yield* Fiber.join(crawl)
+      }),
+    )
   })
 })

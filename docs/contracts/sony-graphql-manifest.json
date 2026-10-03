@@ -115,9 +115,9 @@
         "isActive": true,
         "platform": ["ps5"],
         "size": 100,
-        "start": 0,
         "sortBy": "ACTIVE_DATE",
-        "sortDirection": "desc"
+        "sortDirection": "desc",
+        "start": 0
       },
       "response_path": "data.purchasedTitlesRetrieve.games",
       "observed_status_codes": []

@@ -20,6 +20,7 @@ describe('filterTrackedOperations', () => {
       'metGetProductById',
       'productRetrieveForCtasWithPrice',
       'getSearchResults',
+      'getPurchasedGameList',
       'getDefaultView',
       'queryOracleUserProfileFullSubscription',
       'productRetrieveForUpsellWithCtas',
@@ -29,6 +30,6 @@ describe('filterTrackedOperations', () => {
       filterTrackedOperations(names.map(operation)).map(
         (entry) => entry.operation_name,
       ),
-    ).toEqual(names.slice(0, 4))
+    ).toEqual(names.slice(0, 5))
   })
 })

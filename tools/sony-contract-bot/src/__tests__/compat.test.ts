@@ -72,8 +72,22 @@ const purchasedOperation = (): ContractOperation => ({
   operation_name: 'getPurchasedGameList',
   persisted_query_hash: PURCHASED_HASH,
   required_headers: ['x-apollo-operation-name'],
-  variables_schema: { size: 'number' },
-  sample_variables: { size: 100 },
+  variables_schema: {
+    isActive: 'boolean',
+    platform: ['string'],
+    size: 'number',
+    sortBy: 'string',
+    sortDirection: 'string',
+    start: 'number',
+  },
+  sample_variables: {
+    isActive: true,
+    platform: ['ps5'],
+    size: 100,
+    sortBy: 'ACTIVE_DATE',
+    sortDirection: 'desc',
+    start: 0,
+  },
   response_path: 'data.purchasedTitlesRetrieve.games',
   observed_status_codes: [],
 })
@@ -126,7 +140,7 @@ const serverEnvText = [
 const context = {
   serverEnvText,
   sonyClientText:
-    "headers: { 'x-apollo-operation-name': strategy.operationName }\nreturn json.data?.categoryGridRetrieve?.concepts ?? []\nconst product = json.data?.productRetrieve\nconst search = json.data?.universalSearch",
+    "headers: { 'x-apollo-operation-name': strategy.operationName }\nreturn json.data?.categoryGridRetrieve?.concepts ?? []\nconst product = json.data?.productRetrieve\nconst search = json.data?.universalSearch\nsha256Hash: SONY_PURCHASED_HASH",
   mapperText: 'export const conceptToGame = (concept) => concept',
   serviceText: "await fetchConceptsByFeature('new', 300)",
 }
@@ -158,7 +172,6 @@ describe('validateBackendCompatibility', () => {
         ...GRID_FEATURES.map(gridOperation),
         { ...pdpOperation(), persisted_query_hash: 'c'.repeat(64) },
         priceOperation(),
-        purchasedOperation(),
       ],
     }
 
@@ -236,11 +249,7 @@ describe('validateBackendCompatibility', () => {
   it('rejects a manifest without the price operation', () => {
     const withoutPrice: SonyContractManifest = {
       ...manifest,
-      operations: [
-        ...GRID_FEATURES.map(gridOperation),
-        pdpOperation(),
-        purchasedOperation(),
-      ],
+      operations: [...GRID_FEATURES.map(gridOperation), pdpOperation()],
     }
 
     expect(() => {
@@ -255,7 +264,6 @@ describe('validateBackendCompatibility', () => {
         ...GRID_FEATURES.map(gridOperation),
         pdpOperation(),
         { ...priceOperation(), persisted_query_hash: 'e'.repeat(64) },
-        purchasedOperation(),
       ],
     }
 
@@ -357,46 +365,96 @@ describe('validateBackendCompatibility', () => {
       validateBackendCompatibility(manifest, withoutSearchEnv)
     }).toThrow(/SONY_SEARCH_OPERATION_NAME/)
   })
+  const withoutPurchased = () =>
+    manifest.operations.filter((op) => op.feature !== 'purchased')
 
-  it('rejects a manifest without the purchased operation', () => {
-    const withoutPurchased: SonyContractManifest = {
-      ...manifest,
-      operations: manifest.operations.filter(
-        (op) => op.feature !== 'purchased',
-      ),
-    }
-
+  it('accepts the library operation', () => {
+    expect(manifest.operations.some((op) => op.feature === 'purchased')).toBe(
+      true,
+    )
     expect(() => {
-      validateBackendCompatibility(withoutPurchased, context)
-    }).toThrow(/Manifest missing purchased operation/)
+      validateBackendCompatibility(manifest, context)
+    }).not.toThrow()
   })
 
-  it('rejects a manifest whose purchased hash does not match the server', () => {
-    const rotated: SonyContractManifest = {
-      ...manifest,
-      operations: [
-        ...manifest.operations.filter((op) => op.feature !== 'purchased'),
-        { ...purchasedOperation(), persisted_query_hash: '1'.repeat(64) },
-      ],
-    }
-
+  it('rejects a manifest without the library operation', () => {
     expect(() => {
-      validateBackendCompatibility(rotated, context)
-    }).toThrow(/Manifest missing purchased operation/)
+      validateBackendCompatibility(
+        { ...manifest, operations: withoutPurchased() },
+        context,
+      )
+    }).toThrow(/Manifest missing library operation/)
   })
 
-  it('rejects when the server purchased env constants are unreadable', () => {
-    const withoutPurchasedEnv = {
-      ...context,
-      serverEnvText: serverEnvText
-        .split('\n')
-        .filter((line) => !line.includes('SONY_PURCHASED'))
-        .join('\n')
-        .replace(/\n\s*'9{64}'/, ''),
-    }
-
+  it('rejects a library operation whose hash does not match the server', () => {
     expect(() => {
-      validateBackendCompatibility(manifest, withoutPurchasedEnv)
+      validateBackendCompatibility(
+        {
+          ...manifest,
+          operations: [
+            ...withoutPurchased(),
+            { ...purchasedOperation(), persisted_query_hash: '8'.repeat(64) },
+          ],
+        },
+        context,
+      )
+    }).toThrow(/Manifest missing library operation/)
+  })
+
+  it('rejects a library operation with the wrong response_path', () => {
+    expect(() => {
+      validateBackendCompatibility(
+        {
+          ...manifest,
+          operations: [
+            ...withoutPurchased(),
+            { ...purchasedOperation(), response_path: 'data.productRetrieve' },
+          ],
+        },
+        context,
+      )
+    }).toThrow(/Library operation .* response path incompatible/)
+  })
+
+  it('rejects a library operation with the wrong variables_schema', () => {
+    expect(() => {
+      validateBackendCompatibility(
+        {
+          ...manifest,
+          operations: [
+            ...withoutPurchased(),
+            {
+              ...purchasedOperation(),
+              variables_schema: { size: 'number' },
+            },
+          ],
+        },
+        context,
+      )
+    }).toThrow(/Library operation .* variables_schema incompatible/)
+  })
+
+  it('rejects when sonyClient no longer sends the library hash constant', () => {
+    expect(() => {
+      validateBackendCompatibility(manifest, {
+        ...context,
+        sonyClientText: context.sonyClientText.replace(
+          'SONY_PURCHASED_HASH',
+          '',
+        ),
+      })
+    }).toThrow(/SONY_PURCHASED_HASH/)
+  })
+
+  it('rejects when the server library env constants are unreadable', () => {
+    expect(() => {
+      validateBackendCompatibility(manifest, {
+        ...context,
+        serverEnvText: serverEnvText
+          .split('\n')
+          .filter((line) => !line.includes('SONY_PURCHASED_OPERATION_NAME'))
+          .join('\n'),
+      })
     }).toThrow(/SONY_PURCHASED_OPERATION_NAME/)
   })
 })

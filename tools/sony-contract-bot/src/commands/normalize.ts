@@ -1,10 +1,7 @@
 import fs from 'node:fs/promises'
 import { CORE_FEATURES } from '../contract/constants.js'
 import { createManifest } from '../contract/manifest.js'
-import {
-  normalizeOperations,
-  withSignedInOperations,
-} from '../contract/normalizer.js'
+import { normalizeOperations } from '../contract/normalizer.js'
 import { liveProbe } from '../contract/liveProbe.js'
 import {
   addPinnedOperations,
@@ -79,9 +76,7 @@ export const runNormalize = async (
     probe,
   )
 
-  const operations = normalizeOperations(
-    withSignedInOperations(withPinned, canonical),
-  )
+  const operations = normalizeOperations(withPinned)
 
   for (const feature of CORE_FEATURES) {
     if (!operations.some((operation) => operation.feature === feature)) {

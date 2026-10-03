@@ -54,6 +54,17 @@ const SEARCH_VARIABLES_SCHEMA: Record<string, unknown> = {
   searchTerm: 'string',
 }
 
+// The signed-in library request variable shape the manifest must record. It
+// mirrors the variables the server sends (`requestPurchasedPage`).
+const PURCHASED_VARIABLES_SCHEMA: Record<string, unknown> = {
+  isActive: 'boolean',
+  platform: ['string'],
+  size: 'number',
+  sortBy: 'string',
+  sortDirection: 'string',
+  start: 'number',
+}
+
 export const validateBackendCompatibility = (
   manifest: SonyContractManifest,
   context: CompatibilityContext,
@@ -147,7 +158,7 @@ export const validateBackendCompatibility = (
 
   if (!expectedPurchasedOperationName || !expectedPurchasedHash) {
     throw new Error(
-      'Unable to read server purchased env defaults (SONY_PURCHASED_OPERATION_NAME / SONY_PURCHASED_HASH) for compatibility checks',
+      'Unable to read server library env defaults (SONY_PURCHASED_OPERATION_NAME / SONY_PURCHASED_HASH) for compatibility checks',
     )
   }
 
@@ -208,7 +219,7 @@ export const validateBackendCompatibility = (
     )
   ) {
     throw new Error(
-      `Manifest missing purchased operation compatible with server: ${expectedPurchasedOperationName} @ ${expectedPurchasedHash}`,
+      `Manifest missing library operation compatible with server: ${expectedPurchasedOperationName} @ ${expectedPurchasedHash}`,
     )
   }
 
@@ -274,7 +285,24 @@ export const validateBackendCompatibility = (
           `Search operation ${operation.operation_name} variables_schema incompatible: ${JSON.stringify(operation.variables_schema)}`,
         )
       }
-    } else if (operation.operation_name !== expectedPurchasedOperationName) {
+    } else if (operation.operation_name === expectedPurchasedOperationName) {
+      if (operation.response_path !== 'data.purchasedTitlesRetrieve.games') {
+        throw new Error(
+          `Library operation ${operation.operation_name} response path incompatible: ${operation.response_path}`,
+        )
+      }
+
+      if (
+        !variablesSchemaEquals(
+          operation.variables_schema,
+          PURCHASED_VARIABLES_SCHEMA,
+        )
+      ) {
+        throw new Error(
+          `Library operation ${operation.operation_name} variables_schema incompatible: ${JSON.stringify(operation.variables_schema)}`,
+        )
+      }
+    } else {
       throw new Error(
         `Operation ${operation.feature} has unrecognized operation_name: ${operation.operation_name}`,
       )
@@ -313,6 +341,12 @@ export const validateBackendCompatibility = (
   if (!context.sonyClientText.includes('universalSearch')) {
     throw new Error(
       'sonyClient search response extraction no longer matches expected path (universalSearch)',
+    )
+  }
+
+  if (!context.sonyClientText.includes('SONY_PURCHASED_HASH')) {
+    throw new Error(
+      'sonyClient no longer sends the library persisted-query hash (SONY_PURCHASED_HASH)',
     )
   }
 

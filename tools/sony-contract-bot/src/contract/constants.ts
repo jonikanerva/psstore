@@ -9,7 +9,6 @@ export const CORE_FEATURES: ContractFeature[] = [
 ]
 
 // Features that capture cannot observe because they need a signed-in session.
-// `sony:normalize` carries their canonical entries over unchanged;
 // `sony:probe-purchased` is the only writer of their observed status.
 export const SIGNED_IN_FEATURES: ContractFeature[] = ['purchased']
 

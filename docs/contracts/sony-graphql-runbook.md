@@ -12,8 +12,8 @@ The contract is the Finnish store. The contract bot captures from the `fi-fi` pu
 storefront. The server requests data with `en-fi` (English content, same store). The
 response shapes are identical. To check this by hand, run `pnpm test:live`.
 
-Capture and `pnpm sony:refresh` use no sign-in. One signed-in operation, the
-purchased library, has a separate owner-run check. See Signed-in library operation.
+Capture, `pnpm sony:refresh`, and the anonymous probes use no sign-in. One tracked operation is signed-in: the library list.
+It has a separate owner-run check. See Signed-in library operation below.
 
 ## Refresh contract snapshot
 
@@ -32,7 +32,8 @@ Pipeline:
 ## Tracked operations
 
 The manifest holds only the operations the server calls:
-`categoryGridRetrieve`, `metGetProductById`, `productRetrieveForCtasWithPrice`, and `getSearchResults`.
+`categoryGridRetrieve`, `metGetProductById`, `productRetrieveForCtasWithPrice`, `getSearchResults`,
+and the signed-in `getPurchasedGameList`.
 The normalizer drops every other operation Sony fires on a captured page.
 The list lives in `tools/sony-contract-bot/src/contract/trackedOperations.ts`.
 
@@ -76,19 +77,22 @@ If the probe fails, refresh stops and names the operation and the hash. Find the
 in the store, update `SONY_PRODUCT_BY_ID_HASH` in `server/src/config/env.ts`, and run
 `pnpm sony:refresh` again. See Failure handling below.
 
-## PS Plus monthly feed
-
-The MONTHLY view reads `https://www.playstation.com/bin/imagic/gameslist`, not the GraphQL
-endpoint. The contract tooling does not capture it. A shape change shows as a
-drift warning in the server log and as a failing MONTHLY step in `pnpm test:live`.
-To refresh the golden fixture, download the feed anonymously and replace
-`server/src/__tests__/fixtures/plusMonthly.golden.json`. Do not store the response headers.
-
 ## Signed-in library operation
 
-The PURCHASED view calls `getPurchasedGameList` with the user's Sony access token.
-Capture cannot see this call. The manifest holds a `purchased` entry that an agent
-writes by hand. Its `observed_status_codes` stays `[]` until the owner runs the probe.
+The server calls `getPurchasedGameList` with the user's access token for the PURCHASED view.
+Capture cannot reach it, and the anonymous probe cannot call it.
+The manifest therefore holds a hand-written entry with feature `purchased`.
+Its variables, header list, and response path mirror the server request. All values are synthetic.
+The entry has no `authorization` header. `observed_status_codes` is empty, because nobody observed it live.
+
+Refresh carries the entry over from the canonical manifest. It sets the hash from
+`SONY_PURCHASED_HASH` in `server/src/config/env.ts` and runs no probe.
+Refresh prints `carried over, NOT verified live`.
+
+The compatibility check compares the operation name, the hash, the response path, and the variables
+with `env.ts` and `sonyClient.ts`. It guards repository-internal consistency only.
+It does NOT detect Sony drift for this operation. Only a live check by the owner can do that.
+The owner runs the live check with their own NPSSO. See the probe below.
 
 ```bash
 SONY_NPSSO=<your NPSSO> pnpm sony:probe-purchased
@@ -113,10 +117,16 @@ the owner captures the new hash from a signed-in session of the store, updates
 `SONY_PURCHASED_HASH` in `server/src/config/env.ts`, and runs the probe again.
 Commit the hash and the manifest together.
 
-Carry-over: `pnpm sony:normalize` and `pnpm sony:refresh` copy the canonical
-`purchased` entry into the candidate manifest without change. A refresh never
-clears the observed status. The diff report prints `purchased: unobserved (owner probe pending)`
-while the list is empty, so an empty list never reads as a pass.
+The diff report prints `purchased: unobserved (owner probe pending)` while
+`observed_status_codes` is empty, so an empty list never reads as a pass.
+
+## PS Plus monthly feed
+
+The MONTHLY view reads `https://www.playstation.com/bin/imagic/gameslist`, not the GraphQL
+endpoint. The contract tooling does not capture it. A shape change shows as a
+drift warning in the server log and as a failing MONTHLY step in `pnpm test:live`.
+To refresh the golden fixture, download the feed anonymously and replace
+`server/src/__tests__/fixtures/plusMonthly.golden.json`. Do not store the response headers.
 
 ## Apply candidate as canonical manifest
 
