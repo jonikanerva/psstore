@@ -1,0 +1,63 @@
+{
+  "data": {
+    "productRetrieve": {
+      "id": "JP6928-PPSA34944_00-0954284737531295",
+      "name": "RetroSpace",
+      "webctas": [
+        {
+          "type": "UPSELL_PS_PLUS_DISCOUNT",
+          "meta": {
+            "upSellService": "PS_PLUS"
+          },
+          "price": {
+            "applicability": "UPSELL",
+            "basePrice": "€19,95",
+            "basePriceValue": 1995,
+            "currencyCode": "EUR",
+            "discountedPrice": "€17,95",
+            "discountedValue": 1795,
+            "displayDiscountText": "-10%",
+            "displayUpsellText": "Save 10% with PlayStation Plus",
+            "endTime": "1791471600000",
+            "history": {
+              "launchPrice": null,
+              "lowestRecentPrice": "Lowest price in last 30 days: €19,95"
+            },
+            "isExclusive": false,
+            "isFree": false,
+            "isTiedToSubscription": false,
+            "membershipType": null,
+            "savingTag": "",
+            "serviceBranding": ["PS_PLUS"],
+            "tierLabel": null
+          }
+        },
+        {
+          "type": "ADD_TO_CART",
+          "meta": {
+            "upSellService": "NONE"
+          },
+          "price": {
+            "applicability": "APPLICABLE",
+            "basePrice": "€19,95",
+            "basePriceValue": 1995,
+            "currencyCode": "EUR",
+            "discountedPrice": "€19,95",
+            "discountedValue": 1995,
+            "displayDiscountText": null,
+            "displayUpsellText": null,
+            "endTime": null,
+            "history": null,
+            "isExclusive": false,
+            "isFree": false,
+            "isTiedToSubscription": false,
+            "membershipType": null,
+            "savingTag": "",
+            "serviceBranding": ["NONE"],
+            "tierLabel": null
+          }
+        }
+      ]
+    }
+  }
+}

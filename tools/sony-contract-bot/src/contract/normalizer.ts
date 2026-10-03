@@ -1,3 +1,4 @@
+import { operationIdentity } from './operationIdentity.js'
 import type { ContractOperation } from './types.js'
 
 const normalizeRecord = (operation: ContractOperation): ContractOperation => ({
@@ -8,31 +9,19 @@ const normalizeRecord = (operation: ContractOperation): ContractOperation => ({
   ),
 })
 
-const dedupeKey = (operation: ContractOperation): string =>
-  JSON.stringify([
-    operation.feature,
-    operation.operation_name,
-    operation.persisted_query_hash,
-    operation.response_path,
-    operation.required_headers,
-    operation.variables_schema,
-  ])
-
 export const normalizeOperations = (
   operations: ContractOperation[],
 ): ContractOperation[] => {
   const map = new Map<string, ContractOperation>()
 
   for (const operation of operations.map(normalizeRecord)) {
-    const key = dedupeKey(operation)
+    const key = operationIdentity(operation)
     if (!map.has(key)) {
       map.set(key, operation)
     }
   }
 
   return [...map.values()].sort((a, b) => {
-    const left = `${a.feature}:${a.operation_name}:${a.persisted_query_hash ?? ''}`
-    const right = `${b.feature}:${b.operation_name}:${b.persisted_query_hash ?? ''}`
-    return left.localeCompare(right)
+    return operationIdentity(a).localeCompare(operationIdentity(b))
   })
 }

@@ -68,4 +68,23 @@ describe('validateManifest', () => {
       validateManifest(invalid)
     }).toThrow(/Missing required feature mapping/)
   })
+
+  it('rejects two operations with the same identity and different variables', () => {
+    const duplicate: SonyContractManifest = {
+      ...validManifest,
+      operations: [
+        ...validManifest.operations,
+        {
+          ...gridOperation('new'),
+          variables_schema: { id: 'string', filterBy: [] },
+        },
+      ],
+    }
+
+    expect(() => {
+      validateManifest(duplicate)
+    }).toThrow(
+      /Duplicate operation identity detected: new:categoryGridRetrieve/,
+    )
+  })
 })

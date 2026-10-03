@@ -1,0 +1,35 @@
+{
+  "data": {
+    "productRetrieve": {
+      "id": "EP0006-PPSA20050_00-25STANDARDBUNDLE",
+      "name": "EA SPORTS FC™ 25 Standard Edition PS4 & PS5",
+      "webctas": [
+        {
+          "type": "UPSELL_EA_ACCESS_FREE",
+          "meta": {
+            "upSellService": "EA_ACCESS"
+          },
+          "price": {
+            "applicability": "UPSELL",
+            "basePrice": "€79,95",
+            "basePriceValue": 7995,
+            "currencyCode": "EUR",
+            "discountedPrice": "Included",
+            "discountedValue": 0,
+            "displayDiscountText": "Included",
+            "displayUpsellText": "Included with EA Play",
+            "endTime": null,
+            "history": null,
+            "isExclusive": true,
+            "isFree": true,
+            "isTiedToSubscription": true,
+            "membershipType": "EA_ACCESS",
+            "savingTag": "",
+            "serviceBranding": ["EA_ACCESS"],
+            "tierLabel": "EA_PLAY_BASIC"
+          }
+        }
+      ]
+    }
+  }
+}

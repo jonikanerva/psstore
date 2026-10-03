@@ -1,0 +1,35 @@
+{
+  "data": {
+    "productRetrieve": {
+      "id": "UP9000-PPSA30630_00-MLBTHESHOW26PLUS",
+      "name": "MLB® The Show™ 26",
+      "webctas": [
+        {
+          "type": "UPSELL_PS_PLUS_FREE",
+          "meta": {
+            "upSellService": "PS_PLUS"
+          },
+          "price": {
+            "applicability": "UPSELL",
+            "basePrice": "€49,95",
+            "basePriceValue": 4995,
+            "currencyCode": "EUR",
+            "discountedPrice": "Included",
+            "discountedValue": 0,
+            "displayDiscountText": "Included",
+            "displayUpsellText": "Included with PlayStation Plus",
+            "endTime": null,
+            "history": null,
+            "isExclusive": true,
+            "isFree": true,
+            "isTiedToSubscription": true,
+            "membershipType": "PS_PLUS",
+            "savingTag": "",
+            "serviceBranding": ["PS_PLUS"],
+            "tierLabel": "TIER_10"
+          }
+        }
+      ]
+    }
+  }
+}

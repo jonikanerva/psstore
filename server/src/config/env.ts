@@ -10,13 +10,17 @@ import { Duration } from 'effect'
 export const SONY_GRAPHQL_URL =
   'https://web.np.playstation.com/api/graphql/v1/op'
 export const SONY_CATEGORY_GRID_HASH =
-  '4e41660b6732f35c99fc5541926b7502a09557924e8c2cfebd1beb1a5c8c8f81'
+  '88c0b9a1273c6d320c51cd73e390924e21ae28bf09f01cde8b84b1034b16cd03'
 export const SONY_CATEGORY_ID = 'd0446d4b-dc9a-4f1e-86ec-651f099c9b29'
 export const SONY_DEALS_CATEGORY_ID = '3f772501-f6f8-49b7-abac-874a88ca4897'
 export const SONY_OPERATION_NAME = 'categoryGridRetrieve'
 export const SONY_PRODUCT_OPERATION_NAME = 'metGetProductById'
 export const SONY_PRODUCT_BY_ID_HASH =
   'a128042177bd93dd831164103d53b73ef790d56f51dae647064cb8f9d9fc9d1a'
+export const SONY_PRODUCT_PRICE_OPERATION_NAME =
+  'productRetrieveForCtasWithPrice'
+export const SONY_PRODUCT_PRICE_HASH =
+  '1f0ca607e170abbfb7d67bd76c9bbc97f21fe2e807be49e5fe764e14566cb605'
 // Content language and store region in one tag: English content from the
 // Finnish store (EUR). Fixed constant: never derived from the visitor.
 export const SONY_LOCALE = 'en-fi'

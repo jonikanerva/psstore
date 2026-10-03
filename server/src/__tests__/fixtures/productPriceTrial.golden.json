@@ -1,0 +1,63 @@
+{
+  "data": {
+    "productRetrieve": {
+      "id": "UP7168-PPSA37247_00-0790416802463630",
+      "name": "IRON GUARD: Day Zero",
+      "webctas": [
+        {
+          "type": "UPSELL_PS_PLUS_TRIAL",
+          "meta": {
+            "upSellService": "PS_PLUS"
+          },
+          "price": {
+            "applicability": "UPSELL",
+            "basePrice": "Game Trial",
+            "basePriceValue": 0,
+            "currencyCode": "EUR",
+            "discountedPrice": "Game Trial",
+            "discountedValue": 0,
+            "displayDiscountText": null,
+            "displayUpsellText": "Subscribe to PlayStation Plus Premium to play a 1-hour full game trial",
+            "endTime": null,
+            "history": null,
+            "isExclusive": true,
+            "isFree": true,
+            "isTiedToSubscription": true,
+            "membershipType": "PS_PLUS",
+            "savingTag": "",
+            "serviceBranding": ["PS_PLUS"],
+            "tierLabel": "TIER_30"
+          }
+        },
+        {
+          "type": "ADD_TO_CART",
+          "meta": {
+            "upSellService": "NONE"
+          },
+          "price": {
+            "applicability": "APPLICABLE",
+            "basePrice": "€4,95",
+            "basePriceValue": 495,
+            "currencyCode": "EUR",
+            "discountedPrice": "€3,96",
+            "discountedValue": 396,
+            "displayDiscountText": "",
+            "displayUpsellText": "",
+            "endTime": "1791413940000",
+            "history": {
+              "launchPrice": null,
+              "lowestRecentPrice": "Lowest price in last 30 days: €4,95"
+            },
+            "isExclusive": false,
+            "isFree": false,
+            "isTiedToSubscription": false,
+            "membershipType": null,
+            "savingTag": "Save 20%",
+            "serviceBranding": ["NONE"],
+            "tierLabel": null
+          }
+        }
+      ]
+    }
+  }
+}

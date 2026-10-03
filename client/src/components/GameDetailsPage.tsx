@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import DOMPurify from 'dompurify'
 import { DateTime } from 'luxon'
-import { fetchGame, metacriticLink } from '../modules/psnStore'
+import { fetchGame, metacriticLink, type Game } from '../modules/psnStore'
 import Error from './Error'
 import Image from './Image'
 import Loading from './Spinner'
@@ -24,6 +24,16 @@ const formatDate = (value: string): string => {
   })
 }
 
+// A game read from the persisted client cache can lack the `plusOffer` key.
+// Test it for truthiness; do not compare it with null.
+const plusValueFor = (game: Game): string | null => {
+  if (game.plusOffer) {
+    return game.plusOffer.kind === 'price' ? game.plusOffer.price : 'Included'
+  }
+
+  return game.plusUpsellText
+}
+
 const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
   const {
     data: game,
@@ -43,6 +53,7 @@ const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
     return <Error message="Game not found" />
   }
 
+  const plusValue = plusValueFor(game)
   const hasDescription = game.description.trim().length > 0
   const hasScreenshots = game.screenshots.length > 0
   const hasVideos = game.videos.length > 0
@@ -58,14 +69,14 @@ const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
           <dl className="details-page--meta-list">
             {game.price && (
               <>
-                <dt>Price</dt>
+                <dt>Standard</dt>
                 <dd>{game.price}</dd>
               </>
             )}
-            {game.plusUpsellText !== null && (
+            {plusValue !== null && (
               <>
                 <dt>PS Plus</dt>
-                <dd>{game.plusUpsellText}</dd>
+                <dd>{plusValue}</dd>
               </>
             )}
             <dt>Release</dt>

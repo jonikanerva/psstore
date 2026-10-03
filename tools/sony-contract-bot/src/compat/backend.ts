@@ -11,7 +11,10 @@ export interface CompatibilityContext {
 // constant assignment `NAME = 'literal'` and read the quoted literal. The
 // constants are at module scope with no preceding interface declaration to
 // collide with.
-const extractDefault = (source: string, constName: string): string | null => {
+export const extractDefault = (
+  source: string,
+  constName: string,
+): string | null => {
   const pattern = new RegExp(`${constName}\\s*=\\s*'([^']+)'`, 'm')
   const match = source.match(pattern)
   return match?.[1] ?? null
@@ -80,6 +83,15 @@ export const validateBackendCompatibility = (
     'SONY_PRODUCT_BY_ID_HASH',
   )
 
+  const expectedPriceOperationName = extractDefault(
+    context.serverEnvText,
+    'SONY_PRODUCT_PRICE_OPERATION_NAME',
+  )
+  const expectedPriceHash = extractDefault(
+    context.serverEnvText,
+    'SONY_PRODUCT_PRICE_HASH',
+  )
+
   if (!expectedOperationName || !expectedEndpoint) {
     throw new Error(
       'Unable to read server env defaults for compatibility checks',
@@ -89,6 +101,12 @@ export const validateBackendCompatibility = (
   if (!expectedProductOperationName || !expectedProductHash) {
     throw new Error(
       'Unable to read server PDP env defaults (SONY_PRODUCT_OPERATION_NAME / SONY_PRODUCT_BY_ID_HASH) for compatibility checks',
+    )
+  }
+
+  if (!expectedPriceOperationName || !expectedPriceHash) {
+    throw new Error(
+      'Unable to read server price env defaults (SONY_PRODUCT_PRICE_OPERATION_NAME / SONY_PRODUCT_PRICE_HASH) for compatibility checks',
     )
   }
 
@@ -117,6 +135,18 @@ export const validateBackendCompatibility = (
     )
   }
 
+  if (
+    !manifest.operations.some(
+      (operation) =>
+        operation.operation_name === expectedPriceOperationName &&
+        operation.persisted_query_hash === expectedPriceHash,
+    )
+  ) {
+    throw new Error(
+      `Manifest missing price operation compatible with server: ${expectedPriceOperationName} @ ${expectedPriceHash}`,
+    )
+  }
+
   if (manifest.endpoint.url !== expectedEndpoint) {
     throw new Error(
       `Manifest endpoint mismatch. expected=${expectedEndpoint} actual=${manifest.endpoint.url}`,
@@ -142,10 +172,13 @@ export const validateBackendCompatibility = (
           `Operation ${operation.feature} response path incompatible: ${operation.response_path}`,
         )
       }
-    } else if (operation.operation_name === expectedProductOperationName) {
+    } else if (
+      operation.operation_name === expectedProductOperationName ||
+      operation.operation_name === expectedPriceOperationName
+    ) {
       if (operation.response_path !== 'data.productRetrieve') {
         throw new Error(
-          `PDP operation ${operation.feature} response path incompatible: ${operation.response_path}`,
+          `Product operation ${operation.operation_name} response path incompatible: ${operation.response_path}`,
         )
       }
 
@@ -156,7 +189,7 @@ export const validateBackendCompatibility = (
         !variablesSchemaEquals(operation.variables_schema, PDP_VARIABLES_SCHEMA)
       ) {
         throw new Error(
-          `PDP operation ${operation.feature} variables_schema incompatible: ${JSON.stringify(operation.variables_schema)}`,
+          `Product operation ${operation.operation_name} variables_schema incompatible: ${JSON.stringify(operation.variables_schema)}`,
         )
       }
     } else {

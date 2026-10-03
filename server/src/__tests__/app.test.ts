@@ -31,6 +31,7 @@ const concept: Concept = {
 const FakeSony = Layer.succeed(SonyClient, {
   fetchConceptsByFeature: (feature) =>
     Effect.succeed(feature === 'new' ? [concept] : []),
+  fetchProductPrice: () => Effect.succeed(null),
   fetchProductDetail: () =>
     Effect.succeed({
       releaseDate: '2024-01-01T00:00:00Z',
@@ -61,6 +62,7 @@ const failHandler = (
 } => {
   const FailSony = Layer.succeed(SonyClient, {
     fetchConceptsByFeature: () => Effect.fail(error),
+    fetchProductPrice: () => Effect.succeed(null),
     fetchProductDetail: () => Effect.fail(error),
   })
   const FailApp = HttpApiBuilder.layer(gamesApi).pipe(

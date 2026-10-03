@@ -9,6 +9,7 @@ import { validateBackendCompatibility } from '../compat/backend.js'
 const GRID_FEATURES: ContractFeature[] = ['new', 'upcoming', 'discounted']
 const GRID_HASH = 'a'.repeat(64)
 const PDP_HASH = 'b'.repeat(64)
+const PRICE_HASH = 'd'.repeat(64)
 
 const gridOperation = (feature: ContractFeature): ContractOperation => ({
   feature,
@@ -33,6 +34,12 @@ const pdpOperation = (): ContractOperation => ({
   observed_status_codes: [200],
 })
 
+const priceOperation = (): ContractOperation => ({
+  ...pdpOperation(),
+  operation_name: 'productRetrieveForCtasWithPrice',
+  persisted_query_hash: PRICE_HASH,
+})
+
 const baseMetadata = {
   captured_at: '2026-02-17T00:00:00.000Z',
   captured_by: 'codex',
@@ -53,7 +60,11 @@ const manifest: SonyContractManifest = {
   version: 1,
   metadata: baseMetadata,
   endpoint,
-  operations: [...GRID_FEATURES.map(gridOperation), pdpOperation()],
+  operations: [
+    ...GRID_FEATURES.map(gridOperation),
+    pdpOperation(),
+    priceOperation(),
+  ],
 }
 
 // serverEnvText declares all four anchored constants the backend exposes,
@@ -64,6 +75,8 @@ const serverEnvText = [
   "export const SONY_OPERATION_NAME = 'categoryGridRetrieve'",
   "export const SONY_PRODUCT_OPERATION_NAME = 'metGetProductById'",
   `export const SONY_PRODUCT_BY_ID_HASH =\n  '${PDP_HASH}'`,
+  "export const SONY_PRODUCT_PRICE_OPERATION_NAME = 'productRetrieveForCtasWithPrice'",
+  `export const SONY_PRODUCT_PRICE_HASH =\n  '${PRICE_HASH}'`,
 ].join('\n')
 
 const context = {
@@ -100,6 +113,7 @@ describe('validateBackendCompatibility', () => {
       operations: [
         ...GRID_FEATURES.map(gridOperation),
         { ...pdpOperation(), persisted_query_hash: 'c'.repeat(64) },
+        priceOperation(),
       ],
     }
 
@@ -117,12 +131,13 @@ describe('validateBackendCompatibility', () => {
           ...pdpOperation(),
           response_path: 'data.categoryGridRetrieve.products',
         },
+        priceOperation(),
       ],
     }
 
     expect(() => {
       validateBackendCompatibility(wrongPath, context)
-    }).toThrow(/PDP operation .* response path incompatible/)
+    }).toThrow(/Product operation .* response path incompatible/)
   })
 
   it('rejects a PDP operation with the wrong variables_schema', () => {
@@ -131,12 +146,13 @@ describe('validateBackendCompatibility', () => {
       operations: [
         ...GRID_FEATURES.map(gridOperation),
         { ...pdpOperation(), variables_schema: { conceptId: 'string' } },
+        priceOperation(),
       ],
     }
 
     expect(() => {
       validateBackendCompatibility(wrongVars, context)
-    }).toThrow(/PDP operation .* variables_schema incompatible/)
+    }).toThrow(/Product operation .* variables_schema incompatible/)
   })
 
   it('rejects when sonyClient no longer extracts productRetrieve (cut 3)', () => {
@@ -166,5 +182,46 @@ describe('validateBackendCompatibility', () => {
     expect(() => {
       validateBackendCompatibility(manifest, withoutPdpEnv)
     }).toThrow(/SONY_PRODUCT_OPERATION_NAME/)
+  })
+
+  it('rejects a manifest without the price operation', () => {
+    const withoutPrice: SonyContractManifest = {
+      ...manifest,
+      operations: [...GRID_FEATURES.map(gridOperation), pdpOperation()],
+    }
+
+    expect(() => {
+      validateBackendCompatibility(withoutPrice, context)
+    }).toThrow(/Manifest missing price operation/)
+  })
+
+  it('rejects a manifest whose price hash does not match the server', () => {
+    const rotated: SonyContractManifest = {
+      ...manifest,
+      operations: [
+        ...GRID_FEATURES.map(gridOperation),
+        pdpOperation(),
+        { ...priceOperation(), persisted_query_hash: 'e'.repeat(64) },
+      ],
+    }
+
+    expect(() => {
+      validateBackendCompatibility(rotated, context)
+    }).toThrow(/Manifest missing price operation/)
+  })
+
+  it('rejects when the server price env constants are unreadable', () => {
+    const withoutPriceEnv = {
+      ...context,
+      serverEnvText: serverEnvText
+        .split('\n')
+        .filter((line) => !line.includes('SONY_PRODUCT_PRICE'))
+        .join('\n')
+        .replace(/\n\s*'d{64}'/, ''),
+    }
+
+    expect(() => {
+      validateBackendCompatibility(manifest, withoutPriceEnv)
+    }).toThrow(/SONY_PRODUCT_PRICE_OPERATION_NAME/)
   })
 })

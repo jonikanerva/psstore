@@ -1,0 +1,63 @@
+{
+  "data": {
+    "productRetrieve": {
+      "id": "EP2640-PPSA29380_00-0000000000000000",
+      "name": "ANOMALITH",
+      "webctas": [
+        {
+          "type": "UPSELL_PS_PLUS_DISCOUNT",
+          "meta": {
+            "upSellService": "PS_PLUS"
+          },
+          "price": {
+            "applicability": "UPSELL",
+            "basePrice": "€49,95",
+            "basePriceValue": 4995,
+            "currencyCode": "EUR",
+            "discountedPrice": "€44,95",
+            "discountedValue": 4495,
+            "displayDiscountText": "-10%",
+            "displayUpsellText": "Save 10% with PlayStation Plus",
+            "endTime": "1793199600000",
+            "history": {
+              "launchPrice": null,
+              "lowestRecentPrice": "Lowest price in last 30 days: €49,95"
+            },
+            "isExclusive": false,
+            "isFree": false,
+            "isTiedToSubscription": false,
+            "membershipType": null,
+            "savingTag": "",
+            "serviceBranding": ["PS_PLUS"],
+            "tierLabel": null
+          }
+        },
+        {
+          "type": "PREORDER",
+          "meta": {
+            "upSellService": "NONE"
+          },
+          "price": {
+            "applicability": "APPLICABLE",
+            "basePrice": "€49,95",
+            "basePriceValue": 4995,
+            "currencyCode": "EUR",
+            "discountedPrice": "€49,95",
+            "discountedValue": 4995,
+            "displayDiscountText": null,
+            "displayUpsellText": null,
+            "endTime": null,
+            "history": null,
+            "isExclusive": false,
+            "isFree": false,
+            "isTiedToSubscription": false,
+            "membershipType": null,
+            "savingTag": "",
+            "serviceBranding": ["NONE"],
+            "tierLabel": null
+          }
+        }
+      ]
+    }
+  }
+}

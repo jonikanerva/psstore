@@ -1,5 +1,10 @@
-import { gameSchema, type Game, type PageResult } from '@psstore/shared'
-import { Cache, Context, Duration, Effect, Layer, Schema } from 'effect'
+import {
+  gameSchema,
+  type Game,
+  type PageResult,
+  type PlusOffer,
+} from '@psstore/shared'
+import { Cache, Context, Duration, Effect, Exit, Layer, Schema } from 'effect'
 import { CACHE_TTL } from '../config/env.js'
 import {
   GameNotFound,
@@ -35,6 +40,8 @@ type UpstreamError =
 const NEW_LIST_PAGE_SIZE = 300
 const LIST_PAGE_SIZE = 120
 const DETAIL_TTL = Duration.hours(6)
+const PRICE_TTL = Duration.minutes(10)
+const PRICE_FAILURE_TTL = Duration.seconds(30)
 
 interface ProductMeta {
   readonly date: string
@@ -112,6 +119,29 @@ export const GamesServiceLive: Layer.Layer<GamesService, never, SonyClient> =
             ),
         },
       )
+
+      // Per-product PS Plus offer, read only by the game page. A failed lookup is
+      // cached as a failure for the short TTL so a Sony outage is not retried on
+      // every page view.
+      const productPriceCache = yield* Cache.makeWith(
+        (productId: string) => sony.fetchProductPrice(productId),
+        {
+          capacity: 1_000,
+          timeToLive: (exit) =>
+            Exit.isSuccess(exit) ? PRICE_TTL : PRICE_FAILURE_TTL,
+        },
+      )
+
+      const plusOfferFor = (game: Game): Effect.Effect<PlusOffer | null> =>
+        game.idKind === 'product'
+          ? Cache.get(productPriceCache, game.id).pipe(
+              Effect.catch((error) =>
+                Effect.logWarning('plus offer lookup failed', {
+                  reason: error._tag,
+                }).pipe(Effect.as(null)),
+              ),
+            )
+          : Effect.succeed(null)
 
       const productMeta = (productId: string): Effect.Effect<ProductMeta> =>
         Cache.get(productDetailCache, productId).pipe(
@@ -250,13 +280,17 @@ export const GamesServiceLive: Layer.Layer<GamesService, never, SonyClient> =
         )
 
       const enrichWithDetail = (game: Game): Effect.Effect<Game> =>
-        Cache.get(productDetailCache, game.id).pipe(
-          Effect.map((detail): Game => ({
+        Effect.all(
+          [Cache.get(productDetailCache, game.id), plusOfferFor(game)],
+          { concurrency: 'unbounded' },
+        ).pipe(
+          Effect.map(([detail, plusOffer]): Game => ({
             ...game,
             date: detail.releaseDate ?? game.date,
             genres: detail.genres.length > 0 ? [...detail.genres] : game.genres,
             description: detail.description || game.description,
             studio: detail.publisherName || game.studio,
+            plusOffer,
           })),
         )
 

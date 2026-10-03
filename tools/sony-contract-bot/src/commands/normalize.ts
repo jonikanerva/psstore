@@ -2,10 +2,26 @@ import fs from 'node:fs/promises'
 import { CORE_FEATURES } from '../contract/constants.js'
 import { createManifest } from '../contract/manifest.js'
 import { normalizeOperations } from '../contract/normalizer.js'
+import { liveProbe } from '../contract/liveProbe.js'
+import {
+  addPinnedOperations,
+  type Probe,
+} from '../contract/pinnedOperations.js'
+import { filterTrackedOperations } from '../contract/trackedOperations.js'
 import { filterOperationsByFinnishPs5EurScope } from '../contract/scopeFilter.js'
-import type { CaptureRecord, ContractFeature } from '../contract/types.js'
+import type {
+  CaptureRecord,
+  ContractFeature,
+  SonyContractManifest,
+} from '../contract/types.js'
 import { parseCaptureRecordToOperation } from '../capture/parser.js'
-import { ensureDir, writeJsonFile } from '../io/files.js'
+import {
+  ensureDir,
+  fileExists,
+  readJsonFile,
+  readTextFile,
+  writeJsonFile,
+} from '../io/files.js'
 import { paths } from '../io/paths.js'
 
 interface CaptureEntry extends CaptureRecord {
@@ -21,7 +37,10 @@ const readCaptureEntries = async (): Promise<CaptureEntry[]> => {
     .map((line) => JSON.parse(line) as CaptureEntry)
 }
 
-export const runNormalize = async (writeManifest: boolean): Promise<void> => {
+export const runNormalize = async (
+  writeManifest: boolean,
+  probe: Probe = liveProbe,
+): Promise<void> => {
   const entries = await readCaptureEntries()
   const parsedOperations = entries.map((entry) =>
     parseCaptureRecordToOperation(
@@ -36,8 +55,9 @@ export const runNormalize = async (writeManifest: boolean): Promise<void> => {
     ),
   )
 
-  const scopedOperations =
-    filterOperationsByFinnishPs5EurScope(parsedOperations)
+  const scopedOperations = filterOperationsByFinnishPs5EurScope(
+    filterTrackedOperations(parsedOperations),
+  )
 
   if (scopedOperations.length === 0) {
     throw new Error(
@@ -45,7 +65,18 @@ export const runNormalize = async (writeManifest: boolean): Promise<void> => {
     )
   }
 
-  const operations = normalizeOperations(scopedOperations)
+  const canonical = (await fileExists(paths.canonicalManifest))
+    ? (await readJsonFile<SonyContractManifest>(paths.canonicalManifest))
+        .operations
+    : []
+  const withPinned = await addPinnedOperations(
+    scopedOperations,
+    canonical,
+    await readTextFile(paths.envFile),
+    probe,
+  )
+
+  const operations = normalizeOperations(withPinned)
 
   for (const feature of CORE_FEATURES) {
     if (!operations.some((operation) => operation.feature === feature)) {

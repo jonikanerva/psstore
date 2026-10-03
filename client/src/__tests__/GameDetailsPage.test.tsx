@@ -21,6 +21,7 @@ const baseGame: Game = {
   studio: 'RPG Studio',
   preOrder: false,
   plusUpsellText: null,
+  plusOffer: null,
   idKind: 'product',
 }
 
@@ -133,6 +134,72 @@ describe('GameDetailsPage', () => {
       expect(screen.getByText('Detail Game')).toBeInTheDocument()
     })
 
+    expect(screen.queryByText('PS Plus')).not.toBeInTheDocument()
+  })
+
+  it('shows the Standard and PS Plus prices as labelled values', async () => {
+    const { fetchGame } = await import('../modules/psnStore')
+    vi.mocked(fetchGame).mockResolvedValue({
+      ...baseGame,
+      plusOffer: { kind: 'price', price: '€44,95' },
+    })
+
+    await renderWithRouter(<GameDetailsPage gameId={baseGame.id} />)
+
+    const standard = await screen.findByText('Standard')
+    expect(standard.nextElementSibling).toHaveTextContent('49,99 €')
+    const plus = screen.getByText('PS Plus')
+    expect(plus.nextElementSibling).toHaveTextContent('€44,95')
+  })
+
+  it('shows Included under PS Plus for a subscription game', async () => {
+    const { fetchGame } = await import('../modules/psnStore')
+    vi.mocked(fetchGame).mockResolvedValue({
+      ...baseGame,
+      plusOffer: { kind: 'included' },
+    })
+
+    await renderWithRouter(<GameDetailsPage gameId={baseGame.id} />)
+
+    const plus = await screen.findByText('PS Plus')
+    expect(plus.nextElementSibling).toHaveTextContent('Included')
+  })
+
+  it('shows only the standard price when there is no Plus offer', async () => {
+    const { fetchGame } = await import('../modules/psnStore')
+    vi.mocked(fetchGame).mockResolvedValue(baseGame)
+
+    await renderWithRouter(<GameDetailsPage gameId={baseGame.id} />)
+
+    expect(await screen.findByText('Standard')).toBeInTheDocument()
+    expect(screen.queryByText('PS Plus')).not.toBeInTheDocument()
+  })
+
+  it('shows the upsell text only under the PS Plus label when the offer is null', async () => {
+    const { fetchGame } = await import('../modules/psnStore')
+    vi.mocked(fetchGame).mockResolvedValue({
+      ...baseGame,
+      plusOffer: null,
+      plusUpsellText: 'Save 10%',
+    })
+
+    await renderWithRouter(<GameDetailsPage gameId={baseGame.id} />)
+
+    const plus = await screen.findByText('PS Plus')
+    expect(plus.nextElementSibling).toHaveTextContent('Save 10%')
+    const standard = screen.getByText('Standard')
+    expect(standard.nextElementSibling).not.toHaveTextContent('Save 10%')
+  })
+
+  it('treats a missing plusOffer key from an older cached payload as absent', async () => {
+    const { fetchGame } = await import('../modules/psnStore')
+    const legacy = { ...baseGame }
+    Reflect.deleteProperty(legacy, 'plusOffer')
+    vi.mocked(fetchGame).mockResolvedValue(legacy)
+
+    await renderWithRouter(<GameDetailsPage gameId={baseGame.id} />)
+
+    expect(await screen.findByText('Standard')).toBeInTheDocument()
     expect(screen.queryByText('PS Plus')).not.toBeInTheDocument()
   })
 

@@ -125,5 +125,19 @@ describeSmoke(
         `[test:live] PDP sku=${sku} genres=${String(detail.genres.length)} descLen=${String(detail.description.length)}`,
       )
     }, 20_000)
+
+    it('PRICE: fetchProductPrice resolves the Plus offer for a known SKU', async () => {
+      const sku = 'EP2640-PPSA29380_00-0000000000000000'
+      const offer = await Effect.runPromise(
+        SonyClient.pipe(
+          Effect.flatMap((client) => client.fetchProductPrice(sku)),
+          Effect.provide(SonyClientLive),
+        ),
+      )
+      globalThis.console.log(
+        `[test:live] PRICE sku=${sku} offer=${JSON.stringify(offer)}`,
+      )
+      expect(offer).not.toBeUndefined()
+    }, 20_000)
   },
 )

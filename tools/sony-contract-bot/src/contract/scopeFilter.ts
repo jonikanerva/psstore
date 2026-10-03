@@ -108,10 +108,20 @@ const includesValue = (value: unknown, needle: string): boolean => {
   return false
 }
 
+// A grid request whose `filterBy` lacks the PS5 token lists every platform.
+const hasUnscopedFilter = (operation: ContractOperation): boolean => {
+  const filterBy = operation.sample_variables['filterBy']
+  return Array.isArray(filterBy) && !includesPs5(filterBy)
+}
+
 export const filterOperationsByFinnishPs5EurScope = (
   operations: ContractOperation[],
 ): ContractOperation[] =>
   operations.filter((operation) => {
+    if (hasUnscopedFilter(operation)) {
+      return false
+    }
+
     const bundle = {
       ...operation.variables_schema,
       ...operation.sample_variables,
