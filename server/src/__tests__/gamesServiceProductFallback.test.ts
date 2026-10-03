@@ -54,12 +54,15 @@ const price = (overrides: Partial<ProductPrice> = {}): ProductPrice => ({
 interface Calls {
   detail: number
   price: number
+  concept: number
 }
 
 interface Behaviour {
   detail: () => Effect.Effect<ProductDetailResult, UpstreamFailure>
   price: () => Effect.Effect<ProductPrice, UpstreamFailure>
   listed?: Concept[]
+  conceptProduct?: string | null
+  conceptLookup?: () => Effect.Effect<string | null, UpstreamFailure>
 }
 
 const listedConcept: Concept = {
@@ -71,10 +74,18 @@ const listedConcept: Concept = {
 }
 
 const harness = (behaviour: Partial<Behaviour> = {}) => {
-  const calls: Calls = { detail: 0, price: 0 }
+  const calls: Calls = { detail: 0, price: 0, concept: 0 }
   const Sony = Layer.succeed(SonyClient, {
     fetchConceptsByFeature: (feature) =>
       Effect.succeed(feature === 'new' ? (behaviour.listed ?? []) : []),
+    fetchConceptProductId: () =>
+      Effect.suspend(() => {
+        calls.concept += 1
+        return (
+          behaviour.conceptLookup ??
+          (() => Effect.succeed(behaviour.conceptProduct ?? null))
+        )()
+      }),
     fetchPlusMonthly: () => Effect.succeed([]),
     fetchSearchPage: () =>
       Effect.succeed({ candidates: [], isLast: true, rawCount: 0 }),
@@ -115,6 +126,41 @@ const gameOf = <A, E>(exit: Exit.Exit<A, E>): A => {
   }
   return exit.value
 }
+
+describe('getGameById concept id', () => {
+  it('opens the product Sony sells for the concept', async () => {
+    const h = harness({ conceptProduct: ID })
+    const game = gameOf(await h.runExit((s) => s.getGameById('10000368')))
+
+    expect(game).toMatchObject({ id: ID, name: 'Destiny 2' })
+    expect(h.calls.concept).toBe(1)
+  })
+
+  it('answers 404 when Sony has no product for the concept', async () => {
+    const h = harness({ conceptProduct: null })
+    const exit = await h.runExit((s) => s.getGameById('10000368'))
+
+    expect(failureOf(exit)).toBeInstanceOf(GameNotFound)
+    expect(h.calls.detail).toBe(0)
+  })
+
+  it('propagates a concept lookup outage, not a 404', async () => {
+    const h = harness({
+      conceptLookup: () =>
+        Effect.fail(new UpstreamUnavailable({ message: 'down' })),
+    })
+    const exit = await h.runExit((s) => s.getGameById('10000368'))
+
+    expect(failureOf(exit)).toBeInstanceOf(UpstreamUnavailable)
+  })
+
+  it('never looks up a product id as a concept', async () => {
+    const h = harness()
+    gameOf(await h.runExit((s) => s.getGameById(ID)))
+
+    expect(h.calls.concept).toBe(0)
+  })
+})
 
 describe('getGameById product-id fallback', () => {
   it('builds a full game from the product detail and price', async () => {
@@ -257,7 +303,7 @@ describe('getGameById product-id fallback', () => {
     )
 
     expect(error).toBeInstanceOf(GameNotFound)
-    expect(h.calls).toEqual({ detail: 0, price: 0 })
+    expect(h.calls).toEqual({ detail: 0, price: 0, concept: 0 })
   })
 
   it.each([

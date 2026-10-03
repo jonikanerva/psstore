@@ -43,6 +43,7 @@ const captureLogger = Logger.make((options) => {
 const makeApp = (outcome: SearchPage | SearchFailure) => {
   const FakeSony = Layer.succeed(SonyClient, {
     fetchConceptsByFeature: () => Effect.succeed([]),
+    fetchConceptProductId: () => Effect.succeed(null),
     fetchPlusMonthly: () => Effect.succeed([]),
     fetchProductPrice: () =>
       Effect.succeed({ plusOffer: null, standard: null }),

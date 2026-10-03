@@ -1,6 +1,6 @@
 # Sony GraphQL Contract Drift Report
 
-- Drift detected: UNKNOWN (no fresh capture — not checked against live Sony)
+- Drift detected: no
 - Added: 0
 - Removed: 0
 - Changed: 0

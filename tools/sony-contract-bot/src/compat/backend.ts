@@ -54,6 +54,11 @@ const SEARCH_VARIABLES_SCHEMA: Record<string, unknown> = {
   searchTerm: 'string',
 }
 
+// The concept lookup request variable shape the manifest must record.
+const CONCEPT_VARIABLES_SCHEMA: Record<string, unknown> = {
+  conceptId: 'string',
+}
+
 // The signed-in library request variable shape the manifest must record. It
 // mirrors the variables the server sends (`requestPurchasedPage`).
 const PURCHASED_VARIABLES_SCHEMA: Record<string, unknown> = {
@@ -114,6 +119,15 @@ export const validateBackendCompatibility = (
     'SONY_PRODUCT_PRICE_HASH',
   )
 
+  const expectedConceptOperationName = extractDefault(
+    context.serverEnvText,
+    'SONY_CONCEPT_OPERATION_NAME',
+  )
+  const expectedConceptHash = extractDefault(
+    context.serverEnvText,
+    'SONY_CONCEPT_HASH',
+  )
+
   const expectedSearchOperationName = extractDefault(
     context.serverEnvText,
     'SONY_SEARCH_OPERATION_NAME',
@@ -147,6 +161,12 @@ export const validateBackendCompatibility = (
   if (!expectedPriceOperationName || !expectedPriceHash) {
     throw new Error(
       'Unable to read server price env defaults (SONY_PRODUCT_PRICE_OPERATION_NAME / SONY_PRODUCT_PRICE_HASH) for compatibility checks',
+    )
+  }
+
+  if (!expectedConceptOperationName || !expectedConceptHash) {
+    throw new Error(
+      'Unable to read server concept env defaults (SONY_CONCEPT_OPERATION_NAME / SONY_CONCEPT_HASH) for compatibility checks',
     )
   }
 
@@ -196,6 +216,18 @@ export const validateBackendCompatibility = (
   ) {
     throw new Error(
       `Manifest missing price operation compatible with server: ${expectedPriceOperationName} @ ${expectedPriceHash}`,
+    )
+  }
+
+  if (
+    !manifest.operations.some(
+      (operation) =>
+        operation.operation_name === expectedConceptOperationName &&
+        operation.persisted_query_hash === expectedConceptHash,
+    )
+  ) {
+    throw new Error(
+      `Manifest missing concept operation compatible with server: ${expectedConceptOperationName} @ ${expectedConceptHash}`,
     )
   }
 
@@ -266,6 +298,23 @@ export const validateBackendCompatibility = (
       ) {
         throw new Error(
           `Product operation ${operation.operation_name} variables_schema incompatible: ${JSON.stringify(operation.variables_schema)}`,
+        )
+      }
+    } else if (operation.operation_name === expectedConceptOperationName) {
+      if (operation.response_path !== 'data.conceptRetrieve') {
+        throw new Error(
+          `Concept operation ${operation.operation_name} response path incompatible: ${operation.response_path}`,
+        )
+      }
+
+      if (
+        !variablesSchemaEquals(
+          operation.variables_schema,
+          CONCEPT_VARIABLES_SCHEMA,
+        )
+      ) {
+        throw new Error(
+          `Concept operation ${operation.operation_name} variables_schema incompatible: ${JSON.stringify(operation.variables_schema)}`,
         )
       }
     } else if (operation.operation_name === expectedSearchOperationName) {
@@ -341,6 +390,12 @@ export const validateBackendCompatibility = (
   if (!context.sonyClientText.includes('universalSearch')) {
     throw new Error(
       'sonyClient search response extraction no longer matches expected path (universalSearch)',
+    )
+  }
+
+  if (!context.sonyClientText.includes('SONY_CONCEPT_HASH')) {
+    throw new Error(
+      'sonyClient no longer sends the concept persisted-query hash (SONY_CONCEPT_HASH)',
     )
   }
 

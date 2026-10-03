@@ -11,6 +11,7 @@ const PDP_HASH = 'b'.repeat(64)
 const PRICE_HASH = 'd'.repeat(64)
 const SEARCH_HASH = 'e'.repeat(64)
 const PURCHASED_HASH = '9'.repeat(64)
+const CONCEPT_HASH = '7'.repeat(64)
 const STALE_PURCHASED_HASH = '8'.repeat(64)
 
 const operation = (
@@ -53,6 +54,14 @@ const pdp = operation(
   'c'.repeat(64),
   'data.productRetrieve',
   { productId: 'EP9000-PPSA01341_00-DEMONSSOULS00000' },
+)
+
+const concept = operation(
+  'details',
+  'conceptRetrieveForCtasWithPrice',
+  '6'.repeat(64),
+  'data.conceptRetrieve',
+  { conceptId: '10000368' },
 )
 
 const search: ContractOperation = {
@@ -107,6 +116,8 @@ const envText = [
   `export const SONY_PRODUCT_BY_ID_HASH =\n  '${PDP_HASH}'`,
   "export const SONY_PRODUCT_PRICE_OPERATION_NAME = 'productRetrieveForCtasWithPrice'",
   `export const SONY_PRODUCT_PRICE_HASH =\n  '${PRICE_HASH}'`,
+  "export const SONY_CONCEPT_OPERATION_NAME = 'conceptRetrieveForCtasWithPrice'",
+  `export const SONY_CONCEPT_HASH =\n  '${CONCEPT_HASH}'`,
   "export const SONY_SEARCH_OPERATION_NAME = 'getSearchResults'",
   `export const SONY_SEARCH_HASH =\n  '${SEARCH_HASH}'`,
   "export const SONY_PURCHASED_OPERATION_NAME = 'getPurchasedGameList'",
@@ -121,7 +132,7 @@ const captured = [
   search,
 ]
 
-const canonical = [pdp, purchased]
+const canonical = [pdp, concept, purchased]
 
 describe('addPinnedOperations', () => {
   it('adds the pinned operation with the env hash when the probe passes', async () => {
@@ -133,12 +144,20 @@ describe('addPinnedOperations', () => {
       probe,
     )
 
-    expect(probe).toHaveBeenCalledOnce()
+    expect(probe).toHaveBeenCalledTimes(2)
     expect(probe).toHaveBeenCalledWith({
       url: 'https://web.np.playstation.com/api/graphql/v1/op',
       operationName: 'metGetProductById',
       hash: PDP_HASH,
       variables: { productId: 'EP9000-PPSA01341_00-DEMONSSOULS00000' },
+      responseNode: 'productRetrieve',
+    })
+    expect(probe).toHaveBeenCalledWith({
+      url: 'https://web.np.playstation.com/api/graphql/v1/op',
+      operationName: 'conceptRetrieveForCtasWithPrice',
+      hash: CONCEPT_HASH,
+      variables: { conceptId: '10000368' },
+      responseNode: 'conceptRetrieve',
     })
     const added = result.find(
       (entry) => entry.operation_name === 'metGetProductById',
@@ -171,7 +190,7 @@ describe('addPinnedOperations', () => {
       validateBackendCompatibility(manifest, {
         serverEnvText: envText,
         sonyClientText:
-          "'x-apollo-operation-name': strategy.operationName categoryGridRetrieve productRetrieve universalSearch SONY_PURCHASED_HASH",
+          "'x-apollo-operation-name': strategy.operationName categoryGridRetrieve productRetrieve universalSearch SONY_PURCHASED_HASH SONY_CONCEPT_HASH",
         mapperText: 'conceptToGame',
         serviceText: 'fetchConceptsByFeature',
       })
@@ -193,14 +212,14 @@ describe('addPinnedOperations', () => {
   it('does not probe when the capture holds the operation', async () => {
     const probe = vi.fn().mockResolvedValue(undefined)
     const result = await addPinnedOperations(
-      [...captured, pdp],
+      [...captured, pdp, concept],
       canonical,
       envText,
       probe,
     )
 
     expect(probe).not.toHaveBeenCalled()
-    expect(result).toHaveLength(captured.length + 2)
+    expect(result).toHaveLength(captured.length + 3)
   })
 
   it('fails when the canonical manifest lacks the operation', async () => {
@@ -258,7 +277,7 @@ describe('addPinnedOperations', () => {
     await expect(
       addPinnedOperations(
         captured,
-        [pdp],
+        [pdp, concept],
         envText,
         vi.fn().mockResolvedValue(undefined),
         vi.fn(),

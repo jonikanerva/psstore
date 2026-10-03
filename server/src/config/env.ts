@@ -21,6 +21,9 @@ export const SONY_PRODUCT_PRICE_OPERATION_NAME =
   'productRetrieveForCtasWithPrice'
 export const SONY_PRODUCT_PRICE_HASH =
   '1f0ca607e170abbfb7d67bd76c9bbc97f21fe2e807be49e5fe764e14566cb605'
+export const SONY_CONCEPT_OPERATION_NAME = 'conceptRetrieveForCtasWithPrice'
+export const SONY_CONCEPT_HASH =
+  'c47dab9bb8162ee451bc6f0d8c2e8738ab48c8dd7c50dbe2b30f441c1b8ca119'
 export const SONY_SEARCH_OPERATION_NAME = 'getSearchResults'
 export const SONY_SEARCH_HASH =
   '4df6284f982e57bec70f23c77e2c219dc792eb19af7fb3d3a81767aa3f1958aa'

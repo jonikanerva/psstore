@@ -16,6 +16,7 @@ import {
 
 const entry = {
   productId: 'EP0001-PPSA00001_00-SYNTHETICALPHA00',
+  conceptId: '10000001',
   name: 'Synthetic Alpha',
   imageUrl: 'https://img.test/alpha.png',
 }

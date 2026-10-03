@@ -191,6 +191,19 @@ describeSmoke(
       expect(price.standard).not.toBeUndefined()
     }, 20_000)
 
+    it('CONCEPT: a concept id resolves to the product Sony sells for it', async () => {
+      const productId = await Effect.runPromise(
+        SonyClient.pipe(
+          Effect.flatMap((client) => client.fetchConceptProductId('10000368')),
+          Effect.provide(SonyClientLive),
+        ),
+      )
+      globalThis.console.log(
+        `[test:live] CONCEPT 10000368 -> ${String(productId)}`,
+      )
+      expect(productId).toBe('EP9000-PPSA01341_00-DEMONSSOULS00000')
+    }, 20_000)
+
     it('PRODUCT-ID: a search-only cross-generation id resolves to a PS5 game with a name and a cover', async () => {
       const id = 'EP0002-PPSA02410_00-DESTINYTHEGAME02'
       const [detail, price] = await Effect.runPromise(

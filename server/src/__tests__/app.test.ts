@@ -45,6 +45,7 @@ const monthlyProductId = 'UP7742-PPSA29413_00-0632159817352246'
 const FakeSony = Layer.succeed(SonyClient, {
   fetchConceptsByFeature: (feature) =>
     Effect.succeed(feature === 'new' ? [concept] : []),
+  fetchConceptProductId: () => Effect.succeed(null),
   fetchPlusMonthly: () =>
     Effect.succeed([
       {
@@ -73,6 +74,7 @@ const ACCESS_TOKEN = 'synthetic-access-token-qrstuvwxyz'
 
 const libraryEntry: PurchasedEntry = {
   productId: 'EP9000-PPSA00009_00-LIBRARY000000000',
+  conceptId: '10000009',
   name: 'Library Game',
   imageUrl: 'https://img/library',
 }
@@ -166,6 +168,7 @@ const failHandler = (
 } => {
   const FailSony = Layer.succeed(SonyClient, {
     fetchConceptsByFeature: () => Effect.fail(error),
+    fetchConceptProductId: () => Effect.succeed(null),
     fetchPlusMonthly: () =>
       error._tag === 'UpstreamQueryRotated'
         ? Effect.succeed([])
@@ -210,6 +213,7 @@ const fallbackHandler = (
 ) => {
   const FallbackSony = Layer.succeed(SonyClient, {
     fetchConceptsByFeature: () => Effect.succeed([]),
+    fetchConceptProductId: () => Effect.succeed(null),
     fetchPlusMonthly: () => Effect.succeed([]),
     fetchSearchPage: () =>
       Effect.succeed({ candidates: [], isLast: true, rawCount: 0 }),
@@ -684,7 +688,7 @@ describe('purchased games API', () => {
     expect(body.totalCount).toBe(1)
     expect(body.nextOffset).toBeNull()
     expect(body.games[0]).toMatchObject({
-      id: libraryEntry.productId,
+      id: '10000009',
       idKind: 'product',
       price: '',
     })

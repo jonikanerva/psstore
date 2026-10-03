@@ -29,6 +29,10 @@ describe('parsePurchasedPage', () => {
       'Synthetic Alpha',
       'Synthetic Beta',
     ])
+    expect(outcome.entries.map((entry) => entry.conceptId)).toEqual([
+      '10000001',
+      null,
+    ])
     expect(outcome.outOfScope).toBe(3)
   })
 
@@ -90,7 +94,7 @@ describe('parsePurchasedPage', () => {
 
 describe('dedupePurchased', () => {
   it('keeps the first entry per product id in Sony order', () => {
-    const base = { imageUrl: '' }
+    const base = { conceptId: null, imageUrl: '' }
     const result = dedupePurchased([
       { ...base, productId: 'A', name: 'first' },
       { ...base, productId: 'B', name: 'second' },
@@ -101,20 +105,20 @@ describe('dedupePurchased', () => {
 })
 
 describe('mapPurchasedToGames', () => {
-  it('always links to the product, even when Sony gives a concept id', () => {
+  it('uses the concept id when Sony gives one, else the product id', () => {
     const outcome = parsePurchasedPage(fixture)
     if (outcome.kind !== 'ok') throw new Error('fixture must decode')
     const games = mapPurchasedToGames(outcome.entries)
     expect(games.map((entry) => [entry.id, entry.idKind])).toEqual([
-      ['EP0001-PPSA00001_00-SYNTHETICALPHA00', 'product'],
+      ['10000001', 'product'],
       ['EP0001-PPSA00002_00-SYNTHETICBETA000', 'product'],
     ])
   })
 
   it('keeps Sony order, no date and no price', () => {
     const games = mapPurchasedToGames([
-      { productId: 'B', name: 'Bravo', imageUrl: 'u' },
-      { productId: 'A', name: 'Alpha', imageUrl: 'u' },
+      { productId: 'B', conceptId: '2', name: 'Bravo', imageUrl: 'u' },
+      { productId: 'A', conceptId: '1', name: 'Alpha', imageUrl: 'u' },
     ])
     expect(games.map((entry) => entry.name)).toEqual(['Bravo', 'Alpha'])
     expect(games[0]).toMatchObject({ date: '', price: '', preOrder: false })

@@ -52,6 +52,7 @@ const harness = (price: (productId: string) => PriceResult): Harness => {
         description: '',
         storeDisplayClassification: 'FULL_GAME',
       }),
+    fetchConceptProductId: () => Effect.succeed(null),
     fetchPlusMonthly: () => Effect.succeed([]),
     fetchSearchPage: () =>
       Effect.succeed({ candidates: [], isLast: true, rawCount: 0 }),
