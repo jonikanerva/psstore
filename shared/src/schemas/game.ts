@@ -40,6 +40,15 @@ export const gameSchema = Schema.Struct({
   ),
 })
 
+// The game page payload: a game plus an optional critic score. The key is
+// absent when no trusted score exists. List payloads never carry it.
+export const gameDetailSchema = Schema.Struct({
+  ...gameSchema.fields,
+  criticScore: Schema.optionalKey(
+    Schema.Int.check(Schema.isBetween({ minimum: 0, maximum: 100 })),
+  ),
+})
+
 export const gamesSchema = Schema.Array(gameSchema)
 
 export const pageResultSchema = Schema.Struct({

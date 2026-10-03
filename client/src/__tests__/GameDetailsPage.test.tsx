@@ -64,6 +64,33 @@ describe('GameDetailsPage', () => {
     expect(screen.getByText(/RPG Studio/)).toBeInTheDocument()
   })
 
+  it('shows the critic score as text with an accessible name', async () => {
+    const { fetchGame } = await import('../modules/psnStore')
+    vi.mocked(fetchGame).mockResolvedValue({ ...baseGame, criticScore: 84 })
+
+    await renderWithRouter(<GameDetailsPage gameId={baseGame.id} />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Critics')).toBeInTheDocument()
+    })
+    expect(screen.getByText('Critic score 84 out of 100')).toBeInTheDocument()
+    expect(screen.getByText('84')).toBeInTheDocument()
+  })
+
+  it('shows nothing about critics when there is no score', async () => {
+    const { fetchGame } = await import('../modules/psnStore')
+    vi.mocked(fetchGame).mockResolvedValue(baseGame)
+
+    await renderWithRouter(<GameDetailsPage gameId={baseGame.id} />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Detail Game')).toBeInTheDocument()
+    })
+    expect(screen.queryByText(/critic/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/metacritic/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/N\/A/)).not.toBeInTheDocument()
+  })
+
   it('renders description section only when description exists', async () => {
     const { fetchGame } = await import('../modules/psnStore')
     vi.mocked(fetchGame).mockResolvedValue(baseGame)

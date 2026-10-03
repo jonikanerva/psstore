@@ -1,4 +1,4 @@
-import { Effect } from 'effect'
+import { Effect, Layer, Redacted } from 'effect'
 import { describe, expect, it } from 'vitest'
 import {
   SONY_GRAPHQL_URL,
@@ -11,7 +11,12 @@ import {
   mapConceptsToGames,
   mapUpcomingConceptsToGames,
 } from '../domain/listing.js'
+import { IgdbClientLive } from '../igdb/igdbClient.js'
 import { fetchWithRetry } from '../lib/http.js'
+import {
+  CriticScoreService,
+  CriticScoreServiceLive,
+} from '../services/criticScoreService.js'
 import { productDetailToGame } from '../sony/mapper.js'
 import { buildStrategies, type SonyFeature } from '../sony/queryStrategies.js'
 import {
@@ -232,3 +237,54 @@ describeSmoke(
     }, 20_000)
   },
 )
+
+// The SCORE check needs the owner's IGDB credentials in the environment. It
+// reads a bounded sample: 10 NEW games (10 Sony detail calls, then at most 10
+// sequential provider calls). The hit count is the hit-rate measurement.
+const SCORE_SAMPLE = 10
+const igdbClientId = process.env['IGDB_CLIENT_ID'] ?? ''
+const igdbClientSecret = process.env['IGDB_CLIENT_SECRET'] ?? ''
+const describeScore =
+  SMOKE && igdbClientId !== '' && igdbClientSecret !== ''
+    ? describe
+    : describe.skip
+
+describeScore('IGDB live smoke (SMOKE=1 and IGDB credentials)', () => {
+  it('SCORE: a sample of NEW games gets at least one critic score', async () => {
+    const outcome = extractCategoryGrid(await fetchRawGrid('new'))
+    expect(outcome.kind).toBe('ok')
+    if (outcome.kind !== 'ok') return
+    const sample = mapConceptsToGames(outcome.concepts).slice(0, SCORE_SAMPLE)
+
+    const Critics = CriticScoreServiceLive.pipe(
+      Layer.provide(
+        IgdbClientLive({
+          clientId: igdbClientId,
+          clientSecret: Redacted.make(igdbClientSecret),
+        }),
+      ),
+    )
+    const scores = await Effect.runPromise(
+      Effect.gen(function* () {
+        const sony = yield* SonyClient
+        const critics = yield* CriticScoreService
+        const results: (number | null)[] = []
+        for (const game of sample) {
+          const detail = yield* sony.fetchProductDetail(game.id)
+          results.push(
+            yield* critics.scoreFor({
+              ...game,
+              date: detail.releaseDate ?? '',
+            }),
+          )
+        }
+        return results
+      }).pipe(Effect.provide(Layer.merge(SonyClientLive, Critics))),
+    )
+    const hits = scores.filter((score) => score !== null).length
+    globalThis.console.log(
+      `[test:live] SCORE hits=${String(hits)}/${String(sample.length)} scores=${JSON.stringify(scores)}`,
+    )
+    expect(hits).toBeGreaterThan(0)
+  }, 60_000)
+})

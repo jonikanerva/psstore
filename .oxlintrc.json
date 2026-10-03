@@ -251,6 +251,7 @@
         "server/src/api/gamesHandlers.ts",
         "server/src/http/server.ts",
         "server/src/__tests__/app.test.ts",
+        "server/src/__tests__/criticScoreApi.test.ts",
         "server/src/__tests__/searchApi.test.ts",
         "server/src/__tests__/staticServer.test.ts"
       ],

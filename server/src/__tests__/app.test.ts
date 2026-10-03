@@ -15,6 +15,7 @@ import {
   UpstreamUnavailable,
 } from '../errors/errors.js'
 import { AccountServiceLive } from '../services/accountService.js'
+import { CriticScoreServiceDisabled } from '../services/criticScoreService.js'
 import { GamesServiceLive } from '../services/gamesService.js'
 import { fakeGamesLayer } from './fakeGames.js'
 import type { PurchasedEntry } from '../sony/purchasedSchema.js'
@@ -127,6 +128,7 @@ const accountApp = (
   const App = HttpApiBuilder.layer(gamesApi).pipe(
     Layer.provide([gamesGroupLive, sessionGroupLive]),
     Layer.provide(NpssoAuthLive),
+    Layer.provide(CriticScoreServiceDisabled),
     Layer.provide(
       Layer.mergeAll(
         Services,
@@ -151,6 +153,7 @@ const Services = Layer.mergeAll(GamesServiceLive.pipe(Layer.provide(FakeSony)))
 const AppLive = HttpApiBuilder.layer(gamesApi).pipe(
   Layer.provide([gamesGroupLive, sessionGroupLive]),
   Layer.provide(NpssoAuthLive),
+  Layer.provide(CriticScoreServiceDisabled),
   Layer.provide(
     Layer.mergeAll(
       Services,
@@ -195,6 +198,7 @@ const failHandler = (
   const FailApp = HttpApiBuilder.layer(gamesApi).pipe(
     Layer.provide([gamesGroupLive, sessionGroupLive]),
     Layer.provide(NpssoAuthLive),
+    Layer.provide(CriticScoreServiceDisabled),
     Layer.provide(
       Layer.mergeAll(
         GamesServiceLive.pipe(Layer.provide(FailSony)),
@@ -237,6 +241,7 @@ const fallbackHandler = (
   const FallbackApp = HttpApiBuilder.layer(gamesApi).pipe(
     Layer.provide([gamesGroupLive, sessionGroupLive]),
     Layer.provide(NpssoAuthLive),
+    Layer.provide(CriticScoreServiceDisabled),
     Layer.provide(
       Layer.mergeAll(
         GamesServiceLive.pipe(Layer.provide(FallbackSony)),

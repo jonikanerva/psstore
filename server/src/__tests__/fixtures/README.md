@@ -90,3 +90,12 @@ confirms that shape (`STACK.md` section 4).
 | File                           | Shape                                                                                                                      |
 | ------------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
 | `purchasedPage.synthetic.json` | 5 games: PS5 with a concept id, PS5 with a null concept id, PS4, platform `ps5` in odd case, and an entry with no platform |
+
+## IGDB fixture
+
+`igdbGames.golden.json` is a hand-written, synthetic `POST /v4/games` response
+from the critic score provider (IGDB). It holds no real game data. It has the
+live shape and covers: a rated game, a remaster one year later, a game with no
+rating, a game with malformed values, and an element without a name.
+`igdbSchema.test.ts` decodes it. This file is the drift guard for the provider,
+together with the SCORE check in `pnpm test:live`.

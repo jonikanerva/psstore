@@ -1,6 +1,6 @@
 import * as NodeHttpServer from '@effect/platform-node/NodeHttpServer'
 import * as NodeRuntime from '@effect/platform-node/NodeRuntime'
-import { Layer } from 'effect'
+import { Config, Effect, Layer, Option } from 'effect'
 import { HttpRouter, HttpServerResponse, HttpStaticServer } from 'effect/http'
 import { HttpApiBuilder } from 'effect/http-api'
 import { createServer } from 'node:http'
@@ -13,6 +13,11 @@ import {
   sessionGroupLive,
 } from '../api/gamesHandlers.js'
 import { AccountServiceLive } from '../services/accountService.js'
+import {
+  CriticScoreServiceDisabled,
+  CriticScoreServiceLive,
+} from '../services/criticScoreService.js'
+import { IgdbClientLive } from '../igdb/igdbClient.js'
 import { GamesServiceLive } from '../services/gamesService.js'
 import { SonyAccountClientLive, SonyClientLive } from '../sony/sonyClient.js'
 
@@ -26,8 +31,30 @@ const clientBuildPath = path.resolve(dirname, '../../../client/build')
 
 // Service graph for the games API handlers.
 const GamesLive = GamesServiceLive.pipe(Layer.provide(SonyClientLive))
+
+// The critic score needs both IGDB credentials. Without them the feature is off
+// and every game page answers without a score.
+const CriticScoreLive = Layer.unwrap(
+  Config.all({
+    clientId: Config.NonEmptyString('IGDB_CLIENT_ID'),
+    clientSecret: Config.Redacted('IGDB_CLIENT_SECRET'),
+  }).pipe(
+    Config.option,
+    Effect.map(
+      Option.match({
+        onNone: () => CriticScoreServiceDisabled,
+        onSome: (credentials) =>
+          CriticScoreServiceLive.pipe(
+            Layer.provide(IgdbClientLive(credentials)),
+          ),
+      }),
+    ),
+  ),
+)
+
 const ServicesLive = Layer.mergeAll(
   GamesLive,
+  CriticScoreLive,
   AccountServiceLive.pipe(Layer.provide([SonyAccountClientLive, GamesLive])),
 )
 

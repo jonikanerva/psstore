@@ -38,3 +38,17 @@ export class SessionRejected extends Schema.TaggedError<SessionRejected>()(
   'SessionRejected',
   { message: Schema.String },
 ) {}
+
+// Internal to the critic-score lookup: the service degrades both to "no score"
+// and never exposes them through an HttpApi endpoint. `CriticSourceRejected`
+// means the provider refused our credentials or token (401/403, or a token
+// exchange refusal); everything else is `CriticSourceUnavailable`.
+export class CriticSourceRejected extends Schema.TaggedError<CriticSourceRejected>()(
+  'CriticSourceRejected',
+  { message: Schema.String },
+) {}
+
+export class CriticSourceUnavailable extends Schema.TaggedError<CriticSourceUnavailable>()(
+  'CriticSourceUnavailable',
+  { message: Schema.String },
+) {}

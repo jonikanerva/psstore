@@ -14,6 +14,7 @@ import {
   UpstreamUnavailable,
 } from '../errors/errors.js'
 import { AccountService } from '../services/accountService.js'
+import { CriticScoreServiceDisabled } from '../services/criticScoreService.js'
 import { GamesServiceLive } from '../services/gamesService.js'
 import { productToConcept } from '../sony/mapper.js'
 import { SonyClient, type SearchPage } from '../sony/sonyClient.js'
@@ -59,6 +60,7 @@ const makeApp = (outcome: SearchPage | SearchFailure) => {
   const App = HttpApiBuilder.layer(gamesApi).pipe(
     Layer.provide([gamesGroupLive, sessionGroupLive]),
     Layer.provide(NpssoAuthLive),
+    Layer.provide(CriticScoreServiceDisabled),
     Layer.provide(
       Layer.mergeAll(
         GamesServiceLive.pipe(Layer.provide(FakeSony)),
