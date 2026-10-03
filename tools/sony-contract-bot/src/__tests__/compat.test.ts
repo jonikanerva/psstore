@@ -137,7 +137,7 @@ describe('validateBackendCompatibility', () => {
 
     expect(() => {
       validateBackendCompatibility(wrongPath, context)
-    }).toThrow(/PDP operation .* response path incompatible/)
+    }).toThrow(/Product operation .* response path incompatible/)
   })
 
   it('rejects a PDP operation with the wrong variables_schema', () => {
@@ -152,7 +152,7 @@ describe('validateBackendCompatibility', () => {
 
     expect(() => {
       validateBackendCompatibility(wrongVars, context)
-    }).toThrow(/PDP operation .* variables_schema incompatible/)
+    }).toThrow(/Product operation .* variables_schema incompatible/)
   })
 
   it('rejects when sonyClient no longer extracts productRetrieve (cut 3)', () => {
