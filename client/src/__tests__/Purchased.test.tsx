@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import {
   createMemoryHistory,
   createRootRoute,
+  createRoute,
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
@@ -15,8 +16,8 @@ import {
 } from '@testing-library/react'
 import type { Game, PageResult } from '@psstore/shared'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import AppShell from '../components/AppShell'
 import Purchased from '../components/Purchased'
-import { SearchContext } from '../modules/searchContext'
 
 const game = (id: string, name: string, idKind: Game['idKind']): Game => ({
   id,
@@ -63,27 +64,35 @@ const stubFetch = (responder: Responder) => {
 
 const status = (code: number): Response => new Response(null, { status: code })
 
+// Renders the page inside the real shell, so the header controls are present.
 const renderPurchased = async (search = '') => {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { gcTime: 0 } },
   })
-  const rootRoute = createRootRoute({
-    component: () => (
-      <SearchContext.Provider value={search}>
-        <Purchased />
-      </SearchContext.Provider>
-    ),
+  const rootRoute = createRootRoute({ component: AppShell })
+  const purchasedRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: 'purchased',
+    component: Purchased,
   })
   const router = createRouter({
-    routeTree: rootRoute,
-    history: createMemoryHistory({ initialEntries: ['/'] }),
+    routeTree: rootRoute.addChildren([purchasedRoute]),
+    history: createMemoryHistory({ initialEntries: ['/purchased'] }),
   })
   await router.load()
-  return render(
+  const result = render(
     <QueryClientProvider client={queryClient}>
       <RouterProvider router={router} />
     </QueryClientProvider>,
   )
+  if (search !== '') {
+    const box = await screen.findByRole('searchbox', { name: 'Search' })
+    await waitFor(() => {
+      expect(box).toBeEnabled()
+    })
+    fireEvent.change(box, { target: { value: search } })
+  }
+  return result
 }
 
 const methodsOf = (mock: ReturnType<typeof stubFetch>): string[] =>
@@ -291,6 +300,43 @@ describe('Purchased', () => {
     expect(mock).toHaveBeenCalledTimes(2)
   })
 
+  it('shows Sign out in the header only while the list exists', async () => {
+    let signedIn = false
+    stubFetch((_url, init) => {
+      if (init?.method === 'POST') {
+        signedIn = true
+        return status(204)
+      }
+      return signedIn
+        ? Response.json(library([game('1', 'Synthetic Alpha', 'concept')]))
+        : status(401)
+    })
+    await renderPurchased()
+    await screen.findByLabelText('NPSSO token')
+    expect(
+      screen.queryByRole('button', { name: 'Sign out' }),
+    ).not.toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText('NPSSO token'), {
+      target: { value: TOKEN },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }))
+    await screen.findByText('Synthetic Alpha')
+
+    const signOut = screen.getByRole('button', { name: 'Sign out' })
+    expect(within(screen.getByRole('banner')).getByText('Sign out')).toBe(
+      signOut,
+    )
+    expect(
+      Boolean(
+        signOut.compareDocumentPosition(
+          screen.getByRole('searchbox', { name: 'Search' }),
+        ) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ),
+    ).toBe(true)
+    expect(screen.getAllByRole('button', { name: 'Sign out' })).toHaveLength(1)
+  })
+
   it('signs out, drops the list and shows the form again', async () => {
     let signedOut = false
     const mock = stubFetch((_url, init) => {
@@ -309,6 +355,37 @@ describe('Purchased', () => {
     expect(await screen.findByLabelText('NPSSO token')).toBeInTheDocument()
     expect(screen.queryByText('Synthetic Alpha')).not.toBeInTheDocument()
     expect(methodsOf(mock)).toContain('DELETE /api/session')
+    await waitFor(() => {
+      expect(
+        screen.queryByRole('button', { name: 'Sign out' }),
+      ).not.toBeInTheDocument()
+    })
+  })
+
+  it('shows an alert and keeps the list when sign-out fails', async () => {
+    stubFetch((_url, init) =>
+      init?.method === 'DELETE'
+        ? status(500)
+        : Response.json(library([game('1', 'Synthetic Alpha', 'concept')])),
+    )
+    await renderPurchased()
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Sign out' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Sign-out failed. Try again.',
+    )
+    expect(screen.getByText('Synthetic Alpha')).toBeInTheDocument()
+  })
+
+  it('starts the grid at the top of the page, with no bar above it', async () => {
+    stubFetch(() =>
+      Response.json(library([game('1', 'Synthetic Alpha', 'concept')])),
+    )
+    await renderPurchased()
+    await screen.findByText('Synthetic Alpha')
+    const main = screen.getByRole('main')
+    expect(within(main).queryByRole('button')).not.toBeInTheDocument()
   })
 
   it('never writes the token or the list to browser storage', async () => {

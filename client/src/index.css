@@ -54,8 +54,36 @@ body {
   white-space: nowrap;
 }
 
-.app-shell--search {
+.app-shell--tools {
+  display: flex;
+  gap: 12px;
+  align-items: center;
   justify-self: end;
+}
+
+.sign-out {
+  min-height: 24px;
+  padding: 0 4px;
+  font: inherit;
+  font-size: 14px;
+  color: #0b5cad;
+  text-decoration: underline;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.sign-out:focus-visible {
+  outline: 2px solid var(--focus-color);
+  outline-offset: 1px;
+}
+
+.sign-out--error {
+  font-size: 14px;
+  color: #b3261e;
+}
+
+.app-shell--search {
   min-width: 0;
   width: 220px;
   padding: 6px 10px;
@@ -82,8 +110,12 @@ body {
     gap: 8px;
   }
 
-  .app-shell--search {
+  .app-shell--tools {
     justify-self: stretch;
+  }
+
+  .app-shell--search {
+    flex: 1;
     width: auto;
   }
 }
@@ -430,13 +462,6 @@ body {
 
 .sign-in--error {
   color: #b3261e;
-}
-
-.purchased--bar {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  justify-content: flex-end;
 }
 
 .purchased--failure {

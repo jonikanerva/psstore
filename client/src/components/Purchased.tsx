@@ -1,11 +1,8 @@
 import { filterGamesByName } from '@psstore/shared'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { useSearchQuery } from '../modules/searchContext'
-import {
-  PURCHASED_QUERY_KEY,
-  purchasedQueryOptions,
-} from '../modules/purchasedQuery'
-import { HttpError, signOut } from '../modules/psnStore'
+import { purchasedQueryOptions } from '../modules/purchasedQuery'
+import { HttpError } from '../modules/psnStore'
 import Error from './Error'
 import GameCard from './GameCard'
 import ScrollToTopOnMount from './ScrollToTopOnMount'
@@ -14,17 +11,9 @@ import Loading from './Spinner'
 
 const Purchased = () => {
   const search = useSearchQuery()
-  const queryClient = useQueryClient()
   const { data, isPending, isError, error, refetch } = useQuery(
     purchasedQueryOptions,
   )
-  const signOutMutation = useMutation({
-    mutationFn: signOut,
-    onSuccess: () => {
-      queryClient.removeQueries({ queryKey: PURCHASED_QUERY_KEY })
-    },
-  })
-
   if (isPending) {
     return <Loading loading />
   }
@@ -53,21 +42,6 @@ const Purchased = () => {
 
   return (
     <div className="games--content">
-      <div className="purchased--bar">
-        <button
-          type="button"
-          className="purchased--button"
-          disabled={signOutMutation.isPending}
-          onClick={() => {
-            signOutMutation.mutate()
-          }}
-        >
-          Sign out
-        </button>
-        {signOutMutation.isError && (
-          <span role="alert">Sign-out failed. Try again.</span>
-        )}
-      </div>
       {data.games.length === 0 ? (
         <Error message="No PS5 games in your library" />
       ) : filtered.length === 0 ? (
