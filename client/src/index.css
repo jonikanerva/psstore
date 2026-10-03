@@ -410,8 +410,7 @@ body {
 
 .sign-in--input:focus-visible,
 .sign-in--button:focus-visible,
-.purchased--button:focus-visible,
-.sign-in--help a:focus-visible {
+.purchased--button:focus-visible {
   outline: 2px solid var(--focus-color);
   outline-offset: 1px;
 }
