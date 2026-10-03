@@ -6,7 +6,6 @@ const request = {
   operationName: 'metGetProductById',
   hash: 'b'.repeat(64),
   variables: { productId: 'P' },
-  responseNode: 'productRetrieve',
 }
 
 const respond = (body: unknown, status = 200): void => {
@@ -45,17 +44,6 @@ describe('liveProbe', () => {
   it('rejects a persisted query rotation', async () => {
     respond({ errors: [{ message: 'PersistedQueryNotFound' }] })
     await expect(liveProbe(request)).rejects.toThrow(/PersistedQueryNotFound/)
-  })
-
-  it('checks the node the request names', async () => {
-    const conceptRequest = { ...request, responseNode: 'conceptRetrieve' }
-    respond({ data: { conceptRetrieve: { id: '1' } } })
-    await liveProbe(conceptRequest)
-
-    respond({ data: { productRetrieve: { id: 'P' } } })
-    await expect(liveProbe(conceptRequest)).rejects.toThrow(
-      /no data\.conceptRetrieve/,
-    )
   })
 
   it('rejects a response without data.productRetrieve', async () => {

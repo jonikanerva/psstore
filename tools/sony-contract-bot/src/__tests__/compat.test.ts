@@ -12,7 +12,6 @@ const PDP_HASH = 'b'.repeat(64)
 const PRICE_HASH = 'd'.repeat(64)
 const SEARCH_HASH = 'f'.repeat(64)
 const PURCHASED_HASH = '9'.repeat(64)
-const CONCEPT_HASH = '7'.repeat(64)
 
 const gridOperation = (feature: ContractFeature): ContractOperation => ({
   feature,
@@ -41,17 +40,6 @@ const priceOperation = (): ContractOperation => ({
   ...pdpOperation(),
   operation_name: 'productRetrieveForCtasWithPrice',
   persisted_query_hash: PRICE_HASH,
-})
-
-const conceptOperation = (): ContractOperation => ({
-  feature: 'details',
-  operation_name: 'conceptRetrieveForCtasWithPrice',
-  persisted_query_hash: CONCEPT_HASH,
-  required_headers: ['x-apollo-operation-name'],
-  variables_schema: { conceptId: 'string' },
-  sample_variables: { conceptId: '10000368' },
-  response_path: 'data.conceptRetrieve',
-  observed_status_codes: [200],
 })
 
 const searchOperation = (): ContractOperation => ({
@@ -128,7 +116,6 @@ const manifest: SonyContractManifest = {
     ...GRID_FEATURES.map(gridOperation),
     pdpOperation(),
     priceOperation(),
-    conceptOperation(),
     searchOperation(),
     purchasedOperation(),
   ],
@@ -144,8 +131,6 @@ const serverEnvText = [
   `export const SONY_PRODUCT_BY_ID_HASH =\n  '${PDP_HASH}'`,
   "export const SONY_PRODUCT_PRICE_OPERATION_NAME = 'productRetrieveForCtasWithPrice'",
   `export const SONY_PRODUCT_PRICE_HASH =\n  '${PRICE_HASH}'`,
-  "export const SONY_CONCEPT_OPERATION_NAME = 'conceptRetrieveForCtasWithPrice'",
-  `export const SONY_CONCEPT_HASH =\n  '${CONCEPT_HASH}'`,
   "export const SONY_SEARCH_OPERATION_NAME = 'getSearchResults'",
   `export const SONY_SEARCH_HASH =\n  '${SEARCH_HASH}'`,
   "export const SONY_PURCHASED_OPERATION_NAME = 'getPurchasedGameList'",
@@ -155,7 +140,7 @@ const serverEnvText = [
 const context = {
   serverEnvText,
   sonyClientText:
-    "headers: { 'x-apollo-operation-name': strategy.operationName }\nreturn json.data?.categoryGridRetrieve?.concepts ?? []\nconst product = json.data?.productRetrieve\nconst search = json.data?.universalSearch\nsha256Hash: SONY_PURCHASED_HASH SONY_CONCEPT_HASH",
+    "headers: { 'x-apollo-operation-name': strategy.operationName }\nreturn json.data?.categoryGridRetrieve?.concepts ?? []\nconst product = json.data?.productRetrieve\nconst search = json.data?.universalSearch\nsha256Hash: SONY_PURCHASED_HASH",
   mapperText: 'export const conceptToGame = (concept) => concept',
   serviceText: "await fetchConceptsByFeature('new', 300)",
 }
@@ -205,7 +190,6 @@ describe('validateBackendCompatibility', () => {
           response_path: 'data.categoryGridRetrieve.products',
         },
         priceOperation(),
-        conceptOperation(),
         searchOperation(),
         purchasedOperation(),
       ],
@@ -223,7 +207,6 @@ describe('validateBackendCompatibility', () => {
         ...GRID_FEATURES.map(gridOperation),
         { ...pdpOperation(), variables_schema: { conceptId: 'string' } },
         priceOperation(),
-        conceptOperation(),
         searchOperation(),
         purchasedOperation(),
       ],
@@ -416,50 +399,6 @@ describe('validateBackendCompatibility', () => {
         context,
       )
     }).toThrow(/Manifest missing library operation/)
-  })
-
-  it('rejects a manifest without the concept operation', () => {
-    expect(() => {
-      validateBackendCompatibility(
-        {
-          ...manifest,
-          operations: manifest.operations.filter(
-            (op) => op.operation_name !== 'conceptRetrieveForCtasWithPrice',
-          ),
-        },
-        context,
-      )
-    }).toThrow(/Manifest missing concept operation/)
-  })
-
-  it('rejects a concept operation with the wrong response_path or variables', () => {
-    const others = manifest.operations.filter(
-      (op) => op.operation_name !== 'conceptRetrieveForCtasWithPrice',
-    )
-    expect(() => {
-      validateBackendCompatibility(
-        {
-          ...manifest,
-          operations: [
-            ...others,
-            { ...conceptOperation(), response_path: 'data.productRetrieve' },
-          ],
-        },
-        context,
-      )
-    }).toThrow(/Concept operation .* response path incompatible/)
-    expect(() => {
-      validateBackendCompatibility(
-        {
-          ...manifest,
-          operations: [
-            ...others,
-            { ...conceptOperation(), variables_schema: { id: 'string' } },
-          ],
-        },
-        context,
-      )
-    }).toThrow(/Concept operation .* variables_schema incompatible/)
   })
 
   it('rejects a library operation with the wrong response_path', () => {

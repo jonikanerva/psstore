@@ -18,7 +18,6 @@ const envelopeSchema = Schema.Struct({
 
 const entrySchema = Schema.Struct({
   productId: Schema.optional(Schema.NullOr(Schema.String)),
-  conceptId: Schema.optional(Schema.NullOr(Schema.String)),
   name: Schema.optional(Schema.NullOr(Schema.String)),
   platform: Schema.optional(Schema.NullOr(Schema.String)),
   image: Schema.optional(
@@ -30,7 +29,6 @@ const entrySchema = Schema.Struct({
 
 export interface PurchasedEntry {
   readonly productId: string
-  readonly conceptId: string | null
   readonly name: string
   readonly imageUrl: string
 }
@@ -83,10 +81,6 @@ export const parsePurchasedPage = (json: unknown): PurchasedPageOutcome => {
     }
     entries.push({
       productId,
-      conceptId:
-        typeof game.conceptId === 'string' && game.conceptId !== ''
-          ? game.conceptId
-          : null,
       name,
       imageUrl: game.image?.url ?? '',
     })

@@ -34,7 +34,6 @@ let detailFor: DetailFn = () => ({
 // An in-memory service boundary, not a module mock.
 const FakeSony = Layer.succeed(SonyClient, {
   fetchConceptsByFeature: (feature) => Effect.sync(() => conceptsFor(feature)),
-  fetchConceptProductId: () => Effect.succeed(null),
   fetchPlusMonthly: () => Effect.succeed([]),
   fetchSearchPage: () =>
     Effect.succeed({ candidates: [], isLast: true, rawCount: 0 }),
@@ -660,7 +659,6 @@ describe('gamesService', () => {
           }
           return []
         }),
-      fetchConceptProductId: () => Effect.succeed(null),
       fetchPlusMonthly: () => Effect.succeed([]),
       fetchSearchPage: () =>
         Effect.succeed({ candidates: [], isLast: true, rawCount: 0 }),
@@ -734,7 +732,6 @@ describe('getGameById detail enrichment', () => {
     const FlakySony = Layer.succeed(SonyClient, {
       fetchConceptsByFeature: (feature) =>
         Effect.sync(() => (feature === 'new' ? [makeConcept('degraded')] : [])),
-      fetchConceptProductId: () => Effect.succeed(null),
       fetchPlusMonthly: () => Effect.succeed([]),
       fetchSearchPage: () =>
         Effect.succeed({ candidates: [], isLast: true, rawCount: 0 }),
@@ -779,7 +776,6 @@ describe('upstream error propagation on all list tabs', () => {
   ) =>
     Layer.succeed(SonyClient, {
       fetchConceptsByFeature: () => Effect.fail(error),
-      fetchConceptProductId: () => Effect.succeed(null),
       fetchPlusMonthly: () => Effect.succeed([]),
       fetchSearchPage: () =>
         Effect.succeed({ candidates: [], isLast: true, rawCount: 0 }),
@@ -850,7 +846,6 @@ describe('upstream error propagation on all list tabs', () => {
         feature === 'new'
           ? Effect.succeed<Concept[]>([])
           : Effect.fail(new UpstreamUnavailable({ message: 'down' })),
-      fetchConceptProductId: () => Effect.succeed(null),
       fetchPlusMonthly: () => Effect.succeed([]),
       fetchSearchPage: () =>
         Effect.succeed({ candidates: [], isLast: true, rawCount: 0 }),
@@ -898,7 +893,6 @@ describe('gamesService cache TTL (TestClock)', () => {
           counters.concepts += 1
           return sony.concepts()
         }),
-      fetchConceptProductId: () => Effect.succeed(null),
       fetchPlusMonthly: () => Effect.succeed([]),
       fetchSearchPage: () =>
         Effect.succeed({ candidates: [], isLast: true, rawCount: 0 }),

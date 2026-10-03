@@ -59,7 +59,6 @@ const DETAIL: ProductDetailResult = {
 
 const FakeSony = Layer.succeed(SonyClient, {
   fetchConceptsByFeature: () => Effect.succeed([]),
-  fetchConceptProductId: () => Effect.succeed(null),
   fetchPlusMonthly: () => Effect.succeed([]),
   fetchProductPrice: () => Effect.succeed({ plusOffer: null, standard: null }),
   fetchProductDetail: (id) => detailFor(id),

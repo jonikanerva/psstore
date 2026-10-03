@@ -16,20 +16,6 @@
   "operations": [
     {
       "feature": "details",
-      "operation_name": "conceptRetrieveForCtasWithPrice",
-      "persisted_query_hash": "c47dab9bb8162ee451bc6f0d8c2e8738ab48c8dd7c50dbe2b30f441c1b8ca119",
-      "required_headers": ["x-apollo-operation-name"],
-      "variables_schema": {
-        "conceptId": "string"
-      },
-      "sample_variables": {
-        "conceptId": "10000368"
-      },
-      "response_path": "data.conceptRetrieve",
-      "observed_status_codes": [200]
-    },
-    {
-      "feature": "details",
       "operation_name": "metGetProductById",
       "persisted_query_hash": "a128042177bd93dd831164103d53b73ef790d56f51dae647064cb8f9d9fc9d1a",
       "required_headers": ["x-apollo-operation-name"],

@@ -51,7 +51,6 @@ const harness = (
         genres: ['Action'],
         description: 'long text',
       }),
-    fetchConceptProductId: () => Effect.succeed(null),
     fetchPlusMonthly: () =>
       Effect.suspend(() => {
         counts.monthly += 1

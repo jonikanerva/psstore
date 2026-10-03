@@ -32,7 +32,7 @@ Pipeline:
 ## Tracked operations
 
 The manifest holds only the operations the server calls:
-`categoryGridRetrieve`, `metGetProductById`, `conceptRetrieveForCtasWithPrice`, `productRetrieveForCtasWithPrice`, `getSearchResults`,
+`categoryGridRetrieve`, `metGetProductById`, `productRetrieveForCtasWithPrice`, `getSearchResults`,
 and the signed-in `getPurchasedGameList`.
 The normalizer drops every other operation Sony fires on a captured page.
 The list lives in `tools/sony-contract-bot/src/contract/trackedOperations.ts`.
@@ -62,20 +62,6 @@ If Sony rotates the hash, `UpstreamQueryRotated` (HTTP 502) names `getSearchResu
 Update `SONY_SEARCH_HASH` in `server/src/config/env.ts` and run `pnpm sony:refresh`.
 
 The golden fixture is `server/src/__tests__/fixtures/searchResults.golden.json`.
-
-## Concept operation
-
-The PURCHASED view links a card by concept id. The server calls `conceptRetrieveForCtasWithPrice`
-to find the product that Sony sells for the concept in the Finnish store. The server reads
-`data.conceptRetrieve.defaultProduct.id`, or else the first valid product id.
-The variable is `{ conceptId }`. An unknown concept returns HTTP 200 with an `errors` array and no node.
-The server then answers 404.
-
-The concept page fires this operation, but the capture routes do not open a concept page.
-Refresh therefore probes the operation live like `metGetProductById`.
-The probe expects `data.conceptRetrieve`. The sample concept id is in the manifest.
-If the probe fails, find the new hash on a concept page, update `SONY_CONCEPT_HASH`
-in `server/src/config/env.ts`, and run `pnpm sony:refresh` again.
 
 ## Product page operation
 

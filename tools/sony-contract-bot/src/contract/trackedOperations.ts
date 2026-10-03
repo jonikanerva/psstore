@@ -5,7 +5,6 @@ import type { ContractOperation } from './types.js'
 export const TRACKED_OPERATIONS: readonly string[] = [
   'categoryGridRetrieve',
   'metGetProductById',
-  'conceptRetrieveForCtasWithPrice',
   'productRetrieveForCtasWithPrice',
   'getSearchResults',
   'getPurchasedGameList',

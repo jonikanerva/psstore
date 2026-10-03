@@ -511,10 +511,6 @@ export const GamesServiceLive: Layer.Layer<GamesService, never, SonyClient> =
           })
         })
 
-      // A purchased card carries a concept id: the owned SKU can be delisted,
-      // so the page shows the product Sony sells for the concept today.
-      const isConceptId = (id: string): boolean => /^\d+$/.test(id)
-
       const getGameById = (
         id: string,
       ): Effect.Effect<Game, GameNotFound | UpstreamError> =>
@@ -537,11 +533,6 @@ export const GamesServiceLive: Layer.Layer<GamesService, never, SonyClient> =
           )
           if (monthlyGame) {
             return decodeGame(yield* enrichWithDetail(monthlyGame))
-          }
-
-          if (isConceptId(id)) {
-            const productId = yield* sony.fetchConceptProductId(id)
-            return yield* fromProductId(productId ?? id)
           }
 
           return yield* fromProductId(id)

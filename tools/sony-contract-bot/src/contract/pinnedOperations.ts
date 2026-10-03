@@ -8,12 +8,6 @@ export const PINNED_OPERATIONS = [
   {
     operationNameConstant: 'SONY_PRODUCT_OPERATION_NAME',
     hashConstant: 'SONY_PRODUCT_BY_ID_HASH',
-    responseNode: 'productRetrieve',
-  },
-  {
-    operationNameConstant: 'SONY_CONCEPT_OPERATION_NAME',
-    hashConstant: 'SONY_CONCEPT_HASH',
-    responseNode: 'conceptRetrieve',
   },
 ] as const
 
@@ -32,8 +26,6 @@ export interface ProbeRequest {
   readonly operationName: string
   readonly hash: string
   readonly variables: Record<string, unknown>
-  // The `data.<node>` key that a healthy answer carries.
-  readonly responseNode: string
 }
 
 // Resolves when Sony accepts the request. Rejects with the reason otherwise.
@@ -94,7 +86,6 @@ export const addPinnedOperations = async (
         operationName,
         hash,
         variables: entry.sample_variables,
-        responseNode: pinned.responseNode,
       })
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error)

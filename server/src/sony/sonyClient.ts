@@ -6,8 +6,6 @@ import {
   SONY_AUTH_DEADLINE_MS,
   SONY_AUTH_REDIRECT_URI,
   SONY_AUTH_SCOPE,
-  SONY_CONCEPT_HASH,
-  SONY_CONCEPT_OPERATION_NAME,
   SONY_GRAPHQL_URL,
   SONY_LOCALE,
   SONY_PLUS_MONTHLY_CATEGORY,
@@ -45,7 +43,6 @@ import {
 import { detectPersistedQueryRotation } from './graphqlErrors.js'
 import { parseProductRetrieve } from './productDetailSchema.js'
 import { parsePlusMonthly, type PlusMonthlyEntry } from './plusMonthlySchema.js'
-import { parseConceptProductId } from './conceptSchema.js'
 import { parseProductPrice, type ProductPrice } from './productPriceSchema.js'
 import { parseSearchResponse } from './searchSchema.js'
 import {
@@ -308,35 +305,6 @@ const requestProductPriceRaw = async (productId: string): Promise<unknown> => {
   return response.json()
 }
 
-const requestConceptRaw = async (conceptId: string): Promise<unknown> => {
-  const query = new URLSearchParams({
-    operationName: SONY_CONCEPT_OPERATION_NAME,
-    variables: JSON.stringify({ conceptId }),
-    extensions: JSON.stringify({
-      persistedQuery: {
-        version: 1,
-        sha256Hash: SONY_CONCEPT_HASH,
-      },
-    }),
-  }).toString()
-
-  const response = await fetchWithRetry(
-    `${SONY_GRAPHQL_URL}?${query}`,
-    {
-      method: 'GET',
-      headers: {
-        Accept: 'application/json',
-        'x-apollo-operation-name': SONY_CONCEPT_OPERATION_NAME,
-        'x-psn-store-locale-override': localeOverride(SONY_LOCALE),
-      },
-    },
-    SONY_TIMEOUT_MS,
-    SONY_RETRY_COUNT,
-  )
-
-  return response.json()
-}
-
 const requestSearchRaw = async (
   term: string,
   offset: number,
@@ -443,14 +411,6 @@ export interface SonyClientApi {
     ProductPrice,
     UpstreamUnavailable | UpstreamQueryRotated | UpstreamRateLimited
   >
-  // The product id Sony sells for a concept in the Finnish store, or null when
-  // Sony has no such concept or no valid product for it.
-  readonly fetchConceptProductId: (
-    conceptId: string,
-  ) => Effect.Effect<
-    string | null,
-    UpstreamUnavailable | UpstreamQueryRotated | UpstreamRateLimited
-  >
   readonly fetchSearchPage: (
     term: string,
     offset: number,
@@ -535,23 +495,6 @@ export const SonyClientLive: Layer.Layer<SonyClient> = Layer.succeed(
                 }),
               )
             : Effect.succeed(extractProductDetail(json)),
-        ),
-      ),
-    fetchConceptProductId: (conceptId) =>
-      Effect.tryPromise({
-        try: () => requestConceptRaw(conceptId),
-        catch: mapTransportError,
-      }).pipe(
-        Effect.flatMap((json) =>
-          detectPersistedQueryRotation(json)
-            ? Effect.fail(
-                new UpstreamQueryRotated({
-                  message:
-                    'Sony rejected the persisted query (hash rotated); re-run pnpm sony:refresh',
-                  operationName: SONY_CONCEPT_OPERATION_NAME,
-                }),
-              )
-            : Effect.succeed(parseConceptProductId(json)),
         ),
       ),
     fetchSearchPage: (term, offset, size) =>
