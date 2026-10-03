@@ -1,3 +1,4 @@
+import { SIGNED_IN_FEATURES } from './constants.js'
 import { operationIdentity } from './operationIdentity.js'
 import type { ContractOperation } from './types.js'
 
@@ -25,3 +26,15 @@ export const normalizeOperations = (
     return operationIdentity(a).localeCompare(operationIdentity(b))
   })
 }
+
+// Capture cannot see signed-in operations, so the canonical entries (with
+// their owner-recorded observed status) pass through unchanged.
+export const withSignedInOperations = (
+  captured: ContractOperation[],
+  canonical: ContractOperation[],
+): ContractOperation[] => [
+  ...captured,
+  ...canonical.filter((operation) =>
+    SIGNED_IN_FEATURES.includes(operation.feature),
+  ),
+]

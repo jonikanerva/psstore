@@ -11,6 +11,7 @@ const GRID_HASH = 'a'.repeat(64)
 const PDP_HASH = 'b'.repeat(64)
 const PRICE_HASH = 'd'.repeat(64)
 const SEARCH_HASH = 'f'.repeat(64)
+const PURCHASED_HASH = '9'.repeat(64)
 
 const gridOperation = (feature: ContractFeature): ContractOperation => ({
   feature,
@@ -66,6 +67,17 @@ const searchOperation = (): ContractOperation => ({
   observed_status_codes: [200],
 })
 
+const purchasedOperation = (): ContractOperation => ({
+  feature: 'purchased',
+  operation_name: 'getPurchasedGameList',
+  persisted_query_hash: PURCHASED_HASH,
+  required_headers: ['x-apollo-operation-name'],
+  variables_schema: { size: 'number' },
+  sample_variables: { size: 100 },
+  response_path: 'data.purchasedTitlesRetrieve.games',
+  observed_status_codes: [],
+})
+
 const baseMetadata = {
   captured_at: '2026-02-17T00:00:00.000Z',
   captured_by: 'codex',
@@ -91,6 +103,7 @@ const manifest: SonyContractManifest = {
     pdpOperation(),
     priceOperation(),
     searchOperation(),
+    purchasedOperation(),
   ],
 }
 
@@ -106,6 +119,8 @@ const serverEnvText = [
   `export const SONY_PRODUCT_PRICE_HASH =\n  '${PRICE_HASH}'`,
   "export const SONY_SEARCH_OPERATION_NAME = 'getSearchResults'",
   `export const SONY_SEARCH_HASH =\n  '${SEARCH_HASH}'`,
+  "export const SONY_PURCHASED_OPERATION_NAME = 'getPurchasedGameList'",
+  `export const SONY_PURCHASED_HASH =\n  '${PURCHASED_HASH}'`,
 ].join('\n')
 
 const context = {
@@ -143,6 +158,7 @@ describe('validateBackendCompatibility', () => {
         ...GRID_FEATURES.map(gridOperation),
         { ...pdpOperation(), persisted_query_hash: 'c'.repeat(64) },
         priceOperation(),
+        purchasedOperation(),
       ],
     }
 
@@ -162,6 +178,7 @@ describe('validateBackendCompatibility', () => {
         },
         priceOperation(),
         searchOperation(),
+        purchasedOperation(),
       ],
     }
 
@@ -178,6 +195,7 @@ describe('validateBackendCompatibility', () => {
         { ...pdpOperation(), variables_schema: { conceptId: 'string' } },
         priceOperation(),
         searchOperation(),
+        purchasedOperation(),
       ],
     }
 
@@ -218,7 +236,11 @@ describe('validateBackendCompatibility', () => {
   it('rejects a manifest without the price operation', () => {
     const withoutPrice: SonyContractManifest = {
       ...manifest,
-      operations: [...GRID_FEATURES.map(gridOperation), pdpOperation()],
+      operations: [
+        ...GRID_FEATURES.map(gridOperation),
+        pdpOperation(),
+        purchasedOperation(),
+      ],
     }
 
     expect(() => {
@@ -233,6 +255,7 @@ describe('validateBackendCompatibility', () => {
         ...GRID_FEATURES.map(gridOperation),
         pdpOperation(),
         { ...priceOperation(), persisted_query_hash: 'e'.repeat(64) },
+        purchasedOperation(),
       ],
     }
 
@@ -333,5 +356,47 @@ describe('validateBackendCompatibility', () => {
     expect(() => {
       validateBackendCompatibility(manifest, withoutSearchEnv)
     }).toThrow(/SONY_SEARCH_OPERATION_NAME/)
+  })
+
+  it('rejects a manifest without the purchased operation', () => {
+    const withoutPurchased: SonyContractManifest = {
+      ...manifest,
+      operations: manifest.operations.filter(
+        (op) => op.feature !== 'purchased',
+      ),
+    }
+
+    expect(() => {
+      validateBackendCompatibility(withoutPurchased, context)
+    }).toThrow(/Manifest missing purchased operation/)
+  })
+
+  it('rejects a manifest whose purchased hash does not match the server', () => {
+    const rotated: SonyContractManifest = {
+      ...manifest,
+      operations: [
+        ...manifest.operations.filter((op) => op.feature !== 'purchased'),
+        { ...purchasedOperation(), persisted_query_hash: '1'.repeat(64) },
+      ],
+    }
+
+    expect(() => {
+      validateBackendCompatibility(rotated, context)
+    }).toThrow(/Manifest missing purchased operation/)
+  })
+
+  it('rejects when the server purchased env constants are unreadable', () => {
+    const withoutPurchasedEnv = {
+      ...context,
+      serverEnvText: serverEnvText
+        .split('\n')
+        .filter((line) => !line.includes('SONY_PURCHASED'))
+        .join('\n')
+        .replace(/\n\s*'9{64}'/, ''),
+    }
+
+    expect(() => {
+      validateBackendCompatibility(manifest, withoutPurchasedEnv)
+    }).toThrow(/SONY_PURCHASED_OPERATION_NAME/)
   })
 })

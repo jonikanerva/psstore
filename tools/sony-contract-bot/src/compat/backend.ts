@@ -112,6 +112,15 @@ export const validateBackendCompatibility = (
     'SONY_SEARCH_HASH',
   )
 
+  const expectedPurchasedOperationName = extractDefault(
+    context.serverEnvText,
+    'SONY_PURCHASED_OPERATION_NAME',
+  )
+  const expectedPurchasedHash = extractDefault(
+    context.serverEnvText,
+    'SONY_PURCHASED_HASH',
+  )
+
   if (!expectedOperationName || !expectedEndpoint) {
     throw new Error(
       'Unable to read server env defaults for compatibility checks',
@@ -133,6 +142,12 @@ export const validateBackendCompatibility = (
   if (!expectedSearchOperationName || !expectedSearchHash) {
     throw new Error(
       'Unable to read server search env defaults (SONY_SEARCH_OPERATION_NAME / SONY_SEARCH_HASH) for compatibility checks',
+    )
+  }
+
+  if (!expectedPurchasedOperationName || !expectedPurchasedHash) {
+    throw new Error(
+      'Unable to read server purchased env defaults (SONY_PURCHASED_OPERATION_NAME / SONY_PURCHASED_HASH) for compatibility checks',
     )
   }
 
@@ -182,6 +197,18 @@ export const validateBackendCompatibility = (
   ) {
     throw new Error(
       `Manifest missing search operation compatible with server: ${expectedSearchOperationName} @ ${expectedSearchHash}`,
+    )
+  }
+
+  if (
+    !manifest.operations.some(
+      (operation) =>
+        operation.operation_name === expectedPurchasedOperationName &&
+        operation.persisted_query_hash === expectedPurchasedHash,
+    )
+  ) {
+    throw new Error(
+      `Manifest missing purchased operation compatible with server: ${expectedPurchasedOperationName} @ ${expectedPurchasedHash}`,
     )
   }
 
@@ -247,7 +274,7 @@ export const validateBackendCompatibility = (
           `Search operation ${operation.operation_name} variables_schema incompatible: ${JSON.stringify(operation.variables_schema)}`,
         )
       }
-    } else {
+    } else if (operation.operation_name !== expectedPurchasedOperationName) {
       throw new Error(
         `Operation ${operation.feature} has unrecognized operation_name: ${operation.operation_name}`,
       )

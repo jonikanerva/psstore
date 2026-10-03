@@ -1,4 +1,5 @@
 import type { ManifestDiff } from './diff.js'
+import type { ContractOperation } from './types.js'
 
 // Tri-state headline. The line a reviewer greps must NOT read "no" when nothing
 // was compared against a fresh capture: with no candidate manifest the diff
@@ -9,6 +10,7 @@ import type { ManifestDiff } from './diff.js'
 export const renderDiffReport = (
   diff: ManifestDiff,
   hasCandidate: boolean,
+  signedIn: readonly ContractOperation[] = [],
 ): string => {
   const lines: string[] = ['# Sony GraphQL Contract Drift Report', '']
 
@@ -53,11 +55,22 @@ export const renderDiffReport = (
     lines.push('')
   }
 
+  // An empty observed list is not a pass: only the owner probe records a status.
+  const signedInLines = signedIn.map((operation) =>
+    operation.observed_status_codes.length === 0
+      ? `- ${operation.feature}: unobserved (owner probe pending)`
+      : `- ${operation.feature}: observed ${operation.observed_status_codes.join(', ')}`,
+  )
+  if (signedInLines.length > 0) {
+    lines.push('## Signed-in operations', ...signedInLines, '')
+  }
+
   lines.push('## Impacted API Routes')
   lines.push('- /api/games/new')
   lines.push('- /api/games/upcoming')
   lines.push('- /api/games/discounted')
   lines.push('- /api/games/search')
+  lines.push('- /api/games/purchased')
   lines.push('- /api/games/:id')
   lines.push('')
 

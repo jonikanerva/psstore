@@ -12,7 +12,8 @@ The contract is the Finnish store. The contract bot captures from the `fi-fi` pu
 storefront. The server requests data with `en-fi` (English content, same store). The
 response shapes are identical. To check this by hand, run `pnpm test:live`.
 
-No authentication/sign-in workflow is used.
+Capture and `pnpm sony:refresh` use no sign-in. One signed-in operation, the
+purchased library, has a separate owner-run check. See Signed-in library operation.
 
 ## Refresh contract snapshot
 
@@ -82,6 +83,40 @@ endpoint. The contract tooling does not capture it. A shape change shows as a
 drift warning in the server log and as a failing MONTHLY step in `pnpm test:live`.
 To refresh the golden fixture, download the feed anonymously and replace
 `server/src/__tests__/fixtures/plusMonthly.golden.json`. Do not store the response headers.
+
+## Signed-in library operation
+
+The PURCHASED view calls `getPurchasedGameList` with the user's Sony access token.
+Capture cannot see this call. The manifest holds a `purchased` entry that an agent
+writes by hand. Its `observed_status_codes` stays `[]` until the owner runs the probe.
+
+```bash
+SONY_NPSSO=<your NPSSO> pnpm sony:probe-purchased
+```
+
+- The probe is owner-run. An agent never holds a real NPSSO and never runs it.
+- The probe reads the NPSSO only from the `SONY_NPSSO` environment variable.
+  It does not read a `.env` file and takes no command-line argument.
+- The probe checks the NPSSO format before it sends any request.
+- The probe exchanges the NPSSO for an access token. It requests one library item.
+- A PASS needs HTTP 200, no `PersistedQueryNotFound`, and a `data.purchasedTitlesRetrieve.games` array.
+- On PASS the probe sets the hash from `server/src/config/env.ts` and
+  `observed_status_codes` to `[200]` in `docs/contracts/sony-graphql-manifest.json`.
+  Commit that change.
+- On FAIL the probe writes nothing.
+- The output is one line: operation name, status code, and PASS or FAIL. A FAIL line adds a fixed error tag.
+  The output never holds the NPSSO, a code, a token, a header, or a response body.
+- Never schedule or automate the probe (STACK.md §10).
+
+Hash rotation: when `getPurchasedGameList` answers `PersistedQueryNotFound`,
+the owner captures the new hash from a signed-in session of the store, updates
+`SONY_PURCHASED_HASH` in `server/src/config/env.ts`, and runs the probe again.
+Commit the hash and the manifest together.
+
+Carry-over: `pnpm sony:normalize` and `pnpm sony:refresh` copy the canonical
+`purchased` entry into the candidate manifest without change. A refresh never
+clears the observed status. The diff report prints `purchased: unobserved (owner probe pending)`
+while the list is empty, so an empty list never reads as a pass.
 
 ## Apply candidate as canonical manifest
 
@@ -164,6 +199,7 @@ Drift in CI is a hard failure.
 - [ ] No `authorization` header in `docs/contracts/**`
 - [ ] No `cookie` header in `docs/contracts/**`
 - [ ] No bearer/API tokens in `docs/contracts/**`
+- [ ] No NPSSO, access code, or access token in `docs/contracts/**` or in the probe output
 - [ ] `.sony-contract/` remains untracked
 
 ## Failure handling

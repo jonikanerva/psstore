@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from 'vitest'
 import { validateBackendCompatibility } from '../compat/backend.js'
-import { normalizeOperations } from '../contract/normalizer.js'
+import {
+  normalizeOperations,
+  withSignedInOperations,
+} from '../contract/normalizer.js'
 import { createManifest } from '../contract/manifest.js'
 import { addPinnedOperations } from '../contract/pinnedOperations.js'
 import type { ContractOperation } from '../contract/types.js'
@@ -82,7 +85,17 @@ const envText = [
   `export const SONY_PRODUCT_PRICE_HASH =\n  '${PRICE_HASH}'`,
   "export const SONY_SEARCH_OPERATION_NAME = 'getSearchResults'",
   `export const SONY_SEARCH_HASH =\n  '${SEARCH_HASH}'`,
+  "export const SONY_PURCHASED_OPERATION_NAME = 'getPurchasedGameList'",
+  `export const SONY_PURCHASED_HASH =\n  '${'9'.repeat(64)}'`,
 ].join('\n')
+
+const purchased = operation(
+  'purchased',
+  'getPurchasedGameList',
+  '9'.repeat(64),
+  'data.purchasedTitlesRetrieve.games',
+  {},
+)
 
 const captured = [
   grid('new'),
@@ -112,11 +125,14 @@ describe('addPinnedOperations', () => {
 
   it('yields a candidate manifest that passes validation and compatibility', async () => {
     const operations = normalizeOperations(
-      await addPinnedOperations(
-        captured,
-        [pdp],
-        envText,
-        vi.fn().mockResolvedValue(undefined),
+      withSignedInOperations(
+        await addPinnedOperations(
+          captured,
+          [pdp],
+          envText,
+          vi.fn().mockResolvedValue(undefined),
+        ),
+        [purchased],
       ),
     )
     const manifest = createManifest(

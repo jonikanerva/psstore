@@ -1,6 +1,7 @@
 import { runCapture } from './capture/capture.js'
 import { runDiff } from './commands/diff.js'
 import { runNormalize } from './commands/normalize.js'
+import { runProbePurchased } from './commands/probeSignedIn.js'
 import { runRefresh } from './commands/refresh.js'
 import { runValidate } from './commands/validate.js'
 
@@ -12,6 +13,7 @@ export const usageText = [
   '  validate [--candidate]',
   '  diff [--ci]',
   '  refresh',
+  '  probe-purchased   (owner-run; needs SONY_NPSSO)',
 ].join('\n')
 
 export type ParsedArgv = {
@@ -65,6 +67,9 @@ const main = async (): Promise<void> => {
     case 'refresh':
       await runRefresh()
       console.info('Refresh complete.')
+      return
+    case 'probe-purchased':
+      await runProbePurchased()
       return
     default:
       console.info(usageText)
