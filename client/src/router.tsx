@@ -4,7 +4,6 @@ import {
   createRouter,
   redirect,
 } from '@tanstack/react-router'
-import type { PdpOrigin } from './modules/pdpOrigin'
 import AppShell from './components/AppShell'
 import Details from './components/Details'
 import Games from './components/Games'
@@ -136,12 +135,6 @@ export const router = createRouter({
   stringifySearch,
   scrollRestoration: true,
 })
-
-declare module '@tanstack/history' {
-  interface HistoryState {
-    pdpOrigin?: PdpOrigin | undefined
-  }
-}
 
 declare module '@tanstack/react-router' {
   interface Register {
