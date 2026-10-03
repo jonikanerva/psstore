@@ -5,6 +5,7 @@ import { findCachedGame } from '../modules/cachedGame'
 import { fetchGame, metacriticLink, type Game } from '../modules/psnStore'
 import Error from './Error'
 import Image from './Image'
+import MediaGallery from './MediaGallery'
 import Offline from './Offline'
 
 interface GameDetailsPageProps {
@@ -186,25 +187,12 @@ const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
       )}
 
       {hasMedia && (
-        <section className="details-page--section">
-          <h2>Media</h2>
-          <div className="details-page--media-grid">
-            {game.screenshots.map((screenshot) => (
-              <div key={screenshot} className="details-page--media-item">
-                <Image url={screenshot} name={game.name} />
-              </div>
-            ))}
-            {game.videos.map((video) => (
-              <video
-                key={video}
-                className="details-page--video"
-                controls
-                muted
-                preload="metadata"
-                src={video}
-              />
-            ))}
-          </div>
+        <section className="details-page--section" aria-label="Media">
+          <MediaGallery
+            name={game.name}
+            screenshots={game.screenshots}
+            videos={game.videos}
+          />
         </section>
       )}
     </article>
