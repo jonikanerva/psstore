@@ -18,8 +18,9 @@ export interface SortConfig {
 // Only a field that most entries of the view fill in is offered. MONTHLY has
 // no price and PURCHASED has no date. An entry without a value for the sorted
 // field, such as an UPCOMING concept without a price, sorts last.
-// PURCHASED and WISHLIST arrive in Sony's own order, which no offered field
-// describes, so they sort on the client by their default field from the start.
+// PURCHASED, WISHLIST and SEARCH arrive in an order that no offered field
+// describes (Sony's own, or relevance), so they sort on the client by their
+// default field from the start.
 const CONFIG_BY_PATH: Readonly<Record<string, SortConfig>> = {
   '/new': {
     fields: ['date', 'price', 'name'],
@@ -49,6 +50,11 @@ const CONFIG_BY_PATH: Readonly<Record<string, SortConfig>> = {
   '/wishlist': {
     fields: ['date', 'price', 'name'],
     defaultSort: { field: 'price', direction: 'asc' },
+    serverOrdered: false,
+  },
+  '/search': {
+    fields: ['date', 'price', 'name'],
+    defaultSort: { field: 'date', direction: 'desc' },
     serverOrdered: false,
   },
 }

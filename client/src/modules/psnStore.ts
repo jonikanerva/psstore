@@ -63,9 +63,11 @@ export const fetchSearchGames = async (
   term: string,
   offset: number,
   size: number,
+  signal?: AbortSignal,
 ): Promise<PageResult> =>
   getJson(
     `/api/games/search?q=${encodeURIComponent(term)}&offset=${String(offset)}&size=${String(size)}`,
+    withSignal(signal),
   )
 export const fetchGame = async (gameId: string): Promise<Game> =>
   getJson(`/api/games/${encodeURIComponent(gameId)}`)

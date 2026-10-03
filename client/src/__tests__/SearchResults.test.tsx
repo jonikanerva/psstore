@@ -1,8 +1,10 @@
 import { onlineManager } from '@tanstack/react-query'
-import { cleanup, fireEvent, screen } from '@testing-library/react'
+import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react'
+import { useState } from 'react'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
-import type { Game, PageResult } from '@psstore/shared'
+import type { Game, GameSort, PageResult } from '@psstore/shared'
 import SearchResults from '../components/SearchResults'
+import { SortContext } from '../modules/sortContext'
 import { renderWithRouter } from './testRouter'
 
 beforeAll(() => {
@@ -28,12 +30,12 @@ afterEach(() => {
   )
 })
 
-const game = (id: string, name: string): Game => ({
+const game = (id: string, name: string, date = '', price = '€9,99'): Game => ({
   id,
   name,
-  date: '',
+  date,
   url: 'https://example.com/cover.png',
-  price: '€9,99',
+  price,
   originalPrice: '',
   discountText: '',
   discountDate: '',
@@ -241,5 +243,222 @@ describe('SearchResults', () => {
       screen.queryByText('No PS5 games found for "the"'),
     ).not.toBeInTheDocument()
     expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  describe('sorted', () => {
+    const dateDesc = { field: 'date', direction: 'desc' } as const
+    const nameAsc = { field: 'name', direction: 'asc' } as const
+
+    const renderSorted = (
+      sort: typeof dateDesc | typeof nameAsc,
+      term = 'alp',
+    ) =>
+      renderWithRouter(
+        <SortContext.Provider value={sort}>
+          <SearchResults term={term} />
+        </SortContext.Provider>,
+      )
+
+    const names = (): (string | null)[] =>
+      Array.from(document.querySelectorAll('.game-card--name')).map(
+        (element) => element.textContent,
+      )
+
+    const twoPages = () =>
+      stubFetch((url) =>
+        url.searchParams.get('offset') === '0'
+          ? respond(
+              page(
+                [
+                  game('1', 'Charlie', '2026-01-01T00:00:00Z'),
+                  game('2', 'Nodate'),
+                ],
+                50,
+              ),
+            )
+          : respond(
+              page(
+                [
+                  game('1', 'Charlie', '2026-01-01T00:00:00Z'),
+                  game('3', 'Alpha', '2026-03-01T00:00:00Z'),
+                  game('4', 'Bravo', '2026-02-01T00:00:00Z'),
+                ],
+                null,
+              ),
+            ),
+      )
+
+    it('orders by date, newest first, with an unknown date last, after every page', async () => {
+      const fetchMock = twoPages()
+      const { container } = await renderSorted(dateDesc)
+
+      expect(container.querySelector('.spinner')).not.toBeNull()
+      await waitFor(() => {
+        expect(names()).toEqual(['Alpha', 'Bravo', 'Charlie', 'Nodate'])
+      })
+      expect(fetchMock).toHaveBeenCalledTimes(2)
+      expect(container.querySelector('.spinner')).toBeNull()
+      expect(screen.getByRole('status')).toHaveTextContent('4 PS5 games found')
+    })
+
+    it('shows no card before the last page arrives', async () => {
+      let release: (value: Response) => void = () => undefined
+      let requested = false
+      stubFetch((url) =>
+        url.searchParams.get('offset') === '0'
+          ? respond(page([game('1', 'Charlie')], 50))
+          : (() => {
+              requested = true
+              return new Promise<Response>((resolve) => {
+                release = resolve
+              })
+            })(),
+      )
+      const { container } = await renderSorted(dateDesc)
+
+      await waitFor(() => {
+        expect(requested).toBe(true)
+      })
+      await waitFor(() => {
+        expect(container.querySelector('.spinner')).not.toBeNull()
+      })
+      expect(screen.queryByText('Charlie')).toBeNull()
+
+      release(respond(page([game('2', 'Alpha')], null)))
+      expect(await screen.findByText('Alpha')).toBeInTheDocument()
+      expect(screen.getByText('Charlie')).toBeInTheDocument()
+    })
+
+    it('re-sorts on a sort change without a new fetch', async () => {
+      const fetchMock = twoPages()
+      const Harness = () => {
+        const [sort, setSort] = useState<GameSort>(dateDesc)
+        return (
+          <SortContext.Provider value={sort}>
+            <button
+              type="button"
+              onClick={() => {
+                setSort(nameAsc)
+              }}
+            >
+              Name
+            </button>
+            <SearchResults term="alp" />
+          </SortContext.Provider>
+        )
+      }
+      await renderWithRouter(<Harness />)
+      await waitFor(() => {
+        expect(names()).toEqual(['Alpha', 'Bravo', 'Charlie', 'Nodate'])
+      })
+
+      fireEvent.click(screen.getByRole('button', { name: 'Name' }))
+
+      await waitFor(() => {
+        expect(names()).toEqual(['Alpha', 'Bravo', 'Charlie', 'Nodate'])
+      })
+      fireEvent.click(screen.getByRole('button', { name: 'Name' }))
+      expect(fetchMock).toHaveBeenCalledTimes(2)
+    })
+
+    it('shows the error and Retry with no half-sorted grid, then resumes', async () => {
+      let secondCalls = 0
+      stubFetch((url) => {
+        if (url.searchParams.get('offset') === '0') {
+          return respond(page([game('1', 'Charlie')], 50))
+        }
+        secondCalls += 1
+        return secondCalls === 1
+          ? new Response('', { status: 502 })
+          : respond(page([game('2', 'Alpha')], null))
+      })
+      await renderSorted(nameAsc)
+
+      expect(
+        await screen.findByText('Could not load more results'),
+      ).toBeInTheDocument()
+      expect(screen.queryByText('Charlie')).toBeNull()
+      fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+
+      await waitFor(() => {
+        expect(names()).toEqual(['Alpha', 'Charlie'])
+      })
+    })
+
+    it('shows Offline while paging, with no card', async () => {
+      stubFetch((url) => {
+        if (url.searchParams.get('offset') === '0') {
+          queueMicrotask(() => {
+            onlineManager.setOnline(false)
+          })
+          return respond(page([game('1', 'Charlie')], 50))
+        }
+        return respond(page([game('2', 'Alpha')], null))
+      })
+      await renderSorted(nameAsc)
+
+      expect(
+        await screen.findByText(
+          'You are offline. Games load when the connection returns.',
+        ),
+      ).toBeInTheDocument()
+      expect(screen.queryByText('Charlie')).toBeNull()
+    })
+
+    it('merges no page of a stale term after the term changes mid-load', async () => {
+      let releaseOld: (value: Response) => void = () => undefined
+      stubFetch((url) => {
+        const q = url.searchParams.get('q')
+        if (q === 'old') {
+          return url.searchParams.get('offset') === '0'
+            ? respond(page([game('1', 'OldFirst')], 50))
+            : new Promise<Response>((resolve) => {
+                releaseOld = resolve
+              })
+        }
+        return respond(page([game('9', 'NewOnly')], null))
+      })
+      const Harness = () => {
+        const [term, setTerm] = useState('old')
+        return (
+          <SortContext.Provider value={dateDesc}>
+            <button
+              type="button"
+              onClick={() => {
+                setTerm('new')
+              }}
+            >
+              Change
+            </button>
+            <SearchResults term={term} />
+          </SortContext.Provider>
+        )
+      }
+      await renderWithRouter(<Harness />)
+      await waitFor(() => {
+        expect(document.querySelector('.spinner')).not.toBeNull()
+      })
+
+      fireEvent.click(screen.getByRole('button', { name: 'Change' }))
+      await waitFor(() => {
+        expect(names()).toEqual(['NewOnly'])
+      })
+      releaseOld(respond(page([game('2', 'OldLate')], null)))
+
+      await waitFor(() => {
+        expect(names()).toEqual(['NewOnly'])
+      })
+      expect(screen.queryByText('OldFirst')).toBeNull()
+      expect(screen.queryByText('OldLate')).toBeNull()
+    })
+
+    it('removes a game repeated across pages before it sorts', async () => {
+      twoPages()
+      await renderSorted(nameAsc)
+
+      await waitFor(() => {
+        expect(names()).toEqual(['Alpha', 'Bravo', 'Charlie', 'Nodate'])
+      })
+    })
   })
 })
