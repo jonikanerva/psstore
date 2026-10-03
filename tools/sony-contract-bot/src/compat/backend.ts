@@ -132,6 +132,15 @@ export const validateBackendCompatibility = (
     'SONY_PURCHASED_HASH',
   )
 
+  const expectedWishlistOperationName = extractDefault(
+    context.serverEnvText,
+    'SONY_WISHLIST_OPERATION_NAME',
+  )
+  const expectedWishlistHash = extractDefault(
+    context.serverEnvText,
+    'SONY_WISHLIST_HASH',
+  )
+
   if (!expectedOperationName || !expectedEndpoint) {
     throw new Error(
       'Unable to read server env defaults for compatibility checks',
@@ -159,6 +168,12 @@ export const validateBackendCompatibility = (
   if (!expectedPurchasedOperationName || !expectedPurchasedHash) {
     throw new Error(
       'Unable to read server library env defaults (SONY_PURCHASED_OPERATION_NAME / SONY_PURCHASED_HASH) for compatibility checks',
+    )
+  }
+
+  if (!expectedWishlistOperationName || !expectedWishlistHash) {
+    throw new Error(
+      'Unable to read server wishlist env defaults (SONY_WISHLIST_OPERATION_NAME / SONY_WISHLIST_HASH) for compatibility checks',
     )
   }
 
@@ -220,6 +235,18 @@ export const validateBackendCompatibility = (
   ) {
     throw new Error(
       `Manifest missing library operation compatible with server: ${expectedPurchasedOperationName} @ ${expectedPurchasedHash}`,
+    )
+  }
+
+  if (
+    !manifest.operations.some(
+      (operation) =>
+        operation.operation_name === expectedWishlistOperationName &&
+        operation.persisted_query_hash === expectedWishlistHash,
+    )
+  ) {
+    throw new Error(
+      `Manifest missing wishlist operation compatible with server: ${expectedWishlistOperationName} @ ${expectedWishlistHash}`,
     )
   }
 
@@ -302,6 +329,18 @@ export const validateBackendCompatibility = (
           `Library operation ${operation.operation_name} variables_schema incompatible: ${JSON.stringify(operation.variables_schema)}`,
         )
       }
+    } else if (operation.operation_name === expectedWishlistOperationName) {
+      if (operation.response_path !== 'data.storeWishlistSecure') {
+        throw new Error(
+          `Wishlist operation ${operation.operation_name} response path incompatible: ${operation.response_path}`,
+        )
+      }
+
+      if (Object.keys(operation.variables_schema).length > 0) {
+        throw new Error(
+          `Wishlist operation ${operation.operation_name} variables_schema incompatible: ${JSON.stringify(operation.variables_schema)}`,
+        )
+      }
     } else {
       throw new Error(
         `Operation ${operation.feature} has unrecognized operation_name: ${operation.operation_name}`,
@@ -347,6 +386,12 @@ export const validateBackendCompatibility = (
   if (!context.sonyClientText.includes('SONY_PURCHASED_HASH')) {
     throw new Error(
       'sonyClient no longer sends the library persisted-query hash (SONY_PURCHASED_HASH)',
+    )
+  }
+
+  if (!context.sonyClientText.includes('SONY_WISHLIST_HASH')) {
+    throw new Error(
+      'sonyClient no longer sends the wishlist persisted-query hash (SONY_WISHLIST_HASH)',
     )
   }
 

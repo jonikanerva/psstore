@@ -20,7 +20,8 @@
     "sony:validate": "pnpm run sony -- validate",
     "sony:diff": "pnpm run sony -- diff",
     "sony:refresh": "pnpm run sony -- refresh",
-    "sony:probe-purchased": "pnpm run sony -- probe-purchased"
+    "sony:probe-purchased": "pnpm run sony -- probe-purchased",
+    "sony:probe-wishlist": "pnpm run sony -- probe-wishlist"
   },
   "engines": {
     "node": "^24.21.0"

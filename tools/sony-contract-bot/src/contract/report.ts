@@ -71,6 +71,7 @@ export const renderDiffReport = (
   lines.push('- /api/games/discounted')
   lines.push('- /api/games/search')
   lines.push('- /api/games/purchased')
+  lines.push('- /api/games/wishlist')
   lines.push('- /api/games/:id')
   lines.push('')
 

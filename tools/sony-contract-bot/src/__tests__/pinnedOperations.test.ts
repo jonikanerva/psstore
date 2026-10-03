@@ -2,7 +2,11 @@ import { describe, expect, it, vi } from 'vitest'
 import { validateBackendCompatibility } from '../compat/backend.js'
 import { normalizeOperations } from '../contract/normalizer.js'
 import { createManifest } from '../contract/manifest.js'
-import { addPinnedOperations } from '../contract/pinnedOperations.js'
+import {
+  addPinnedOperations,
+  PINNED_OPERATIONS,
+  SIGNED_IN_PINNED_OPERATIONS,
+} from '../contract/pinnedOperations.js'
 import type { ContractOperation } from '../contract/types.js'
 import { validateManifest } from '../contract/validator.js'
 
@@ -12,6 +16,8 @@ const PRICE_HASH = 'd'.repeat(64)
 const SEARCH_HASH = 'e'.repeat(64)
 const PURCHASED_HASH = '9'.repeat(64)
 const STALE_PURCHASED_HASH = '8'.repeat(64)
+const WISHLIST_HASH = '7'.repeat(64)
+const STALE_WISHLIST_HASH = '6'.repeat(64)
 
 const operation = (
   feature: ContractOperation['feature'],
@@ -99,6 +105,17 @@ const purchased: ContractOperation = {
   observed_status_codes: [],
 }
 
+const wishlist: ContractOperation = {
+  feature: 'wishlist',
+  operation_name: 'storeRetrieveWishlist',
+  persisted_query_hash: STALE_WISHLIST_HASH,
+  required_headers: ['x-apollo-operation-name'],
+  variables_schema: {},
+  sample_variables: {},
+  response_path: 'data.storeWishlistSecure',
+  observed_status_codes: [],
+}
+
 const envText = [
   'export const SONY_GRAPHQL_URL =',
   "  'https://web.np.playstation.com/api/graphql/v1/op'",
@@ -111,6 +128,8 @@ const envText = [
   `export const SONY_SEARCH_HASH =\n  '${SEARCH_HASH}'`,
   "export const SONY_PURCHASED_OPERATION_NAME = 'getPurchasedGameList'",
   `export const SONY_PURCHASED_HASH =\n  '${PURCHASED_HASH}'`,
+  "export const SONY_WISHLIST_OPERATION_NAME = 'storeRetrieveWishlist'",
+  `export const SONY_WISHLIST_HASH =\n  '${WISHLIST_HASH}'`,
 ].join('\n')
 
 const captured = [
@@ -121,7 +140,7 @@ const captured = [
   search,
 ]
 
-const canonical = [pdp, purchased]
+const canonical = [pdp, purchased, wishlist]
 
 describe('addPinnedOperations', () => {
   it('adds the pinned operation with the env hash when the probe passes', async () => {
@@ -171,7 +190,7 @@ describe('addPinnedOperations', () => {
       validateBackendCompatibility(manifest, {
         serverEnvText: envText,
         sonyClientText:
-          "'x-apollo-operation-name': strategy.operationName categoryGridRetrieve productRetrieve universalSearch SONY_PURCHASED_HASH",
+          "'x-apollo-operation-name': strategy.operationName categoryGridRetrieve productRetrieve universalSearch SONY_PURCHASED_HASH SONY_WISHLIST_HASH",
         mapperText: 'conceptToGame',
         serviceText: 'fetchConceptsByFeature',
       })
@@ -200,13 +219,13 @@ describe('addPinnedOperations', () => {
     )
 
     expect(probe).not.toHaveBeenCalled()
-    expect(result).toHaveLength(captured.length + 2)
+    expect(result).toHaveLength(captured.length + 3)
   })
 
   it('fails when the canonical manifest lacks the operation', async () => {
     const probe = vi.fn()
     await expect(
-      addPinnedOperations(captured, [purchased], envText, probe),
+      addPinnedOperations(captured, [purchased, wishlist], envText, probe),
     ).rejects.toThrow(/not in the canonical manifest/)
     expect(probe).not.toHaveBeenCalled()
   })
@@ -264,5 +283,41 @@ describe('addPinnedOperations', () => {
         vi.fn(),
       ),
     ).rejects.toThrow(/getPurchasedGameList is not in the canonical manifest/)
+  })
+
+  it('carries the wishlist operation over with the env hash and never pins a write operation', async () => {
+    const probe = vi.fn().mockResolvedValue(undefined)
+    const result = await addPinnedOperations(
+      captured,
+      canonical,
+      envText,
+      probe,
+      vi.fn(),
+    )
+    const carried = result.find(
+      (entry) => entry.operation_name === 'storeRetrieveWishlist',
+    )
+    expect(carried?.persisted_query_hash).toBe(WISHLIST_HASH)
+    expect(carried?.observed_status_codes).toEqual([])
+    expect(probe).not.toHaveBeenCalledWith(
+      expect.objectContaining({ operationName: 'storeRetrieveWishlist' }),
+    )
+    expect(JSON.stringify(result)).not.toContain('removeWishlistItem')
+    expect(JSON.stringify(PINNED_OPERATIONS)).not.toContain('removeWishlist')
+    expect(JSON.stringify(SIGNED_IN_PINNED_OPERATIONS)).not.toContain(
+      'removeWishlist',
+    )
+  })
+
+  it('fails when the canonical manifest lacks the wishlist operation', async () => {
+    await expect(
+      addPinnedOperations(
+        captured,
+        [pdp, purchased],
+        envText,
+        vi.fn().mockResolvedValue(undefined),
+        vi.fn(),
+      ),
+    ).rejects.toThrow(/storeRetrieveWishlist is not in the canonical manifest/)
   })
 })
