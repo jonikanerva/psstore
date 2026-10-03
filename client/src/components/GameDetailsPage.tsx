@@ -41,13 +41,13 @@ const DetailsSkeleton = () => (
       Loading
     </div>
     <section className="details-page--hero">
+      <div className="details-page--cover" />
       <div className="details-page--info">
         <div className="skeleton skeleton--title" />
         <div className="skeleton skeleton--block" />
         <div className="skeleton skeleton--line" />
         <div className="skeleton skeleton--line" />
       </div>
-      <div className="details-page--cover" />
     </section>
   </article>
 )
@@ -85,42 +85,51 @@ const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
   return (
     <article className="details-page" aria-busy={isPlaceholderData}>
       <section className="details-page--hero">
+        <div className="details-page--cover">
+          <Image url={game.url} name={game.name} priority />
+        </div>
         <div className="details-page--info">
           <h1 className="details-page--title">{game.name}</h1>
 
           <dl className="details-page--meta-list">
-            <dt>Release</dt>
-            <dd>{formatDate(game.date)}</dd>
+            <div>
+              <dt>Release</dt>
+              <dd>{formatDate(game.date)}</dd>
+            </div>
             {isPlaceholderData ? (
               <>
-                <dt>Publisher</dt>
-                <dd>
-                  <span className="skeleton skeleton--inline" />
-                </dd>
-                <dt>Genre</dt>
-                <dd>
-                  <span className="skeleton skeleton--inline" />
-                </dd>
+                <div>
+                  <dt>Publisher</dt>
+                  <dd>
+                    <span className="skeleton skeleton--inline" />
+                  </dd>
+                </div>
+                <div>
+                  <dt>Genre</dt>
+                  <dd>
+                    <span className="skeleton skeleton--inline" />
+                  </dd>
+                </div>
               </>
             ) : (
               <>
                 {game.studio && (
-                  <>
+                  <div>
                     <dt>Publisher</dt>
                     <dd>{game.studio}</dd>
-                  </>
+                  </div>
                 )}
                 {game.genres.length > 0 && (
-                  <>
+                  <div>
                     <dt>Genre</dt>
                     <dd>{game.genres.join(', ')}</dd>
-                  </>
+                  </div>
                 )}
               </>
             )}
           </dl>
 
-          <div className="details-page--prices">
+          <div className="details-page--buy">
             {game.price && (
               <div className="details-page--price">
                 <span className="details-page--price-label">Standard</span>
@@ -136,22 +145,22 @@ const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
                 <span className="details-page--price-value">{plusValue}</span>
               </div>
             )}
-          </div>
 
-          <div className="details-page--actions">
-            <a
-              className="details-page--link details-page--link-primary"
-              href={storeUrl(game.id)}
-            >
-              Open In Store
-            </a>
-            <a className="details-page--link" href={metacriticLink(game.name)}>
-              Metacritic
-            </a>
+            <div className="details-page--actions">
+              <a
+                className="details-page--link details-page--link-primary"
+                href={storeUrl(game.id)}
+              >
+                Open In Store
+              </a>
+              <a
+                className="details-page--link"
+                href={metacriticLink(game.name)}
+              >
+                Metacritic
+              </a>
+            </div>
           </div>
-        </div>
-        <div className="details-page--cover">
-          <Image url={game.url} name={game.name} priority />
         </div>
       </section>
 

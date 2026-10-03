@@ -321,7 +321,7 @@ body {
 
 .details-page--hero {
   display: grid;
-  grid-template-columns: 1fr 200px;
+  grid-template-columns: 200px 1fr;
   gap: 24px;
   align-items: start;
   border: 1px solid var(--border-color);
@@ -347,12 +347,6 @@ body {
 .details-page--title {
   font-size: 28px;
   line-height: 1.2;
-}
-
-.details-page--prices {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
 }
 
 .details-page--price {
@@ -386,10 +380,15 @@ body {
 }
 
 .details-page--meta-list {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 4px 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 20px;
   margin: 0;
+}
+
+.details-page--meta-list div {
+  display: flex;
+  gap: 6px;
 }
 
 .details-page--meta-list dt {
@@ -398,6 +397,13 @@ body {
 
 .details-page--meta-list dd {
   margin: 0;
+}
+
+.details-page--buy {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
 }
 
 .details-page--actions {
@@ -498,7 +504,6 @@ body {
   }
 
   .details-page--cover {
-    order: -1;
     max-width: 200px;
   }
 }
