@@ -7,6 +7,7 @@ const Purchased = () => (
     label="purchased"
     failureMessage="Failed to load your library"
     emptyMessage="No PS5 games in your library"
+    showPrice={false}
   />
 )
 

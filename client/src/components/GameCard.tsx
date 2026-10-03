@@ -6,6 +6,8 @@ import Image from './Image'
 interface GameCardProps {
   game: Game
   showPrice?: boolean
+  // Open the internal game page even for a concept id.
+  internalLink?: boolean
 }
 
 const formatDate = (value: string): string => {
@@ -25,7 +27,11 @@ const formatDate = (value: string): string => {
 const storeHref = (conceptId: string): string =>
   `https://store.playstation.com/en-fi/concept/${conceptId}`
 
-const GameCard = ({ game, showPrice = true }: GameCardProps) => {
+const GameCard = ({
+  game,
+  showPrice = true,
+  internalLink = false,
+}: GameCardProps) => {
   const hasDiscount =
     Boolean(game.originalPrice) && game.originalPrice !== game.price
   // Concept-only UPCOMING cards have no anonymously-available price: the price
@@ -69,7 +75,7 @@ const GameCard = ({ game, showPrice = true }: GameCardProps) => {
     </>
   )
 
-  if (isConcept) {
+  if (isConcept && !internalLink) {
     return (
       <a
         className="game-card"

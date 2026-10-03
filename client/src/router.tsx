@@ -72,16 +72,16 @@ const monthlyRoute = createRoute({
   ),
 })
 
-const purchasedRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: 'purchased',
-  component: Purchased,
-})
-
 const wishlistRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'wishlist',
   component: Wishlist,
+})
+
+const purchasedRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'purchased',
+  component: Purchased,
 })
 
 const detailsRoute = createRoute({
@@ -122,8 +122,8 @@ const routeTree = rootRoute.addChildren([
   upcomingRoute,
   discountedRoute,
   monthlyRoute,
-  purchasedRoute,
   wishlistRoute,
+  purchasedRoute,
   detailsRoute,
   searchRoute,
   splatRoute,

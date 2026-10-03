@@ -171,33 +171,42 @@ describe('Wishlist', () => {
     expect(screen.getByRole('searchbox', { name: 'Search' })).toBeDisabled()
   })
 
-  it('renders cards without prices that link out to Sony', async () => {
+  it('renders full cards that open the internal game page, never Sony', async () => {
     stubFetch(() =>
       Response.json(
         library([
+          {
+            ...game(
+              'EP0001-PPSA00002_00-SYNTHETICBETA000',
+              'Synthetic Beta',
+              'product',
+            ),
+            date: '2025-01-02T00:00:00.000Z',
+            price: '€39,99',
+            originalPrice: '€59,99',
+            discountText: '-33%',
+            plusOffer: { kind: 'price', price: '€29,99' },
+          },
           game('10000001', 'Synthetic Alpha', 'concept'),
-          game(
-            'EP0001-PPSA00002_00-SYNTHETICBETA000',
-            'Synthetic Beta',
-            'product',
-          ),
         ]),
       ),
     )
     await renderWishlist()
-    expect(
-      await screen.findByRole('link', { name: /Synthetic Alpha/ }),
-    ).toHaveAttribute(
+    const beta = await screen.findByRole('link', { name: /Synthetic Beta/ })
+    expect(beta).toHaveAttribute(
       'href',
-      'https://store.playstation.com/en-fi/concept/10000001',
+      '/g/EP0001-PPSA00002_00-SYNTHETICBETA000',
     )
-    expect(
-      screen.getByRole('link', { name: /Synthetic Beta/ }),
-    ).toHaveAttribute(
-      'href',
-      'https://store.playstation.com/en-fi/product/EP0001-PPSA00002_00-SYNTHETICBETA000',
-    )
-    expect(screen.queryByText(/€/)).not.toBeInTheDocument()
+    expect(beta).toHaveTextContent('€39,99')
+    expect(beta).toHaveTextContent('€59,99')
+    const alpha = screen.getByRole('link', { name: /Synthetic Alpha/ })
+    expect(alpha).toHaveAttribute('href', '/g/10000001')
+    expect(alpha).not.toHaveAttribute('target')
+    for (const link of screen.getAllByRole('link')) {
+      expect(link.getAttribute('href') ?? '').not.toContain(
+        'store.playstation.com',
+      )
+    }
   })
 
   it('says so when the wishlist is empty', async () => {

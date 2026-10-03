@@ -7,6 +7,7 @@ const Wishlist = () => (
     label="wishlist"
     failureMessage="Failed to load your wishlist"
     emptyMessage="No PS5 games on your wishlist"
+    showPrice
   />
 )
 

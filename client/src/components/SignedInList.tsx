@@ -16,14 +16,17 @@ interface SignedInListProps {
   readonly label: string
   readonly failureMessage: string
   readonly emptyMessage: string
+  readonly showPrice: boolean
 }
 
-// A signed-in list view: the user's own Sony data, read-only, without prices.
+// A signed-in list view: the user's own Sony data, read-only. Every card opens
+// the internal game page.
 const SignedInList = ({
   query,
   label,
   failureMessage,
   emptyMessage,
+  showPrice,
 }: SignedInListProps) => {
   const search = useSearchQuery()
   const { data, isPending, isError, error, fetchStatus, refetch } =
@@ -64,8 +67,8 @@ const SignedInList = ({
     <GameGrid
       games={filtered}
       label={label}
-      showPrice={false}
-      outbound
+      showPrice={showPrice}
+      internalLink
       trailing={term === '' ? null : <SearchAllCard term={term} />}
       hasNextPage={false}
       isFetchingNextPage={false}
