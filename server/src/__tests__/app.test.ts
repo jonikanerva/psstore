@@ -20,6 +20,7 @@ import type { PurchasedEntry } from '../sony/purchasedSchema.js'
 import {
   SonyAccountClient,
   SonyClient,
+  type ProductDetailResult,
   type SonyAccountClientApi,
 } from '../sony/sonyClient.js'
 import type { Concept } from '../sony/types.js'
@@ -56,10 +57,11 @@ const FakeSony = Layer.succeed(SonyClient, {
     ]),
   fetchSearchPage: () =>
     Effect.succeed({ candidates: [], isLast: true, rawCount: 0 }),
-  fetchProductPrice: () => Effect.succeed(null),
+  fetchProductPrice: () => Effect.succeed({ plusOffer: null, standard: null }),
   fetchProductDetail: () =>
     Effect.succeed({
       releaseDate: '2024-01-01T00:00:00Z',
+      media: [],
       genres: [],
       description: '',
     }),
@@ -171,7 +173,8 @@ const failHandler = (
         : Effect.fail(error),
     fetchSearchPage: () =>
       Effect.succeed({ candidates: [], isLast: true, rawCount: 0 }),
-    fetchProductPrice: () => Effect.succeed(null),
+    fetchProductPrice: () =>
+      Effect.succeed({ plusOffer: null, standard: null }),
     fetchProductDetail: () => Effect.fail(error),
   })
   const FailApp = HttpApiBuilder.layer(gamesApi).pipe(
@@ -198,6 +201,69 @@ const failHandler = (
   return HttpRouter.toWebHandler(FailApp)
 }
 
+// Every list is empty, so a product id reaches the product-id fallback. The
+// detail answer decides the HTTP status.
+const fallbackHandler = (
+  detail: Effect.Effect<
+    ProductDetailResult,
+    UpstreamUnavailable | UpstreamQueryRotated | UpstreamRateLimited
+  >,
+) => {
+  const FallbackSony = Layer.succeed(SonyClient, {
+    fetchConceptsByFeature: () => Effect.succeed([]),
+    fetchPlusMonthly: () => Effect.succeed([]),
+    fetchSearchPage: () =>
+      Effect.succeed({ candidates: [], isLast: true, rawCount: 0 }),
+    fetchProductPrice: () =>
+      Effect.succeed({ plusOffer: null, standard: null }),
+    fetchProductDetail: () => detail,
+  })
+  const FallbackApp = HttpApiBuilder.layer(gamesApi).pipe(
+    Layer.provide([gamesGroupLive, sessionGroupLive]),
+    Layer.provide(NpssoAuthLive),
+    Layer.provide(
+      Layer.mergeAll(
+        GamesServiceLive.pipe(Layer.provide(FallbackSony)),
+        AccountServiceLive.pipe(
+          Layer.provide(
+            Layer.succeed(SonyAccountClient, {
+              exchangeNpsso: () => Effect.succeed(Redacted.make(ACCESS_TOKEN)),
+              fetchPurchasedGames: () => Effect.succeed([]),
+            }),
+          ),
+        ),
+      ),
+    ),
+    Layer.provide(HttpServer.layerServices),
+  )
+  return HttpRouter.toWebHandler(FallbackApp)
+}
+
+const SEARCH_ONLY_ID = 'EP0002-PPSA02410_00-DESTINYTHEGAME02'
+const crossGenApp = fallbackHandler(
+  Effect.succeed({
+    name: 'Destiny 2',
+    media: [],
+    genres: [],
+    description: '',
+    storeDisplayClassification: 'FULL_GAME',
+    platforms: ['PS4', 'PS5'],
+  }),
+)
+const ps4OnlyApp = fallbackHandler(
+  Effect.succeed({
+    name: 'Old Game',
+    media: [],
+    genres: [],
+    description: '',
+    storeDisplayClassification: 'FULL_GAME',
+    platforms: ['PS4'],
+  }),
+)
+const fallbackDownApp = fallbackHandler(
+  Effect.fail(new UpstreamUnavailable({ message: 'sony down' })),
+)
+
 const unavailableApp = failHandler(
   new UpstreamUnavailable({ message: 'sony down' }),
 )
@@ -216,6 +282,9 @@ afterAll(async () => {
   await unavailableApp.dispose()
   await rotatedApp.dispose()
   await rateLimitedApp.dispose()
+  await crossGenApp.dispose()
+  await ps4OnlyApp.dispose()
+  await fallbackDownApp.dispose()
 })
 
 describe('games HTTP API', () => {
@@ -239,6 +308,29 @@ describe('games HTTP API', () => {
       ),
     )
     expect(response.status).toBe(404)
+  })
+
+  it('serves a game that only the product-id fallback finds', async () => {
+    const response = await crossGenApp.handler(
+      new Request(`http://localhost/api/games/${SEARCH_ONLY_ID}`),
+    )
+    expect(response.status).toBe(200)
+    const body = (await response.json()) as { id: string; name: string }
+    expect(body).toMatchObject({ id: SEARCH_ONLY_ID, name: 'Destiny 2' })
+  })
+
+  it('maps a PS4-only product id to 404', async () => {
+    const response = await ps4OnlyApp.handler(
+      new Request(`http://localhost/api/games/${SEARCH_ONLY_ID}`),
+    )
+    expect(response.status).toBe(404)
+  })
+
+  it('maps a product-id fallback upstream outage to 502, not 404', async () => {
+    const response = await fallbackDownApp.handler(
+      new Request(`http://localhost/api/games/${SEARCH_ONLY_ID}`),
+    )
+    expect(response.status).toBe(502)
   })
 
   it('serves the MONTHLY list as typed JSON', async () => {

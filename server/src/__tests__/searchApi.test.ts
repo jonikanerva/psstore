@@ -44,10 +44,12 @@ const makeApp = (outcome: SearchPage | SearchFailure) => {
   const FakeSony = Layer.succeed(SonyClient, {
     fetchConceptsByFeature: () => Effect.succeed([]),
     fetchPlusMonthly: () => Effect.succeed([]),
-    fetchProductPrice: () => Effect.succeed(null),
+    fetchProductPrice: () =>
+      Effect.succeed({ plusOffer: null, standard: null }),
     fetchProductDetail: () =>
       Effect.succeed({
         releaseDate: '2024-01-01T00:00:00Z',
+        media: [],
         genres: [],
         description: '',
       }),

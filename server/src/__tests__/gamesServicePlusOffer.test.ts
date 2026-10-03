@@ -47,6 +47,7 @@ const harness = (price: (productId: string) => PriceResult): Harness => {
     fetchProductDetail: () =>
       Effect.succeed({
         releaseDate: '2025-01-01T00:00:00Z',
+        media: [],
         genres: [],
         description: '',
         storeDisplayClassification: 'FULL_GAME',
@@ -57,7 +58,9 @@ const harness = (price: (productId: string) => PriceResult): Harness => {
     fetchProductPrice: (productId) =>
       Effect.suspend(() => {
         priceCalls.push(productId)
-        return price(productId)
+        return price(productId).pipe(
+          Effect.map((plusOffer) => ({ plusOffer, standard: null })),
+        )
       }),
   })
   const capture = Logger.make(({ logLevel, message }) => {

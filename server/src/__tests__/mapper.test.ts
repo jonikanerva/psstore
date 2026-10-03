@@ -3,6 +3,7 @@ import {
   conceptToGame,
   isConceptDiscounted,
   isConceptPlus,
+  productDetailToGame,
 } from '../sony/mapper.js'
 
 describe('concept mapper', () => {
@@ -123,5 +124,61 @@ describe('concept mapper', () => {
 
       expect(game.plusUpsellText).toBeNull()
     })
+  })
+})
+
+describe('productDetailToGame', () => {
+  const ID = 'EP0002-PPSA02410_00-DESTINYTHEGAME02'
+  const detail = {
+    name: 'Destiny 2',
+    media: [
+      { type: 'IMAGE', role: 'GAMEHUB_COVER_ART', url: 'https://img/cover' },
+      { type: 'IMAGE', role: 'SCREENSHOT', url: 'https://img/shot' },
+      { type: 'VIDEO', role: 'PREVIEW', url: 'https://vid/preview.mp4' },
+    ],
+    releaseDate: '2019-10-01T00:00:00+02:00',
+    genres: ['Action'],
+    description: 'Long text',
+    publisherName: 'Bungie',
+  }
+
+  it('maps detail fields and a standard price to a game', () => {
+    const game = productDetailToGame(ID, detail, {
+      basePrice: '€39,99',
+      discountedPrice: '€19,99',
+      discountText: '-50%',
+    })
+
+    expect(game).toMatchObject({
+      id: ID,
+      name: 'Destiny 2',
+      date: '2019-09-30T22:00:00.000Z',
+      url: 'https://img/cover',
+      screenshots: ['https://img/shot'],
+      videos: ['https://vid/preview.mp4'],
+      genres: ['Action'],
+      studio: 'Bungie',
+      price: '€19,99',
+      originalPrice: '€39,99',
+      discountText: '-50%',
+      plusUpsellText: null,
+      plusOffer: null,
+      description: '',
+      idKind: 'product',
+    })
+  })
+
+  it('leaves the price empty without a standard price and the date empty without a release date', () => {
+    const game = productDetailToGame(
+      ID,
+      { media: [], genres: [], description: '' },
+      null,
+    )
+
+    expect(game.price).toBe('')
+    expect(game.originalPrice).toBe('')
+    expect(game.date).toBe('')
+    expect(game.preOrder).toBe(false)
+    expect(game.name).toBe('')
   })
 })

@@ -24,6 +24,7 @@ type DetailFn = (productId: string) => ProductDetailResult
 let conceptsFor: ConceptFn = () => []
 let detailFor: DetailFn = () => ({
   releaseDate: PAST_DATE,
+  media: [],
   genres: [],
   description: '',
   storeDisplayClassification: 'FULL_GAME',
@@ -36,7 +37,7 @@ const FakeSony = Layer.succeed(SonyClient, {
   fetchPlusMonthly: () => Effect.succeed([]),
   fetchSearchPage: () =>
     Effect.succeed({ candidates: [], isLast: true, rawCount: 0 }),
-  fetchProductPrice: () => Effect.succeed(null),
+  fetchProductPrice: () => Effect.succeed({ plusOffer: null, standard: null }),
   fetchProductDetail: (productId) => Effect.sync(() => detailFor(productId)),
 })
 
@@ -96,6 +97,7 @@ beforeEach(() => {
   conceptsFor = () => []
   detailFor = () => ({
     releaseDate: PAST_DATE,
+    media: [],
     genres: [],
     description: '',
     storeDisplayClassification: 'FULL_GAME',
@@ -111,6 +113,7 @@ describe('gamesService', () => {
     }
     detailFor = (productId) => ({
       releaseDate: productId.includes('FUTURE') ? FUTURE_DATE : PAST_DATE,
+      media: [],
       genres: [],
       description: '',
       storeDisplayClassification: 'FULL_GAME',
@@ -130,6 +133,7 @@ describe('gamesService', () => {
       feature === 'new' ? [makeConcept('alpha'), makeConcept('bravo')] : []
     detailFor = () => ({
       releaseDate: '2024-06-15T00:00:00Z',
+      media: [],
       genres: [],
       description: '',
     })
@@ -144,6 +148,7 @@ describe('gamesService', () => {
       feature === 'new' ? [makeConcept('alpha'), makeConcept('bravo')] : []
     detailFor = (productId) => ({
       releaseDate: productId.includes('ALPHA') ? PAST_DATE : undefined,
+      media: [],
       genres: [],
       description: '',
     })
@@ -182,6 +187,7 @@ describe('gamesService', () => {
 
     detailFor = (productId) => ({
       releaseDate: productId === upcomingProductId ? FUTURE_DATE : PAST_DATE,
+      media: [],
       genres: [],
       description: '',
     })
@@ -210,6 +216,7 @@ describe('gamesService', () => {
       releaseDate: productId.includes('RELEASED')
         ? '2024-01-01T00:00:00Z'
         : FUTURE_DATE,
+      media: [],
       genres: [],
       description: '',
     })
@@ -227,6 +234,7 @@ describe('gamesService', () => {
 
     detailFor = (productId) => ({
       releaseDate: productId.includes('JUSTPASSED') ? justPassedIso : futureIso,
+      media: [],
       genres: [],
       description: '',
     })
@@ -245,6 +253,7 @@ describe('gamesService', () => {
     ).toISOString()
     detailFor = (productId) => ({
       releaseDate: productId.includes('HASDATE') ? futureIso : undefined,
+      media: [],
       genres: [],
       description: '',
     })
@@ -278,7 +287,12 @@ describe('gamesService', () => {
       Date.now() + 5 * 24 * 60 * 60 * 1000,
     ).toISOString()
 
-    detailFor = () => ({ releaseDate: futureIso, genres: [], description: '' })
+    detailFor = () => ({
+      releaseDate: futureIso,
+      media: [],
+      genres: [],
+      description: '',
+    })
     conceptsFor = (feature) =>
       feature === 'upcoming' ? [skuConcept, conceptOnlyA, conceptOnlyB] : []
 
@@ -319,7 +333,12 @@ describe('gamesService', () => {
       Date.now() + 5 * 24 * 60 * 60 * 1000,
     ).toISOString()
 
-    detailFor = () => ({ releaseDate: futureIso, genres: [], description: '' })
+    detailFor = () => ({
+      releaseDate: futureIso,
+      media: [],
+      genres: [],
+      description: '',
+    })
     conceptsFor = (feature) =>
       feature === 'upcoming' ? [conceptFirst, skuConcept, conceptSecond] : []
 
@@ -348,7 +367,7 @@ describe('gamesService', () => {
     const detailCalls: string[] = []
     detailFor = (productId) => {
       detailCalls.push(productId)
-      return { releaseDate: futureIso, genres: [], description: '' }
+      return { releaseDate: futureIso, media: [], genres: [], description: '' }
     }
     conceptsFor = (feature) =>
       feature === 'upcoming' ? [skuConcept, conceptOnly] : []
@@ -369,7 +388,7 @@ describe('gamesService', () => {
     const detailCalls: string[] = []
     detailFor = (productId) => {
       detailCalls.push(productId)
-      return { releaseDate: PAST_DATE, genres: [], description: '' }
+      return { releaseDate: PAST_DATE, media: [], genres: [], description: '' }
     }
     conceptsFor = (feature) => (feature === 'upcoming' ? [conceptOnly] : [])
 
@@ -389,6 +408,7 @@ describe('gamesService', () => {
         : productId.includes('RECENT')
           ? '2025-06-01T00:00:00Z'
           : '2024-06-01T00:00:00Z',
+      media: [],
       genres: [],
       description: '',
     })
@@ -406,6 +426,7 @@ describe('gamesService', () => {
       releaseDate: productId.includes('LATER')
         ? '2099-06-01T00:00:00Z'
         : '2099-01-01T00:00:00Z',
+      media: [],
       genres: [],
       description: '',
     })
@@ -432,6 +453,7 @@ describe('gamesService', () => {
       )
       return {
         releaseDate: PAST_DATE,
+        media: [],
         genres: [],
         description: '',
         storeDisplayClassification: marker
@@ -466,6 +488,7 @@ describe('gamesService', () => {
     // survives, so this is a per-row drop, not a whole-list failure.
     detailFor = (productId) => ({
       releaseDate: PAST_DATE,
+      media: [],
       genres: [],
       description: '',
       storeDisplayClassification: productId.includes('GOODGAME')
@@ -484,6 +507,7 @@ describe('gamesService', () => {
   it('discounted keeps future-dated deals (no released date gate)', async () => {
     detailFor = () => ({
       releaseDate: FUTURE_DATE,
+      media: [],
       genres: [],
       description: '',
       storeDisplayClassification: 'FULL_GAME',
@@ -502,6 +526,7 @@ describe('gamesService', () => {
         : productId.includes('RECENT')
           ? '2025-06-01T00:00:00Z'
           : '2024-06-01T00:00:00Z',
+      media: [],
       genres: [],
       description: '',
       storeDisplayClassification: 'FULL_GAME',
@@ -558,6 +583,7 @@ describe('gamesService', () => {
   it('enriches game with publisher name from product detail', async () => {
     detailFor = () => ({
       releaseDate: PAST_DATE,
+      media: [],
       genres: ['Strategy'],
       description: '<p>Grand strategy</p>',
       publisherName: 'PARADOX GAMES INC',
@@ -610,6 +636,7 @@ describe('gamesService', () => {
 
     detailFor = (productId) => ({
       releaseDate: dateByProductId.get(productId) ?? olderIso,
+      media: [],
       genres: [],
       description: '',
     })
@@ -635,9 +662,15 @@ describe('gamesService', () => {
       fetchPlusMonthly: () => Effect.succeed([]),
       fetchSearchPage: () =>
         Effect.succeed({ candidates: [], isLast: true, rawCount: 0 }),
-      fetchProductPrice: () => Effect.succeed(null),
+      fetchProductPrice: () =>
+        Effect.succeed({ plusOffer: null, standard: null }),
       fetchProductDetail: () =>
-        Effect.succeed({ releaseDate: PAST_DATE, genres: [], description: '' }),
+        Effect.succeed({
+          releaseDate: PAST_DATE,
+          media: [],
+          genres: [],
+          description: '',
+        }),
     })
     const Services = GamesServiceLive.pipe(Layer.provide(CapturingSony))
     await Effect.runPromise(
@@ -654,6 +687,7 @@ describe('gamesService', () => {
   it('orders games with equal release dates by upstream concept order (stable)', async () => {
     detailFor = () => ({
       releaseDate: '2025-01-01T00:00:00Z',
+      media: [],
       genres: [],
       description: '',
     })
@@ -671,6 +705,7 @@ describe('getGameById detail enrichment', () => {
   it('enriches the game with LONG description and localized genres', async () => {
     detailFor = () => ({
       releaseDate: PAST_DATE,
+      media: [],
       genres: ['Toiminta', 'Roolipelit'],
       description: '<p>The long game info body.</p>',
       publisherName: 'STUDIO OY',
@@ -700,7 +735,8 @@ describe('getGameById detail enrichment', () => {
       fetchPlusMonthly: () => Effect.succeed([]),
       fetchSearchPage: () =>
         Effect.succeed({ candidates: [], isLast: true, rawCount: 0 }),
-      fetchProductPrice: () => Effect.succeed(null),
+      fetchProductPrice: () =>
+        Effect.succeed({ plusOffer: null, standard: null }),
       fetchProductDetail: () => Effect.fail(upstream('boom')),
     })
     const Services = GamesServiceLive.pipe(Layer.provide(FlakySony))
@@ -743,7 +779,8 @@ describe('upstream error propagation on all list tabs', () => {
       fetchPlusMonthly: () => Effect.succeed([]),
       fetchSearchPage: () =>
         Effect.succeed({ candidates: [], isLast: true, rawCount: 0 }),
-      fetchProductPrice: () => Effect.succeed(null),
+      fetchProductPrice: () =>
+        Effect.succeed({ plusOffer: null, standard: null }),
       fetchProductDetail: () => Effect.fail(error),
     })
 
@@ -812,8 +849,10 @@ describe('upstream error propagation on all list tabs', () => {
       fetchPlusMonthly: () => Effect.succeed([]),
       fetchSearchPage: () =>
         Effect.succeed({ candidates: [], isLast: true, rawCount: 0 }),
-      fetchProductPrice: () => Effect.succeed(null),
-      fetchProductDetail: () => Effect.succeed({ genres: [], description: '' }),
+      fetchProductPrice: () =>
+        Effect.succeed({ plusOffer: null, standard: null }),
+      fetchProductDetail: () =>
+        Effect.succeed({ media: [], genres: [], description: '' }),
     })
     const exit = await runWith(NewOkFeaturesFail, (s) =>
       s.getGameById('EP0001-PPSA09999_00-UPCOMINGONLY00000'),
@@ -857,7 +896,8 @@ describe('gamesService cache TTL (TestClock)', () => {
       fetchPlusMonthly: () => Effect.succeed([]),
       fetchSearchPage: () =>
         Effect.succeed({ candidates: [], isLast: true, rawCount: 0 }),
-      fetchProductPrice: () => Effect.succeed(null),
+      fetchProductPrice: () =>
+        Effect.succeed({ plusOffer: null, standard: null }),
       fetchProductDetail: () =>
         Effect.suspend(() => {
           counters.details += 1
@@ -865,6 +905,7 @@ describe('gamesService cache TTL (TestClock)', () => {
             sony.detail?.() ??
             Effect.succeed<ProductDetailResult>({
               releaseDate: PAST_DATE,
+              media: [],
               genres: [],
               description: '',
               storeDisplayClassification: 'FULL_GAME',

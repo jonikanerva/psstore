@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
+  isPs5Game,
   mapConceptsToGames,
   mapUpcomingConceptsToGames,
 } from '../domain/listing.js'
+import { productDetailToGame } from '../sony/mapper.js'
 import { parseProductRetrieve } from '../sony/productDetailSchema.js'
 import {
   extractCategoryGrid,
@@ -12,6 +14,7 @@ import {
 import brokenGolden from './fixtures/categoryGridBrokenElement.golden.json' with { type: 'json' }
 import conceptsGolden from './fixtures/categoryGridConcepts.golden.json' with { type: 'json' }
 import productsGolden from './fixtures/categoryGridProducts.golden.json' with { type: 'json' }
+import crossGenGolden from './fixtures/productDetailCrossGen.synthetic.json' with { type: 'json' }
 import productGolden from './fixtures/productDetail.golden.json' with { type: 'json' }
 
 // REGRESSION GUARD for null tolerance at the Sony boundary. These fixtures are
@@ -98,5 +101,47 @@ describe('golden decode — productRetrieve (metGetProductById, real capture)', 
     // The LONG body is real marketing copy; LEGAL/COMPATIBILITY entries are
     // never user-facing and must not be selected.
     expect(detail.description).not.toContain('All rights reserved')
+  })
+})
+
+describe('synthetic decode — productRetrieve with name, media and platforms (live shape)', () => {
+  it('reads the name, top-level media and platforms; ignores nested media', () => {
+    const detail = extractProductDetail(crossGenGolden)
+
+    expect(detail.name).toBe('Synthetic Game PS4 & PS5')
+    expect(detail.platforms).toEqual(['PS4', 'PS5'])
+    expect(isPs5Game(detail.platforms, detail.storeDisplayClassification)).toBe(
+      true,
+    )
+    expect(detail.media.map((item) => item.role)).toEqual([
+      'PREVIEW',
+      'GAMEHUB_COVER_ART',
+      'SCREENSHOT',
+    ])
+    expect(detail.description).toBe('Synthetic long text.')
+  })
+
+  it('maps to a game with a cover, a screenshot and a video', () => {
+    const detail = extractProductDetail(crossGenGolden)
+    const game = productDetailToGame(
+      'EP0000-PPSA00000_00-SYNTHETICGAME000',
+      detail,
+      null,
+    )
+
+    expect(game.url).toBe('https://example.invalid/cover.jpg')
+    expect(game.screenshots).toEqual(['https://example.invalid/shot.jpg'])
+    expect(game.videos).toEqual(['https://example.invalid/preview.mp4'])
+  })
+
+  it('gives an empty media list when the media node is missing or null', () => {
+    expect(
+      extractProductDetail({ data: { productRetrieve: { name: 'X' } } }).media,
+    ).toEqual([])
+    expect(
+      extractProductDetail({
+        data: { productRetrieve: { name: 'X', media: null } },
+      } as unknown as Parameters<typeof extractProductDetail>[0]).media,
+    ).toEqual([])
   })
 })

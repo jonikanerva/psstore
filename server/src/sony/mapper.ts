@@ -1,5 +1,7 @@
 import type { Game } from '@psstore/shared'
 import type { PlusMonthlyEntry } from './plusMonthlySchema.js'
+import type { StandardPrice } from './productPriceSchema.js'
+import type { ProductDetailResult } from './sonyClient.js'
 import type { CategoryGridProduct, Concept } from './types.js'
 
 const DEFAULT_DISCOUNT_DATE = ''
@@ -133,6 +135,31 @@ export const conceptToGame = (concept: Concept): Game => {
     idKind: 'product',
   }
 }
+
+/**
+ * Build a game from a product's own detail and standard price, for a product
+ * id that no list contains. `description` and `plusOffer` stay empty; the
+ * caller fills them.
+ */
+export const productDetailToGame = (
+  id: string,
+  detail: ProductDetailResult,
+  standard: StandardPrice | null,
+): Game =>
+  conceptToGame({
+    id,
+    name: detail.name,
+    media: detail.media,
+    price: standard,
+    products: [
+      {
+        id,
+        releaseDate: detail.releaseDate,
+        providerName: detail.publisherName,
+        genres: detail.genres,
+      },
+    ],
+  })
 
 export const defaultDiscountDate = DEFAULT_DISCOUNT_DATE
 

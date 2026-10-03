@@ -18,7 +18,7 @@ import { Result, Schema } from 'effect'
  * one odd item is dropped, not the whole grid (VISION continuity over blankness
  * at element granularity). Do NOT tighten this.
  */
-const mediaSchema = Schema.Struct({
+export const mediaSchema = Schema.Struct({
   url: Schema.optional(Schema.NullOr(Schema.String)),
   role: Schema.optional(Schema.NullOr(Schema.String)),
   type: Schema.optional(Schema.NullOr(Schema.String)),

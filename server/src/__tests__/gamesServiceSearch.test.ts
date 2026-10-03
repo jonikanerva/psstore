@@ -50,6 +50,7 @@ let pageCalls: { term: string; offset: number; size: number }[]
 
 const DETAIL: ProductDetailResult = {
   releaseDate: '2024-01-01T00:00:00Z',
+  media: [],
   genres: ['Action'],
   description: '',
   storeDisplayClassification: 'FULL_GAME',
@@ -59,7 +60,7 @@ const DETAIL: ProductDetailResult = {
 const FakeSony = Layer.succeed(SonyClient, {
   fetchConceptsByFeature: () => Effect.succeed([]),
   fetchPlusMonthly: () => Effect.succeed([]),
-  fetchProductPrice: () => Effect.succeed(null),
+  fetchProductPrice: () => Effect.succeed({ plusOffer: null, standard: null }),
   fetchProductDetail: (id) => detailFor(id),
   fetchSearchPage: (term, offset, size) => {
     pageCalls.push({ term, offset, size })
@@ -213,7 +214,7 @@ describe('gamesService searchGames', () => {
           ? DETAIL
           : id === productId(2)
             ? { ...DETAIL, platforms: ['PS4'] }
-            : { genres: [], description: '' },
+            : { media: [], genres: [], description: '' },
       )
 
     const result = await value((s) => s.searchGames('x'))

@@ -1,4 +1,3 @@
-import type { PlusOffer } from '@psstore/shared'
 import { Context, Effect, Layer, Redacted } from 'effect'
 import {
   SONY_AUTH_BASE_URL,
@@ -44,7 +43,7 @@ import {
 import { detectPersistedQueryRotation } from './graphqlErrors.js'
 import { parseProductRetrieve } from './productDetailSchema.js'
 import { parsePlusMonthly, type PlusMonthlyEntry } from './plusMonthlySchema.js'
-import { parsePlusOffer } from './productPriceSchema.js'
+import { parseProductPrice, type ProductPrice } from './productPriceSchema.js'
 import { parseSearchResponse } from './searchSchema.js'
 import {
   dedupePurchased,
@@ -58,7 +57,7 @@ import {
   type StrategyContext,
 } from './queryStrategies.js'
 import { productToConcept } from './mapper.js'
-import type { Concept, ProductRetrieveResponse } from './types.js'
+import type { Concept, Media, ProductRetrieveResponse } from './types.js'
 
 export const localeOverride = (locale: string): string =>
   locale.replace(
@@ -79,6 +78,8 @@ export const extractReleaseDateFromProductResponse = (
 }
 
 export interface ProductDetailResult {
+  name?: string | undefined
+  media: Media[]
   releaseDate?: string | undefined
   genres: string[]
   description: string
@@ -144,7 +145,14 @@ export const extractProductDetail = (
     (value): value is string => typeof value === 'string',
   )
 
+  const name =
+    typeof product?.name === 'string' && product.name.length > 0
+      ? product.name
+      : undefined
+
   return {
+    name,
+    media: [...(product?.media ?? [])],
     releaseDate,
     genres,
     description,
@@ -400,7 +408,7 @@ export interface SonyClientApi {
   readonly fetchProductPrice: (
     productId: string,
   ) => Effect.Effect<
-    PlusOffer | null,
+    ProductPrice,
     UpstreamUnavailable | UpstreamQueryRotated | UpstreamRateLimited
   >
   readonly fetchSearchPage: (
@@ -588,7 +596,7 @@ export const SonyClientLive: Layer.Layer<SonyClient> = Layer.succeed(
                   operationName: SONY_PRODUCT_PRICE_OPERATION_NAME,
                 }),
               )
-            : Effect.succeed(parsePlusOffer(json)),
+            : Effect.succeed(parseProductPrice(json)),
         ),
       ),
   }),
