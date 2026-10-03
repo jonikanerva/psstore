@@ -195,11 +195,11 @@ describe('AppShell', () => {
       expect(pillNames()).toEqual(['Reset', 'Date ↓', 'Price', 'Name'])
     })
 
-    it('is hidden on the search route', async () => {
+    it('is shown on the search route with Date descending active', async () => {
       await renderShellAt('/search')
       expect(
-        screen.queryByRole('group', { name: 'Sort:' }),
-      ).not.toBeInTheDocument()
+        screen.getByRole('button', { name: 'Sort by date, descending' }),
+      ).toHaveAttribute('aria-pressed', 'true')
     })
 
     it('is hidden on PURCHASED until the library list exists', async () => {

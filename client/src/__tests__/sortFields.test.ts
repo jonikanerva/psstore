@@ -9,6 +9,7 @@ describe('sortConfigForPath', () => {
     ['/monthly', ['date', 'name'], 'date', 'desc', true],
     ['/purchased', ['name'], 'name', 'asc', false],
     ['/wishlist', ['date', 'price', 'name'], 'price', 'asc', false],
+    ['/search', ['date', 'price', 'name'], 'date', 'desc', false],
   ])(
     'offers the fields and default of %s',
     (path, fields, field, direction, serverOrdered) => {
@@ -28,18 +29,16 @@ describe('sortConfigForPath', () => {
       '/monthly',
       '/purchased',
       '/wishlist',
+      '/search',
     ]) {
       const config = sortConfigForPath(path)
       expect(config?.fields).toContain(config?.defaultSort.field)
     }
   })
 
-  it.each(['/search', '/g/EP0001', '/', '/unknown'])(
-    'offers no sort on %s',
-    (path) => {
-      expect(sortConfigForPath(path)).toBeUndefined()
-    },
-  )
+  it.each(['/g/EP0001', '/', '/unknown'])('offers no sort on %s', (path) => {
+    expect(sortConfigForPath(path)).toBeUndefined()
+  })
 })
 
 describe('isSameSort', () => {

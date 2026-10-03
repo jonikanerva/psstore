@@ -41,23 +41,24 @@ const AppShell = () => {
   const queryClient = useQueryClient()
   const stopSignedInPrefetch = usePrefetchTabs()
 
-  // The sort belongs to the route it was chosen on: arriving on another
-  // pathname drops it.
+  // The sort belongs to the view it was chosen on: arriving on another
+  // pathname, or on a search for another term, drops it.
+  const sortScope = onSearchRoute ? `${SEARCH_PATH}?q=${urlTerm}` : pathname
   const [sortState, setSortState] = useState<{
-    pathname: string
+    scope: string
     sort: GameSort | null
-  }>({ pathname, sort: null })
-  if (sortState.pathname !== pathname) {
-    setSortState({ pathname, sort: null })
+  }>({ scope: sortScope, sort: null })
+  if (sortState.scope !== sortScope) {
+    setSortState({ scope: sortScope, sort: null })
   }
-  const sort = sortState.pathname === pathname ? sortState.sort : null
+  const sort = sortState.scope === sortScope ? sortState.sort : null
   const loadRef = useRef<AbortController | null>(null)
 
   useEffect(
     () => () => {
       loadRef.current?.abort()
     },
-    [pathname],
+    [sortScope],
   )
 
   const sortConfig = sortConfigForPath(pathname)
@@ -72,10 +73,10 @@ const AppShell = () => {
       return
     }
     if (isSameSort(next, sortConfig.defaultSort)) {
-      setSortState({ pathname, sort: null })
+      setSortState({ scope: sortScope, sort: null })
       return
     }
-    setSortState({ pathname, sort: next })
+    setSortState({ scope: sortScope, sort: next })
     const target = gamesFeatureForPath(pathname)
     if (target !== undefined) {
       const controller = new AbortController()

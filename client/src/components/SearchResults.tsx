@@ -1,7 +1,8 @@
-import type { Game } from '@psstore/shared'
+import { sortGames, type Game } from '@psstore/shared'
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { fetchSearchGames } from '../modules/psnStore'
+import { useSort } from '../modules/sortContext'
 import Error from './Error'
 import GameGrid from './GameGrid'
 import Offline from './Offline'
@@ -25,14 +26,16 @@ const uniqueById = (games: readonly Game[]): Game[] => {
   })
 }
 
-const countLabel = (count: number, more: boolean): string =>
-  `${String(count)} PS5 ${count === 1 ? 'game' : 'games'} found${more ? ' so far' : ''}`
+const countLabel = (count: number): string =>
+  `${String(count)} PS5 ${count === 1 ? 'game' : 'games'} found`
 
 // Results of the global search. The term in the URL is the only source of
 // truth. The query key stays outside the persister allow-list, so a term never
-// reaches localStorage. The live region stays mounted so that a screen reader
+// reaches localStorage. The grid is held until every page is loaded, so the
+// sorted order is complete before any card shows. The live region stays mounted so that a screen reader
 // announces each outcome; focus never moves.
 const SearchResults = ({ term }: SearchResultsProps) => {
+  const sort = useSort()
   const {
     data,
     isPending,
@@ -45,19 +48,23 @@ const SearchResults = ({ term }: SearchResultsProps) => {
     isFetchingNextPage,
   } = useInfiniteQuery({
     queryKey: ['search', term],
-    queryFn: ({ pageParam }) => fetchSearchGames(term, pageParam, PAGE_SIZE),
+    queryFn: ({ pageParam, signal }) =>
+      fetchSearchGames(term, pageParam, PAGE_SIZE, signal),
     initialPageParam: 0,
     getNextPageParam: (lastPage) => lastPage.nextOffset ?? undefined,
     gcTime: SEARCH_GC_TIME_MS,
   })
 
-  const games =
+  const unique =
     data === undefined
       ? []
       : uniqueById(data.pages.flatMap((page) => page.games))
-  const awaitingMore = data !== undefined && games.length === 0 && hasNextPage
+  const games = sort === null ? unique : sortGames(unique, sort)
+  const awaitingMore =
+    data !== undefined && hasNextPage && (unique.length === 0 || sort !== null)
 
-  // A page whose games were all filtered out still has a next page to read.
+  // A page whose games were all filtered out still has a next page to read. A
+  // sorted view reads every page before it shows a card.
   useEffect(() => {
     if (awaitingMore && !isFetchingNextPage && !isFetchNextPageError) {
       void fetchNextPage()
@@ -79,14 +86,16 @@ const SearchResults = ({ term }: SearchResultsProps) => {
   const offline = isPending && fetchStatus === 'paused'
   const failed = isError && data === undefined
   const empty = data !== undefined && games.length === 0 && !hasNextPage
-  const showResults = games.length > 0
+  const showResults = games.length > 0 && !awaitingMore
+  const loadingMore = awaitingMore && !isFetchNextPageError
+  const pagingOffline = loadingMore && fetchStatus === 'paused'
 
   const status = failed ? (
     <Error message="Search failed" />
   ) : empty ? (
     <Error message={`No PS5 games found for "${term}"`} />
   ) : showResults ? (
-    countLabel(games.length, hasNextPage)
+    countLabel(games.length)
   ) : null
 
   return (
@@ -102,7 +111,7 @@ const SearchResults = ({ term }: SearchResultsProps) => {
       {failed && retry(refetch)}
       {offline && <Offline />}
       {isPending && !offline && <Spinner />}
-      {awaitingMore && !isFetchNextPageError && <Spinner />}
+      {loadingMore && (pagingOffline ? <Offline /> : <Spinner />)}
       {showResults && (
         <GameGrid
           games={games}
