@@ -19,6 +19,23 @@ describe('shouldDehydrateQuery', () => {
   })
 })
 
+describe('a prefetched signed-in list', () => {
+  it('never dehydrates, even with data', () => {
+    const client = new QueryClient()
+    const list = { games: [], totalCount: 0, nextOffset: null }
+    client.setQueryData(['wishlist'], list)
+    client.setQueryData(['purchased'], list)
+    client.setQueryData(['games', 'upcoming'], {
+      pages: [list],
+      pageParams: [0],
+    })
+    const keys = dehydrate(client, { shouldDehydrateQuery }).queries.map(
+      (query) => query.queryKey,
+    )
+    expect(keys).toEqual([['games', 'upcoming']])
+  })
+})
+
 describe('a fully loaded games query', () => {
   it('dehydrates as one entry with every page', () => {
     const client = new QueryClient()

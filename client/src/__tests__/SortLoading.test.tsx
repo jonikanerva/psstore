@@ -20,12 +20,18 @@ import AppShell from '../components/AppShell'
 import Games from '../components/Games'
 import { fetchNewGames } from '../modules/psnStore'
 
+// The prefetch has its own tests; here it would add requests to the counts.
+vi.mock('../modules/usePrefetchTabs', () => ({
+  usePrefetchTabs: () => () => undefined,
+}))
+
 vi.mock('../modules/psnStore', () => ({
   fetchNewGames: vi.fn(),
   fetchUpcomingGames: vi.fn(),
   fetchDiscountedGames: vi.fn(),
   fetchMonthlyGames: vi.fn(),
   fetchPurchasedGames: vi.fn(),
+  fetchWishlistGames: vi.fn(),
 }))
 
 beforeAll(() => {
