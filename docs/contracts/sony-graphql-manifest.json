@@ -130,7 +130,7 @@
       "variables_schema": {},
       "sample_variables": {},
       "response_path": "data.storeWishlistSecure",
-      "observed_status_codes": []
+      "observed_status_codes": [200]
     },
     {
       "feature": "search",
