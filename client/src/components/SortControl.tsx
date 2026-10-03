@@ -1,8 +1,4 @@
-import {
-  NATURAL_DIRECTION,
-  type GameSort,
-  type SortField,
-} from '@psstore/shared'
+import type { GameSort, SortField } from '@psstore/shared'
 import { SORT_FIELD_LABELS } from '../modules/sortFields'
 
 interface SortControlProps {
@@ -12,8 +8,8 @@ interface SortControlProps {
   onToggleDirection: () => void
 }
 
-// One pill per field. Clicking a pill steps through: natural direction, the
-// opposite direction, then back to Sony's own order.
+// A Default pill restores Sony's own order. Each field pill flips between its
+// two directions.
 const SortControl = ({
   fields,
   sort,
@@ -21,11 +17,22 @@ const SortControl = ({
   onToggleDirection,
 }: SortControlProps) => (
   <div role="group" aria-label="Sort" className="sort-bar">
+    <button
+      type="button"
+      className={
+        sort === null ? 'sort-bar--pill sort-bar--active' : 'sort-bar--pill'
+      }
+      aria-pressed={sort === null}
+      onClick={() => {
+        onFieldChange(null)
+      }}
+    >
+      Default
+    </button>
     {fields.map((field) => {
       const label = SORT_FIELD_LABELS[field]
       const active = sort?.field === field
       const direction = active ? sort.direction : null
-      const onNaturalDirection = direction === NATURAL_DIRECTION[field]
       return (
         <button
           key={field}
@@ -40,12 +47,10 @@ const SortControl = ({
               : `Sort by ${label.toLowerCase()}, ${direction === 'asc' ? 'ascending' : 'descending'}`
           }
           onClick={() => {
-            if (!active) {
-              onFieldChange(field)
-            } else if (onNaturalDirection) {
+            if (active) {
               onToggleDirection()
             } else {
-              onFieldChange(null)
+              onFieldChange(field)
             }
           }}
         >

@@ -196,7 +196,7 @@ describe('Purchased', () => {
       within(screen.getByRole('group', { name: 'Sort' }))
         .getAllByRole('button')
         .map((button) => button.textContent),
-    ).toEqual(['Name'])
+    ).toEqual(['Default', 'Name'])
     fireEvent.click(pill)
     expect(names()).toEqual(['alpha', 'Bravo', 'Charlie'])
 

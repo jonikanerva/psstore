@@ -182,11 +182,11 @@ describe('AppShell', () => {
 
     it('offers the fields of the current route', async () => {
       await renderShellAt('/upcoming')
-      expect(pillNames()).toEqual(['Date', 'Name'])
+      expect(pillNames()).toEqual(['Default', 'Date', 'Name'])
       cleanup()
 
       await renderShellAt('/discounted')
-      expect(pillNames()).toEqual(['Date', 'Price', 'Name'])
+      expect(pillNames()).toEqual(['Default', 'Date', 'Price', 'Name'])
     })
 
     it('is hidden on the search route', async () => {
@@ -203,13 +203,14 @@ describe('AppShell', () => {
       ).not.toBeInTheDocument()
     })
 
-    it('starts with no pill pressed', async () => {
+    it('starts with only the Default pill pressed', async () => {
       await renderShellAt('/discounted')
-      for (const button of within(
+      const buttons = within(
         screen.getByRole('group', { name: 'Sort' }),
-      ).getAllByRole('button')) {
-        expect(button).toHaveAttribute('aria-pressed', 'false')
-      }
+      ).getAllByRole('button')
+      expect(
+        buttons.map((button) => button.getAttribute('aria-pressed')),
+      ).toEqual(['true', 'false', 'false', 'false'])
       expect(screen.getByTestId('probe-sort')).toHaveTextContent('default')
     })
 
@@ -224,7 +225,7 @@ describe('AppShell', () => {
       expect(screen.getByTestId('probe-sort')).toHaveTextContent('date desc')
     })
 
-    it('toggles the direction, then returns to the default order', async () => {
+    it('flips between two directions, and Default restores the order', async () => {
       await renderShellAt('/upcoming')
       fireEvent.click(screen.getByRole('button', { name: 'Sort by name' }))
       const pill = screen.getByRole('button', {
@@ -241,7 +242,14 @@ describe('AppShell', () => {
       expect(flipped).toHaveTextContent('Name ↓')
 
       fireEvent.click(flipped)
+      expect(screen.getByTestId('probe-sort')).toHaveTextContent('name asc')
+
+      fireEvent.click(screen.getByRole('button', { name: 'Default' }))
       expect(screen.getByTestId('probe-sort')).toHaveTextContent('default')
+      expect(screen.getByRole('button', { name: 'Default' })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      )
       expect(
         screen.getByRole('button', { name: 'Sort by name' }),
       ).toHaveAttribute('aria-pressed', 'false')
