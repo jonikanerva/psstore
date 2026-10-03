@@ -80,7 +80,8 @@ export const releaseYearOf = (date: string): number | null => {
 /**
  * The critic score for a game, or null. Accepts a candidate only when its
  * normalised name equals the game's, its release year is within one year of
- * the game's, it is the only such candidate, and it has enough critic reviews.
+ * the game's, and it has a score from enough critic reviews. Exactly one such
+ * candidate must exist; two are ambiguous.
  */
 export const matchCriticScore = (
   title: string,
@@ -92,18 +93,16 @@ export const matchCriticScore = (
     return null
   }
 
-  const matches = candidates.filter(
+  // An edition entry often shares the base game's normalised name. Only a
+  // candidate with a trusted score takes part in the uniqueness check.
+  const qualified = candidates.filter(
     (candidate) =>
       candidate.releaseYear !== null &&
       Math.abs(candidate.releaseYear - year) <= 1 &&
+      candidate.rating !== null &&
+      candidate.ratingCount >= MIN_CRITIC_COUNT &&
       normalizeTitle(candidate.name) === name,
   )
-  const [only] = matches
-  if (matches.length !== 1 || only === undefined) {
-    return null
-  }
-
-  return only.rating !== null && only.ratingCount >= MIN_CRITIC_COUNT
-    ? only.rating
-    : null
+  const [only] = qualified
+  return qualified.length === 1 && only !== undefined ? only.rating : null
 }

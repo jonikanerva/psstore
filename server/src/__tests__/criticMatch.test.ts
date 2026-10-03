@@ -102,6 +102,51 @@ describe('matchCriticScore', () => {
     ).toBe(84)
   })
 
+  it('ignores an unrated edition entry next to a rated base entry', () => {
+    expect(
+      matchCriticScore('Synthetic Quest', 2023, [
+        candidate(),
+        candidate({
+          name: 'Synthetic Quest Deluxe Edition',
+          rating: null,
+          ratingCount: 0,
+        }),
+      ]),
+    ).toBe(84)
+  })
+
+  it('ignores an edition entry with too few reviews next to a rated base entry', () => {
+    expect(
+      matchCriticScore('Synthetic Quest', 2023, [
+        candidate(),
+        candidate({
+          name: 'Synthetic Quest Complete Edition',
+          releaseYear: 2024,
+          rating: 94,
+          ratingCount: MIN_CRITIC_COUNT - 1,
+        }),
+      ]),
+    ).toBe(84)
+  })
+
+  it('refuses two qualified candidates with the same name', () => {
+    expect(
+      matchCriticScore('Synthetic Quest', 2023, [
+        candidate(),
+        candidate({ name: 'Synthetic Quest Complete Edition', rating: 94 }),
+      ]),
+    ).toBeNull()
+  })
+
+  it('refuses when every same-name candidate is unrated', () => {
+    expect(
+      matchCriticScore('Synthetic Quest', 2023, [
+        candidate({ rating: null, ratingCount: 0 }),
+        candidate({ name: 'Synthetic Quest Deluxe Edition', rating: null }),
+      ]),
+    ).toBeNull()
+  })
+
   it('refuses a score with too few critic reviews', () => {
     expect(
       matchCriticScore('Synthetic Quest', 2023, [
