@@ -18,7 +18,7 @@ import type { Game, PageResult } from '@psstore/shared'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import AppShell from '../components/AppShell'
 import Games from '../components/Games'
-import { fetchNewGames } from '../modules/psnStore'
+import { fetchNewGames, fetchUpcomingGames } from '../modules/psnStore'
 
 vi.mock('../modules/psnStore', () => ({
   fetchNewGames: vi.fn(),
@@ -39,12 +39,12 @@ beforeAll(() => {
   )
 })
 
-const game = (id: string, name: string, date = ''): Game => ({
+const game = (id: string, name: string, date = '', price = ''): Game => ({
   id,
   name,
   date,
   url: 'https://example.com/cover.png',
-  price: '',
+  price,
   originalPrice: '',
   discountText: '',
   discountDate: '',
@@ -81,12 +81,17 @@ const deferred = (): Deferred => {
   return { promise, resolve, reject }
 }
 
-const renderApp = async () => {
+const renderApp = async (initialPath = '/new') => {
   const rootRoute = createRootRoute({ component: AppShell })
   const newRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: 'new',
     component: () => <Games feature="new" fetch={fetchNewGames} />,
+  })
+  const upcomingRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: 'upcoming',
+    component: () => <Games feature="upcoming" fetch={fetchUpcomingGames} />,
   })
   const monthlyRoute = createRoute({
     getParentRoute: () => rootRoute,
@@ -94,8 +99,8 @@ const renderApp = async () => {
     component: () => <div>monthly view</div>,
   })
   const router = createRouter({
-    routeTree: rootRoute.addChildren([newRoute, monthlyRoute]),
-    history: createMemoryHistory({ initialEntries: ['/new'] }),
+    routeTree: rootRoute.addChildren([newRoute, upcomingRoute, monthlyRoute]),
+    history: createMemoryHistory({ initialEntries: [initialPath] }),
   })
   await router.load()
   const queryClient = new QueryClient({
@@ -121,6 +126,7 @@ describe('sorting a paged view', () => {
   afterEach(() => {
     cleanup()
     vi.mocked(fetchNewGames).mockReset()
+    vi.mocked(fetchUpcomingGames).mockReset()
   })
 
   it('shows the spinner while pages load, then the sorted list', async () => {
@@ -147,6 +153,33 @@ describe('sorting a paged view', () => {
       expect(cardNames()).toEqual(['Alpha', 'Bravo', 'Charlie'])
     })
     expect(fetchNewGames).toHaveBeenCalledTimes(2)
+  })
+
+  it('sorts UPCOMING by price with unpriced games last in both directions', async () => {
+    vi.mocked(fetchUpcomingGames).mockResolvedValueOnce(
+      page(
+        [
+          game('1', 'Concept', '2027-01-01T00:00:00Z'),
+          game('2', 'Pricey', '2027-02-01T00:00:00Z', '69,99 €'),
+          game('3', 'Cheap', '2027-03-01T00:00:00Z', '19,99 €'),
+        ],
+        null,
+      ),
+    )
+    await renderApp('/upcoming')
+    expect(await screen.findByText('Concept')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sort by price' }))
+    await waitFor(() => {
+      expect(cardNames()).toEqual(['Cheap', 'Pricey', 'Concept'])
+    })
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Sort by price, ascending' }),
+    )
+    await waitFor(() => {
+      expect(cardNames()).toEqual(['Pricey', 'Cheap', 'Concept'])
+    })
   })
 
   it('loads nothing while the sort is idle', async () => {
