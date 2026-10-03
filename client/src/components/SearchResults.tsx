@@ -4,7 +4,8 @@ import { useEffect } from 'react'
 import { fetchSearchGames } from '../modules/psnStore'
 import Error from './Error'
 import GameGrid from './GameGrid'
-import Loading from './Spinner'
+import Offline from './Offline'
+import Spinner from './Spinner'
 
 const PAGE_SIZE = 50
 const SEARCH_GC_TIME_MS = 60_000
@@ -80,9 +81,7 @@ const SearchResults = ({ term }: SearchResultsProps) => {
   const empty = data !== undefined && games.length === 0 && !hasNextPage
   const showResults = games.length > 0
 
-  const status = offline ? (
-    <Error message="You are offline. Search needs a connection." />
-  ) : failed ? (
+  const status = failed ? (
     <Error message="Search failed" />
   ) : empty ? (
     <Error message={`No PS5 games found for "${term}"`} />
@@ -100,9 +99,10 @@ const SearchResults = ({ term }: SearchResultsProps) => {
       <div role="status" className="search-results--status">
         {status}
       </div>
-      {(offline || failed) && retry(refetch)}
-      {isPending && !offline && <Loading loading />}
-      {awaitingMore && !isFetchNextPageError && <Loading loading />}
+      {failed && retry(refetch)}
+      {offline && <Offline />}
+      {isPending && !offline && <Spinner />}
+      {awaitingMore && !isFetchNextPageError && <Spinner />}
       {showResults && (
         <GameGrid
           games={games}

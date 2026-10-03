@@ -5,8 +5,9 @@ import { useSearchQuery } from '../modules/searchContext'
 import Error from './Error'
 import { normalizeSearchTerm } from '../modules/searchTerm'
 import GameGrid from './GameGrid'
+import Offline from './Offline'
 import SearchAllCard from './SearchAllCard'
-import Loading from './Spinner'
+import Spinner from './Spinner'
 
 const PAGE_SIZE = 60
 
@@ -31,6 +32,7 @@ const Games = ({
     data,
     isPending,
     isError,
+    fetchStatus,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
@@ -46,7 +48,7 @@ const Games = ({
   }
 
   if (isPending) {
-    return <Loading loading />
+    return fetchStatus === 'paused' ? <Offline /> : <Spinner />
   }
 
   const games = data.pages.flatMap((page) => page.games)

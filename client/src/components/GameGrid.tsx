@@ -2,7 +2,7 @@ import type { Game } from '@psstore/shared'
 import { useEffect, useRef, type ReactNode } from 'react'
 import GameCard from './GameCard'
 import ScrollToTopOnMount from './ScrollToTopOnMount'
-import Loading from './Spinner'
+import Spinner from './Spinner'
 
 interface GameGridProps {
   games: readonly Game[]
@@ -59,7 +59,7 @@ const GameGrid = ({
           {trailing}
         </div>
         <div ref={sentinelRef} className="games--sentinel">
-          {isFetchingNextPage && <Loading loading />}
+          {isFetchingNextPage && <Spinner />}
         </div>
       </div>
     </>

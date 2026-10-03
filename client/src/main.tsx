@@ -4,6 +4,7 @@ import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client
 import { RouterProvider } from '@tanstack/react-router'
 import { createRoot } from 'react-dom/client'
 import { shouldDehydrateQuery } from './modules/persistence'
+import { syncOnlineState } from './modules/syncOnlineState'
 import { router } from './router'
 import './index.css'
 
@@ -25,6 +26,8 @@ const queryClient = new QueryClient({
 // rule suggests is unnecessary for synchronous localStorage.
 // eslint-disable-next-line @typescript-eslint/no-deprecated -- STACK.md §2 specifies createSyncStoragePersister for localStorage
 const persister = createSyncStoragePersister({ storage: window.localStorage })
+
+syncOnlineState()
 
 const container = document.getElementById('root')
 if (container) {

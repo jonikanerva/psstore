@@ -144,7 +144,9 @@ describe('SearchResults', () => {
     await renderWithRouter(<SearchResults term="alp" />)
 
     expect(
-      await screen.findByText('You are offline. Search needs a connection.'),
+      await screen.findByText(
+        'You are offline. Games load when the connection returns.',
+      ),
     ).toBeInTheDocument()
     expect(fetchMock).not.toHaveBeenCalled()
   })
