@@ -58,3 +58,15 @@ This fixture and `pnpm test:live` are its only drift guards. Response headers
 
 To re-capture, repeat the live fetch with the current `config/env.ts` hashes and
 re-trim, preserving nulls.
+
+## Signed-in library fixture
+
+`purchasedPage.synthetic.json` is **hand-made**. It is not a Sony capture. It
+holds only synthetic names, ids and URLs. No real account data, no real
+purchase and no token appears in it. The shape follows the `psn-api` 2.18.1
+type `PurchasedGamesResponse`. The owner-run live check with a real NPSSO
+confirms that shape (`STACK.md` section 4).
+
+| File                           | Shape                                                                                                                      |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| `purchasedPage.synthetic.json` | 5 games: PS5 with a concept id, PS5 with a null concept id, PS4, platform `ps5` in odd case, and an entry with no platform |

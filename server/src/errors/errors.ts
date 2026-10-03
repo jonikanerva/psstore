@@ -30,3 +30,11 @@ export class UpstreamRateLimited extends Schema.TaggedError<UpstreamRateLimited>
   'UpstreamRateLimited',
   { message: Schema.String, retryAfterSeconds: Schema.optional(Schema.Number) },
 ) {}
+
+// Sony definitively rejected the NPSSO or the session token derived from it
+// (or the request carried no NPSSO cookie). Mapped to HTTP 401. Only this error
+// may expire the sign-in cookie.
+export class SessionRejected extends Schema.TaggedError<SessionRejected>()(
+  'SessionRejected',
+  { message: Schema.String },
+) {}

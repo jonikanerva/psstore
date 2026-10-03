@@ -1,0 +1,70 @@
+{
+  "data": {
+    "purchasedTitlesRetrieve": {
+      "__typename": "GameList",
+      "games": [
+        {
+          "__typename": "GameLibraryTitle",
+          "conceptId": "10000001",
+          "entitlementId": "ENT-SYNTHETIC-0001",
+          "image": {
+            "__typename": "Media",
+            "url": "https://img.test/alpha.png"
+          },
+          "isActive": true,
+          "name": "Synthetic Alpha",
+          "platform": "PS5",
+          "productId": "EP0001-PPSA00001_00-SYNTHETICALPHA00",
+          "titleId": "PPSA00001_00"
+        },
+        {
+          "__typename": "GameLibraryTitle",
+          "conceptId": null,
+          "entitlementId": "ENT-SYNTHETIC-0002",
+          "image": {
+            "__typename": "Media",
+            "url": "https://img.test/beta.png"
+          },
+          "isActive": true,
+          "name": "Synthetic Beta",
+          "platform": "PS5",
+          "productId": "EP0001-PPSA00002_00-SYNTHETICBETA000",
+          "titleId": "PPSA00002_00"
+        },
+        {
+          "__typename": "GameLibraryTitle",
+          "conceptId": "10000003",
+          "entitlementId": "ENT-SYNTHETIC-0003",
+          "image": {
+            "__typename": "Media",
+            "url": "https://img.test/gamma.png"
+          },
+          "isActive": true,
+          "name": "Synthetic Gamma PS4",
+          "platform": "PS4",
+          "productId": "EP0001-CUSA00003_00-SYNTHETICGAMMA00",
+          "titleId": "CUSA00003_00"
+        },
+        {
+          "__typename": "GameLibraryTitle",
+          "conceptId": "10000004",
+          "entitlementId": "ENT-SYNTHETIC-0004",
+          "image": null,
+          "isActive": true,
+          "name": "Synthetic Delta odd case",
+          "platform": "ps5",
+          "productId": "EP0001-PPSA00004_00-SYNTHETICDELTA00",
+          "titleId": "PPSA00004_00"
+        },
+        {
+          "__typename": "GameLibraryTitle",
+          "conceptId": "10000005",
+          "entitlementId": "ENT-SYNTHETIC-0005",
+          "name": "Synthetic Epsilon no platform",
+          "productId": "EP0001-PPSA00005_00-SYNTHETICEPSIL00",
+          "titleId": "PPSA00005_00"
+        }
+      ]
+    }
+  }
+}

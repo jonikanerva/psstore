@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SONY_RETRY_AFTER_MAX_MS } from '../config/env.js'
 import {
   fetchWithRetry,
+  HttpStatusError,
   parseRetryAfterMs,
   RateLimitedError,
 } from '../lib/http.js'
@@ -93,5 +94,63 @@ describe('fetchWithRetry 429 handling', () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(2)
     expect(response.status).toBe(200)
+  })
+})
+
+describe('fetchWithRetry status handling', () => {
+  const realFetch = globalThis.fetch
+
+  afterEach(() => {
+    globalThis.fetch = realFetch
+    vi.restoreAllMocks()
+  })
+
+  it('returns a 3xx answer when redirects are handled manually', async () => {
+    globalThis.fetch = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response(null, { status: 302 }))
+    const response = await fetchWithRetry(
+      'https://sony.test/op',
+      { redirect: 'manual' },
+      6000,
+      0,
+    )
+    expect(response.status).toBe(302)
+  })
+
+  it('treats a 3xx answer as a failure when redirects are followed', async () => {
+    globalThis.fetch = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response(null, { status: 302 }))
+    await expect(
+      fetchWithRetry('https://sony.test/op', {}, 6000, 0),
+    ).rejects.toBeInstanceOf(HttpStatusError)
+  })
+
+  it('never retries a 4xx answer and reports its status', async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response(null, { status: 401 }))
+    globalThis.fetch = fetchMock
+    const error = await fetchWithRetry(
+      'https://sony.test/op',
+      {},
+      6000,
+      3,
+    ).catch((caught: unknown) => caught)
+    expect(error).toBeInstanceOf(HttpStatusError)
+    expect(error instanceof HttpStatusError && error.status).toBe(401)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('still retries a 5xx answer within the retry budget', async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response(null, { status: 503 }))
+      .mockResolvedValueOnce(new Response('{}', { status: 200 }))
+    globalThis.fetch = fetchMock
+    const response = await fetchWithRetry('https://sony.test/op', {}, 6000, 1)
+    expect(response.status).toBe(200)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 })
