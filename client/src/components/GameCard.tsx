@@ -41,9 +41,6 @@ const GameCard = ({
   const pdpOrigin = useRouterState({
     select: (state) => pdpOriginForPath(state.location.pathname),
   })
-  // Router history state is not augmented: the origin is read back through
-  // readPdpOrigin, and a variable avoids the empty-interface literal check.
-  const historyState = { pdpOrigin }
 
   const body = (
     <>
@@ -101,7 +98,7 @@ const GameCard = ({
       className="game-card"
       to="/g/$gameId"
       params={{ gameId: game.id }}
-      state={historyState}
+      state={(previous) => ({ ...previous, pdpOrigin })}
     >
       {body}
     </Link>
