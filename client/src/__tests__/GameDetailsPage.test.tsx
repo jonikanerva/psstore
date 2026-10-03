@@ -65,7 +65,7 @@ describe('GameDetailsPage', () => {
     await renderWithRouter(<GameDetailsPage gameId={baseGame.id} />)
 
     await waitFor(() => {
-      expect(screen.getByText('Description')).toBeInTheDocument()
+      expect(screen.getByText('A great game')).toBeInTheDocument()
     })
   })
 
@@ -79,7 +79,7 @@ describe('GameDetailsPage', () => {
       expect(screen.getByText('Detail Game')).toBeInTheDocument()
     })
 
-    expect(screen.queryByText('Description')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Description')).not.toBeInTheDocument()
   })
 
   it('renders media section only when screenshots or videos exist', async () => {
@@ -96,7 +96,7 @@ describe('GameDetailsPage', () => {
       expect(screen.getByText('Detail Game')).toBeInTheDocument()
     })
 
-    expect(screen.queryByText('Media')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Media')).not.toBeInTheDocument()
   })
 
   it('shows error state on fetch failure', async () => {
@@ -315,6 +315,6 @@ describe('GameDetailsPage', () => {
 
     expect(screen.getByText('Detail Game')).toBeInTheDocument()
     expect(screen.getByText(/49,99 €/)).toBeInTheDocument()
-    expect(screen.queryByText('Description')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Description')).not.toBeInTheDocument()
   })
 })

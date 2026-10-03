@@ -174,8 +174,7 @@ const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
         </section>
       )}
       {hasDescription && (
-        <section className="details-page--section">
-          <h2>Description</h2>
+        <section className="details-page--section" aria-label="Description">
           {/* XSS boundary: Sony's description HTML is untrusted and is sanitised
           with DOMPurify before injection. Do not remove or reorder (da #5). */}
           <div
