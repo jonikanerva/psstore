@@ -7,9 +7,14 @@ import { createServer } from 'node:http'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { gamesApi } from '../api/gamesApi.js'
-import { gamesGroupLive } from '../api/gamesHandlers.js'
+import {
+  gamesGroupLive,
+  NpssoAuthLive,
+  sessionGroupLive,
+} from '../api/gamesHandlers.js'
+import { AccountServiceLive } from '../services/accountService.js'
 import { GamesServiceLive } from '../services/gamesService.js'
-import { SonyClientLive } from '../sony/sonyClient.js'
+import { SonyAccountClientLive, SonyClientLive } from '../sony/sonyClient.js'
 
 // The HTTP composition root and the third (and last) module permitted to import
 // `effect/http` and `effect/http-api`. It mounts the typed games API, a health
@@ -22,11 +27,16 @@ const clientBuildPath = path.resolve(dirname, '../../../client/build')
 const indexHtmlPath = path.join(clientBuildPath, 'index.html')
 
 // Service graph for the games API handlers.
-const ServicesLive = GamesServiceLive.pipe(Layer.provide(SonyClientLive))
+const ServicesLive = Layer.mergeAll(
+  GamesServiceLive.pipe(Layer.provide(SonyClientLive)),
+  AccountServiceLive.pipe(Layer.provide(SonyAccountClientLive)),
+)
 
-// Mount the typed REST API (prefix /api/games is declared on the group).
+// Mount the typed REST API (prefixes /api/games and /api/session are declared
+// on the groups).
 const ApiRoutes = HttpApiBuilder.layer(gamesApi).pipe(
-  Layer.provide(gamesGroupLive),
+  Layer.provide([gamesGroupLive, sessionGroupLive]),
+  Layer.provide(NpssoAuthLive),
   Layer.provide(ServicesLive),
 )
 

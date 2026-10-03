@@ -1,14 +1,19 @@
-import { Effect, Layer, Logger } from 'effect'
+import { Context, Effect, Layer, Logger } from 'effect'
 import { HttpRouter, HttpServer } from 'effect/http'
 import { HttpApiBuilder, OpenApi } from 'effect/http-api'
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 import { gamesApi } from '../api/gamesApi.js'
-import { gamesGroupLive } from '../api/gamesHandlers.js'
+import {
+  gamesGroupLive,
+  NpssoAuthLive,
+  sessionGroupLive,
+} from '../api/gamesHandlers.js'
 import {
   UpstreamQueryRotated,
   UpstreamRateLimited,
   UpstreamUnavailable,
 } from '../errors/errors.js'
+import { AccountService } from '../services/accountService.js'
 import { GamesServiceLive } from '../services/gamesService.js'
 import { productToConcept } from '../sony/mapper.js'
 import { SonyClient, type SearchPage } from '../sony/sonyClient.js'
@@ -50,8 +55,18 @@ const makeApp = (outcome: SearchPage | SearchFailure) => {
       'candidates' in outcome ? Effect.succeed(outcome) : Effect.fail(outcome),
   })
   const App = HttpApiBuilder.layer(gamesApi).pipe(
-    Layer.provide(gamesGroupLive),
-    Layer.provide(GamesServiceLive.pipe(Layer.provide(FakeSony))),
+    Layer.provide([gamesGroupLive, sessionGroupLive]),
+    Layer.provide(NpssoAuthLive),
+    Layer.provide(
+      Layer.mergeAll(
+        GamesServiceLive.pipe(Layer.provide(FakeSony)),
+        Layer.succeed(AccountService, {
+          verifyNpsso: () => Effect.void,
+          getPurchasedGames: () =>
+            Effect.succeed({ games: [], totalCount: 0, nextOffset: null }),
+        }),
+      ),
+    ),
     Layer.provide(HttpServer.layerServices),
     Layer.provideMerge(Logger.layer([captureLogger])),
   )
@@ -66,7 +81,7 @@ const rotatedApp = makeApp(
 const rateLimitedApp = makeApp(new UpstreamRateLimited({ message: 'slow' }))
 
 const get = (app: typeof okApp, path: string): Promise<Response> =>
-  app.handler(new Request(`http://localhost${path}`))
+  app.handler(new Request(`http://localhost${path}`), Context.empty())
 
 beforeEach(() => {
   logLines.length = 0

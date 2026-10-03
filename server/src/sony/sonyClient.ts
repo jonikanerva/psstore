@@ -1,6 +1,12 @@
 import type { PlusOffer } from '@psstore/shared'
-import { Context, Effect, Layer } from 'effect'
+import { Context, Effect, Layer, Redacted } from 'effect'
 import {
+  SONY_AUTH_BASE_URL,
+  SONY_AUTH_BASIC_HEADER,
+  SONY_AUTH_CLIENT_ID,
+  SONY_AUTH_DEADLINE_MS,
+  SONY_AUTH_REDIRECT_URI,
+  SONY_AUTH_SCOPE,
   SONY_GRAPHQL_URL,
   SONY_LOCALE,
   SONY_PLUS_MONTHLY_CATEGORY,
@@ -9,18 +15,28 @@ import {
   SONY_PRODUCT_OPERATION_NAME,
   SONY_PRODUCT_PRICE_HASH,
   SONY_PRODUCT_PRICE_OPERATION_NAME,
+  SONY_PURCHASED_DEADLINE_MS,
+  SONY_PURCHASED_HASH,
+  SONY_PURCHASED_MAX_PAGES,
+  SONY_PURCHASED_OPERATION_NAME,
+  SONY_PURCHASED_PAGE_SIZE,
   SONY_RETRY_COUNT,
   SONY_SEARCH_HASH,
   SONY_SEARCH_OPERATION_NAME,
   SONY_TIMEOUT_MS,
 } from '../config/env.js'
 import {
+  SessionRejected,
   UpstreamQueryRotated,
   UpstreamRateLimited,
   UpstreamUnavailable,
 } from '../errors/errors.js'
+import {
+  fetchWithRetry,
+  HttpStatusError,
+  RateLimitedError,
+} from '../lib/http.js'
 import { narrowSearchEntries, type SearchCandidate } from '../domain/listing.js'
-import { fetchWithRetry, RateLimitedError } from '../lib/http.js'
 import {
   extractCategoryGridNode,
   parseCategoryGrid,
@@ -30,6 +46,12 @@ import { parseProductRetrieve } from './productDetailSchema.js'
 import { parsePlusMonthly, type PlusMonthlyEntry } from './plusMonthlySchema.js'
 import { parsePlusOffer } from './productPriceSchema.js'
 import { parseSearchResponse } from './searchSchema.js'
+import {
+  dedupePurchased,
+  parsePurchasedPage,
+  type PurchasedEntry,
+} from './purchasedSchema.js'
+import { extractAccessCode, parseTokenResponse } from './sessionSchema.js'
 import {
   buildStrategies,
   type SonyFeature,
@@ -571,3 +593,240 @@ export const SonyClientLive: Layer.Layer<SonyClient> = Layer.succeed(
       ),
   }),
 )
+
+// ---- Signed-in account client ----------------------------------------------
+// Kept apart from SonyClient: only the account service can reach credentials.
+// Sign-in and library calls never retry (retries = 0) and use fixed error
+// messages, so no header, redirect target or token reaches a log or a response.
+
+export type AccountError =
+  SessionRejected | UpstreamUnavailable | UpstreamRateLimited
+
+export type LibraryError = AccountError | UpstreamQueryRotated
+
+export interface SonyAccountClientApi {
+  // Exchanges the NPSSO for a short-lived access token. Resolves to the token
+  // only; any refresh or id token Sony returns is dropped.
+  readonly exchangeNpsso: (
+    npsso: Redacted.Redacted,
+  ) => Effect.Effect<Redacted.Redacted, AccountError>
+  // The whole PS5 library in Sony's order, de-duplicated by product id.
+  readonly fetchPurchasedGames: (
+    accessToken: Redacted.Redacted,
+  ) => Effect.Effect<readonly PurchasedEntry[], LibraryError>
+}
+
+export class SonyAccountClient extends Context.Service<
+  SonyAccountClient,
+  SonyAccountClientApi
+>()('SonyAccountClient') {}
+
+// `rejectingStatuses`: HTTP statuses that prove Sony refused the credential.
+const mapAccountTransportError =
+  (rejectingStatuses: readonly number[]) =>
+  (error: unknown): AccountError => {
+    if (error instanceof RateLimitedError) {
+      return new UpstreamRateLimited({
+        message: 'Sony sign-in rate limited the request (HTTP 429)',
+        ...(error.retryAfterMs === null
+          ? {}
+          : { retryAfterSeconds: Math.ceil(error.retryAfterMs / 1000) }),
+      })
+    }
+    if (
+      error instanceof HttpStatusError &&
+      rejectingStatuses.includes(error.status)
+    ) {
+      return new SessionRejected({ message: 'Sony rejected the sign-in' })
+    }
+    return new UpstreamUnavailable({ message: 'Sony sign-in unavailable' })
+  }
+
+type AuthorizeOutcome =
+  | { readonly kind: 'code'; readonly code: string }
+  | { readonly kind: 'rejected' }
+  | { readonly kind: 'unexpected' }
+
+const requestAccessCode = async (
+  npsso: Redacted.Redacted,
+): Promise<AuthorizeOutcome> => {
+  const query = new URLSearchParams({
+    access_type: 'offline',
+    client_id: SONY_AUTH_CLIENT_ID,
+    redirect_uri: SONY_AUTH_REDIRECT_URI,
+    response_type: 'code',
+    scope: SONY_AUTH_SCOPE,
+  }).toString()
+  const response = await fetchWithRetry(
+    `${SONY_AUTH_BASE_URL}/authorize?${query}`,
+    {
+      method: 'GET',
+      // Only the sign-in cookie is sent. Set-Cookie answers are never read.
+      headers: { Cookie: `npsso=${Redacted.value(npsso)}` },
+      redirect: 'manual',
+    },
+    SONY_TIMEOUT_MS,
+    0,
+  )
+  if (response.status !== 302) {
+    return { kind: 'unexpected' }
+  }
+  const code = extractAccessCode(response.headers.get('location'))
+  return code === null ? { kind: 'rejected' } : { kind: 'code', code }
+}
+
+const requestAccessToken = async (code: string): Promise<unknown> => {
+  const response = await fetchWithRetry(
+    `${SONY_AUTH_BASE_URL}/token`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Authorization: SONY_AUTH_BASIC_HEADER,
+      },
+      body: new URLSearchParams({
+        code,
+        redirect_uri: SONY_AUTH_REDIRECT_URI,
+        grant_type: 'authorization_code',
+        token_format: 'jwt',
+      }).toString(),
+    },
+    SONY_TIMEOUT_MS,
+    0,
+  )
+  return response.json()
+}
+
+const requestPurchasedPage = async (
+  accessToken: Redacted.Redacted,
+  start: number,
+): Promise<unknown> => {
+  const query = new URLSearchParams({
+    operationName: SONY_PURCHASED_OPERATION_NAME,
+    variables: JSON.stringify({
+      isActive: true,
+      platform: ['ps5'],
+      size: SONY_PURCHASED_PAGE_SIZE,
+      start,
+      sortBy: 'ACTIVE_DATE',
+      sortDirection: 'desc',
+    }),
+    extensions: JSON.stringify({
+      persistedQuery: { version: 1, sha256Hash: SONY_PURCHASED_HASH },
+    }),
+  }).toString()
+  const response = await fetchWithRetry(
+    `${SONY_GRAPHQL_URL}?${query}`,
+    {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+        Authorization: `Bearer ${Redacted.value(accessToken)}`,
+        'x-apollo-operation-name': SONY_PURCHASED_OPERATION_NAME,
+        'x-psn-store-locale-override': localeOverride(SONY_LOCALE),
+      },
+    },
+    SONY_TIMEOUT_MS,
+    0,
+  )
+  return response.json()
+}
+
+const exchangeNpsso = (
+  npsso: Redacted.Redacted,
+): Effect.Effect<Redacted.Redacted, AccountError> =>
+  Effect.gen(function* () {
+    const authorize = yield* Effect.tryPromise({
+      try: () => requestAccessCode(npsso),
+      catch: mapAccountTransportError([]),
+    })
+    if (authorize.kind === 'rejected') {
+      return yield* new SessionRejected({
+        message: 'Sony rejected the sign-in',
+      })
+    }
+    if (authorize.kind === 'unexpected') {
+      return yield* new UpstreamUnavailable({
+        message: 'Sony sign-in answered unexpectedly',
+      })
+    }
+    const json = yield* Effect.tryPromise({
+      try: () => requestAccessToken(authorize.code),
+      catch: mapAccountTransportError([401, 403]),
+    })
+    const session = parseTokenResponse(json)
+    if (session === null) {
+      return yield* new UpstreamUnavailable({
+        message: 'Sony sign-in answered unexpectedly',
+      })
+    }
+    return session.accessToken
+  }).pipe(
+    Effect.timeoutOrElse({
+      duration: SONY_AUTH_DEADLINE_MS,
+      orElse: () =>
+        Effect.fail(
+          new UpstreamUnavailable({ message: 'Sony sign-in timed out' }),
+        ),
+    }),
+  )
+
+const fetchPurchasedGames = (
+  accessToken: Redacted.Redacted,
+): Effect.Effect<readonly PurchasedEntry[], LibraryError> =>
+  Effect.gen(function* () {
+    const collected: PurchasedEntry[] = []
+    for (let page = 0; page < SONY_PURCHASED_MAX_PAGES; page += 1) {
+      const json = yield* Effect.tryPromise({
+        try: () =>
+          requestPurchasedPage(accessToken, page * SONY_PURCHASED_PAGE_SIZE),
+        catch: mapAccountTransportError([401, 403]),
+      })
+      if (detectPersistedQueryRotation(json)) {
+        return yield* new UpstreamQueryRotated({
+          message:
+            'Sony rejected the persisted query (hash rotated); re-run pnpm sony:refresh',
+          operationName: SONY_PURCHASED_OPERATION_NAME,
+        })
+      }
+      const outcome = parsePurchasedPage(json)
+      if (outcome.kind === 'drift') {
+        yield* Effect.logWarning('sony purchased list drift', {
+          event: 'sony.purchased.drift',
+        })
+        return yield* new UpstreamUnavailable({
+          message: 'Sony library list has an unexpected shape',
+        })
+      }
+      if (outcome.dropped > 0) {
+        yield* Effect.logWarning('sony purchased list element drift', {
+          event: 'sony.purchased.elementDrift',
+          dropped: outcome.dropped,
+          kept: outcome.entries.length,
+        })
+      }
+      collected.push(...outcome.entries)
+      if (outcome.rawCount < SONY_PURCHASED_PAGE_SIZE) {
+        return dedupePurchased(collected)
+      }
+    }
+    // The last allowed page was still full: more games may exist. A truncated
+    // library is never shown as complete.
+    return yield* new UpstreamUnavailable({
+      message: 'Sony library list exceeds the supported size',
+    })
+  }).pipe(
+    Effect.timeoutOrElse({
+      duration: SONY_PURCHASED_DEADLINE_MS,
+      orElse: () =>
+        Effect.fail(
+          new UpstreamUnavailable({ message: 'Sony library list timed out' }),
+        ),
+    }),
+  )
+
+export const SonyAccountClientLive: Layer.Layer<SonyAccountClient> =
+  Layer.succeed(
+    SonyAccountClient,
+    SonyAccountClient.of({ exchangeNpsso, fetchPurchasedGames }),
+  )

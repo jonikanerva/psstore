@@ -1,13 +1,18 @@
 import { gameSchema, pageResultSchema } from '@psstore/shared'
+import { Context, Schema, type Redacted } from 'effect'
 import {
   HttpApi,
   HttpApiEndpoint,
   HttpApiError,
   HttpApiGroup,
+  HttpApiMiddleware,
   HttpApiSchema,
+  HttpApiSecurity,
 } from 'effect/http-api'
+import { NPSSO_COOKIE_NAME } from '../config/env.js'
 import {
   GameNotFound,
+  SessionRejected,
   UpstreamQueryRotated,
   UpstreamRateLimited,
   UpstreamUnavailable,
@@ -17,6 +22,30 @@ import {
   paginationQuerySchema,
   searchQuerySchema,
 } from '../validation/schemas.js'
+
+// The sign-in cookie as a security scheme: the middleware below decodes it from
+// the request. The credential is the user's NPSSO.
+export const npssoSecurity = HttpApiSecurity.apiKey({
+  key: NPSSO_COOKIE_NAME,
+  in: 'cookie',
+})
+
+export class CurrentNpsso extends Context.Service<
+  CurrentNpsso,
+  Redacted.Redacted
+>()('CurrentNpsso') {}
+
+// Guards the signed-in routes. A missing or empty cookie is a 401 before any
+// Sony call; the implementation lives in gamesHandlers.ts.
+export class NpssoAuth extends HttpApiMiddleware.Service<
+  NpssoAuth,
+  {
+    provides: CurrentNpsso
+  }
+>()('NpssoAuth', {
+  security: { npsso: npssoSecurity },
+  error: SessionRejected.pipe(HttpApiSchema.status(401)),
+}) {}
 
 // The typed REST surface. The endpoint schemas validate path / query at the
 // boundary. A failed decode reaches the client as an empty 400 (runtime
@@ -40,6 +69,11 @@ const listEndpoint = <const Name extends string>(name: Name) =>
     error: [HttpApiError.BadRequestNoContent, ...upstreamErrors],
   })
 
+// Registered before `getById` so `/purchased` is never read as a game id.
+const purchasedEndpoint = HttpApiEndpoint.get('purchased', '/purchased', {
+  success: pageResultSchema,
+  error: [SessionRejected.pipe(HttpApiSchema.status(401)), ...upstreamErrors],
+}).middleware(NpssoAuth)
 const searchEndpoint = HttpApiEndpoint.get('search', '/search', {
   query: searchQuerySchema,
   success: pageResultSchema,
@@ -62,11 +96,43 @@ export const gamesGroup = HttpApiGroup.make('games')
     listEndpoint('upcoming'),
     listEndpoint('discounted'),
     listEndpoint('monthly'),
+    purchasedEndpoint,
     searchEndpoint,
     getByIdEndpoint,
   )
   .prefix('/api/games')
 
-export const gamesApi = HttpApi.make('psstore').add(gamesGroup)
+// The NPSSO is a full account credential: 16 to 512 characters from a
+// cookie-safe set, so it can be stored in a cookie value verbatim.
+const npssoSchema = Schema.RedactedFromValue(
+  Schema.String.check(
+    Schema.isMinLength(16),
+    Schema.isMaxLength(512),
+    Schema.isPattern(/^[A-Za-z0-9._~-]+$/),
+  ),
+)
+
+// The sign-in cookie is set and cleared here. The body carries the NPSSO in and
+// nothing out: no token and no NPSSO ever appears in a response body.
+export const sessionGroup = HttpApiGroup.make('session')
+  .add(
+    HttpApiEndpoint.post('signIn', '/', {
+      payload: Schema.Struct({ npsso: npssoSchema }),
+      success: HttpApiSchema.NoContent,
+      error: [
+        HttpApiError.BadRequestNoContent,
+        SessionRejected.pipe(HttpApiSchema.status(401)),
+        ...upstreamErrors,
+      ],
+    }),
+    HttpApiEndpoint.delete('signOut', '/', {
+      success: HttpApiSchema.NoContent,
+    }),
+  )
+  .prefix('/api/session')
+
+export const gamesApi = HttpApi.make('psstore')
+  .add(gamesGroup)
+  .add(sessionGroup)
 
 export type GamesApi = typeof gamesApi

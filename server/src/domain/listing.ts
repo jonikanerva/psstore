@@ -1,4 +1,9 @@
-import { gamesSchema, type Game, type PageResult } from '@psstore/shared'
+import {
+  gamesSchema,
+  isValidProductId,
+  type Game,
+  type PageResult,
+} from '@psstore/shared'
 import { Schema } from 'effect'
 import {
   conceptToGame,
@@ -16,10 +21,7 @@ import type { Concept } from '../sony/types.js'
 
 const decodeGames = Schema.decodeUnknownSync(gamesSchema)
 
-const PRODUCT_ID_PATTERN = /^[A-Z]{2}\d{4}-[A-Z]{4}\d{5}_00-/
-
-export const isValidProductId = (id: string): boolean =>
-  PRODUCT_ID_PATTERN.test(id)
+export { isValidProductId }
 
 export type SortOrder = 'date-desc' | 'date-asc'
 

@@ -21,6 +21,18 @@ export class RateLimitedError extends Error {
   }
 }
 
+// Structured non-2xx failure. The service layer reads `status`, never the
+// message, to tell a definitive rejection (401/403) from an outage.
+export class HttpStatusError extends Error {
+  readonly kind = 'http-status' as const
+  readonly status: number
+  constructor(status: number) {
+    super(`Sony upstream returned ${String(status)}`)
+    this.name = 'HttpStatusError'
+    this.status = status
+  }
+}
+
 const describeError = (error: unknown): string => {
   if (error instanceof Error) {
     return error.message
@@ -106,8 +118,13 @@ export const fetchWithRetry = async (
         throw new RateLimitedError(retryAfterMs)
       }
 
-      if (!response.ok) {
-        throw new Error(`Sony upstream returned ${String(response.status)}`)
+      // With `redirect: 'manual'` the caller inspects a 3xx itself.
+      const manualRedirect =
+        init.redirect === 'manual' &&
+        response.status >= 300 &&
+        response.status < 400
+      if (!response.ok && !manualRedirect) {
+        throw new HttpStatusError(response.status)
       }
 
       return response
@@ -119,10 +136,21 @@ export const fetchWithRetry = async (
       if (error instanceof RateLimitedError) {
         throw error
       }
+      // A 4xx answer is final: repeating the request cannot change it.
+      if (
+        error instanceof HttpStatusError &&
+        error.status >= 400 &&
+        error.status < 500
+      ) {
+        throw error
+      }
       lastError = error
       attempt += 1
     }
   }
 
+  if (lastError instanceof HttpStatusError) {
+    throw lastError
+  }
   throw new Error(describeError(lastError))
 }

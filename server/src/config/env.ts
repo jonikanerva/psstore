@@ -31,6 +31,33 @@ export const SONY_SEARCH_MAX_PAGE_SIZE = 50
 export const SONY_PLUS_MONTHLY_URL =
   'https://www.playstation.com/bin/imagic/gameslist'
 export const SONY_PLUS_MONTHLY_CATEGORY = 'plus-monthly-games-list'
+// Sony account sign-in and the signed-in library operation. These are the public
+// constants of Sony's own mobile app (the same ones every NPSSO client uses):
+// they identify the app, not the user, and are not secrets.
+export const SONY_AUTH_BASE_URL =
+  'https://ca.account.sony.com/api/authz/v3/oauth'
+export const SONY_AUTH_CLIENT_ID = '09515159-7237-4370-9b40-3806e67c0891'
+export const SONY_AUTH_REDIRECT_URI =
+  'com.scee.psxandroid.scecompcall://redirect'
+export const SONY_AUTH_SCOPE = 'psn:mobile.v2.core psn:clientapp'
+export const SONY_AUTH_BASIC_HEADER =
+  'Basic MDk1MTUxNTktNzIzNy00MzcwLTliNDAtMzgwNmU2N2MwODkxOnVjUGprYTV0bnRCMktxc1A='
+export const SONY_PURCHASED_OPERATION_NAME = 'getPurchasedGameList'
+export const SONY_PURCHASED_HASH =
+  '827a423f6a8ddca4107ac01395af2ec0eafd8396fc7fa204aaf9b7ed2eefa168'
+export const SONY_PURCHASED_PAGE_SIZE = 100
+// Hard cap on library pages per request. A library that needs more pages fails
+// the request instead of showing a truncated list.
+export const SONY_PURCHASED_MAX_PAGES = 20
+// Deadline for the whole sign-in exchange, and for the whole library crawl.
+export const SONY_AUTH_DEADLINE_MS = 15000
+export const SONY_PURCHASED_DEADLINE_MS = 30000
+
+// Sign-in cookie. The value is the user's NPSSO; the cookie is HttpOnly.
+export const NPSSO_COOKIE_NAME = 'npsso'
+export const NPSSO_COOKIE_PATH = '/api'
+export const NPSSO_COOKIE_MAX_AGE_SECONDS = 2592000
+
 // Content language and store region in one tag: English content from the
 // Finnish store (EUR). Fixed constant: never derived from the visitor.
 export const SONY_LOCALE = 'en-fi'

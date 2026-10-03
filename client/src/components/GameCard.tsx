@@ -1,11 +1,14 @@
 import { Link } from '@tanstack/react-router'
 import { DateTime } from 'luxon'
-import type { Game } from '@psstore/shared'
+import { isValidProductId, type Game } from '@psstore/shared'
 import Image from './Image'
 
 interface GameCardProps {
   game: Game
   showPrice?: boolean
+  // Link out to Sony's store instead of the internal game page, for games the
+  // internal page cannot resolve.
+  outbound?: boolean
 }
 
 const formatDate = (value: string): string => {
@@ -21,16 +24,21 @@ const formatDate = (value: string): string => {
     : ''
 }
 
-// Concept-only UPCOMING cards (idKind === 'concept') have no internal PDP and
-// no anonymously-available price. They link OUT to Sony's concept page and
-// show "Unknown" in the price slot. Everything else (default `product`) keeps
-// the internal PDP Link and normal price rendering.
-const conceptHref = (id: string): string =>
-  `https://store.playstation.com/en-fi/concept/${id}`
+// A product id links to the store product page; any other id is a concept id.
+const storeHref = (id: string): string =>
+  isValidProductId(id)
+    ? `https://store.playstation.com/en-fi/product/${id}`
+    : `https://store.playstation.com/en-fi/concept/${id}`
 
-const GameCard = ({ game, showPrice = true }: GameCardProps) => {
+const GameCard = ({
+  game,
+  showPrice = true,
+  outbound = false,
+}: GameCardProps) => {
   const hasDiscount =
     Boolean(game.originalPrice) && game.originalPrice !== game.price
+  // Concept-only UPCOMING cards have no anonymously-available price: the price
+  // slot shows "Unknown". The internal game page needs a product id.
   const isConcept = game.idKind === 'concept'
 
   const body = (
@@ -70,11 +78,11 @@ const GameCard = ({ game, showPrice = true }: GameCardProps) => {
     </>
   )
 
-  if (isConcept) {
+  if (isConcept || outbound) {
     return (
       <a
         className="game-card"
-        href={conceptHref(game.id)}
+        href={storeHref(game.id)}
         target="_blank"
         rel="noopener noreferrer"
         aria-label={`${game.name} on PlayStation Store`}

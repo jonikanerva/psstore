@@ -2,10 +2,19 @@ import type { Game, PageResult } from '@psstore/shared'
 
 const jsonHeaders = { Accept: 'application/json' }
 
-const getJson = async <T>(url: string): Promise<T> => {
-  const response = await fetch(url, { headers: jsonHeaders })
+export class HttpError extends Error {
+  readonly status: number
+  constructor(status: number) {
+    super(`Request failed with status ${String(status)}`)
+    this.name = 'HttpError'
+    this.status = status
+  }
+}
+
+const getJson = async <T>(url: string, init: RequestInit = {}): Promise<T> => {
+  const response = await fetch(url, { headers: jsonHeaders, ...init })
   if (!response.ok) {
-    throw new Error(`Request failed with status ${String(response.status)}`)
+    throw new HttpError(response.status)
   }
 
   return (await response.json()) as T
@@ -41,6 +50,38 @@ export const fetchSearchGames = async (
   )
 export const fetchGame = async (gameId: string): Promise<Game> =>
   getJson(`/api/games/${encodeURIComponent(gameId)}`)
+
+// Signed-in calls. The sign-in cookie is HttpOnly: the browser attaches it, the
+// page never reads it. `no-store` keeps signed-in answers out of the HTTP cache.
+export const fetchPurchasedGames = async (): Promise<PageResult> =>
+  getJson('/api/games/purchased', {
+    cache: 'no-store',
+    credentials: 'same-origin',
+  })
+
+export const signIn = async (npsso: string): Promise<void> => {
+  const response = await fetch('/api/session', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ npsso }),
+    cache: 'no-store',
+    credentials: 'same-origin',
+  })
+  if (!response.ok) {
+    throw new HttpError(response.status)
+  }
+}
+
+export const signOut = async (): Promise<void> => {
+  const response = await fetch('/api/session', {
+    method: 'DELETE',
+    cache: 'no-store',
+    credentials: 'same-origin',
+  })
+  if (!response.ok) {
+    throw new HttpError(response.status)
+  }
+}
 
 export const metacriticLink = (name: string): string =>
   `https://www.metacritic.com/search/${encodeURIComponent(name)}/`

@@ -7,6 +7,7 @@ import {
 import AppShell from './components/AppShell'
 import Details from './components/Details'
 import Games from './components/Games'
+import Purchased from './components/Purchased'
 import SearchResults from './components/SearchResults'
 import {
   fetchDiscountedGames,
@@ -70,6 +71,12 @@ const monthlyRoute = createRoute({
   ),
 })
 
+const purchasedRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'purchased',
+  component: Purchased,
+})
+
 const detailsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'g/$gameId',
@@ -108,6 +115,7 @@ const routeTree = rootRoute.addChildren([
   upcomingRoute,
   discountedRoute,
   monthlyRoute,
+  purchasedRoute,
   detailsRoute,
   searchRoute,
   splatRoute,
