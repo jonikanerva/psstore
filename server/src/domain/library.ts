@@ -1,4 +1,4 @@
-import { isValidProductId, type Game } from '@psstore/shared'
+import type { Game } from '@psstore/shared'
 import type { PurchasedEntry } from '../sony/purchasedSchema.js'
 import type { WishlistEntry } from '../sony/wishlistSchema.js'
 
@@ -29,21 +29,13 @@ const libraryCard = (
   idKind,
 })
 
-// The id is the concept id when Sony gives one, else the product id; `idKind`
-// follows the id, as in the monthly mapper.
+// The id is always the product id: the internal game page resolves product ids.
 export const mapPurchasedToGames = (
   entries: readonly PurchasedEntry[],
 ): Game[] =>
-  entries.map((entry) => {
-    const id = entry.conceptId ?? entry.productId
-    return libraryCard(
-      id,
-      entry.name,
-      entry.imageUrl,
-      isValidProductId(id) ? 'product' : 'concept',
-    )
-  })
-
+  entries.map((entry) =>
+    libraryCard(entry.productId, entry.name, entry.imageUrl, 'product'),
+  )
 // `idKind` comes from the entry: the wishlist boundary has already checked the
 // id against it.
 export const mapWishlistToGames = (entries: readonly WishlistEntry[]): Game[] =>

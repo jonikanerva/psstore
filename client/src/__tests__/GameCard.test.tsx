@@ -154,13 +154,4 @@ describe('GameCard', () => {
 
     expect(screen.queryByText(/\d{4}/)).not.toBeInTheDocument()
   })
-
-  it('links an outbound product card to the Sony product page', async () => {
-    await renderWithRouter(<GameCard game={game} outbound showPrice={false} />)
-
-    expect(screen.getByRole('link', { name: /Test Game/ })).toHaveAttribute(
-      'href',
-      `https://store.playstation.com/en-fi/product/${game.id}`,
-    )
-  })
 })

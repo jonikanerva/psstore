@@ -1,14 +1,11 @@
 import { Link } from '@tanstack/react-router'
 import { DateTime } from 'luxon'
-import { isValidProductId, type Game } from '@psstore/shared'
+import type { Game } from '@psstore/shared'
 import Image from './Image'
 
 interface GameCardProps {
   game: Game
   showPrice?: boolean
-  // Link out to Sony's store instead of the internal game page, for games the
-  // internal page cannot resolve.
-  outbound?: boolean
 }
 
 const formatDate = (value: string): string => {
@@ -24,17 +21,11 @@ const formatDate = (value: string): string => {
     : ''
 }
 
-// A product id links to the store product page; any other id is a concept id.
-const storeHref = (id: string): string =>
-  isValidProductId(id)
-    ? `https://store.playstation.com/en-fi/product/${id}`
-    : `https://store.playstation.com/en-fi/concept/${id}`
+// Concept-only cards have no product id, so they link to Sony's concept page.
+const storeHref = (conceptId: string): string =>
+  `https://store.playstation.com/en-fi/concept/${conceptId}`
 
-const GameCard = ({
-  game,
-  showPrice = true,
-  outbound = false,
-}: GameCardProps) => {
+const GameCard = ({ game, showPrice = true }: GameCardProps) => {
   const hasDiscount =
     Boolean(game.originalPrice) && game.originalPrice !== game.price
   // Concept-only UPCOMING cards have no anonymously-available price: the price
@@ -78,7 +69,7 @@ const GameCard = ({
     </>
   )
 
-  if (isConcept || outbound) {
+  if (isConcept) {
     return (
       <a
         className="game-card"
