@@ -71,7 +71,6 @@ describe('parseWishlist', () => {
     )
     expect(outcome.entries.map((e) => e.id)).toEqual([PRODUCT_TWO])
     expect(outcome.outOfScope).toBe(9)
-    expect(outcome.rawCount).toBe(10)
   })
 
   it('drops entries without a usable name or id and counts them', () => {
@@ -114,7 +113,7 @@ describe('parseWishlist', () => {
   })
 
   it('treats an empty list as an empty wishlist, not as drift', () => {
-    expect(ok(envelope([]))).toMatchObject({ entries: [], rawCount: 0 })
+    expect(ok(envelope([]))).toMatchObject({ entries: [] })
   })
 
   it('reports access denied only for a denied answer with a null list', () => {

@@ -46,8 +46,6 @@ export type WishlistOutcome =
   | { readonly kind: 'drift' }
   | {
       readonly kind: 'ok'
-      // Entries Sony returned, before any scope filter.
-      readonly rawCount: number
       readonly entries: readonly WishlistEntry[]
       // Elements that failed decode or lacked a usable id or name.
       readonly dropped: number
@@ -128,7 +126,6 @@ export const parseWishlist = (json: unknown): WishlistOutcome => {
 
   return {
     kind: 'ok',
-    rawCount: rawEntries.length,
     entries,
     dropped,
     outOfScope,
