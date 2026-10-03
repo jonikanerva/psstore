@@ -24,6 +24,19 @@ minimal. `goldenDecode.test.ts` asserts the boundary decodes + maps them.
 | `categoryGridBrokenElement.golden.json` | `concepts` + 1 synthetic                | the concepts fixture plus ONE synthetic deliberately-broken element (id of the wrong type) so the per-element `dropped > 0` path is asserted   |
 | `productDetail.golden.json`             | `productRetrieve` (`metGetProductById`) | real LONG/SHORT/LEGAL/COMPATIBILITY_NOTICE descriptions + genres + a real `null` field (`backwardsCompatibilityCategory`)                      |
 
+## Search fixture
+
+`searchResults.golden.json` is a trimmed response of the search operation
+(`getSearchResults`), captured on 2026-10-03 with locale `en-FI` from the terms
+`elden`, `bloodborne`, and `florist`. Trimming kept up to two image entries per
+`media` list and dropped `personalizedMeta` and `telemetryData`. It holds public
+store data only. Three elements are synthetic: a concept that names one product
+id, a product with a wrong-typed `id`, and an element with an unknown typename.
+
+| File                        | Envelope                           | Shapes preserved                                                                                                                                                 |
+| --------------------------- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `searchResults.golden.json` | `data.universalSearch`, 9 elements | PS4 and PS5 products, a PS4-only full game, a premium edition, a repeated id, a concept with `products: []`, and `pageInfo.isLast`; the synthetic elements above |
+
 ## Price operation fixtures
 
 The `productPrice*.golden.json` files are lightly-trimmed real anonymous

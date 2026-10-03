@@ -18,7 +18,7 @@ Let a Finnish PS5 owner find new, upcoming, discounted, monthly PS Plus, and pur
 ## Product Shape
 
 1. The site opens on NEW: PS5 games, newest release first.
-2. Five views: NEW, UPCOMING, DISCOUNTED, MONTHLY, PURCHASED. One search field filters the current view by name.
+2. Five views: NEW, UPCOMING, DISCOUNTED, MONTHLY, PURCHASED. One search field filters the current view by name. The same field can also search all PS5 games in the Finnish store. The result opens as a list of game cards.
 3. A game card opens the game page: artwork, description, details, both prices, and a link to buy in Sony's store.
 
 ## Non-Goals
@@ -30,6 +30,7 @@ Let a Finnish PS5 owner find new, upcoming, discounted, monthly PS Plus, and pur
 - A configurable product — no settings, themes, or remembered preferences.
 - A PS Plus membership manager or claim tracking.
 - A tracking or analytics product.
+- Search history, suggestions, or filters.
 
 ## Decision Filter
 
@@ -47,6 +48,7 @@ If any answer is "no", the change must not be added.
 - I see the PS Plus price and the standard price side by side.
 - I see this month's PS Plus games in one view.
 - I find a game I already own by typing part of its name.
+- I find any PS5 game in the Finnish store by typing part of its name.
 - The page is fast and calm.
 
 ## Persistence and Privacy Posture

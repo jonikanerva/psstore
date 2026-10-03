@@ -1,12 +1,12 @@
 import type { PageResult } from '@psstore/shared'
 import { filterGamesByName } from '@psstore/shared'
 import { useInfiniteQuery } from '@tanstack/react-query'
-import { useEffect, useRef } from 'react'
 import { useSearchQuery } from '../modules/searchContext'
 import Error from './Error'
-import GameCard from './GameCard'
+import { normalizeSearchTerm } from '../modules/searchTerm'
+import GameGrid from './GameGrid'
 import Offline from './Offline'
-import ScrollToTopOnMount from './ScrollToTopOnMount'
+import SearchAllCard from './SearchAllCard'
 import Spinner from './Spinner'
 
 const PAGE_SIZE = 60
@@ -23,7 +23,6 @@ const Games = ({
   emptyMessage = 'No games found',
 }: GamesProps) => {
   const query = useSearchQuery()
-  const sentinelRef = useRef<HTMLDivElement>(null)
 
   // Query key is feature only (pagination flows through pageParam); the search
   // text is never part of the key, so the persisted cache carries no search or
@@ -44,27 +43,6 @@ const Games = ({
     getNextPageParam: (lastPage) => lastPage.nextOffset ?? undefined,
   })
 
-  useEffect(() => {
-    const sentinel = sentinelRef.current
-    if (!sentinel) {
-      return
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting && hasNextPage && !isFetchingNextPage) {
-          void fetchNextPage()
-        }
-      },
-      { rootMargin: '200px' },
-    )
-
-    observer.observe(sentinel)
-    return () => {
-      observer.disconnect()
-    }
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage])
-
   if (isError) {
     return <Error message="Failed to load games" />
   }
@@ -76,28 +54,22 @@ const Games = ({
   const games = data.pages.flatMap((page) => page.games)
   const filtered = filterGamesByName(games, query)
 
-  if (filtered.length === 0) {
+  const term = normalizeSearchTerm(query)
+
+  if (filtered.length === 0 && term === '') {
     return <Error message={emptyMessage} />
   }
 
   return (
-    <>
-      <ScrollToTopOnMount />
-      <div className="games--content">
-        <div className="games--grid" data-label={feature}>
-          {filtered.map((game) => (
-            <GameCard
-              key={game.id}
-              game={game}
-              showPrice={feature !== 'monthly'}
-            />
-          ))}
-        </div>
-        <div ref={sentinelRef} className="games--sentinel">
-          {isFetchingNextPage && <Spinner />}
-        </div>
-      </div>
-    </>
+    <GameGrid
+      games={filtered}
+      label={feature}
+      showPrice={feature !== 'monthly'}
+      trailing={term === '' ? null : <SearchAllCard term={term} />}
+      hasNextPage={hasNextPage}
+      isFetchingNextPage={isFetchingNextPage}
+      fetchNextPage={fetchNextPage}
+    />
   )
 }
 

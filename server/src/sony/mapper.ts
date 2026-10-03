@@ -1,6 +1,6 @@
 import type { Game } from '@psstore/shared'
 import type { PlusMonthlyEntry } from './plusMonthlySchema.js'
-import type { Concept } from './types.js'
+import type { CategoryGridProduct, Concept } from './types.js'
 
 const DEFAULT_DISCOUNT_DATE = ''
 const DEFAULT_RELEASE_DATE = ''
@@ -74,6 +74,14 @@ export const isConceptPlus = (concept: Concept): boolean =>
 
 const conceptId = (concept: Concept): string =>
   concept.products?.[0]?.id ?? concept.id ?? ''
+
+export const productToConcept = (product: CategoryGridProduct): Concept => ({
+  id: product.id,
+  name: product.name,
+  media: product.media,
+  price: product.price,
+  products: [{ id: product.id }],
+})
 
 export const conceptToGame = (concept: Concept): Game => {
   const screenshots = conceptScreenshots(concept)

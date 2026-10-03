@@ -21,6 +21,8 @@ export const gamesGroupLive = HttpApiBuilder.group(
         discounted: ({ query }) =>
           games.getDiscountedGames(query.offset, query.size),
         monthly: ({ query }) => games.getMonthlyGames(query.offset, query.size),
+        search: ({ query }) =>
+          games.searchGames(query.q, query.offset, query.size),
         getById: ({ params }) => games.getGameById(params.id),
       })
     }),

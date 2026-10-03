@@ -1,7 +1,12 @@
 import { gamesSchema, type Game, type PageResult } from '@psstore/shared'
 import { Schema } from 'effect'
-import { conceptToGame, monthlyEntryToGame } from '../sony/mapper.js'
+import {
+  conceptToGame,
+  monthlyEntryToGame,
+  productToConcept,
+} from '../sony/mapper.js'
 import type { PlusMonthlyEntry } from '../sony/plusMonthlySchema.js'
+import type { SearchEntry } from '../sony/searchSchema.js'
 import type { Concept } from '../sony/types.js'
 
 // Pure domain core: sorting, pagination, scope filtering, and concept→game
@@ -126,3 +131,71 @@ export const DISCOUNTED_GAME_CLASSIFICATIONS = new Set([
 
 export const conceptProductId = (concept: Concept): string =>
   concept.products?.[0]?.id ?? concept.id ?? ''
+
+export const PS5_PLATFORM = 'PS5'
+
+export const isPs5Game = (
+  platforms: readonly string[] | null | undefined,
+  classification: string | null | undefined,
+): boolean =>
+  (platforms ?? []).includes(PS5_PLATFORM) &&
+  classification !== null &&
+  classification !== undefined &&
+  DISCOUNTED_GAME_CLASSIFICATIONS.has(classification)
+
+// A search result that survived narrowing. `known`: the search response itself
+// proves PS5 and a game classification. `unverified`: a concept that names a
+// product id; platforms and classification must come from the product detail.
+export type SearchCandidate =
+  | { readonly kind: 'known'; readonly concept: Concept }
+  | {
+      readonly kind: 'unverified'
+      readonly productId: string
+      readonly concept: Concept
+    }
+
+const candidateId = (candidate: SearchCandidate): string =>
+  candidate.kind === 'known'
+    ? conceptProductId(candidate.concept)
+    : candidate.productId
+
+const narrowSearchEntry = (entry: SearchEntry): SearchCandidate | null => {
+  if (entry.kind === 'product') {
+    const { product } = entry
+    return product.id !== null &&
+      product.id !== undefined &&
+      isValidProductId(product.id) &&
+      isPs5Game(product.platforms, product.storeDisplayClassification)
+      ? { kind: 'known', concept: productToConcept(product) }
+      : null
+  }
+
+  const productId = entry.concept.products?.[0]?.id
+  return productId !== null &&
+    productId !== undefined &&
+    isValidProductId(productId)
+    ? { kind: 'unverified', productId, concept: entry.concept }
+    : null
+}
+
+// Scope narrowing for search: Sony applies no platform filter, so only PS5
+// game products and concepts that name a valid product id survive. Keeps
+// Sony's relevance order and the first occurrence of a repeated id.
+export const narrowSearchEntries = (
+  entries: readonly SearchEntry[],
+): SearchCandidate[] => {
+  const seen = new Set<string>()
+  const candidates: SearchCandidate[] = []
+  for (const entry of entries) {
+    const candidate = narrowSearchEntry(entry)
+    if (candidate === null) {
+      continue
+    }
+    const id = candidateId(candidate)
+    if (!seen.has(id)) {
+      seen.add(id)
+      candidates.push(candidate)
+    }
+  }
+  return candidates
+}

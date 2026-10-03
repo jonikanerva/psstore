@@ -43,6 +43,17 @@ const variablesSchemaEquals = (
   right: Record<string, unknown>,
 ): boolean => canonicalJson(left) === canonicalJson(right)
 
+// The search request variable shape the manifest must record: the term, the
+// page window, and the fixed store scope.
+const SEARCH_VARIABLES_SCHEMA: Record<string, unknown> = {
+  countryCode: 'string',
+  languageCode: 'string',
+  nextCursor: 'string',
+  pageOffset: 'number',
+  pageSize: 'number',
+  searchTerm: 'string',
+}
+
 export const validateBackendCompatibility = (
   manifest: SonyContractManifest,
   context: CompatibilityContext,
@@ -92,6 +103,15 @@ export const validateBackendCompatibility = (
     'SONY_PRODUCT_PRICE_HASH',
   )
 
+  const expectedSearchOperationName = extractDefault(
+    context.serverEnvText,
+    'SONY_SEARCH_OPERATION_NAME',
+  )
+  const expectedSearchHash = extractDefault(
+    context.serverEnvText,
+    'SONY_SEARCH_HASH',
+  )
+
   if (!expectedOperationName || !expectedEndpoint) {
     throw new Error(
       'Unable to read server env defaults for compatibility checks',
@@ -107,6 +127,12 @@ export const validateBackendCompatibility = (
   if (!expectedPriceOperationName || !expectedPriceHash) {
     throw new Error(
       'Unable to read server price env defaults (SONY_PRODUCT_PRICE_OPERATION_NAME / SONY_PRODUCT_PRICE_HASH) for compatibility checks',
+    )
+  }
+
+  if (!expectedSearchOperationName || !expectedSearchHash) {
+    throw new Error(
+      'Unable to read server search env defaults (SONY_SEARCH_OPERATION_NAME / SONY_SEARCH_HASH) for compatibility checks',
     )
   }
 
@@ -144,6 +170,18 @@ export const validateBackendCompatibility = (
   ) {
     throw new Error(
       `Manifest missing price operation compatible with server: ${expectedPriceOperationName} @ ${expectedPriceHash}`,
+    )
+  }
+
+  if (
+    !manifest.operations.some(
+      (operation) =>
+        operation.operation_name === expectedSearchOperationName &&
+        operation.persisted_query_hash === expectedSearchHash,
+    )
+  ) {
+    throw new Error(
+      `Manifest missing search operation compatible with server: ${expectedSearchOperationName} @ ${expectedSearchHash}`,
     )
   }
 
@@ -192,6 +230,23 @@ export const validateBackendCompatibility = (
           `Product operation ${operation.operation_name} variables_schema incompatible: ${JSON.stringify(operation.variables_schema)}`,
         )
       }
+    } else if (operation.operation_name === expectedSearchOperationName) {
+      if (operation.response_path !== 'data.universalSearch') {
+        throw new Error(
+          `Search operation ${operation.operation_name} response path incompatible: ${operation.response_path}`,
+        )
+      }
+
+      if (
+        !variablesSchemaEquals(
+          operation.variables_schema,
+          SEARCH_VARIABLES_SCHEMA,
+        )
+      ) {
+        throw new Error(
+          `Search operation ${operation.operation_name} variables_schema incompatible: ${JSON.stringify(operation.variables_schema)}`,
+        )
+      }
     } else {
       throw new Error(
         `Operation ${operation.feature} has unrecognized operation_name: ${operation.operation_name}`,
@@ -225,6 +280,12 @@ export const validateBackendCompatibility = (
   if (!context.sonyClientText.includes('productRetrieve')) {
     throw new Error(
       'sonyClient PDP response extraction no longer matches expected path (productRetrieve)',
+    )
+  }
+
+  if (!context.sonyClientText.includes('universalSearch')) {
+    throw new Error(
+      'sonyClient search response extraction no longer matches expected path (universalSearch)',
     )
   }
 

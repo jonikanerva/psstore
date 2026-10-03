@@ -31,13 +31,37 @@ Pipeline:
 ## Tracked operations
 
 The manifest holds only the operations the server calls:
-`categoryGridRetrieve`, `metGetProductById`, and `productRetrieveForCtasWithPrice`.
+`categoryGridRetrieve`, `metGetProductById`, `productRetrieveForCtasWithPrice`, and `getSearchResults`.
 The normalizer drops every other operation Sony fires on a captured page.
 The list lives in `tools/sony-contract-bot/src/contract/trackedOperations.ts`.
 
 The scope filter drops a grid request whose `filterBy` has no PS5 token.
 Sony fires the category grid twice per page, once with an empty `filterBy`
 and once with `targetPlatforms:PS5`. Only the PS5 request reaches the manifest.
+
+## Search operation
+
+The `search` feature route opens `https://store.playstation.com/fi-fi/search/<fixed sample term>`.
+The page fires `getSearchResults` as an anonymous GET. The page calls the endpoint with a
+double slash (`/api/graphql/v1//op`). The server uses the single-slash URL from `SONY_GRAPHQL_URL`.
+Both URLs work.
+
+The variables are `countryCode`, `languageCode`, `nextCursor`, `pageOffset`, `pageSize`, and `searchTerm`.
+The page size limit is 50. Sony returns a validation error for a larger value.
+Paging works with `pageOffset` and an empty `nextCursor`. `data.universalSearch.pageInfo` carries `isLast`.
+
+The search request has no platform filter variable. Sony returns PS4-only titles too.
+The scope filter therefore keeps an operation that has no PS5 token and no other platform token.
+The server narrows the results at decode: `platforms` must include `PS5`, and
+`storeDisplayClassification` must be a game class. The sample term must not contain a platform,
+locale, or currency token, because the scope filter matches those tokens inside every variable value.
+
+If Sony rotates the hash, `UpstreamQueryRotated` (HTTP 502) names `getSearchResults`.
+Update `SONY_SEARCH_HASH` in `server/src/config/env.ts` and run `pnpm sony:refresh`.
+
+The golden fixture is `server/src/__tests__/fixtures/searchResults.golden.json`.
+
+## Product page operation
 
 The store product page no longer fires `metGetProductById`, so capture cannot see it.
 The server still calls it. Refresh therefore probes it live: one anonymous GET with
@@ -107,7 +131,7 @@ pnpm test:live
 ```
 
 Paste into the PR the per-feature counts it logs (NEW / UPCOMING / DISCOUNTED / MONTHLY
-concept counts) and the resolved PDP SKU. `pnpm test:live` is **not** part of
+concept counts, and the SEARCH counts for two terms plus the PS4-only title `bloodborne`) and the resolved PDP SKU. `pnpm test:live` is **not** part of
 `pnpm test-all` (it is network/uptime-coupled — keeping it in the build would
 make the build flaky).
 

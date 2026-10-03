@@ -28,8 +28,8 @@ import {
 // this suite — which `test-all` cannot, since it only decodes committed fixtures
 // and diffs the manifest against itself.
 //
-// Load fence: exactly one raw fetch per feature + one
-// PDP fetch. NEVER drive GamesServiceLive (its enrichment fans out at
+// Load fence: exactly one raw fetch per feature + one PDP fetch + one search
+// page per term. NEVER drive GamesServiceLive (its enrichment fans out at
 // concurrency:'unbounded' -> dozens-to-hundreds of real calls = a load test).
 
 const SMOKE = process.env['SMOKE'] === '1'
@@ -113,6 +113,40 @@ describeSmoke(
       expect(entries.length).toBeGreaterThanOrEqual(1)
       globalThis.console.log(
         `[test:live] MONTHLY entries=${String(entries.length)}`,
+      )
+    }, 20_000)
+
+    it.each(['elden', 'god of war'])(
+      'SEARCH %s: the page decodes with no drops and keeps PS5 games',
+      async (term) => {
+        const page = await Effect.runPromise(
+          SonyClient.pipe(
+            Effect.flatMap((client) => client.fetchSearchPage(term, 0, 50)),
+            Effect.provide(SonyClientLive),
+          ),
+        )
+        expect(page.rawCount).toBeGreaterThan(0)
+        expect(page.candidates.length).toBeGreaterThan(0)
+        globalThis.console.log(
+          `[test:live] SEARCH term=${term} raw=${String(page.rawCount)} candidates=${String(page.candidates.length)} isLast=${String(page.isLast)}`,
+        )
+      },
+      20_000,
+    )
+
+    it('SEARCH bloodborne: a PS4-only title narrows to zero candidates', async () => {
+      const page = await Effect.runPromise(
+        SonyClient.pipe(
+          Effect.flatMap((client) =>
+            client.fetchSearchPage('bloodborne', 0, 50),
+          ),
+          Effect.provide(SonyClientLive),
+        ),
+      )
+      expect(page.rawCount).toBeGreaterThan(0)
+      expect(page.candidates).toHaveLength(0)
+      globalThis.console.log(
+        `[test:live] SEARCH term=bloodborne raw=${String(page.rawCount)} candidates=0`,
       )
     }, 20_000)
 

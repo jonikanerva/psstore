@@ -1,4 +1,5 @@
 import { Effect, Schema } from 'effect'
+import { SONY_SEARCH_MAX_PAGE_SIZE } from '../config/env.js'
 
 // Path / query parameter schemas for the HttpApi endpoints (api/gamesApi.ts).
 // URL params arrive as strings, so numeric fields decode from string
@@ -28,4 +29,20 @@ export const paginationQuerySchema = Schema.Struct({
     Schema.optional,
     Schema.withDecodingDefaultType(Effect.succeed(60)),
   ),
+})
+
+// The search term is trimmed before its length is checked. The size cap is
+// Sony's page-size limit for search.
+export const searchQuerySchema = Schema.Struct({
+  q: Schema.Trim.check(Schema.isMinLength(1), Schema.isMaxLength(100)),
+  offset: offsetFromString.pipe(
+    Schema.optional,
+    Schema.withDecodingDefaultType(Effect.succeed(0)),
+  ),
+  size: sizeFromString
+    .check(Schema.isLessThanOrEqualTo(SONY_SEARCH_MAX_PAGE_SIZE))
+    .pipe(
+      Schema.optional,
+      Schema.withDecodingDefaultType(Effect.succeed(SONY_SEARCH_MAX_PAGE_SIZE)),
+    ),
 })

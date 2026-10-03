@@ -15,6 +15,7 @@ import {
 import {
   gameIdParamSchema,
   paginationQuerySchema,
+  searchQuerySchema,
 } from '../validation/schemas.js'
 
 // The typed REST surface. The endpoint schemas validate path / query at the
@@ -39,6 +40,12 @@ const listEndpoint = <const Name extends string>(name: Name) =>
     error: [HttpApiError.BadRequestNoContent, ...upstreamErrors],
   })
 
+const searchEndpoint = HttpApiEndpoint.get('search', '/search', {
+  query: searchQuerySchema,
+  success: pageResultSchema,
+  error: [HttpApiError.BadRequestNoContent, ...upstreamErrors],
+})
+
 const getByIdEndpoint = HttpApiEndpoint.get('getById', '/:id', {
   params: gameIdParamSchema,
   success: gameSchema,
@@ -55,6 +62,7 @@ export const gamesGroup = HttpApiGroup.make('games')
     listEndpoint('upcoming'),
     listEndpoint('discounted'),
     listEndpoint('monthly'),
+    searchEndpoint,
     getByIdEndpoint,
   )
   .prefix('/api/games')
