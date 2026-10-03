@@ -14,6 +14,13 @@ import {
 import { purchasedQueryOptions } from '../modules/purchasedQuery'
 import { wishlistQueryOptions } from '../modules/wishlistQuery'
 import { usePrefetchTabs } from '../modules/usePrefetchTabs'
+import {
+  FocusReturnContext,
+  GAME_PAGE_PREFIX,
+  gamePagePath,
+  viewKeyFor,
+  type PendingFocus,
+} from '../modules/focusReturn'
 import { SearchContext } from '../modules/searchContext'
 import { SortContext } from '../modules/sortContext'
 import { isSameSort, sortConfigForPath } from '../modules/sortFields'
@@ -28,8 +35,15 @@ import SortControl from './SortControl'
 
 const SEARCH_PATH = '/search'
 
+interface ViewState {
+  key: string
+  sort: GameSort | null
+  // Outside the search route: the filter of the list. On the search route: the
+  // draft of the field, seeded from the URL term.
+  query: string
+}
+
 const AppShell = () => {
-  const [query, setQuery] = useState('')
   const navigate = useNavigate()
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
@@ -41,26 +55,39 @@ const AppShell = () => {
   const queryClient = useQueryClient()
   const stopSignedInPrefetch = usePrefetchTabs()
 
-  // The sort belongs to the view it was chosen on: arriving on another
-  // pathname, or on a search for another term, drops it.
-  const sortScope = onSearchRoute ? `${SEARCH_PATH}?q=${urlTerm}` : pathname
-  const [sortState, setSortState] = useState<{
-    scope: string
-    sort: GameSort | null
-  }>({ scope: sortScope, sort: null })
-  if (sortState.scope !== sortScope) {
-    setSortState({ scope: sortScope, sort: null })
+  const onGamePage = pathname.startsWith(GAME_PAGE_PREFIX)
+  const viewKey = viewKeyFor(pathname, urlTerm)
+  const freshView = (): ViewState => ({
+    key: viewKey,
+    sort: null,
+    query: onSearchRoute ? urlTerm : '',
+  })
+
+  // The sort and the filter belong to the list view they were set on. The game
+  // page keeps them while it is open, so closing it returns to the same list;
+  // any other view change resets both. Memory only.
+  const [view, setView] = useState<ViewState>(freshView)
+  if (!onGamePage && view.key !== viewKey) {
+    setView(freshView())
   }
-  const sort = sortState.scope === sortScope ? sortState.sort : null
-  const loadRef = useRef<AbortController | null>(null)
+  const { sort, query } = view
+  const setQuery = (next: string) => {
+    setView((previous) => ({ ...previous, query: next }))
+  }
 
-  useEffect(
-    () => () => {
-      loadRef.current?.abort()
-    },
-    [sortScope],
-  )
-
+  const focusReturn = useRef<PendingFocus | null>(null)
+  useEffect(() => {
+    const pending = focusReturn.current
+    if (pending === null) {
+      return
+    }
+    const stale = onGamePage
+      ? pathname !== gamePagePath(pending.gameId)
+      : pending.fromKey !== viewKey
+    if (stale) {
+      focusReturn.current = null
+    }
+  }, [pathname, viewKey, onGamePage])
   const sortConfig = sortConfigForPath(pathname)
 
   // `null` is the route default of a server-ordered view: the server order,
@@ -68,26 +95,34 @@ const AppShell = () => {
   // choosing one loads the remaining pages of the open view. A view that is not
   // server-ordered keeps its default as an applied sort.
   const applySort = (next: GameSort) => {
-    loadRef.current?.abort()
     if (sortConfig === undefined) {
       return
     }
     if (isSameSort(next, sortConfig.defaultSort)) {
-      setSortState({ scope: sortScope, sort: null })
+      setView((previous) => ({ ...previous, sort: null }))
       return
     }
-    setSortState({ scope: sortScope, sort: next })
-    const target = gamesFeatureForPath(pathname)
-    if (target !== undefined) {
-      const controller = new AbortController()
-      loadRef.current = controller
-      void loadAllPages(
-        queryClient,
-        gamesQueryOptions(target.feature, target.fetch),
-        controller.signal,
-      )
-    }
+    setView((previous) => ({ ...previous, sort: next }))
   }
+
+  // The loader owns the load of a kept sort: it starts whenever a sorted list
+  // is on screen, so a list that lost its pages while the game page was open
+  // loads again. Leaving the list aborts it.
+  const sortedTarget = sort === null ? undefined : gamesFeatureForPath(pathname)
+  useEffect(() => {
+    if (sortedTarget === undefined) {
+      return
+    }
+    const controller = new AbortController()
+    void loadAllPages(
+      queryClient,
+      gamesQueryOptions(sortedTarget.feature, sortedTarget.fetch),
+      controller.signal,
+    )
+    return () => {
+      controller.abort()
+    }
+  }, [queryClient, sortedTarget])
 
   const activeSort = sort ?? sortConfig?.defaultSort
   const appliedSort = sortConfig?.serverOrdered === false ? activeSort : sort
@@ -122,13 +157,6 @@ const AppShell = () => {
     (pathname === '/wishlist' && wishlist.data === undefined)
   const showSortBar =
     !searchDisabled && sortConfig !== undefined && activeSort !== undefined
-
-  // Outside the search route the field filters the current view and clears
-  // with the route. On the search route the URL term seeds the field, and
-  // edits stay local until the form is submitted.
-  useEffect(() => {
-    setQuery(onSearchRoute ? urlTerm : '')
-  }, [pathname, onSearchRoute, urlTerm])
 
   const term = normalizeSearchTerm(query)
 
@@ -181,11 +209,13 @@ const AppShell = () => {
         />
       )}
       <main className="app-shell--main">
-        <SearchContext.Provider value={onSearchRoute ? '' : query}>
-          <SortContext.Provider value={appliedSort ?? null}>
-            <Outlet />
-          </SortContext.Provider>
-        </SearchContext.Provider>
+        <FocusReturnContext.Provider value={focusReturn}>
+          <SearchContext.Provider value={onSearchRoute ? '' : query}>
+            <SortContext.Provider value={appliedSort ?? null}>
+              <Outlet />
+            </SortContext.Provider>
+          </SearchContext.Provider>
+        </FocusReturnContext.Provider>
       </main>
     </div>
   )

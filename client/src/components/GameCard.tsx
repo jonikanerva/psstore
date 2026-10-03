@@ -1,7 +1,9 @@
 import { Link, useRouterState } from '@tanstack/react-router'
 import { DateTime } from 'luxon'
 import type { Game } from '@psstore/shared'
+import { useFocusReturn, viewKeyFor } from '../modules/focusReturn'
 import { pdpOriginForPath } from '../modules/pdpOrigin'
+import { readSearchTerm } from '../modules/searchTerm'
 import Image from './Image'
 
 interface GameCardProps {
@@ -40,6 +42,15 @@ const GameCard = ({
   const isConcept = game.idKind === 'concept'
   const pdpOrigin = useRouterState({
     select: (state) => pdpOriginForPath(state.location.pathname),
+  })
+
+  const focusReturn = useFocusReturn()
+  const viewKey = useRouterState({
+    select: (state) =>
+      viewKeyFor(
+        state.location.pathname,
+        readSearchTerm(state.location.search),
+      ),
   })
 
   const body = (
@@ -96,6 +107,18 @@ const GameCard = ({
   return (
     <Link
       className="game-card"
+      data-game-id={game.id}
+      onClick={(event) => {
+        const plain =
+          event.button === 0 &&
+          !event.metaKey &&
+          !event.ctrlKey &&
+          !event.shiftKey &&
+          !event.altKey
+        if (focusReturn !== null && plain) {
+          focusReturn.current = { gameId: game.id, fromKey: viewKey }
+        }
+      }}
       to="/g/$gameId"
       params={{ gameId: game.id }}
       state={(previous) => ({ ...previous, pdpOrigin })}
