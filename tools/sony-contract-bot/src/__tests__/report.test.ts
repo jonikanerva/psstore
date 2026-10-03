@@ -75,4 +75,32 @@ describe('renderDiffReport tri-state headline', () => {
     expect(report).toContain('oldhash -> newhash')
     expect(report).toContain('## Impacted API Routes')
   })
+
+  it('lists the purchased route among the impacted routes', () => {
+    const lines = renderDiffReport(noDrift, true).split('\n')
+    const search = lines.indexOf('- /api/games/search')
+    expect(lines[search + 1]).toBe('- /api/games/purchased')
+    expect(lines[search + 2]).toBe('- /api/games/:id')
+  })
+
+  it('says unobserved when the purchased entry has no observed status', () => {
+    const purchased: ContractOperation = {
+      ...operation,
+      feature: 'purchased',
+      observed_status_codes: [],
+    }
+    const report = renderDiffReport(noDrift, true, [purchased])
+    expect(report).toContain('- purchased: unobserved (owner probe pending)')
+  })
+
+  it('shows the observed status once the owner probe recorded it', () => {
+    const purchased: ContractOperation = {
+      ...operation,
+      feature: 'purchased',
+      observed_status_codes: [200],
+    }
+    const report = renderDiffReport(noDrift, true, [purchased])
+    expect(report).toContain('- purchased: observed 200')
+    expect(report).not.toContain('unobserved')
+  })
 })

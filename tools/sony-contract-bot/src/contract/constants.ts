@@ -8,6 +8,10 @@ export const CORE_FEATURES: ContractFeature[] = [
   'search',
 ]
 
+// Features that capture cannot observe because they need a signed-in session.
+// `sony:probe-purchased` is the only writer of their observed status.
+export const SIGNED_IN_FEATURES: ContractFeature[] = ['purchased']
+
 // The NARROW required-headers contract signal: the header(s) a normalized
 // operation must record so the backend keeps sending them. This is the parser's
 // emitted `required_headers` value — kept deliberately separate from the

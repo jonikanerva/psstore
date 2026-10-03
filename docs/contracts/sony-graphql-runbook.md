@@ -12,8 +12,8 @@ The contract is the Finnish store. The contract bot captures from the `fi-fi` pu
 storefront. The server requests data with `en-fi` (English content, same store). The
 response shapes are identical. To check this by hand, run `pnpm test:live`.
 
-Capture and probes use no sign-in. One tracked operation is signed-in: the library list.
-No tool in this repository holds an NPSSO or an access token. See Signed-in library operation below.
+Capture, `pnpm sony:refresh`, and the anonymous probes use no sign-in. One tracked operation is signed-in: the library list.
+It has a separate owner-run check. See Signed-in library operation below.
 
 ## Refresh contract snapshot
 
@@ -92,8 +92,33 @@ Refresh prints `carried over, NOT verified live`.
 The compatibility check compares the operation name, the hash, the response path, and the variables
 with `env.ts` and `sonyClient.ts`. It guards repository-internal consistency only.
 It does NOT detect Sony drift for this operation. Only a live check by the owner can do that.
-The owner runs the check with their own NPSSO, supplied through an environment variable that is never committed.
-A live check is not built yet.
+The owner runs the live check with their own NPSSO. See the probe below.
+
+```bash
+SONY_NPSSO=<your NPSSO> pnpm sony:probe-purchased
+```
+
+- The probe is owner-run. An agent never holds a real NPSSO and never runs it.
+- The probe reads the NPSSO only from the `SONY_NPSSO` environment variable.
+  It does not read a `.env` file and takes no command-line argument.
+- The probe checks the NPSSO format before it sends any request.
+- The probe exchanges the NPSSO for an access token. It requests one library item.
+- A PASS needs HTTP 200, no `PersistedQueryNotFound`, and a `data.purchasedTitlesRetrieve.games` array.
+- On PASS the probe sets the hash from `server/src/config/env.ts` and
+  `observed_status_codes` to `[200]` in `docs/contracts/sony-graphql-manifest.json`.
+  Commit that change.
+- On FAIL the probe writes nothing.
+- The output is one line: operation name, status code, and PASS or FAIL. A FAIL line adds a fixed error tag.
+  The output never holds the NPSSO, a code, a token, a header, or a response body.
+- Never schedule or automate the probe (STACK.md §10).
+
+Hash rotation: when `getPurchasedGameList` answers `PersistedQueryNotFound`,
+the owner captures the new hash from a signed-in session of the store, updates
+`SONY_PURCHASED_HASH` in `server/src/config/env.ts`, and runs the probe again.
+Commit the hash and the manifest together.
+
+The diff report prints `purchased: unobserved (owner probe pending)` while
+`observed_status_codes` is empty, so an empty list never reads as a pass.
 
 ## PS Plus monthly feed
 
@@ -184,6 +209,7 @@ Drift in CI is a hard failure.
 - [ ] No `authorization` header in `docs/contracts/**`
 - [ ] No `cookie` header in `docs/contracts/**`
 - [ ] No bearer/API tokens in `docs/contracts/**`
+- [ ] No NPSSO, access code, or access token in `docs/contracts/**` or in the probe output
 - [ ] `.sony-contract/` remains untracked
 
 ## Failure handling

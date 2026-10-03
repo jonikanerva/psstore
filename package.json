@@ -19,7 +19,8 @@
     "sony:normalize": "pnpm run sony -- normalize",
     "sony:validate": "pnpm run sony -- validate",
     "sony:diff": "pnpm run sony -- diff",
-    "sony:refresh": "pnpm run sony -- refresh"
+    "sony:refresh": "pnpm run sony -- refresh",
+    "sony:probe-purchased": "pnpm run sony -- probe-purchased"
   },
   "engines": {
     "node": "^24.21.0"

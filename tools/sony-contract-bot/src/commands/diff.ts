@@ -1,4 +1,5 @@
 import { diffManifests } from '../contract/diff.js'
+import { SIGNED_IN_FEATURES } from '../contract/constants.js'
 import { renderDiffReport } from '../contract/report.js'
 import type { SonyContractManifest } from '../contract/types.js'
 import { fileExists, readJsonFile, writeTextFile } from '../io/files.js'
@@ -21,7 +22,16 @@ export const runDiff = async (ci: boolean): Promise<boolean> => {
     : base
 
   const diff = diffManifests(base, next)
-  await writeTextFile(paths.diffReport, renderDiffReport(diff, hasCandidate))
+  await writeTextFile(
+    paths.diffReport,
+    renderDiffReport(
+      diff,
+      hasCandidate,
+      base.operations.filter((operation) =>
+        SIGNED_IN_FEATURES.includes(operation.feature),
+      ),
+    ),
+  )
 
   if (ci && diff.hasDrift) {
     throw new Error(
