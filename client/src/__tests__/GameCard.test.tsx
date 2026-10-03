@@ -1,9 +1,10 @@
-import { cleanup, screen } from '@testing-library/react'
+import { act, cleanup, screen, waitFor } from '@testing-library/react'
 import { Settings } from 'luxon'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { Game } from '@psstore/shared'
 import GameCard from '../components/GameCard'
-import { renderWithRouter } from './testRouter'
+import { readPdpOrigin } from '../modules/pdpOrigin'
+import { renderRoutes, renderWithRouter } from './testRouter'
 
 const game: Game = {
   id: 'EP0001-PPSA01234_00-TESTGAME00000001',
@@ -48,6 +49,40 @@ describe('GameCard', () => {
 
     const link = screen.getByRole('link', { name: /Test Game/ })
     expect(link).toHaveAttribute('href', `/g/${game.id}`)
+  })
+
+  it('passes the tab it was opened from to the game page', async () => {
+    const router = await renderRoutes(
+      {
+        '/discounted': () => <GameCard game={game} />,
+        '/g/$gameId': () => null,
+      },
+      ['/discounted'],
+    )
+    act(() => {
+      screen.getByRole('link', { name: /Test Game/ }).click()
+    })
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe(`/g/${game.id}`)
+    })
+    expect(readPdpOrigin(router.state.location.state)).toBe('/discounted')
+  })
+
+  it('passes no origin from a path that is not a tab', async () => {
+    const router = await renderRoutes(
+      {
+        '/other': () => <GameCard game={game} />,
+        '/g/$gameId': () => null,
+      },
+      ['/other'],
+    )
+    act(() => {
+      screen.getByRole('link', { name: /Test Game/ }).click()
+    })
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe(`/g/${game.id}`)
+    })
+    expect(readPdpOrigin(router.state.location.state)).toBeUndefined()
   })
 
   it('shows original price with strikethrough when discounted', async () => {

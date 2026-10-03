@@ -1,7 +1,6 @@
 import type { Game } from '@psstore/shared'
 import { useEffect, useRef, type ReactNode } from 'react'
 import GameCard from './GameCard'
-import ScrollToTopOnMount from './ScrollToTopOnMount'
 import Spinner from './Spinner'
 
 interface GameGridProps {
@@ -52,7 +51,6 @@ const GameGrid = ({
 
   return (
     <>
-      <ScrollToTopOnMount />
       <div className="games--content">
         <div className="games--grid" data-label={label}>
           {games.map((game) => (

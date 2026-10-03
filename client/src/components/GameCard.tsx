@@ -1,6 +1,7 @@
-import { Link } from '@tanstack/react-router'
+import { Link, useRouterState } from '@tanstack/react-router'
 import { DateTime } from 'luxon'
 import type { Game } from '@psstore/shared'
+import { pdpOriginForPath } from '../modules/pdpOrigin'
 import Image from './Image'
 
 interface GameCardProps {
@@ -37,6 +38,9 @@ const GameCard = ({
   // Concept-only UPCOMING cards have no anonymously-available price: the price
   // slot shows "Unknown". The internal game page needs a product id.
   const isConcept = game.idKind === 'concept'
+  const pdpOrigin = useRouterState({
+    select: (state) => pdpOriginForPath(state.location.pathname),
+  })
 
   const body = (
     <>
@@ -90,7 +94,12 @@ const GameCard = ({
   }
 
   return (
-    <Link className="game-card" to="/g/$gameId" params={{ gameId: game.id }}>
+    <Link
+      className="game-card"
+      to="/g/$gameId"
+      params={{ gameId: game.id }}
+      state={{ pdpOrigin }}
+    >
       {body}
     </Link>
   )

@@ -188,7 +188,8 @@ body {
   background: var(--button-color);
 }
 
-.navigation--active {
+.navigation--active,
+.navigation--origin {
   color: var(--text-color);
   border-color: var(--text-color);
 }
@@ -312,6 +313,34 @@ body {
 .game-card:focus-visible {
   outline: 2px solid var(--focus-color);
   outline-offset: 1px;
+}
+
+.details-frame {
+  max-width: 1120px;
+  margin: 0 auto;
+}
+
+.details-frame--bar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+
+.details-frame--close {
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: var(--button-color);
+  color: var(--text-color);
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.details-frame--close:focus-visible {
+  outline: 2px solid var(--focus-color);
+  outline-offset: 2px;
 }
 
 .details-page {

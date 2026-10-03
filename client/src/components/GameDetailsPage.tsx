@@ -19,6 +19,7 @@ import Error from './Error'
 import Image from './Image'
 import MediaGallery from './MediaGallery'
 import Offline from './Offline'
+import Spinner from './Spinner'
 
 interface GameDetailsPageProps {
   gameId: string
@@ -50,9 +51,7 @@ const plusValueFor = (game: Game): string | null => {
 
 const DetailsSkeleton = () => (
   <article className="details-page" aria-busy="true">
-    <div role="status" className="sr-only">
-      Loading
-    </div>
+    <Spinner />
     <section className="details-page--hero">
       <div className="details-page--cover" />
       <div className="details-page--info">

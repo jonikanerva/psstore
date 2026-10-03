@@ -4,6 +4,7 @@ import {
   createRouter,
   redirect,
 } from '@tanstack/react-router'
+import type { PdpOrigin } from './modules/pdpOrigin'
 import AppShell from './components/AppShell'
 import Details from './components/Details'
 import Games from './components/Games'
@@ -129,7 +130,18 @@ const routeTree = rootRoute.addChildren([
   splatRoute,
 ])
 
-export const router = createRouter({ routeTree, parseSearch, stringifySearch })
+export const router = createRouter({
+  routeTree,
+  parseSearch,
+  stringifySearch,
+  scrollRestoration: true,
+})
+
+declare module '@tanstack/history' {
+  interface HistoryState {
+    pdpOrigin?: PdpOrigin | undefined
+  }
+}
 
 declare module '@tanstack/react-router' {
   interface Register {
