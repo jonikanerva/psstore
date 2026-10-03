@@ -10,6 +10,9 @@ The PURCHASED view shows your own PS5 library. You sign in with your NPSSO token
 server keeps the token in an HttpOnly cookie for 30 days. Sign out clears the cookie.
 `STACK.md` section 14 describes the mechanics.
 
+The WISHLIST view shows your own Sony wishlist. It uses the same sign-in. It is read-only: it
+shows PS5 names and images, and it never changes your wishlist.
+
 The backend proxies and normalises Sony's public GraphQL API into a clean REST surface scoped
 to PS5 / Finland / EUR; the frontend renders what the backend returns.
 
