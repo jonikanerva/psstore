@@ -40,7 +40,10 @@ const AppShell = () => {
           className="app-shell--search-form"
           onSubmit={(event) => {
             event.preventDefault()
-            if (term !== '') {
+            if (term === '') {
+              setQuery('')
+              void navigate({ to: '/' })
+            } else {
               void navigate({ to: SEARCH_PATH, search: { q: term } })
             }
           }}

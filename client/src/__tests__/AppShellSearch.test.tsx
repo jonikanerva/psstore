@@ -4,6 +4,7 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
+  redirect,
   RouterProvider,
 } from '@tanstack/react-router'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
@@ -16,6 +17,8 @@ import {
 } from '../modules/searchTerm'
 import { useSearchQuery } from '../modules/searchContext'
 
+let rootVisits = 0
+
 const Probe = () => <div data-testid="filter">{useSearchQuery()}</div>
 
 const renderAt = async (initial: string) => {
@@ -26,6 +29,15 @@ const renderAt = async (initial: string) => {
       path,
       component: Probe,
     })
+  const indexRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/',
+    beforeLoad: () => {
+      rootVisits += 1
+      // eslint-disable-next-line @typescript-eslint/only-throw-error -- redirect() is the router's throw-to-navigate contract
+      throw redirect({ to: '/new' })
+    },
+  })
   const searchRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: 'search',
@@ -36,6 +48,7 @@ const renderAt = async (initial: string) => {
   })
   const router = createRouter({
     routeTree: rootRoute.addChildren([
+      indexRoute,
       view('new'),
       view('discounted'),
       searchRoute,
@@ -102,14 +115,64 @@ describe('AppShell global search', () => {
     expect(await screen.findByTestId('search-page')).toBeInTheDocument()
   })
 
-  it('does nothing on submit of an empty or whitespace term', async () => {
-    const router = await renderAt('/new')
+  it('goes to the start on Enter in an empty field on a list view', async () => {
+    const router = await renderAt('/discounted')
+    rootVisits = 0
 
-    submit()
-    type('   ')
-    submit()
+    await act(async () => {
+      submit()
+      await router.load()
+    })
 
+    expect(rootVisits).toBe(1)
     expect(router.state.location.pathname).toBe('/new')
+    expect(field().value).toBe('')
+  })
+
+  it('goes to the start on Enter in a whitespace-only field', async () => {
+    const router = await renderAt('/discounted')
+    rootVisits = 0
+
+    type('   ')
+    await act(async () => {
+      submit()
+      await router.load()
+    })
+
+    expect(rootVisits).toBe(1)
+    expect(router.state.location.pathname).toBe('/new')
+    expect(field().value).toBe('')
+  })
+
+  it('goes to the start when the field is cleared on the search route', async () => {
+    const router = await renderAt('/search?q=elden')
+    rootVisits = 0
+
+    type('')
+    await act(async () => {
+      submit()
+      await router.load()
+    })
+
+    expect(rootVisits).toBe(1)
+    expect(router.state.location.pathname).toBe('/new')
+    expect(router.state.location.search).toEqual({})
+    expect(field().value).toBe('')
+  })
+
+  it('still searches on Enter in a non-empty field', async () => {
+    const router = await renderAt('/discounted')
+    rootVisits = 0
+
+    type('elden')
+    await act(async () => {
+      submit()
+      await router.load()
+    })
+
+    expect(rootVisits).toBe(0)
+    expect(router.state.location.pathname).toBe('/search')
+    expect(router.state.location.search).toEqual({ q: 'elden' })
   })
 
   it('hides the row on the search route and seeds the field from q', async () => {
