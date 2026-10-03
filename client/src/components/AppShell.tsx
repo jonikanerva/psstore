@@ -14,6 +14,13 @@ import {
 import { purchasedQueryOptions } from '../modules/purchasedQuery'
 import { wishlistQueryOptions } from '../modules/wishlistQuery'
 import { usePrefetchTabs } from '../modules/usePrefetchTabs'
+import {
+  FocusReturnContext,
+  GAME_PAGE_PREFIX,
+  gamePagePath,
+  viewKeyFor,
+  type PendingFocus,
+} from '../modules/focusReturn'
 import { SearchContext } from '../modules/searchContext'
 import { SortContext } from '../modules/sortContext'
 import { isSameSort, sortConfigForPath } from '../modules/sortFields'
@@ -28,8 +35,15 @@ import SortControl from './SortControl'
 
 const SEARCH_PATH = '/search'
 
+interface ViewState {
+  key: string
+  sort: GameSort | null
+  // Outside the search route: the filter of the list. On the search route: the
+  // draft of the field, seeded from the URL term.
+  query: string
+}
+
 const AppShell = () => {
-  const [query, setQuery] = useState('')
   const navigate = useNavigate()
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
@@ -41,16 +55,39 @@ const AppShell = () => {
   const queryClient = useQueryClient()
   const stopSignedInPrefetch = usePrefetchTabs()
 
-  // The sort belongs to the route it was chosen on: arriving on another
-  // pathname drops it.
-  const [sortState, setSortState] = useState<{
-    pathname: string
-    sort: GameSort | null
-  }>({ pathname, sort: null })
-  if (sortState.pathname !== pathname) {
-    setSortState({ pathname, sort: null })
+  const onGamePage = pathname.startsWith(GAME_PAGE_PREFIX)
+  const viewKey = viewKeyFor(pathname, urlTerm)
+  const freshView = (): ViewState => ({
+    key: viewKey,
+    sort: null,
+    query: onSearchRoute ? urlTerm : '',
+  })
+
+  // The sort and the filter belong to the list view they were set on. The game
+  // page keeps them while it is open, so closing it returns to the same list;
+  // any other view change resets both. Memory only.
+  const [view, setView] = useState<ViewState>(freshView)
+  if (!onGamePage && view.key !== viewKey) {
+    setView(freshView())
   }
-  const sort = sortState.pathname === pathname ? sortState.sort : null
+  const { sort, query } = view
+  const setQuery = (next: string) => {
+    setView((previous) => ({ ...previous, query: next }))
+  }
+
+  const focusReturn = useRef<PendingFocus | null>(null)
+  useEffect(() => {
+    const pending = focusReturn.current
+    if (pending === null) {
+      return
+    }
+    const stale = onGamePage
+      ? pathname !== gamePagePath(pending.gameId)
+      : pending.fromKey !== viewKey
+    if (stale) {
+      focusReturn.current = null
+    }
+  }, [pathname, viewKey, onGamePage])
   const loadRef = useRef<AbortController | null>(null)
 
   useEffect(
@@ -72,10 +109,10 @@ const AppShell = () => {
       return
     }
     if (isSameSort(next, sortConfig.defaultSort)) {
-      setSortState({ pathname, sort: null })
+      setView((previous) => ({ ...previous, sort: null }))
       return
     }
-    setSortState({ pathname, sort: next })
+    setView((previous) => ({ ...previous, sort: next }))
     const target = gamesFeatureForPath(pathname)
     if (target !== undefined) {
       const controller = new AbortController()
@@ -121,13 +158,6 @@ const AppShell = () => {
     (pathname === '/wishlist' && wishlist.data === undefined)
   const showSortBar =
     !searchDisabled && sortConfig !== undefined && activeSort !== undefined
-
-  // Outside the search route the field filters the current view and clears
-  // with the route. On the search route the URL term seeds the field, and
-  // edits stay local until the form is submitted.
-  useEffect(() => {
-    setQuery(onSearchRoute ? urlTerm : '')
-  }, [pathname, onSearchRoute, urlTerm])
 
   const term = normalizeSearchTerm(query)
 
@@ -180,11 +210,13 @@ const AppShell = () => {
         />
       )}
       <main className="app-shell--main">
-        <SearchContext.Provider value={onSearchRoute ? '' : query}>
-          <SortContext.Provider value={appliedSort ?? null}>
-            <Outlet />
-          </SortContext.Provider>
-        </SearchContext.Provider>
+        <FocusReturnContext.Provider value={focusReturn}>
+          <SearchContext.Provider value={onSearchRoute ? '' : query}>
+            <SortContext.Provider value={appliedSort ?? null}>
+              <Outlet />
+            </SortContext.Provider>
+          </SearchContext.Provider>
+        </FocusReturnContext.Provider>
       </main>
     </div>
   )

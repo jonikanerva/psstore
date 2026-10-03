@@ -1,5 +1,12 @@
 import type { Game } from '@psstore/shared'
 import { useEffect, useRef, type ReactNode } from 'react'
+import { useRouterState } from '@tanstack/react-router'
+import {
+  consumeFocusReturn,
+  useFocusReturn,
+  viewKeyFor,
+} from '../modules/focusReturn'
+import { readSearchTerm } from '../modules/searchTerm'
 import GameCard from './GameCard'
 import Spinner from './Spinner'
 
@@ -27,6 +34,23 @@ const GameGrid = ({
   fetchNextPage,
 }: GameGridProps) => {
   const sentinelRef = useRef<HTMLDivElement>(null)
+  const gridRef = useRef<HTMLDivElement>(null)
+  const focusReturn = useFocusReturn()
+  const viewKey = useRouterState({
+    select: (state) =>
+      viewKeyFor(
+        state.location.pathname,
+        readSearchTerm(state.location.search),
+      ),
+  })
+
+  // Runs on the first render of the grid only: a later change of the list must
+  // not pull focus.
+  useEffect(() => {
+    if (focusReturn !== null && gridRef.current !== null) {
+      consumeFocusReturn(focusReturn, viewKey, gridRef.current)
+    }
+  }, [])
 
   useEffect(() => {
     const sentinel = sentinelRef.current
@@ -52,7 +76,7 @@ const GameGrid = ({
   return (
     <>
       <div className="games--content">
-        <div className="games--grid" data-label={label}>
+        <div ref={gridRef} className="games--grid" data-label={label}>
           {games.map((game) => (
             <GameCard
               key={game.id}
