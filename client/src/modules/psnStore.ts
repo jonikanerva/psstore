@@ -11,6 +11,9 @@ export class HttpError extends Error {
   }
 }
 
+const withSignal = (signal: AbortSignal | undefined): RequestInit =>
+  signal === undefined ? {} : { signal }
+
 const getJson = async <T>(url: string, init: RequestInit = {}): Promise<T> => {
   const response = await fetch(url, { headers: jsonHeaders, ...init })
   if (!response.ok) {
@@ -23,23 +26,39 @@ const getJson = async <T>(url: string, init: RequestInit = {}): Promise<T> => {
 export const fetchNewGames = async (
   offset: number,
   size: number,
+  signal?: AbortSignal,
 ): Promise<PageResult> =>
-  getJson(`/api/games/new?offset=${String(offset)}&size=${String(size)}`)
+  getJson(
+    `/api/games/new?offset=${String(offset)}&size=${String(size)}`,
+    withSignal(signal),
+  )
 export const fetchUpcomingGames = async (
   offset: number,
   size: number,
+  signal?: AbortSignal,
 ): Promise<PageResult> =>
-  getJson(`/api/games/upcoming?offset=${String(offset)}&size=${String(size)}`)
+  getJson(
+    `/api/games/upcoming?offset=${String(offset)}&size=${String(size)}`,
+    withSignal(signal),
+  )
 export const fetchDiscountedGames = async (
   offset: number,
   size: number,
+  signal?: AbortSignal,
 ): Promise<PageResult> =>
-  getJson(`/api/games/discounted?offset=${String(offset)}&size=${String(size)}`)
+  getJson(
+    `/api/games/discounted?offset=${String(offset)}&size=${String(size)}`,
+    withSignal(signal),
+  )
 export const fetchMonthlyGames = async (
   offset: number,
   size: number,
+  signal?: AbortSignal,
 ): Promise<PageResult> =>
-  getJson(`/api/games/monthly?offset=${String(offset)}&size=${String(size)}`)
+  getJson(
+    `/api/games/monthly?offset=${String(offset)}&size=${String(size)}`,
+    withSignal(signal),
+  )
 export const fetchSearchGames = async (
   term: string,
   offset: number,
@@ -53,16 +72,22 @@ export const fetchGame = async (gameId: string): Promise<Game> =>
 
 // Signed-in calls. The sign-in cookie is HttpOnly: the browser attaches it, the
 // page never reads it. `no-store` keeps signed-in answers out of the HTTP cache.
-export const fetchPurchasedGames = async (): Promise<PageResult> =>
+export const fetchPurchasedGames = async (
+  signal?: AbortSignal,
+): Promise<PageResult> =>
   getJson('/api/games/purchased', {
     cache: 'no-store',
     credentials: 'same-origin',
+    ...withSignal(signal),
   })
 
-export const fetchWishlistGames = async (): Promise<PageResult> =>
+export const fetchWishlistGames = async (
+  signal?: AbortSignal,
+): Promise<PageResult> =>
   getJson('/api/games/wishlist', {
     cache: 'no-store',
     credentials: 'same-origin',
+    ...withSignal(signal),
   })
 
 export const signIn = async (npsso: string): Promise<void> => {

@@ -13,6 +13,7 @@ import {
 } from '../modules/gamesQuery'
 import { purchasedQueryOptions } from '../modules/purchasedQuery'
 import { wishlistQueryOptions } from '../modules/wishlistQuery'
+import { usePrefetchTabs } from '../modules/usePrefetchTabs'
 import { SearchContext } from '../modules/searchContext'
 import { SortContext } from '../modules/sortContext'
 import { isSameSort, sortConfigForPath } from '../modules/sortFields'
@@ -38,6 +39,7 @@ const AppShell = () => {
   })
   const onSearchRoute = pathname === SEARCH_PATH
   const queryClient = useQueryClient()
+  const stopSignedInPrefetch = usePrefetchTabs()
 
   // The sort belongs to the route it was chosen on: arriving on another
   // pathname drops it.
@@ -136,7 +138,7 @@ const AppShell = () => {
         <Navigation />
         <div className="app-shell--tools">
           {(library.data !== undefined || wishlist.data !== undefined) && (
-            <SignOut />
+            <SignOut onSignOut={stopSignedInPrefetch} />
           )}
           <form
             role="search"

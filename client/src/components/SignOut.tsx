@@ -2,7 +2,11 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { SIGNED_IN_QUERY_KEYS } from '../modules/signedInQuery'
 import { signOut } from '../modules/psnStore'
 
-const SignOut = () => {
+interface SignOutProps {
+  readonly onSignOut: () => void
+}
+
+const SignOut = ({ onSignOut }: SignOutProps) => {
   const queryClient = useQueryClient()
   const mutation = useMutation({
     mutationFn: signOut,
@@ -25,6 +29,7 @@ const SignOut = () => {
         className="sign-out"
         disabled={mutation.isPending}
         onClick={() => {
+          onSignOut()
           mutation.mutate()
         }}
       >

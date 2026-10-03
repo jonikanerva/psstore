@@ -23,6 +23,11 @@ import AppShell from '../components/AppShell'
 import Purchased from '../components/Purchased'
 import Wishlist from '../components/Wishlist'
 
+// The prefetch has its own tests; here it would add requests to the counts.
+vi.mock('../modules/usePrefetchTabs', () => ({
+  usePrefetchTabs: () => () => undefined,
+}))
+
 const game = (id: string, name: string, idKind: Game['idKind']): Game => ({
   id,
   name,

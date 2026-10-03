@@ -11,8 +11,8 @@ export const SIGNED_IN_QUERY_KEYS = [
   WISHLIST_QUERY_KEY,
 ] as const
 
-// Only a user action (sign-in, retry) refetches: no window-focus, reconnect,
-// mount or interval refetch of signed-in data.
+// Only a user action (sign-in, retry) or the once-per-page-load tab prefetch
+// fetches: no window-focus, reconnect, mount or interval refetch.
 export const signedInQueryOptions = (
   queryKey: QueryKey,
   queryFn: () => Promise<PageResult>,
