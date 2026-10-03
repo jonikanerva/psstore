@@ -7,7 +7,7 @@ import Error from './Error'
 import GameCard from './GameCard'
 import Offline from './Offline'
 import ScrollToTopOnMount from './ScrollToTopOnMount'
-import Loading from './Spinner'
+import Spinner from './Spinner'
 
 const PAGE_SIZE = 60
 
@@ -70,7 +70,7 @@ const Games = ({
   }
 
   if (isPending) {
-    return fetchStatus === 'paused' ? <Offline /> : <Loading loading />
+    return fetchStatus === 'paused' ? <Offline /> : <Spinner />
   }
 
   const games = data.pages.flatMap((page) => page.games)
@@ -94,7 +94,7 @@ const Games = ({
           ))}
         </div>
         <div ref={sentinelRef} className="games--sentinel">
-          {isFetchingNextPage && <Loading loading />}
+          {isFetchingNextPage && <Spinner />}
         </div>
       </div>
     </>

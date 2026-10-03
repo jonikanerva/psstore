@@ -5,7 +5,7 @@ import { fetchGame, metacriticLink, type Game } from '../modules/psnStore'
 import Error from './Error'
 import Image from './Image'
 import Offline from './Offline'
-import Loading from './Spinner'
+import Spinner from './Spinner'
 
 interface GameDetailsPageProps {
   gameId: string
@@ -48,7 +48,7 @@ const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
   })
 
   if (isPending) {
-    return fetchStatus === 'paused' ? <Offline /> : <Loading loading />
+    return fetchStatus === 'paused' ? <Offline /> : <Spinner />
   }
 
   if (isError) {
