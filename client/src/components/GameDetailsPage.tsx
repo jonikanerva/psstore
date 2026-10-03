@@ -41,13 +41,13 @@ const DetailsSkeleton = () => (
       Loading
     </div>
     <section className="details-page--hero">
-      <div className="details-page--cover" />
       <div className="details-page--info">
         <div className="skeleton skeleton--title" />
         <div className="skeleton skeleton--block" />
         <div className="skeleton skeleton--line" />
         <div className="skeleton skeleton--line" />
       </div>
+      <div className="details-page--cover" />
     </section>
   </article>
 )
@@ -85,41 +85,8 @@ const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
   return (
     <article className="details-page" aria-busy={isPlaceholderData}>
       <section className="details-page--hero">
-        <div className="details-page--cover">
-          <Image url={game.url} name={game.name} priority />
-        </div>
         <div className="details-page--info">
           <h1 className="details-page--title">{game.name}</h1>
-
-          <div className="details-page--prices">
-            {game.price && (
-              <div className="details-page--price">
-                <span className="details-page--price-label">Standard</span>
-                <span className="details-page--price-value">
-                  {hasDiscount && <s>{game.originalPrice}</s>}
-                  {game.price}
-                </span>
-              </div>
-            )}
-            {plusValue !== null && (
-              <div className="details-page--price">
-                <span className="details-page--price-label">PS Plus</span>
-                <span className="details-page--price-value">{plusValue}</span>
-              </div>
-            )}
-          </div>
-
-          <div className="details-page--actions">
-            <a
-              className="details-page--link details-page--link-primary"
-              href={storeUrl(game.id)}
-            >
-              Open In Store
-            </a>
-            <a className="details-page--link" href={metacriticLink(game.name)}>
-              Metacritic
-            </a>
-          </div>
 
           <dl className="details-page--meta-list">
             <dt>Release</dt>
@@ -153,28 +120,61 @@ const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
             )}
           </dl>
 
-          {isPlaceholderData && (
-            <div className="details-page--description" role="status">
-              <span className="sr-only">Loading</span>
-              <div className="skeleton skeleton--line" />
-              <div className="skeleton skeleton--line" />
-              <div className="skeleton skeleton--line skeleton--short" />
-            </div>
-          )}
-          {hasDescription && (
-            <div className="details-page--description">
-              <h2>Description</h2>
-              {/* XSS boundary: Sony's description HTML is untrusted and is sanitised
-                  with DOMPurify before injection. Do not remove or reorder (da #5). */}
-              <div
-                dangerouslySetInnerHTML={{
-                  __html: DOMPurify.sanitize(game.description),
-                }}
-              />
-            </div>
-          )}
+          <div className="details-page--prices">
+            {game.price && (
+              <div className="details-page--price">
+                <span className="details-page--price-label">Standard</span>
+                <span className="details-page--price-value">
+                  {hasDiscount && <s>{game.originalPrice}</s>}
+                  {game.price}
+                </span>
+              </div>
+            )}
+            {plusValue !== null && (
+              <div className="details-page--price">
+                <span className="details-page--price-label">PS Plus</span>
+                <span className="details-page--price-value">{plusValue}</span>
+              </div>
+            )}
+          </div>
+
+          <div className="details-page--actions">
+            <a
+              className="details-page--link details-page--link-primary"
+              href={storeUrl(game.id)}
+            >
+              Open In Store
+            </a>
+            <a className="details-page--link" href={metacriticLink(game.name)}>
+              Metacritic
+            </a>
+          </div>
+        </div>
+        <div className="details-page--cover">
+          <Image url={game.url} name={game.name} priority />
         </div>
       </section>
+
+      {isPlaceholderData && (
+        <section className="details-page--section" role="status">
+          <span className="sr-only">Loading</span>
+          <div className="skeleton skeleton--line" />
+          <div className="skeleton skeleton--line" />
+          <div className="skeleton skeleton--line skeleton--short" />
+        </section>
+      )}
+      {hasDescription && (
+        <section className="details-page--section">
+          <h2>Description</h2>
+          {/* XSS boundary: Sony's description HTML is untrusted and is sanitised
+          with DOMPurify before injection. Do not remove or reorder (da #5). */}
+          <div
+            dangerouslySetInnerHTML={{
+              __html: DOMPurify.sanitize(game.description),
+            }}
+          />
+        </section>
+      )}
 
       {hasMedia && (
         <section className="details-page--section">

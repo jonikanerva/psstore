@@ -321,7 +321,7 @@ body {
 
 .details-page--hero {
   display: grid;
-  grid-template-columns: minmax(240px, 320px) 1fr;
+  grid-template-columns: 1fr 200px;
   gap: 24px;
   align-items: start;
   border: 1px solid var(--border-color);
@@ -331,8 +331,6 @@ body {
 }
 
 .details-page--cover {
-  position: sticky;
-  top: 72px;
   aspect-ratio: 1;
   overflow: hidden;
   border-radius: 8px;
@@ -500,8 +498,8 @@ body {
   }
 
   .details-page--cover {
-    position: static;
-    max-width: 360px;
+    order: -1;
+    max-width: 200px;
   }
 }
 
