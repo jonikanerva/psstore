@@ -12,6 +12,7 @@ Read order: `VISION.md` → this file → `STACK.md` → the issue (`gh issue vi
 The backlog is the GitHub issue list. Drive work through `/project-manager` — the team lead and the only surface that talks to the user; invoke it by issue number (`solve issue #42`) or a problem description.
 
 - `/project-manager` — reads the issue, proposes a plan, then convenes the team (`architect`, `ux-guardian`, `devils-advocate`, `lead-dev`, `qa-enforcer`). They design, stress-test, implement, open a PR, and run `/codereview` to PASS. The PR reaches the user only after PASS, for the final review.
+- **Hand-off command.** Every time the user gets a PR for review, the message includes one copyable shell command that runs exactly that PR locally. In a worktree: `cd <worktree path> && pnpm dev`. In a normal checkout: `cd <repo root> && git pull && git checkout <branch> && pnpm dev`. Use the real paths and the real branch name.
 - `/implement <task>` — branch → change → lint and build → commit → `$VERIFY_CMD` → push → PR. `lead-dev` runs it once per issue.
 - `/codereview` — reviews the branch against `main`, posts a PASS/FAIL comment. Only `qa-enforcer` runs it (once after each `/implement`); `lead-dev` hands the PR off rather than reviewing its own work.
 
