@@ -54,6 +54,7 @@ export const gamesGroup = HttpApiGroup.make('games')
     listEndpoint('new'),
     listEndpoint('upcoming'),
     listEndpoint('discounted'),
+    listEndpoint('monthly'),
     getByIdEndpoint,
   )
   .prefix('/api/games')

@@ -9,6 +9,7 @@ import Details from './components/Details'
 import Games from './components/Games'
 import {
   fetchDiscountedGames,
+  fetchMonthlyGames,
   fetchNewGames,
   fetchUpcomingGames,
 } from './modules/psnStore'
@@ -51,6 +52,18 @@ const discountedRoute = createRoute({
   component: () => <Games feature="discounted" fetch={fetchDiscountedGames} />,
 })
 
+const monthlyRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'monthly',
+  component: () => (
+    <Games
+      feature="monthly"
+      fetch={fetchMonthlyGames}
+      emptyMessage="No PS Plus monthly games right now"
+    />
+  ),
+})
+
 const detailsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'g/$gameId',
@@ -73,6 +86,7 @@ const routeTree = rootRoute.addChildren([
   newRoute,
   upcomingRoute,
   discountedRoute,
+  monthlyRoute,
   detailsRoute,
   splatRoute,
 ])

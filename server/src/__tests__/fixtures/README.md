@@ -44,5 +44,17 @@ files exist for this operation. The synthetic malformed cases are inline in
 | `productPriceTrial.golden.json`             | IRON GUARD: Day Zero           | `UPSELL_PS_PLUS_TRIAL`, tied to the subscription, price text `Game Trial`             |
 | `productPriceOtherSubscription.golden.json` | EA SPORTS FC 25                | `UPSELL_EA_ACCESS_FREE`, `EA_ACCESS` branding, `Included` (must never map to PS Plus) |
 
+## PS Plus monthly list fixture
+
+`plusMonthly.golden.json` is the unmodified response body of the anonymous feed
+`https://www.playstation.com/bin/imagic/gameslist?locale=en-fi&categoryList=plus-monthly-games-list`,
+captured on 2026-10-02. The feed sits outside the GraphQL contract tooling.
+This fixture and `pnpm test:live` are its only drift guards. Response headers
+(including the country cookie) are not stored.
+
+| File                      | Envelope                      | Real-data shapes preserved                                                                                                               |
+| ------------------------- | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `plusMonthly.golden.json` | 27 alphabetical buckets, list | 6 entries: 4 PS5 games kept; a PS4-only entry (`CUSA` id) and an entry with `device: []` dropped; two entries that share one `conceptId` |
+
 To re-capture, repeat the live fetch with the current `config/env.ts` hashes and
 re-trim, preserving nulls.

@@ -33,6 +33,7 @@ let detailFor: DetailFn = () => ({
 // An in-memory service boundary, not a module mock.
 const FakeSony = Layer.succeed(SonyClient, {
   fetchConceptsByFeature: (feature) => Effect.sync(() => conceptsFor(feature)),
+  fetchPlusMonthly: () => Effect.succeed([]),
   fetchProductPrice: () => Effect.succeed(null),
   fetchProductDetail: (productId) => Effect.sync(() => detailFor(productId)),
 })
@@ -629,6 +630,7 @@ describe('gamesService', () => {
           }
           return []
         }),
+      fetchPlusMonthly: () => Effect.succeed([]),
       fetchProductPrice: () => Effect.succeed(null),
       fetchProductDetail: () =>
         Effect.succeed({ releaseDate: PAST_DATE, genres: [], description: '' }),
@@ -691,6 +693,7 @@ describe('getGameById detail enrichment', () => {
     const FlakySony = Layer.succeed(SonyClient, {
       fetchConceptsByFeature: (feature) =>
         Effect.sync(() => (feature === 'new' ? [makeConcept('degraded')] : [])),
+      fetchPlusMonthly: () => Effect.succeed([]),
       fetchProductPrice: () => Effect.succeed(null),
       fetchProductDetail: () => Effect.fail(upstream('boom')),
     })
@@ -731,6 +734,7 @@ describe('upstream error propagation on all list tabs', () => {
   ) =>
     Layer.succeed(SonyClient, {
       fetchConceptsByFeature: () => Effect.fail(error),
+      fetchPlusMonthly: () => Effect.succeed([]),
       fetchProductPrice: () => Effect.succeed(null),
       fetchProductDetail: () => Effect.fail(error),
     })
@@ -797,6 +801,7 @@ describe('upstream error propagation on all list tabs', () => {
         feature === 'new'
           ? Effect.succeed<Concept[]>([])
           : Effect.fail(new UpstreamUnavailable({ message: 'down' })),
+      fetchPlusMonthly: () => Effect.succeed([]),
       fetchProductPrice: () => Effect.succeed(null),
       fetchProductDetail: () => Effect.succeed({ genres: [], description: '' }),
     })
@@ -839,6 +844,7 @@ describe('gamesService cache TTL (TestClock)', () => {
           counters.concepts += 1
           return sony.concepts()
         }),
+      fetchPlusMonthly: () => Effect.succeed([]),
       fetchProductPrice: () => Effect.succeed(null),
       fetchProductDetail: () =>
         Effect.suspend(() => {

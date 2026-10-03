@@ -5,6 +5,7 @@ import Image from './Image'
 
 interface GameCardProps {
   game: Game
+  showPrice?: boolean
 }
 
 const formatDate = (value: string): string => {
@@ -27,7 +28,7 @@ const formatDate = (value: string): string => {
 const conceptHref = (id: string): string =>
   `https://store.playstation.com/en-fi/concept/${id}`
 
-const GameCard = ({ game }: GameCardProps) => {
+const GameCard = ({ game, showPrice = true }: GameCardProps) => {
   const hasDiscount =
     Boolean(game.originalPrice) && game.originalPrice !== game.price
   const isConcept = game.idKind === 'concept'
@@ -43,25 +44,27 @@ const GameCard = ({ game }: GameCardProps) => {
         </div>
         <div className="game-card--meta">
           <span className="game-card--date">{formatDate(game.date)}</span>
-          <span className="game-card--price">
-            {isConcept ? (
-              'Unknown'
-            ) : (
-              <>
-                {hasDiscount && (
-                  <s className="game-card--original-price">
-                    {game.originalPrice}
-                  </s>
-                )}
-                {game.price || '-'}
-                {game.plusUpsellText !== null && (
-                  <span className="game-card--plus">
-                    PS+ {game.plusUpsellText}
-                  </span>
-                )}
-              </>
-            )}
-          </span>
+          {showPrice && (
+            <span className="game-card--price">
+              {isConcept ? (
+                'Unknown'
+              ) : (
+                <>
+                  {hasDiscount && (
+                    <s className="game-card--original-price">
+                      {game.originalPrice}
+                    </s>
+                  )}
+                  {game.price || '-'}
+                  {game.plusUpsellText !== null && (
+                    <span className="game-card--plus">
+                      PS+ {game.plusUpsellText}
+                    </span>
+                  )}
+                </>
+              )}
+            </span>
+          )}
         </div>
       </div>
     </>

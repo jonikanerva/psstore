@@ -21,6 +21,11 @@ export const SONY_PRODUCT_PRICE_OPERATION_NAME =
   'productRetrieveForCtasWithPrice'
 export const SONY_PRODUCT_PRICE_HASH =
   '1f0ca607e170abbfb7d67bd76c9bbc97f21fe2e807be49e5fe764e14566cb605'
+// The PS Plus monthly games list is a separate anonymous JSON feed outside the
+// GraphQL contract; the content language is SONY_LOCALE.
+export const SONY_PLUS_MONTHLY_URL =
+  'https://www.playstation.com/bin/imagic/gameslist'
+export const SONY_PLUS_MONTHLY_CATEGORY = 'plus-monthly-games-list'
 // Content language and store region in one tag: English content from the
 // Finnish store (EUR). Fixed constant: never derived from the visitor.
 export const SONY_LOCALE = 'en-fi'
