@@ -214,7 +214,7 @@ describe('Wishlist', () => {
     }
   })
 
-  it('applies the default date sort at once and sorts by every pill, entries lacking a value last', async () => {
+  it('applies the default price sort at once and sorts by every pill, entries lacking a value last', async () => {
     stubFetch(() =>
       Response.json(
         library([
@@ -242,8 +242,8 @@ describe('Wishlist', () => {
         (element) => element.textContent,
       )
     await screen.findByText('Alpha')
-    // Sony's order here is Alpha, Bravo, Gamma. The default pill is Date
-    // descending, so the list is already sorted that way.
+    // Sony's order here is Alpha, Bravo, Gamma. The default pill is Price
+    // ascending, so the list is already sorted that way.
     expect(names()).toEqual(['Gamma', 'Alpha', 'Bravo'])
     expect(screen.getByRole('link', { name: /Gamma/ })).toHaveTextContent(
       '15 Jan 2026',
@@ -253,19 +253,18 @@ describe('Wishlist', () => {
     )
 
     fireEvent.click(
-      screen.getByRole('button', { name: 'Sort by date, descending' }),
+      screen.getByRole('button', { name: 'Sort by price, ascending' }),
     )
     expect(names()).toEqual(['Alpha', 'Gamma', 'Bravo'])
-
     fireEvent.click(
-      screen.getByRole('button', { name: 'Sort by date, ascending' }),
+      screen.getByRole('button', { name: 'Sort by price, descending' }),
     )
     expect(names()).toEqual(['Gamma', 'Alpha', 'Bravo'])
 
-    fireEvent.click(screen.getByRole('button', { name: 'Sort by price' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Sort by date' }))
     expect(names()).toEqual(['Gamma', 'Alpha', 'Bravo'])
     fireEvent.click(
-      screen.getByRole('button', { name: 'Sort by price, ascending' }),
+      screen.getByRole('button', { name: 'Sort by date, descending' }),
     )
     expect(names()).toEqual(['Alpha', 'Gamma', 'Bravo'])
 
@@ -281,7 +280,7 @@ describe('Wishlist', () => {
     )
     expect(names()).toEqual(['Gamma', 'Alpha', 'Bravo'])
     expect(
-      screen.getByRole('button', { name: 'Sort by date, descending' }),
+      screen.getByRole('button', { name: 'Sort by price, ascending' }),
     ).toHaveAttribute('aria-pressed', 'true')
   })
 

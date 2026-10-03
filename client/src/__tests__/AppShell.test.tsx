@@ -188,7 +188,7 @@ describe('AppShell', () => {
 
     it('offers the fields of the current route', async () => {
       await renderShellAt('/upcoming')
-      expect(pillNames()).toEqual(['Reset', 'Date ↑', 'Name'])
+      expect(pillNames()).toEqual(['Reset', 'Date ↑', 'Price', 'Name'])
       cleanup()
 
       await renderShellAt('/discounted')

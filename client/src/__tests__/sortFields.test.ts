@@ -4,11 +4,11 @@ import { isSameSort, sortConfigForPath } from '../modules/sortFields'
 describe('sortConfigForPath', () => {
   it.each([
     ['/new', ['date', 'price', 'name'], 'date', 'desc', true],
-    ['/upcoming', ['date', 'name'], 'date', 'asc', true],
+    ['/upcoming', ['date', 'price', 'name'], 'date', 'asc', true],
     ['/discounted', ['date', 'price', 'name'], 'date', 'desc', true],
     ['/monthly', ['date', 'name'], 'date', 'desc', true],
     ['/purchased', ['name'], 'name', 'asc', false],
-    ['/wishlist', ['date', 'price', 'name'], 'date', 'desc', false],
+    ['/wishlist', ['date', 'price', 'name'], 'price', 'asc', false],
   ])(
     'offers the fields and default of %s',
     (path, fields, field, direction, serverOrdered) => {
