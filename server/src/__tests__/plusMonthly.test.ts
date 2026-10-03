@@ -36,6 +36,9 @@ describe('parsePlusMonthly on the real capture', () => {
     ])
     expect(outcome.outOfScope).toBe(2)
     expect(outcome.dropped).toBe(0)
+    expect(outcome.entries.map((item) => item.name)).toContain(
+      'Fallout 76 PS4 & PS5',
+    )
   })
 
   it('maps to cards ordered by release date, newest first, without prices', () => {
@@ -153,5 +156,13 @@ describe('parsePlusMonthly on synthetic input', () => {
     ]) {
       expect(parsePlusMonthly(body)).toEqual({ kind: 'drift' })
     }
+  })
+
+  it('decodes HTML entities in the name so cards show plain text', () => {
+    const outcome = ok([bucket(entry({ name: 'Fallout 76 PS4 &amp; PS5' }))])
+    expect(outcome.entries[0]?.name).toBe('Fallout 76 PS4 & PS5')
+    expect(mapMonthlyToGames(outcome.entries)[0]?.name).toBe(
+      'Fallout 76 PS4 & PS5',
+    )
   })
 })

@@ -1,5 +1,6 @@
 import { Result, Schema } from 'effect'
 import { isValidProductId } from '../domain/listing.js'
+import { decodeHtmlEntities } from './htmlEntities.js'
 
 /**
  * Tolerant boundary schema for the PS Plus monthly games feed: a list of
@@ -109,7 +110,7 @@ export const parsePlusMonthly = (json: unknown): PlusMonthlyOutcome => {
       seen.add(productId)
       entries.push({
         productId,
-        name,
+        name: decodeHtmlEntities(name),
         imageUrl: entry.imageUrl ?? '',
         releaseDate: entry.releaseDate ?? '',
         genres: strings(entry.genre),
