@@ -6,7 +6,7 @@ import { useSearchQuery } from '../modules/searchContext'
 import Error from './Error'
 import GameCard from './GameCard'
 import ScrollToTopOnMount from './ScrollToTopOnMount'
-import Loading from './Spinner'
+import Spinner from './Spinner'
 
 const PAGE_SIZE = 60
 
@@ -68,7 +68,7 @@ const Games = ({
   }
 
   if (isPending) {
-    return <Loading loading />
+    return <Spinner />
   }
 
   const games = data.pages.flatMap((page) => page.games)
@@ -92,7 +92,7 @@ const Games = ({
           ))}
         </div>
         <div ref={sentinelRef} className="games--sentinel">
-          {isFetchingNextPage && <Loading loading />}
+          {isFetchingNextPage && <Spinner />}
         </div>
       </div>
     </>

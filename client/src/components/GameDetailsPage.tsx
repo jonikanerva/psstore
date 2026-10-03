@@ -4,7 +4,7 @@ import { DateTime } from 'luxon'
 import { fetchGame, metacriticLink, type Game } from '../modules/psnStore'
 import Error from './Error'
 import Image from './Image'
-import Loading from './Spinner'
+import Spinner from './Spinner'
 
 interface GameDetailsPageProps {
   gameId: string
@@ -46,7 +46,7 @@ const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
   })
 
   if (isPending) {
-    return <Loading loading />
+    return <Spinner />
   }
 
   if (isError) {
