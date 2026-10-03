@@ -25,8 +25,14 @@ const formatDate = (value: string): string => {
 // no anonymously-available price. They link OUT to Sony's concept page and
 // show "Unknown" in the price slot. Everything else (default `product`) keeps
 // the internal PDP Link and normal price rendering.
+// A product id (library entries without a concept id) links to the product
+// page; any other id is a concept id.
+const PRODUCT_ID_PATTERN = /^[A-Z]{2}\d{4}-[A-Z]{4}\d{5}_00-/
+
 const conceptHref = (id: string): string =>
-  `https://store.playstation.com/en-fi/concept/${id}`
+  PRODUCT_ID_PATTERN.test(id)
+    ? `https://store.playstation.com/en-fi/product/${id}`
+    : `https://store.playstation.com/en-fi/concept/${id}`
 
 const GameCard = ({ game, showPrice = true }: GameCardProps) => {
   const hasDiscount =

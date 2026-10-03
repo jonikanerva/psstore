@@ -34,8 +34,17 @@ const renderShellAt = async (initial: string) => {
     path: 'discounted',
     component: QueryProbe,
   })
+  const purchasedRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: 'purchased',
+    component: QueryProbe,
+  })
   const router = createRouter({
-    routeTree: rootRoute.addChildren([newRoute, discountedRoute]),
+    routeTree: rootRoute.addChildren([
+      newRoute,
+      discountedRoute,
+      purchasedRoute,
+    ]),
     history: createMemoryHistory({ initialEntries: [initial] }),
   })
   await router.load()
@@ -70,7 +79,7 @@ describe('AppShell', () => {
       within(nav)
         .getAllByRole('link')
         .map((link) => link.textContent),
-    ).toEqual(['New', 'Upcoming', 'Discounted', 'Monthly'])
+    ).toEqual(['New', 'Upcoming', 'Discounted', 'Monthly', 'Purchased'])
   })
 
   it('marks the current view with aria-current', async () => {
@@ -120,5 +129,14 @@ describe('AppShell', () => {
       screen.getByRole<HTMLInputElement>('searchbox', { name: 'Search' }).value,
     ).toBe('')
     expect(screen.getByTestId('probe-query')).toHaveTextContent('')
+  })
+
+  it('disables the search on PURCHASED until the library list exists', async () => {
+    await renderShellAt('/purchased')
+    expect(screen.getByRole('searchbox', { name: 'Search' })).toBeDisabled()
+    cleanup()
+
+    await renderShellAt('/new')
+    expect(screen.getByRole('searchbox', { name: 'Search' })).toBeEnabled()
   })
 })
