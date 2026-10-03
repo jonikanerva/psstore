@@ -31,6 +31,13 @@ const Navigation = () => (
       Monthly
     </Link>
     <Link
+      to="/wishlist"
+      className="navigation--link"
+      activeProps={{ className: 'navigation--link navigation--active' }}
+    >
+      Wishlist
+    </Link>
+    <Link
       to="/purchased"
       className="navigation--link"
       activeProps={{ className: 'navigation--link navigation--active' }}

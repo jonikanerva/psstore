@@ -4,6 +4,7 @@ import {
   SONY_AUTH_REDIRECT_URI,
   SONY_PURCHASED_MAX_PAGES,
   SONY_PURCHASED_PAGE_SIZE,
+  SONY_WISHLIST_HASH,
 } from '../config/env.js'
 import { SonyAccountClient, SonyAccountClientLive } from '../sony/sonyClient.js'
 
@@ -50,6 +51,14 @@ const library = () =>
     Effect.gen(function* () {
       const client = yield* SonyAccountClient
       return yield* client.fetchPurchasedGames(Redacted.make(TOKEN))
+    }).pipe(Effect.provide(SonyAccountClientLive)),
+  )
+
+const wishlist = () =>
+  Effect.runPromiseExit(
+    Effect.gen(function* () {
+      const client = yield* SonyAccountClient
+      return yield* client.fetchWishlistGames(Redacted.make(TOKEN))
     }).pipe(Effect.provide(SonyAccountClientLive)),
   )
 
@@ -290,5 +299,133 @@ describe('fetchPurchasedGames', () => {
     const pending = library()
     await vi.advanceTimersByTimeAsync(60_000)
     expect(tagOf(await pending)).toBe('UpstreamUnavailable')
+  })
+})
+
+describe('fetchWishlistGames', () => {
+  const wishlistBody = (list: unknown): Response =>
+    Response.json({ data: { storeWishlistSecure: list } })
+  const wishRow = (id: string, platforms: string[] = ['PS5']): unknown => ({
+    __typename: 'Concept',
+    id,
+    name: `Synthetic ${id}`,
+    platforms,
+    boxArt: { url: 'https://img.test/x.png' },
+  })
+
+  it('makes one GET with the persisted query, a bearer token and the locale', async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(wishlistBody([wishRow('1'), wishRow('2', ['PS4'])]))
+    globalThis.fetch = fetchMock
+    const result = await wishlist()
+    expect(Exit.isSuccess(result) && result.value).toHaveLength(1)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    const init = fetchMock.mock.calls[0]?.[1]
+    const params = new URL(urlOf(fetchMock.mock.calls[0])).searchParams
+    expect(init?.method).toBe('GET')
+    expect(params.get('operationName')).toBe('storeRetrieveWishlist')
+    expect(params.get('variables')).toBe('{}')
+    expect(JSON.parse(params.get('extensions') ?? '{}')).toEqual({
+      persistedQuery: { version: 1, sha256Hash: SONY_WISHLIST_HASH },
+    })
+    expect(init?.headers).toMatchObject({
+      Authorization: `Bearer ${TOKEN}`,
+      'x-psn-store-locale-override': 'en-FI',
+    })
+  })
+
+  it('treats an empty list as success', async () => {
+    globalThis.fetch = vi.fn<typeof fetch>().mockResolvedValue(wishlistBody([]))
+    const result = await wishlist()
+    expect(Exit.isSuccess(result) && result.value).toEqual([])
+  })
+
+  it('maps a GraphQL access denied answer to SessionRejected', async () => {
+    globalThis.fetch = vi.fn<typeof fetch>().mockResolvedValue(
+      Response.json({
+        errors: [{ message: 'Access denied! You need to be authorized.' }],
+        data: { storeWishlistSecure: null },
+      }),
+    )
+    expect(tagOf(await wishlist())).toBe('SessionRejected')
+  })
+
+  it('maps a null or missing list without a denial to UpstreamUnavailable', async () => {
+    for (const body of [
+      { data: { storeWishlistSecure: null } },
+      { data: {} },
+      { data: null },
+      {},
+      { errors: [{ message: 'Internal error' }], data: null },
+    ]) {
+      globalThis.fetch = vi
+        .fn<typeof fetch>()
+        .mockResolvedValue(Response.json(body))
+      expect(tagOf(await wishlist()), JSON.stringify(body)).toBe(
+        'UpstreamUnavailable',
+      )
+    }
+  })
+
+  it('maps HTTP statuses, never retrying', async () => {
+    for (const [status, tag] of [
+      [401, 'SessionRejected'],
+      [403, 'SessionRejected'],
+      [400, 'UpstreamQueryRotated'],
+      [429, 'UpstreamRateLimited'],
+      [500, 'UpstreamUnavailable'],
+      [502, 'UpstreamUnavailable'],
+    ] as const) {
+      const fetchMock = vi
+        .fn<typeof fetch>()
+        .mockResolvedValue(new Response(null, { status }))
+      globalThis.fetch = fetchMock
+      expect(tagOf(await wishlist()), String(status)).toBe(tag)
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+    }
+  })
+
+  it('maps a rotated hash reported in the body', async () => {
+    globalThis.fetch = vi.fn<typeof fetch>().mockResolvedValue(
+      Response.json({
+        errors: [{ extensions: { code: 'PERSISTED_QUERY_NOT_FOUND' } }],
+      }),
+    )
+    expect(tagOf(await wishlist())).toBe('UpstreamQueryRotated')
+  })
+
+  it('maps a network failure and a body that is not JSON to UpstreamUnavailable', async () => {
+    globalThis.fetch = vi
+      .fn<typeof fetch>()
+      .mockRejectedValue(new TypeError('network down'))
+    expect(tagOf(await wishlist())).toBe('UpstreamUnavailable')
+    globalThis.fetch = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response('<html>', { status: 200 }))
+    expect(tagOf(await wishlist())).toBe('UpstreamUnavailable')
+  })
+
+  it('maps a call that outlives the deadline to UpstreamUnavailable', async () => {
+    globalThis.fetch = vi.fn<typeof fetch>().mockImplementation(
+      () =>
+        new Promise<Response>((resolve) => {
+          setTimeout(() => {
+            resolve(wishlistBody([]))
+          }, 60_000)
+        }),
+    )
+    const pending = wishlist()
+    await vi.advanceTimersByTimeAsync(120_000)
+    expect(tagOf(await pending)).toBe('UpstreamUnavailable')
+  })
+
+  it('keeps names, ids and the token out of the error', async () => {
+    globalThis.fetch = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(wishlistBody({ unexpected: 'Synthetic 77' }))
+    const text = JSON.stringify(await wishlist())
+    expect(text).not.toContain(TOKEN)
+    expect(text).not.toContain('Synthetic 77')
   })
 })

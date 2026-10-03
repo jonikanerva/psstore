@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { PURCHASED_QUERY_KEY } from '../modules/purchasedQuery'
+import { SIGNED_IN_QUERY_KEYS } from '../modules/signedInQuery'
 import { signOut } from '../modules/psnStore'
 
 const SignOut = () => {
@@ -7,7 +7,9 @@ const SignOut = () => {
   const mutation = useMutation({
     mutationFn: signOut,
     onSuccess: () => {
-      void queryClient.resetQueries({ queryKey: PURCHASED_QUERY_KEY })
+      for (const queryKey of SIGNED_IN_QUERY_KEYS) {
+        void queryClient.resetQueries({ queryKey })
+      }
     },
   })
 

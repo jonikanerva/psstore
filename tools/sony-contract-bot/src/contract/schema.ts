@@ -7,6 +7,7 @@ export const contractFeatureSchema = Schema.Literals([
   'details',
   'search',
   'purchased',
+  'wishlist',
 ])
 
 export const contractOperationSchema = Schema.Struct({

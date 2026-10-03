@@ -26,6 +26,7 @@ vi.mock('../modules/psnStore', () => ({
   fetchDiscountedGames: vi.fn(),
   fetchMonthlyGames: vi.fn(),
   fetchPurchasedGames: vi.fn(),
+  fetchWishlistGames: vi.fn(),
 }))
 
 beforeAll(() => {

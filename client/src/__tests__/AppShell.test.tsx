@@ -58,6 +58,11 @@ const renderShellAt = async (initial: string) => {
     path: 'search',
     component: QueryProbe,
   })
+  const wishlistRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: 'wishlist',
+    component: QueryProbe,
+  })
   const router = createRouter({
     routeTree: rootRoute.addChildren([
       newRoute,
@@ -65,6 +70,7 @@ const renderShellAt = async (initial: string) => {
       discountedRoute,
       purchasedRoute,
       searchRoute,
+      wishlistRoute,
     ]),
     history: createMemoryHistory({ initialEntries: [initial] }),
   })
@@ -100,7 +106,14 @@ describe('AppShell', () => {
       within(nav)
         .getAllByRole('link')
         .map((link) => link.textContent),
-    ).toEqual(['New', 'Upcoming', 'Discounted', 'Monthly', 'Purchased'])
+    ).toEqual([
+      'New',
+      'Upcoming',
+      'Discounted',
+      'Monthly',
+      'Wishlist',
+      'Purchased',
+    ])
   })
 
   it('marks the current view with aria-current', async () => {
@@ -258,5 +271,23 @@ describe('AppShell', () => {
       fireEvent.click(screen.getByRole('link', { name: 'Upcoming' }))
       expect(screen.getByTestId('probe-sort')).toHaveTextContent('default')
     })
+  })
+
+  it('disables the search on WISHLIST until the wishlist exists', async () => {
+    await renderShellAt('/wishlist')
+    expect(screen.getByRole('searchbox', { name: 'Search' })).toBeDisabled()
+  })
+
+  it('renders six anchor links with Purchased last', async () => {
+    await renderShellAt('/new')
+    const nav = screen.getByRole('navigation', { name: 'Top navigation' })
+    const links = within(nav).getAllByRole('link')
+    expect(links).toHaveLength(6)
+    for (const link of links) {
+      expect(link.tagName).toBe('A')
+      expect(link).toHaveAttribute('href')
+    }
+    expect(links.at(-2)).toHaveTextContent('Wishlist')
+    expect(links.at(-1)).toHaveTextContent('Purchased')
   })
 })

@@ -12,6 +12,7 @@ import {
   loadAllPages,
 } from '../modules/gamesQuery'
 import { purchasedQueryOptions } from '../modules/purchasedQuery'
+import { wishlistQueryOptions } from '../modules/wishlistQuery'
 import { SearchContext } from '../modules/searchContext'
 import { SortContext } from '../modules/sortContext'
 import { sortFieldsForPath } from '../modules/sortFields'
@@ -93,11 +94,14 @@ const AppShell = () => {
     }
   }
 
-  // The PURCHASED search has nothing to filter until the library list exists,
-  // and Sign out shows only while it does. `enabled: false` observes the shared
+  // A signed-in search has nothing to filter until its list exists, and Sign
+  // out shows while either list does. `enabled: false` observes the shared
   // query without starting a fetch.
   const library = useQuery({ ...purchasedQueryOptions, enabled: false })
-  const searchDisabled = pathname === '/purchased' && library.data === undefined
+  const wishlist = useQuery({ ...wishlistQueryOptions, enabled: false })
+  const searchDisabled =
+    (pathname === '/purchased' && library.data === undefined) ||
+    (pathname === '/wishlist' && wishlist.data === undefined)
   const sortFields = searchDisabled ? [] : sortFieldsForPath(pathname)
 
   // Outside the search route the field filters the current view and clears
@@ -115,7 +119,9 @@ const AppShell = () => {
         <div className="app-shell--brand">PS Store</div>
         <Navigation />
         <div className="app-shell--tools">
-          {library.data !== undefined && <SignOut />}
+          {(library.data !== undefined || wishlist.data !== undefined) && (
+            <SignOut />
+          )}
           <form
             role="search"
             className="app-shell--search-form"

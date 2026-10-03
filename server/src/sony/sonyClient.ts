@@ -23,6 +23,9 @@ import {
   SONY_SEARCH_HASH,
   SONY_SEARCH_OPERATION_NAME,
   SONY_TIMEOUT_MS,
+  SONY_WISHLIST_DEADLINE_MS,
+  SONY_WISHLIST_HASH,
+  SONY_WISHLIST_OPERATION_NAME,
 } from '../config/env.js'
 import {
   SessionRejected,
@@ -50,6 +53,7 @@ import {
   parsePurchasedPage,
   type PurchasedEntry,
 } from './purchasedSchema.js'
+import { parseWishlist, type WishlistEntry } from './wishlistSchema.js'
 import { extractAccessCode, parseTokenResponse } from './sessionSchema.js'
 import {
   buildStrategies,
@@ -622,6 +626,11 @@ export interface SonyAccountClientApi {
   readonly fetchPurchasedGames: (
     accessToken: Redacted.Redacted,
   ) => Effect.Effect<readonly PurchasedEntry[], LibraryError>
+  // The user's whole Sony wishlist in Sony's order, de-duplicated by id and
+  // narrowed to PS5. One read-only request; Sony paginates nothing.
+  readonly fetchWishlistGames: (
+    accessToken: Redacted.Redacted,
+  ) => Effect.Effect<readonly WishlistEntry[], LibraryError>
 }
 
 export class SonyAccountClient extends Context.Service<
@@ -740,6 +749,40 @@ const requestPurchasedPage = async (
   return response.json()
 }
 
+const requestWishlist = async (
+  accessToken: Redacted.Redacted,
+): Promise<unknown> => {
+  const query = new URLSearchParams({
+    operationName: SONY_WISHLIST_OPERATION_NAME,
+    variables: '{}',
+    extensions: JSON.stringify({
+      persistedQuery: { version: 1, sha256Hash: SONY_WISHLIST_HASH },
+    }),
+  }).toString()
+  const response = await fetchWithRetry(
+    `${SONY_GRAPHQL_URL}?${query}`,
+    {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+        Authorization: `Bearer ${Redacted.value(accessToken)}`,
+        'x-apollo-operation-name': SONY_WISHLIST_OPERATION_NAME,
+        'x-psn-store-locale-override': localeOverride(SONY_LOCALE),
+      },
+    },
+    SONY_TIMEOUT_MS,
+    0,
+  )
+  return response.json()
+}
+
+const queryRotated = () =>
+  new UpstreamQueryRotated({
+    message:
+      'Sony rejected the persisted query (hash rotated); re-run pnpm sony:refresh',
+    operationName: SONY_WISHLIST_OPERATION_NAME,
+  })
+
 const exchangeNpsso = (
   npsso: Redacted.Redacted,
 ): Effect.Effect<Redacted.Redacted, AccountError> =>
@@ -833,8 +876,60 @@ const fetchPurchasedGames = (
     }),
   )
 
+const fetchWishlistGames = (
+  accessToken: Redacted.Redacted,
+): Effect.Effect<readonly WishlistEntry[], LibraryError> =>
+  Effect.gen(function* () {
+    const json = yield* Effect.tryPromise({
+      try: () => requestWishlist(accessToken),
+      // Sony answers HTTP 400 for a persisted query it does not whitelist.
+      catch: (error): LibraryError =>
+        error instanceof HttpStatusError && error.status === 400
+          ? queryRotated()
+          : mapAccountTransportError([401, 403])(error),
+    })
+    if (detectPersistedQueryRotation(json)) {
+      return yield* queryRotated()
+    }
+    const outcome = parseWishlist(json)
+    if (outcome.kind === 'denied') {
+      return yield* new SessionRejected({
+        message: 'Sony rejected the sign-in',
+      })
+    }
+    if (outcome.kind === 'drift') {
+      yield* Effect.logWarning('sony wishlist drift', {
+        event: 'sony.wishlist.drift',
+      })
+      return yield* new UpstreamUnavailable({
+        message: 'Sony wishlist has an unexpected shape',
+      })
+    }
+    if (outcome.dropped > 0 || outcome.outOfScope > 0) {
+      yield* Effect.logWarning('sony wishlist element drift', {
+        event: 'sony.wishlist.elementDrift',
+        dropped: outcome.dropped,
+        outOfScope: outcome.outOfScope,
+        kept: outcome.entries.length,
+      })
+    }
+    return outcome.entries
+  }).pipe(
+    Effect.timeoutOrElse({
+      duration: SONY_WISHLIST_DEADLINE_MS,
+      orElse: () =>
+        Effect.fail(
+          new UpstreamUnavailable({ message: 'Sony wishlist timed out' }),
+        ),
+    }),
+  )
+
 export const SonyAccountClientLive: Layer.Layer<SonyAccountClient> =
   Layer.succeed(
     SonyAccountClient,
-    SonyAccountClient.of({ exchangeNpsso, fetchPurchasedGames }),
+    SonyAccountClient.of({
+      exchangeNpsso,
+      fetchPurchasedGames,
+      fetchWishlistGames,
+    }),
   )

@@ -7,13 +7,14 @@ export const SORT_FIELD_LABELS = {
 } as const satisfies Record<SortField, string>
 
 // Only a field that most entries of the view fill in is offered. UPCOMING
-// concept entries have no price, MONTHLY has none, and PURCHASED has no date.
+// concept entries have no price, MONTHLY has none, and PURCHASED and WISHLIST have no date.
 const FIELDS_BY_PATH: Readonly<Record<string, readonly SortField[]>> = {
   '/new': ['date', 'price', 'name'],
   '/discounted': ['date', 'price', 'name'],
   '/upcoming': ['date', 'name'],
   '/monthly': ['date', 'name'],
   '/purchased': ['name'],
+  '/wishlist': ['name'],
 }
 
 export const sortFieldsForPath = (pathname: string): readonly SortField[] =>

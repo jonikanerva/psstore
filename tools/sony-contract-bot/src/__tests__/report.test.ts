@@ -80,7 +80,18 @@ describe('renderDiffReport tri-state headline', () => {
     const lines = renderDiffReport(noDrift, true).split('\n')
     const search = lines.indexOf('- /api/games/search')
     expect(lines[search + 1]).toBe('- /api/games/purchased')
-    expect(lines[search + 2]).toBe('- /api/games/:id')
+    expect(lines[search + 2]).toBe('- /api/games/wishlist')
+    expect(lines[search + 3]).toBe('- /api/games/:id')
+  })
+
+  it('says unobserved when the wishlist entry has no observed status', () => {
+    const wishlist: ContractOperation = {
+      ...operation,
+      feature: 'wishlist',
+      observed_status_codes: [],
+    }
+    const report = renderDiffReport(noDrift, true, [wishlist])
+    expect(report).toContain('- wishlist: unobserved (owner probe pending)')
   })
 
   it('says unobserved when the purchased entry has no observed status', () => {

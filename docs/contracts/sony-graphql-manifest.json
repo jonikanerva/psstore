@@ -123,6 +123,16 @@
       "observed_status_codes": [200]
     },
     {
+      "feature": "wishlist",
+      "operation_name": "storeRetrieveWishlist",
+      "persisted_query_hash": "1fa88dd6c70279e3d914f7ba535b2558a7e45821d030cb2a63a8e450963d12c3",
+      "required_headers": ["x-apollo-operation-name"],
+      "variables_schema": {},
+      "sample_variables": {},
+      "response_path": "data.storeWishlistSecure",
+      "observed_status_codes": [200]
+    },
+    {
       "feature": "search",
       "operation_name": "getSearchResults",
       "persisted_query_hash": "4df6284f982e57bec70f23c77e2c219dc792eb19af7fb3d3a81767aa3f1958aa",

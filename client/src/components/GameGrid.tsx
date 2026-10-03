@@ -8,6 +8,7 @@ interface GameGridProps {
   games: readonly Game[]
   label: string
   showPrice?: boolean
+  internalLink?: boolean
   trailing?: ReactNode
   hasNextPage: boolean
   isFetchingNextPage: boolean
@@ -20,6 +21,7 @@ const GameGrid = ({
   games,
   label,
   showPrice = true,
+  internalLink = false,
   trailing = null,
   hasNextPage,
   isFetchingNextPage,
@@ -54,7 +56,12 @@ const GameGrid = ({
       <div className="games--content">
         <div className="games--grid" data-label={label}>
           {games.map((game) => (
-            <GameCard key={game.id} game={game} showPrice={showPrice} />
+            <GameCard
+              key={game.id}
+              game={game}
+              showPrice={showPrice}
+              internalLink={internalLink}
+            />
           ))}
           {trailing}
         </div>
