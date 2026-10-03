@@ -130,7 +130,7 @@ describe('Purchased', () => {
         'https://www.playstation.com/',
       ],
       [
-        steps.getByRole('link', { name: 'Get your NPSSO token' }),
+        steps.getByRole('link', { name: 'Get your token here' }),
         'https://ca.account.sony.com/api/v1/ssocookie',
       ],
     ] as const

@@ -38,6 +38,22 @@ const SignIn = () => {
       }}
       aria-busy={mutation.isPending}
     >
+      <ol className="sign-in--steps">
+        <li>
+          Make sure you are signed in to{' '}
+          <a href={PLAYSTATION_URL} target="_blank" rel="noopener noreferrer">
+            playstation.com
+          </a>
+          .
+        </li>
+        <li>
+          <a href={NPSSO_URL} target="_blank" rel="noopener noreferrer">
+            Get your token here
+          </a>{' '}
+          and copy it.
+        </li>
+        <li>Paste it below and click Sign in.</li>
+      </ol>
       <label htmlFor="npsso" className="sign-in--label">
         NPSSO token
       </label>
@@ -66,27 +82,6 @@ const SignIn = () => {
           {errorMessage(mutation.error)}
         </p>
       )}
-      <p className="sign-in--help">
-        The NPSSO token is a full account credential. It is sent once. The
-        sign-in stays for 30 days until you sign out.
-      </p>
-      <ol className="sign-in--steps">
-        <li>
-          Sign in at{' '}
-          <a href={PLAYSTATION_URL} target="_blank" rel="noopener noreferrer">
-            playstation.com
-          </a>{' '}
-          in this browser.
-        </li>
-        <li>
-          Open{' '}
-          <a href={NPSSO_URL} target="_blank" rel="noopener noreferrer">
-            Get your NPSSO token
-          </a>
-          .
-        </li>
-        <li>Copy the value of npsso and paste it above.</li>
-      </ol>
     </form>
   )
 }
