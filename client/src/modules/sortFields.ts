@@ -1,7 +1,7 @@
 import type { SortField } from '@psstore/shared'
 
 export const SORT_FIELD_LABELS = {
-  date: 'Release date',
+  date: 'Date',
   price: 'Price',
   name: 'Name',
 } as const satisfies Record<SortField, string>

@@ -116,14 +116,6 @@ const AppShell = () => {
         <Navigation />
         <div className="app-shell--tools">
           {library.data !== undefined && <SignOut />}
-          {sortFields.length > 0 && (
-            <SortControl
-              fields={sortFields}
-              sort={sort}
-              onFieldChange={changeField}
-              onToggleDirection={toggleDirection}
-            />
-          )}
           <form
             role="search"
             className="app-shell--search-form"
@@ -155,6 +147,14 @@ const AppShell = () => {
           </form>
         </div>
       </header>
+      {sortFields.length > 0 && (
+        <SortControl
+          fields={sortFields}
+          sort={sort}
+          onFieldChange={changeField}
+          onToggleDirection={toggleDirection}
+        />
+      )}
       <main className="app-shell--main">
         <SearchContext.Provider value={onSearchRoute ? '' : query}>
           <SortContext.Provider value={sort}>

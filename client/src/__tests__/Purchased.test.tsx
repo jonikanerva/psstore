@@ -191,17 +191,17 @@ describe('Purchased', () => {
         .filter((text) => ['Charlie', 'alpha', 'Bravo'].includes(text))
     expect(names()).toEqual(['Charlie', 'alpha', 'Bravo'])
 
-    const select = await screen.findByRole('combobox', { name: 'Sort by' })
+    const pill = await screen.findByRole('button', { name: 'Sort by name' })
     expect(
-      within(select)
-        .getAllByRole('option')
-        .map((option) => option.textContent),
-    ).toEqual(['Default', 'Name'])
-    fireEvent.change(select, { target: { value: 'name' } })
+      within(screen.getByRole('group', { name: 'Sort' }))
+        .getAllByRole('button')
+        .map((button) => button.textContent),
+    ).toEqual(['Name'])
+    fireEvent.click(pill)
     expect(names()).toEqual(['alpha', 'Bravo', 'Charlie'])
 
     fireEvent.click(
-      screen.getByRole('button', { name: 'Sort direction: ascending' }),
+      screen.getByRole('button', { name: 'Sort by name, ascending' }),
     )
     expect(names()).toEqual(['Charlie', 'Bravo', 'alpha'])
   })

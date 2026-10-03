@@ -1,4 +1,8 @@
-import type { GameSort, SortField } from '@psstore/shared'
+import {
+  NATURAL_DIRECTION,
+  type GameSort,
+  type SortField,
+} from '@psstore/shared'
 import { SORT_FIELD_LABELS } from '../modules/sortFields'
 
 interface SortControlProps {
@@ -8,52 +12,51 @@ interface SortControlProps {
   onToggleDirection: () => void
 }
 
-const isSortField = (
-  value: string,
-  fields: readonly SortField[],
-): value is SortField => fields.some((field) => field === value)
-
+// One pill per field. Clicking a pill steps through: natural direction, the
+// opposite direction, then back to Sony's own order.
 const SortControl = ({
   fields,
   sort,
   onFieldChange,
   onToggleDirection,
-}: SortControlProps) => {
-  const directionName =
-    sort === null
-      ? 'Sort direction'
-      : `Sort direction: ${sort.direction === 'asc' ? 'ascending' : 'descending'}`
-  const glyph = sort === null ? '↕' : sort.direction === 'asc' ? '↑' : '↓'
-
-  return (
-    <div className="sort-control">
-      <select
-        aria-label="Sort by"
-        className="sort-control--select"
-        value={sort?.field ?? ''}
-        onChange={(event) => {
-          const value = event.currentTarget.value
-          onFieldChange(isSortField(value, fields) ? value : null)
-        }}
-      >
-        <option value="">Default</option>
-        {fields.map((field) => (
-          <option key={field} value={field}>
-            {SORT_FIELD_LABELS[field]}
-          </option>
-        ))}
-      </select>
-      <button
-        type="button"
-        className="sort-control--direction"
-        aria-label={directionName}
-        disabled={sort === null}
-        onClick={onToggleDirection}
-      >
-        <span aria-hidden="true">{glyph}</span>
-      </button>
-    </div>
-  )
-}
+}: SortControlProps) => (
+  <div role="group" aria-label="Sort" className="sort-bar">
+    {fields.map((field) => {
+      const label = SORT_FIELD_LABELS[field]
+      const active = sort?.field === field
+      const direction = active ? sort.direction : null
+      const onNaturalDirection = direction === NATURAL_DIRECTION[field]
+      return (
+        <button
+          key={field}
+          type="button"
+          className={
+            active ? 'sort-bar--pill sort-bar--active' : 'sort-bar--pill'
+          }
+          aria-pressed={active}
+          aria-label={
+            direction === null
+              ? `Sort by ${label.toLowerCase()}`
+              : `Sort by ${label.toLowerCase()}, ${direction === 'asc' ? 'ascending' : 'descending'}`
+          }
+          onClick={() => {
+            if (!active) {
+              onFieldChange(field)
+            } else if (onNaturalDirection) {
+              onToggleDirection()
+            } else {
+              onFieldChange(null)
+            }
+          }}
+        >
+          {label}
+          {direction !== null && (
+            <span aria-hidden="true">{direction === 'asc' ? ' ↑' : ' ↓'}</span>
+          )}
+        </button>
+      )
+    })}
+  </div>
+)
 
 export default SortControl

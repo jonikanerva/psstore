@@ -113,9 +113,7 @@ const cardNames = (): (string | null)[] =>
   )
 
 const pickName = () => {
-  fireEvent.change(screen.getByRole('combobox', { name: 'Sort by' }), {
-    target: { value: 'name' },
-  })
+  fireEvent.click(screen.getByRole('button', { name: 'Sort by name' }))
 }
 
 describe('sorting a paged view', () => {

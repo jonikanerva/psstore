@@ -161,80 +161,99 @@ describe('AppShell', () => {
     expect(screen.getByRole('searchbox', { name: 'Search' })).toBeEnabled()
   })
 
-  describe('sort control', () => {
-    const optionLabels = () =>
-      within(screen.getByRole('combobox', { name: 'Sort by' }))
-        .getAllByRole('option')
-        .map((option) => option.textContent)
+  describe('sort bar', () => {
+    const pillNames = () =>
+      within(screen.getByRole('group', { name: 'Sort' }))
+        .getAllByRole('button')
+        .map((button) => button.textContent)
 
     it('offers the fields of the current route', async () => {
       await renderShellAt('/upcoming')
-      expect(optionLabels()).toEqual(['Default', 'Release date', 'Name'])
+      expect(pillNames()).toEqual(['Date', 'Name'])
       cleanup()
 
       await renderShellAt('/discounted')
-      expect(optionLabels()).toEqual([
-        'Default',
-        'Release date',
-        'Price',
-        'Name',
-      ])
+      expect(pillNames()).toEqual(['Date', 'Price', 'Name'])
     })
 
     it('is hidden on the search route', async () => {
       await renderShellAt('/search')
       expect(
-        screen.queryByRole('combobox', { name: 'Sort by' }),
+        screen.queryByRole('group', { name: 'Sort' }),
       ).not.toBeInTheDocument()
     })
 
     it('is hidden on PURCHASED until the library list exists', async () => {
       await renderShellAt('/purchased')
       expect(
-        screen.queryByRole('combobox', { name: 'Sort by' }),
+        screen.queryByRole('group', { name: 'Sort' }),
       ).not.toBeInTheDocument()
     })
 
-    it('disables the direction button while Default is chosen', async () => {
-      await renderShellAt('/upcoming')
-      expect(
-        screen.getByRole('button', { name: 'Sort direction' }),
-      ).toBeDisabled()
+    it('starts with no pill pressed', async () => {
+      await renderShellAt('/discounted')
+      for (const button of within(
+        screen.getByRole('group', { name: 'Sort' }),
+      ).getAllByRole('button')) {
+        expect(button).toHaveAttribute('aria-pressed', 'false')
+      }
+      expect(screen.getByTestId('probe-sort')).toHaveTextContent('default')
     })
 
-    it('starts at the natural direction and toggles it', async () => {
+    it('activates a pill at its natural direction in one click', async () => {
+      await renderShellAt('/discounted')
+      fireEvent.click(screen.getByRole('button', { name: 'Sort by price' }))
+      expect(screen.getByTestId('probe-sort')).toHaveTextContent('price asc')
+      cleanup()
+
+      await renderShellAt('/discounted')
+      fireEvent.click(screen.getByRole('button', { name: 'Sort by date' }))
+      expect(screen.getByTestId('probe-sort')).toHaveTextContent('date desc')
+    })
+
+    it('toggles the direction, then returns to the default order', async () => {
       await renderShellAt('/upcoming')
-      fireEvent.change(screen.getByRole('combobox', { name: 'Sort by' }), {
-        target: { value: 'name' },
+      fireEvent.click(screen.getByRole('button', { name: 'Sort by name' }))
+      const pill = screen.getByRole('button', {
+        name: 'Sort by name, ascending',
       })
-      expect(screen.getByTestId('probe-sort')).toHaveTextContent('name asc')
-      const button = screen.getByRole('button', {
-        name: 'Sort direction: ascending',
-      })
-      expect(button).toBeEnabled()
-      expect(button).not.toHaveAttribute('aria-pressed')
+      expect(pill).toHaveAttribute('aria-pressed', 'true')
+      expect(pill).toHaveTextContent('Name ↑')
 
-      fireEvent.click(button)
-
+      fireEvent.click(pill)
       expect(screen.getByTestId('probe-sort')).toHaveTextContent('name desc')
+      const flipped = screen.getByRole('button', {
+        name: 'Sort by name, descending',
+      })
+      expect(flipped).toHaveTextContent('Name ↓')
+
+      fireEvent.click(flipped)
+      expect(screen.getByTestId('probe-sort')).toHaveTextContent('default')
       expect(
-        screen.getByRole('button', { name: 'Sort direction: descending' }),
-      ).toBeInTheDocument()
+        screen.getByRole('button', { name: 'Sort by name' }),
+      ).toHaveAttribute('aria-pressed', 'false')
+    })
+
+    it('moves the sort to another pill', async () => {
+      await renderShellAt('/upcoming')
+      fireEvent.click(screen.getByRole('button', { name: 'Sort by name' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Sort by date' }))
+      expect(screen.getByTestId('probe-sort')).toHaveTextContent('date desc')
+      expect(
+        screen.getByRole('button', { name: 'Sort by name' }),
+      ).toHaveAttribute('aria-pressed', 'false')
     })
 
     it('resets when the route changes, also when coming back', async () => {
       await renderShellAt('/upcoming')
-      fireEvent.change(screen.getByRole('combobox', { name: 'Sort by' }), {
-        target: { value: 'date' },
-      })
+      fireEvent.click(screen.getByRole('button', { name: 'Sort by date' }))
       expect(screen.getByTestId('probe-sort')).toHaveTextContent('date desc')
 
       fireEvent.click(screen.getByRole('link', { name: 'Discounted' }))
       expect(screen.getByTestId('probe-sort')).toHaveTextContent('default')
       expect(
-        screen.getByRole<HTMLSelectElement>('combobox', { name: 'Sort by' })
-          .value,
-      ).toBe('')
+        screen.getByRole('button', { name: 'Sort by date' }),
+      ).toHaveAttribute('aria-pressed', 'false')
 
       fireEvent.click(screen.getByRole('link', { name: 'Upcoming' }))
       expect(screen.getByTestId('probe-sort')).toHaveTextContent('default')
