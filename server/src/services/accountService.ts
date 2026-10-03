@@ -1,6 +1,6 @@
 import type { PageResult } from '@psstore/shared'
 import { Context, Effect, Layer, RcMap, Redacted } from 'effect'
-import { mapPurchasedToGames } from '../domain/library.js'
+import { mapPurchasedToGames, mapWishlistToGames } from '../domain/library.js'
 import type {
   SessionRejected,
   UpstreamQueryRotated,
@@ -31,6 +31,10 @@ export interface AccountServiceApi {
   readonly getPurchasedGames: (
     npsso: Redacted.Redacted,
   ) => Effect.Effect<PageResult, AccountError | UpstreamQueryRotated>
+  // The user's whole Sony wishlist as one response page.
+  readonly getWishlistGames: (
+    npsso: Redacted.Redacted,
+  ) => Effect.Effect<PageResult, AccountError | UpstreamQueryRotated>
 }
 
 export class AccountService extends Context.Service<
@@ -53,17 +57,23 @@ export const AccountServiceLive: Layer.Layer<
     // crawl so the shared entry never outlives the token hand-over.
     const exchange = (npsso: Redacted.Redacted) =>
       RcMap.get(exchanges, npsso).pipe(Effect.scoped)
+    const wholePage = (games: PageResult['games']): PageResult => ({
+      games,
+      totalCount: games.length,
+      nextOffset: null,
+    })
     return AccountService.of({
       verifyNpsso: (npsso) => logFailure(exchange(npsso)).pipe(Effect.asVoid),
       getPurchasedGames: (npsso) =>
         logFailure(
           Effect.flatMap(exchange(npsso), sony.fetchPurchasedGames),
         ).pipe(
-          Effect.map((entries): PageResult => {
-            const games = mapPurchasedToGames(entries)
-            return { games, totalCount: games.length, nextOffset: null }
-          }),
+          Effect.map((entries) => wholePage(mapPurchasedToGames(entries))),
         ),
+      getWishlistGames: (npsso) =>
+        logFailure(
+          Effect.flatMap(exchange(npsso), sony.fetchWishlistGames),
+        ).pipe(Effect.map((entries) => wholePage(mapWishlistToGames(entries)))),
     })
   }),
 )

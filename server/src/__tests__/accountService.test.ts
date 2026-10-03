@@ -21,6 +21,13 @@ const entry = {
   imageUrl: 'https://img.test/alpha.png',
 }
 
+const wishlistEntry = {
+  id: '10000002',
+  idKind: 'concept' as const,
+  name: 'Synthetic Wish',
+  imageUrl: 'https://img.test/wish.png',
+}
+
 const run = <A, E>(
   overrides: Partial<SonyAccountClientApi>,
   use: (service: AccountService['Service']) => Effect.Effect<A, E>,
@@ -32,6 +39,7 @@ const run = <A, E>(
       return Effect.succeed(Redacted.make('synthetic-token'))
     },
     fetchPurchasedGames: () => Effect.succeed([entry]),
+    fetchWishlistGames: () => Effect.succeed([wishlistEntry]),
     ...overrides,
   }
   const layer = AccountServiceLive.pipe(
@@ -84,6 +92,59 @@ describe('AccountService', () => {
       const result = await exit
       expect(Exit.isFailure(result)).toBe(true)
       expect(JSON.stringify(result)).toContain(failure._tag)
+    }
+  })
+
+  it('returns the whole wishlist as one page', async () => {
+    const { exit } = run({}, (service) => service.getWishlistGames(npsso))
+    const result = await exit
+    expect(Exit.isSuccess(result)).toBe(true)
+    if (Exit.isSuccess(result)) {
+      expect(result.value.totalCount).toBe(1)
+      expect(result.value.nextOffset).toBeNull()
+      expect(result.value.games[0]).toMatchObject({
+        id: '10000002',
+        idKind: 'concept',
+        name: 'Synthetic Wish',
+        price: '',
+      })
+    }
+  })
+
+  it('returns an empty page for an empty wishlist', async () => {
+    const { exit } = run(
+      { fetchWishlistGames: () => Effect.succeed([]) },
+      (service) => service.getWishlistGames(npsso),
+    )
+    const result = await exit
+    expect(Exit.isSuccess(result) && result.value.games).toEqual([])
+  })
+
+  it('passes each wishlist failure through and skips the call after a failed exchange', async () => {
+    const wishlist = vi.fn()
+    const { exit } = run(
+      {
+        exchangeNpsso: () =>
+          Effect.fail(new SessionRejected({ message: 'no' })),
+        fetchWishlistGames: () => {
+          wishlist()
+          return Effect.succeed([])
+        },
+      },
+      (service) => service.getWishlistGames(npsso),
+    )
+    expect(JSON.stringify(await exit)).toContain('SessionRejected')
+    expect(wishlist).not.toHaveBeenCalled()
+    for (const failure of [
+      new SessionRejected({ message: 'no' }),
+      new UpstreamRateLimited({ message: 'slow' }),
+      new UpstreamUnavailable({ message: 'down' }),
+    ]) {
+      const failed = run(
+        { fetchWishlistGames: () => Effect.fail(failure) },
+        (service) => service.getWishlistGames(npsso),
+      )
+      expect(JSON.stringify(await failed.exit)).toContain(failure._tag)
     }
   })
 
@@ -150,6 +211,7 @@ describe('AccountService in-flight sharing', () => {
         return exchangeFor(calls, value)
       },
       fetchPurchasedGames: fetchGames,
+      fetchWishlistGames: () => Effect.succeed([]),
     }
     const layer = AccountServiceLive.pipe(
       Layer.provide(Layer.succeed(SonyAccountClient, sony)),

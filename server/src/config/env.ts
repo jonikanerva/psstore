@@ -49,9 +49,14 @@ export const SONY_PURCHASED_PAGE_SIZE = 100
 // Hard cap on library pages per request. A library that needs more pages fails
 // the request instead of showing a truncated list.
 export const SONY_PURCHASED_MAX_PAGES = 20
-// Deadline for the whole sign-in exchange, and for the whole library crawl.
+export const SONY_WISHLIST_OPERATION_NAME = 'storeRetrieveWishlist'
+export const SONY_WISHLIST_HASH =
+  '1fa88dd6c70279e3d914f7ba535b2558a7e45821d030cb2a63a8e450963d12c3'
+// Deadline for the whole sign-in exchange, for the whole library crawl, and for
+// the single wishlist call.
 export const SONY_AUTH_DEADLINE_MS = 15000
 export const SONY_PURCHASED_DEADLINE_MS = 30000
+export const SONY_WISHLIST_DEADLINE_MS = 15000
 
 // Sign-in cookie. The value is the user's NPSSO; the cookie is HttpOnly.
 export const NPSSO_COOKIE_NAME = 'npsso'

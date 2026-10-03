@@ -17,6 +17,7 @@ import {
 import { AccountServiceLive } from '../services/accountService.js'
 import { GamesServiceLive } from '../services/gamesService.js'
 import type { PurchasedEntry } from '../sony/purchasedSchema.js'
+import type { WishlistEntry } from '../sony/wishlistSchema.js'
 import {
   SonyAccountClient,
   SonyClient,
@@ -78,9 +79,17 @@ const libraryEntry: PurchasedEntry = {
   imageUrl: 'https://img/library',
 }
 
+const wishlistEntry: WishlistEntry = {
+  id: '10000002',
+  idKind: 'concept',
+  name: 'Wishlist Game',
+  imageUrl: 'https://img/wishlist',
+}
+
 interface AccountFake {
   readonly exchange: ReturnType<typeof vi.fn>
   readonly library: ReturnType<typeof vi.fn>
+  readonly wishlist: ReturnType<typeof vi.fn>
   readonly logs: string[]
 }
 
@@ -96,6 +105,7 @@ const accountApp = (
   const logs: string[] = []
   const exchange = vi.fn()
   const library = vi.fn()
+  const wishlist = vi.fn()
   const sony: SonyAccountClientApi = {
     exchangeNpsso: (npsso) => {
       exchange(Redacted.value(npsso))
@@ -104,6 +114,10 @@ const accountApp = (
     fetchPurchasedGames: (token) => {
       library(Redacted.value(token))
       return Effect.succeed([libraryEntry])
+    },
+    fetchWishlistGames: (token) => {
+      wishlist(Redacted.value(token))
+      return Effect.succeed([wishlistEntry])
     },
     ...overrides,
   }
@@ -128,7 +142,7 @@ const accountApp = (
   return {
     handler: (req) => web.handler(req, Context.empty()),
     dispose: web.dispose,
-    fake: { exchange, library, logs },
+    fake: { exchange, library, wishlist, logs },
   }
 }
 
@@ -145,6 +159,7 @@ const AppLive = HttpApiBuilder.layer(gamesApi).pipe(
           Layer.succeed(SonyAccountClient, {
             exchangeNpsso: () => Effect.succeed(Redacted.make(ACCESS_TOKEN)),
             fetchPurchasedGames: () => Effect.succeed([libraryEntry]),
+            fetchWishlistGames: () => Effect.succeed([]),
           }),
         ),
       ),
@@ -191,6 +206,7 @@ const failHandler = (
                   ? Effect.succeed(Redacted.make(ACCESS_TOKEN))
                   : Effect.fail(error),
               fetchPurchasedGames: () => Effect.fail(error),
+              fetchWishlistGames: () => Effect.fail(error),
             }),
           ),
         ),
@@ -229,6 +245,7 @@ const fallbackHandler = (
             Layer.succeed(SonyAccountClient, {
               exchangeNpsso: () => Effect.succeed(Redacted.make(ACCESS_TOKEN)),
               fetchPurchasedGames: () => Effect.succeed([]),
+              fetchWishlistGames: () => Effect.succeed([]),
             }),
           ),
         ),
@@ -787,5 +804,140 @@ describe('purchased games API', () => {
     expect(spec.paths['/api/games/purchased']?.get).toBeDefined()
     expect(spec.paths['/api/session']?.post).toBeDefined()
     expect(spec.paths['/api/session']?.delete).toBeDefined()
+  })
+})
+
+const wishlist = (
+  app: { handler: (req: Request) => Promise<Response> },
+  cookie?: string,
+  method = 'GET',
+  path = '/api/games/wishlist',
+): Promise<Response> =>
+  app.handler(
+    new Request(`http://localhost${path}`, {
+      method,
+      headers: cookie === undefined ? {} : { cookie },
+    }),
+  )
+
+describe('wishlist API', () => {
+  it('answers 401 with no Sony call without a usable cookie', async () => {
+    const app = accountApp()
+    for (const cookie of [undefined, 'npsso=']) {
+      const response = await wishlist(app, cookie)
+      expect(response.status).toBe(401)
+    }
+    expect(app.fake.exchange).not.toHaveBeenCalled()
+    expect(app.fake.wishlist).not.toHaveBeenCalled()
+    await app.dispose()
+  })
+
+  it('returns the wishlist as one page for a signed-in user', async () => {
+    const app = accountApp()
+    const response = await wishlist(app, `npsso=${NPSSO}`)
+    expect(response.status).toBe(200)
+    expect(response.headers.getSetCookie()).toEqual([])
+    const body = (await response.json()) as {
+      games: { id: string; name: string; idKind: string }[]
+      totalCount: number
+      nextOffset: number | null
+    }
+    expect(body.totalCount).toBe(1)
+    expect(body.nextOffset).toBeNull()
+    expect(body.games[0]).toMatchObject({
+      id: '10000002',
+      name: 'Wishlist Game',
+      idKind: 'concept',
+    })
+    expect(app.fake.wishlist).toHaveBeenCalledWith(ACCESS_TOKEN)
+    expect(app.fake.library).not.toHaveBeenCalled()
+    await app.dispose()
+  })
+
+  it('answers an empty page for an empty wishlist', async () => {
+    const app = accountApp({ fetchWishlistGames: () => Effect.succeed([]) })
+    const response = await wishlist(app, `npsso=${NPSSO}`)
+    expect(response.status).toBe(200)
+    expect(await response.json()).toMatchObject({ games: [], totalCount: 0 })
+    await app.dispose()
+  })
+
+  it('expires the cookie only when Sony rejects the credential', async () => {
+    const rejected = accountApp({
+      fetchWishlistGames: () =>
+        Effect.fail(new SessionRejected({ message: 'no' })),
+    })
+    const response = await wishlist(rejected, `npsso=${NPSSO}`)
+    expect(response.status).toBe(401)
+    expect(response.headers.getSetCookie()).toHaveLength(1)
+    await rejected.dispose()
+
+    const cases: [Partial<SonyAccountClientApi>, number][] = [
+      [
+        {
+          fetchWishlistGames: () =>
+            Effect.fail(new UpstreamUnavailable({ message: 'x' })),
+        },
+        502,
+      ],
+      [
+        {
+          fetchWishlistGames: () =>
+            Effect.fail(new UpstreamRateLimited({ message: 'x' })),
+        },
+        503,
+      ],
+      [
+        {
+          fetchWishlistGames: () =>
+            Effect.fail(
+              new UpstreamQueryRotated({ message: 'x', operationName: 'op' }),
+            ),
+        },
+        502,
+      ],
+    ]
+    for (const [overrides, status] of cases) {
+      const app = accountApp(overrides)
+      const failed = await wishlist(app, `npsso=${NPSSO}`)
+      expect(failed.status).toBe(status)
+      expect(failed.headers.getSetCookie()).toEqual([])
+      await app.dispose()
+    }
+  })
+
+  it('is read-only: only GET is routed and the spec lists only GET', async () => {
+    const app = accountApp()
+    for (const method of ['POST', 'PUT', 'PATCH', 'DELETE']) {
+      const response = await wishlist(app, `npsso=${NPSSO}`, method)
+      expect(response.status, method).toBeGreaterThanOrEqual(400)
+      expect(response.status, method).not.toBe(401)
+    }
+    expect(app.fake.wishlist).not.toHaveBeenCalled()
+    await app.dispose()
+    const operations = OpenApi.fromApi(gamesApi).paths['/api/games/wishlist']
+    expect(operations?.get).toBeDefined()
+    expect(Object.keys(operations ?? {})).toEqual(['get'])
+  })
+
+  it('does not read /wishlist as a game id', async () => {
+    const app = accountApp()
+    const response = await wishlist(app)
+    expect(response.status).toBe(401)
+    await app.dispose()
+  })
+
+  it('never logs the NPSSO or the access token', async () => {
+    const app = accountApp({
+      fetchWishlistGames: () =>
+        Effect.fail(new UpstreamUnavailable({ message: 'x' })),
+    })
+    await wishlist(app, `npsso=${NPSSO}`)
+    expect(app.fake.logs.length).toBeGreaterThan(0)
+    for (const line of app.fake.logs) {
+      expect(line).not.toContain(NPSSO)
+      expect(line).not.toContain(ACCESS_TOKEN)
+    }
+    await app.dispose()
   })
 })
