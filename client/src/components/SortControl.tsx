@@ -1,57 +1,66 @@
+import { useId } from 'react'
 import type { GameSort, SortField } from '@psstore/shared'
 import { SORT_FIELD_LABELS } from '../modules/sortFields'
 
 interface SortControlProps {
   fields: readonly SortField[]
-  sort: GameSort | null
-  onFieldChange: (field: SortField | null) => void
-  onToggleDirection: () => void
+  // The sort in effect, which is the route default until the user picks one.
+  active: GameSort
+  onFieldClick: (field: SortField) => void
+  onReset: () => void
 }
 
-const isSortField = (
-  value: string,
-  fields: readonly SortField[],
-): value is SortField => fields.some((field) => field === value)
-
+// Exactly one field pill is active and shows its direction. Reset is an
+// action, not a state: it restores the route default and stays enabled.
 const SortControl = ({
   fields,
-  sort,
-  onFieldChange,
-  onToggleDirection,
+  active,
+  onFieldClick,
+  onReset,
 }: SortControlProps) => {
-  const directionName =
-    sort === null
-      ? 'Sort direction'
-      : `Sort direction: ${sort.direction === 'asc' ? 'ascending' : 'descending'}`
-  const glyph = sort === null ? '↕' : sort.direction === 'asc' ? '↑' : '↓'
-
+  const labelId = useId()
   return (
-    <div className="sort-control">
-      <select
-        aria-label="Sort by"
-        className="sort-control--select"
-        value={sort?.field ?? ''}
-        onChange={(event) => {
-          const value = event.currentTarget.value
-          onFieldChange(isSortField(value, fields) ? value : null)
-        }}
-      >
-        <option value="">Default</option>
-        {fields.map((field) => (
-          <option key={field} value={field}>
-            {SORT_FIELD_LABELS[field]}
-          </option>
-        ))}
-      </select>
+    <div role="group" aria-labelledby={labelId} className="sort-bar">
+      <span id={labelId} className="sort-bar--label">
+        Sort:
+      </span>
       <button
         type="button"
-        className="sort-control--direction"
-        aria-label={directionName}
-        disabled={sort === null}
-        onClick={onToggleDirection}
+        className="sort-bar--pill"
+        aria-label="Reset sort to the default order"
+        onClick={onReset}
       >
-        <span aria-hidden="true">{glyph}</span>
+        Reset
       </button>
+      {fields.map((field) => {
+        const label = SORT_FIELD_LABELS[field]
+        const isActive = active.field === field
+        return (
+          <button
+            key={field}
+            type="button"
+            className={
+              isActive ? 'sort-bar--pill sort-bar--active' : 'sort-bar--pill'
+            }
+            aria-pressed={isActive}
+            aria-label={
+              isActive
+                ? `Sort by ${label.toLowerCase()}, ${active.direction === 'asc' ? 'ascending' : 'descending'}`
+                : `Sort by ${label.toLowerCase()}`
+            }
+            onClick={() => {
+              onFieldClick(field)
+            }}
+          >
+            {label}
+            {isActive && (
+              <span aria-hidden="true">
+                {active.direction === 'asc' ? ' ↑' : ' ↓'}
+              </span>
+            )}
+          </button>
+        )
+      })}
     </div>
   )
 }

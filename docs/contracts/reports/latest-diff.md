@@ -7,7 +7,7 @@
 
 ## Signed-in operations
 - purchased: observed 200
-- wishlist: unobserved (owner probe pending)
+- wishlist: observed 200
 
 ## Impacted API Routes
 - /api/games/new

@@ -119,9 +119,7 @@ const cardNames = (): (string | null)[] =>
   )
 
 const pickName = () => {
-  fireEvent.change(screen.getByRole('combobox', { name: 'Sort by' }), {
-    target: { value: 'name' },
-  })
+  fireEvent.click(screen.getByRole('button', { name: 'Sort by name' }))
 }
 
 describe('sorting a paged view', () => {
@@ -163,6 +161,78 @@ describe('sorting a paged view', () => {
     await renderApp()
     expect(await screen.findByText('Charlie')).toBeInTheDocument()
     expect(fetchNewGames).toHaveBeenCalledTimes(1)
+  })
+
+  it('loads every page when the default field flips direction', async () => {
+    vi.mocked(fetchNewGames)
+      .mockResolvedValueOnce(
+        page([game('1', 'Charlie', '2025-01-01T00:00:00Z')], 60),
+      )
+      .mockResolvedValueOnce(
+        page([game('2', 'Alpha', '2026-01-01T00:00:00Z')], null),
+      )
+    await renderApp()
+    expect(await screen.findByText('Charlie')).toBeInTheDocument()
+    expect(fetchNewGames).toHaveBeenCalledTimes(1)
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Sort by date, descending' }),
+    )
+
+    await waitFor(() => {
+      expect(cardNames()).toEqual(['Charlie', 'Alpha'])
+    })
+    expect(fetchNewGames).toHaveBeenCalledTimes(2)
+  })
+
+  it('keeps the server order and loads nothing when Reset is chosen', async () => {
+    vi.mocked(fetchNewGames).mockResolvedValueOnce(
+      page(
+        [
+          game('1', 'Charlie', '2025-01-01T00:00:00Z'),
+          game('2', 'Alpha', '2026-01-01T00:00:00Z'),
+        ],
+        null,
+      ),
+    )
+    await renderApp()
+    expect(await screen.findByText('Charlie')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sort by name' }))
+    await waitFor(() => {
+      expect(cardNames()).toEqual(['Alpha', 'Charlie'])
+    })
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Reset sort to the default order' }),
+    )
+    expect(cardNames()).toEqual(['Charlie', 'Alpha'])
+    expect(fetchNewGames).toHaveBeenCalledTimes(1)
+  })
+
+  it('stops loading when Reset is chosen while pages are loading', async () => {
+    const second = deferred()
+    vi.mocked(fetchNewGames)
+      .mockResolvedValueOnce(page([game('1', 'Charlie')], 60))
+      .mockReturnValueOnce(second.promise)
+      .mockResolvedValue(page([game('3', 'Bravo')], null))
+    await renderApp()
+    expect(await screen.findByText('Charlie')).toBeInTheDocument()
+
+    pickName()
+    await waitFor(() => {
+      expect(fetchNewGames).toHaveBeenCalledTimes(2)
+    })
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Reset sort to the default order' }),
+    )
+    await act(async () => {
+      second.resolve(page([game('2', 'Alpha')], 120))
+      await Promise.resolve()
+    })
+
+    expect(fetchNewGames).toHaveBeenCalledTimes(2)
+    expect(await screen.findByText('Charlie')).toBeInTheDocument()
   })
 
   it('shows the error state when a page fails, never a partial list', async () => {

@@ -16,7 +16,7 @@ import { wishlistQueryOptions } from '../modules/wishlistQuery'
 import { usePrefetchTabs } from '../modules/usePrefetchTabs'
 import { SearchContext } from '../modules/searchContext'
 import { SortContext } from '../modules/sortContext'
-import { sortFieldsForPath } from '../modules/sortFields'
+import { isSameSort, sortConfigForPath } from '../modules/sortFields'
 import {
   normalizeSearchTerm,
   readSearchTerm,
@@ -60,18 +60,22 @@ const AppShell = () => {
     [pathname],
   )
 
-  // A sort needs every page, so picking one loads the remaining pages of the
-  // open view. Nothing loads while the sort is idle.
-  const changeField = (field: SortField | null) => {
+  const sortConfig = sortConfigForPath(pathname)
+
+  // `null` is the route default of a server-ordered view: the server order,
+  // with no pages loaded on purpose. Any other sort needs every page, so
+  // choosing one loads the remaining pages of the open view. A view that is not
+  // server-ordered keeps its default as an applied sort.
+  const applySort = (next: GameSort) => {
     loadRef.current?.abort()
-    if (field === null) {
+    if (sortConfig === undefined) {
+      return
+    }
+    if (isSameSort(next, sortConfig.defaultSort)) {
       setSortState({ pathname, sort: null })
       return
     }
-    setSortState({
-      pathname,
-      sort: { field, direction: NATURAL_DIRECTION[field] },
-    })
+    setSortState({ pathname, sort: next })
     const target = gamesFeatureForPath(pathname)
     if (target !== undefined) {
       const controller = new AbortController()
@@ -84,15 +88,26 @@ const AppShell = () => {
     }
   }
 
-  const toggleDirection = () => {
-    if (sort !== null) {
-      setSortState({
-        pathname,
-        sort: {
-          field: sort.field,
-          direction: sort.direction === 'asc' ? 'desc' : 'asc',
-        },
-      })
+  const activeSort = sort ?? sortConfig?.defaultSort
+  const appliedSort = sortConfig?.serverOrdered === false ? activeSort : sort
+
+  const clickField = (field: SortField) => {
+    if (activeSort === undefined) {
+      return
+    }
+    applySort(
+      activeSort.field === field
+        ? {
+            field,
+            direction: activeSort.direction === 'asc' ? 'desc' : 'asc',
+          }
+        : { field, direction: NATURAL_DIRECTION[field] },
+    )
+  }
+
+  const resetSort = () => {
+    if (sortConfig !== undefined) {
+      applySort(sortConfig.defaultSort)
     }
   }
 
@@ -104,7 +119,8 @@ const AppShell = () => {
   const searchDisabled =
     (pathname === '/purchased' && library.data === undefined) ||
     (pathname === '/wishlist' && wishlist.data === undefined)
-  const sortFields = searchDisabled ? [] : sortFieldsForPath(pathname)
+  const showSortBar =
+    !searchDisabled && sortConfig !== undefined && activeSort !== undefined
 
   // Outside the search route the field filters the current view and clears
   // with the route. On the search route the URL term seeds the field, and
@@ -123,14 +139,6 @@ const AppShell = () => {
         <div className="app-shell--tools">
           {(library.data !== undefined || wishlist.data !== undefined) && (
             <SignOut onSignOut={stopSignedInPrefetch} />
-          )}
-          {sortFields.length > 0 && (
-            <SortControl
-              fields={sortFields}
-              sort={sort}
-              onFieldChange={changeField}
-              onToggleDirection={toggleDirection}
-            />
           )}
           <form
             role="search"
@@ -163,9 +171,17 @@ const AppShell = () => {
           </form>
         </div>
       </header>
+      {showSortBar && (
+        <SortControl
+          fields={sortConfig.fields}
+          active={activeSort}
+          onFieldClick={clickField}
+          onReset={resetSort}
+        />
+      )}
       <main className="app-shell--main">
         <SearchContext.Provider value={onSearchRoute ? '' : query}>
-          <SortContext.Provider value={sort}>
+          <SortContext.Provider value={appliedSort ?? null}>
             <Outlet />
           </SortContext.Provider>
         </SearchContext.Provider>
