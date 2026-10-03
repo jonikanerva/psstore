@@ -1,7 +1,7 @@
 import * as NodeHttpServer from '@effect/platform-node/NodeHttpServer'
 import * as NodeRuntime from '@effect/platform-node/NodeRuntime'
-import { Effect, FileSystem, Layer } from 'effect'
-import { HttpRouter, HttpServerResponse } from 'effect/http'
+import { Layer } from 'effect'
+import { HttpRouter, HttpServerResponse, HttpStaticServer } from 'effect/http'
 import { HttpApiBuilder } from 'effect/http-api'
 import { createServer } from 'node:http'
 import path from 'node:path'
@@ -18,13 +18,11 @@ import { SonyAccountClientLive, SonyClientLive } from '../sony/sonyClient.js'
 
 // The HTTP composition root and the third (and last) module permitted to import
 // `effect/http` and `effect/http-api`. It mounts the typed games API, a health
-// probe, and — in production — the built SPA with a deep-link fallback to
-// index.html. `@effect/platform-node` is imported by subpath: its package root
-// re-exports a Redis module that needs the optional `redis` peer.
+// probe, and the built SPA. `@effect/platform-node` is imported by subpath: its
+// package root re-exports a Redis module that needs the optional `redis` peer.
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
 const clientBuildPath = path.resolve(dirname, '../../../client/build')
-const indexHtmlPath = path.join(clientBuildPath, 'index.html')
 
 // Service graph for the games API handlers.
 const ServicesLive = Layer.mergeAll(
@@ -46,25 +44,25 @@ const HealthRoute = HttpRouter.add(
   HttpServerResponse.json({ ok: true }),
 )
 
-// SPA deep-link fallback: any unmatched GET serves the built index.html so a
-// client-side route (e.g. /g/:id) reloads correctly. Missing build (dev) → 404.
-const SpaFallbackRoute = HttpRouter.add(
-  'GET',
-  '/*',
-  Effect.gen(function* () {
-    const fs = yield* FileSystem.FileSystem
-    const exists = yield* fs.exists(indexHtmlPath)
-    if (!exists) {
-      return HttpServerResponse.empty({ status: 404 })
-    }
-    const html = yield* fs.readFileString(indexHtmlPath)
-    return HttpServerResponse.html(html)
-  }).pipe(
-    Effect.orElseSucceed(() => HttpServerResponse.empty({ status: 404 })),
-  ),
-)
+// Hashed bundles live under /assets; an unknown file there is a 404, never
+// index.html. The root layer serves index.html, favicon.png, and SPA deep links.
+// Deep links get index.html only for an extensionless path whose Accept header
+// includes text/html. `no-cache` keeps index.html from pointing at deleted
+// bundles after a deploy. A missing build directory yields 404 for every path.
+export const staticRoutes = (root: string) =>
+  Layer.mergeAll(
+    HttpStaticServer.layer({
+      root: path.join(root, 'assets'),
+      prefix: '/assets',
+    }),
+    HttpStaticServer.layer({ root, spa: true, cacheControl: 'no-cache' }),
+  )
 
-const AllRoutes = Layer.mergeAll(ApiRoutes, HealthRoute, SpaFallbackRoute)
+const AllRoutes = Layer.mergeAll(
+  ApiRoutes,
+  HealthRoute,
+  staticRoutes(clientBuildPath),
+)
 
 // PORT is read here at the composition root (the imperative shell). Default 3000.
 const port = Number.parseInt(process.env['PORT'] ?? '3000', 10) || 3000
