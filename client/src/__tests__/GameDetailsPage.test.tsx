@@ -1,4 +1,4 @@
-import { onlineManager } from '@tanstack/react-query'
+import { onlineManager, QueryClient } from '@tanstack/react-query'
 import { act, cleanup, screen, waitFor } from '@testing-library/react'
 import { Settings } from 'luxon'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -65,7 +65,7 @@ describe('GameDetailsPage', () => {
     await renderWithRouter(<GameDetailsPage gameId={baseGame.id} />)
 
     await waitFor(() => {
-      expect(screen.getByText('Description')).toBeInTheDocument()
+      expect(screen.getByText('A great game')).toBeInTheDocument()
     })
   })
 
@@ -79,7 +79,7 @@ describe('GameDetailsPage', () => {
       expect(screen.getByText('Detail Game')).toBeInTheDocument()
     })
 
-    expect(screen.queryByText('Description')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Description')).not.toBeInTheDocument()
   })
 
   it('renders media section only when screenshots or videos exist', async () => {
@@ -96,7 +96,7 @@ describe('GameDetailsPage', () => {
       expect(screen.getByText('Detail Game')).toBeInTheDocument()
     })
 
-    expect(screen.queryByText('Media')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Media')).not.toBeInTheDocument()
   })
 
   it('shows error state on fetch failure', async () => {
@@ -279,7 +279,7 @@ describe('GameDetailsPage', () => {
     expect(screen.queryByText(/You are offline/)).not.toBeInTheDocument()
   })
 
-  it('shows the spinner, not the offline state, while an online fetch is pending', async () => {
+  it('shows the skeleton, not the offline state, while an online fetch is pending', async () => {
     const { fetchGame } = await import('../modules/psnStore')
     vi.mocked(fetchGame).mockReturnValue(new Promise(() => undefined))
 
@@ -287,7 +287,34 @@ describe('GameDetailsPage', () => {
       <GameDetailsPage gameId={baseGame.id} />,
     )
 
-    expect(container.querySelector('.spinner')).not.toBeNull()
+    expect(container.querySelector('.skeleton')).not.toBeNull()
     expect(screen.queryByText(/You are offline/)).not.toBeInTheDocument()
+  })
+
+  it('paints a game from the list cache before its own request finishes', async () => {
+    const { fetchGame } = await import('../modules/psnStore')
+    vi.mocked(fetchGame).mockReturnValue(new Promise(() => undefined))
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: 0 } },
+    })
+    queryClient.setQueryData(['games', 'new'], {
+      pages: [
+        {
+          games: [{ ...baseGame, description: '', genres: [], studio: '' }],
+          totalCount: 1,
+          nextOffset: null,
+        },
+      ],
+      pageParams: [0],
+    })
+
+    await renderWithRouter(
+      <GameDetailsPage gameId={baseGame.id} />,
+      queryClient,
+    )
+
+    expect(screen.getByText('Detail Game')).toBeInTheDocument()
+    expect(screen.getByText(/49,99 €/)).toBeInTheDocument()
+    expect(screen.queryByLabelText('Description')).not.toBeInTheDocument()
   })
 })
