@@ -1,9 +1,21 @@
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
-import { useQuery } from '@tanstack/react-query'
-import { useEffect, useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useEffect, useRef, useState } from 'react'
+import {
+  NATURAL_DIRECTION,
+  type GameSort,
+  type SortField,
+} from '@psstore/shared'
+import {
+  gamesFeatureForPath,
+  gamesQueryOptions,
+  loadAllPages,
+} from '../modules/gamesQuery'
 import { purchasedQueryOptions } from '../modules/purchasedQuery'
 import { wishlistQueryOptions } from '../modules/wishlistQuery'
 import { SearchContext } from '../modules/searchContext'
+import { SortContext } from '../modules/sortContext'
+import { isSameSort, sortConfigForPath } from '../modules/sortFields'
 import {
   normalizeSearchTerm,
   readSearchTerm,
@@ -11,6 +23,7 @@ import {
 } from '../modules/searchTerm'
 import Navigation from './Navigation'
 import SignOut from './SignOut'
+import SortControl from './SortControl'
 
 const SEARCH_PATH = '/search'
 
@@ -24,6 +37,77 @@ const AppShell = () => {
     select: (state) => readSearchTerm(state.location.search),
   })
   const onSearchRoute = pathname === SEARCH_PATH
+  const queryClient = useQueryClient()
+
+  // The sort belongs to the route it was chosen on: arriving on another
+  // pathname drops it.
+  const [sortState, setSortState] = useState<{
+    pathname: string
+    sort: GameSort | null
+  }>({ pathname, sort: null })
+  if (sortState.pathname !== pathname) {
+    setSortState({ pathname, sort: null })
+  }
+  const sort = sortState.pathname === pathname ? sortState.sort : null
+  const loadRef = useRef<AbortController | null>(null)
+
+  useEffect(
+    () => () => {
+      loadRef.current?.abort()
+    },
+    [pathname],
+  )
+
+  const sortConfig = sortConfigForPath(pathname)
+
+  // `null` is the route default of a server-ordered view: the server order,
+  // with no pages loaded on purpose. Any other sort needs every page, so
+  // choosing one loads the remaining pages of the open view. A view that is not
+  // server-ordered keeps its default as an applied sort.
+  const applySort = (next: GameSort) => {
+    loadRef.current?.abort()
+    if (sortConfig === undefined) {
+      return
+    }
+    if (isSameSort(next, sortConfig.defaultSort)) {
+      setSortState({ pathname, sort: null })
+      return
+    }
+    setSortState({ pathname, sort: next })
+    const target = gamesFeatureForPath(pathname)
+    if (target !== undefined) {
+      const controller = new AbortController()
+      loadRef.current = controller
+      void loadAllPages(
+        queryClient,
+        gamesQueryOptions(target.feature, target.fetch),
+        controller.signal,
+      )
+    }
+  }
+
+  const activeSort = sort ?? sortConfig?.defaultSort
+  const appliedSort = sortConfig?.serverOrdered === false ? activeSort : sort
+
+  const clickField = (field: SortField) => {
+    if (activeSort === undefined) {
+      return
+    }
+    applySort(
+      activeSort.field === field
+        ? {
+            field,
+            direction: activeSort.direction === 'asc' ? 'desc' : 'asc',
+          }
+        : { field, direction: NATURAL_DIRECTION[field] },
+    )
+  }
+
+  const resetSort = () => {
+    if (sortConfig !== undefined) {
+      applySort(sortConfig.defaultSort)
+    }
+  }
 
   // A signed-in search has nothing to filter until its list exists, and Sign
   // out shows while either list does. `enabled: false` observes the shared
@@ -33,6 +117,8 @@ const AppShell = () => {
   const searchDisabled =
     (pathname === '/purchased' && library.data === undefined) ||
     (pathname === '/wishlist' && wishlist.data === undefined)
+  const showSortBar =
+    !searchDisabled && sortConfig !== undefined && activeSort !== undefined
 
   // Outside the search route the field filters the current view and clears
   // with the route. On the search route the URL term seeds the field, and
@@ -83,9 +169,19 @@ const AppShell = () => {
           </form>
         </div>
       </header>
+      {showSortBar && (
+        <SortControl
+          fields={sortConfig.fields}
+          active={activeSort}
+          onFieldClick={clickField}
+          onReset={resetSort}
+        />
+      )}
       <main className="app-shell--main">
         <SearchContext.Provider value={onSearchRoute ? '' : query}>
-          <Outlet />
+          <SortContext.Provider value={appliedSort ?? null}>
+            <Outlet />
+          </SortContext.Provider>
         </SearchContext.Provider>
       </main>
     </div>

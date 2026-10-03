@@ -92,11 +92,11 @@ describe('AppShell global search', () => {
   it('keeps the header unchanged while typing and searching', async () => {
     await renderAt('/new')
     const header = screen.getByRole('banner')
-    const before = header.innerHTML.replace(/value="[^"]*"/, '')
+    const before = header.innerHTML.replace(/value="[^"]*"/g, '')
 
     type('elden')
 
-    expect(header.innerHTML.replace(/value="[^"]*"/, '')).toBe(before)
+    expect(header.innerHTML.replace(/value="[^"]*"/g, '')).toBe(before)
     expect(screen.queryByRole('link', { name: /Search all/ })).toBeNull()
     expect(screen.getByTestId('filter')).toHaveTextContent('elden')
   })

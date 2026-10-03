@@ -172,6 +172,45 @@ describe('Purchased', () => {
     }
   })
 
+  it('sorts the library by name in both directions', async () => {
+    stubFetch(() =>
+      Response.json(
+        library([
+          game('10000001', 'Charlie', 'concept'),
+          game('10000002', 'alpha', 'concept'),
+          game('10000003', 'Bravo', 'concept'),
+        ]),
+      ),
+    )
+    await renderPurchased()
+    await screen.findByText('Charlie')
+    const names = () =>
+      screen
+        .getAllByRole('link')
+        .map((link) => link.textContent)
+        .filter((text) => ['Charlie', 'alpha', 'Bravo'].includes(text))
+    expect(names()).toEqual(['alpha', 'Bravo', 'Charlie'])
+
+    expect(
+      within(screen.getByRole('group', { name: 'Sort:' }))
+        .getAllByRole('button')
+        .map((button) => button.textContent),
+    ).toEqual(['Reset', 'Name ↑'])
+    expect(
+      screen.queryByRole('button', { name: /Sort by date/ }),
+    ).not.toBeInTheDocument()
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Sort by name, ascending' }),
+    )
+    expect(names()).toEqual(['Charlie', 'Bravo', 'alpha'])
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Reset sort to the default order' }),
+    )
+    expect(names()).toEqual(['alpha', 'Bravo', 'Charlie'])
+  })
+
   it('posts the token, clears the field and loads the library', async () => {
     let signedIn = false
     const mock = stubFetch((url, init) => {

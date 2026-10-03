@@ -705,3 +705,44 @@ body {
   align-items: center;
   gap: 8px;
 }
+
+.sort-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--surface-color);
+}
+
+.sort-bar--label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted-text-color);
+}
+
+.sort-bar--pill {
+  min-height: 24px;
+  padding: 0 10px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted-text-color);
+  background: var(--button-color);
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.sort-bar--active {
+  color: #fff;
+  background: var(--text-color);
+  border-color: var(--text-color);
+}
+
+.sort-bar--pill:focus-visible {
+  outline: 2px solid var(--focus-color);
+  outline-offset: 1px;
+}

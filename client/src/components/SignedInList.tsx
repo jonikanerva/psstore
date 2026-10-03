@@ -1,7 +1,8 @@
-import { filterGamesByName } from '@psstore/shared'
+import { filterGamesByName, sortGames } from '@psstore/shared'
 import { useQuery } from '@tanstack/react-query'
 import type { signedInQueryOptions } from '../modules/signedInQuery'
 import { useSearchQuery } from '../modules/searchContext'
+import { useSort } from '../modules/sortContext'
 import { normalizeSearchTerm } from '../modules/searchTerm'
 import { HttpError } from '../modules/psnStore'
 import Error from './Error'
@@ -29,6 +30,7 @@ const SignedInList = ({
   showPrice,
 }: SignedInListProps) => {
   const search = useSearchQuery()
+  const sort = useSort()
   const { data, isPending, isError, error, fetchStatus, refetch } =
     useQuery(query)
   if (isPending) {
@@ -56,6 +58,7 @@ const SignedInList = ({
   }
 
   const filtered = filterGamesByName(data.games, search)
+  const ordered = sort === null ? filtered : sortGames(filtered, sort)
 
   const term = normalizeSearchTerm(search)
 
@@ -65,7 +68,7 @@ const SignedInList = ({
 
   return (
     <GameGrid
-      games={filtered}
+      games={ordered}
       label={label}
       showPrice={showPrice}
       internalLink
