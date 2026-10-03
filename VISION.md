@@ -19,7 +19,7 @@ Let a Finnish PS5 owner find new, upcoming, discounted, monthly PS Plus, purchas
 
 1. The site opens on NEW: PS5 games, newest release first.
 2. Six views: NEW, UPCOMING, DISCOUNTED, MONTHLY, WISHLIST, PURCHASED. WISHLIST and PURCHASED show the signed-in user's own Sony data, read-only. One search field filters the current view by name. The same field can also search all PS5 games in the Finnish store. The result opens as a list of game cards.
-3. A game card opens the game page: artwork, description, details, both prices, one critic score when a trusted one exists, and a link to buy in Sony's store. The critic score is plain text next to the details. It is absent when there is no trusted score.
+3. A game card opens the game page: artwork, description, details, both prices, one critic score when a trusted one exists, and a link to buy in Sony's store. The critic score sits in a box in the price row, labelled "IGDB score". It is absent when there is no trusted score.
 
 ## Non-Goals
 

@@ -64,20 +64,27 @@ describe('GameDetailsPage', () => {
     expect(screen.getByText(/RPG Studio/)).toBeInTheDocument()
   })
 
-  it('shows the critic score as text with an accessible name', async () => {
+  it('shows the critic score in a price-style box with an accessible name', async () => {
     const { fetchGame } = await import('../modules/psnStore')
     vi.mocked(fetchGame).mockResolvedValue({ ...baseGame, criticScore: 84 })
 
     await renderWithRouter(<GameDetailsPage gameId={baseGame.id} />)
 
     await waitFor(() => {
-      expect(screen.getByText('Critics')).toBeInTheDocument()
+      expect(screen.getByText('IGDB score 84 out of 100')).toBeInTheDocument()
     })
-    expect(screen.getByText('Critic score 84 out of 100')).toBeInTheDocument()
-    expect(screen.getByText('84')).toBeInTheDocument()
+    const box = screen.getByText('IGDB score 84 out of 100').parentElement
+    expect(box).toHaveClass('details-page--price')
+    expect(box?.querySelector('.details-page--price-label')).toHaveTextContent(
+      'IGDB score',
+    )
+    expect(box?.querySelector('.details-page--price-value')).toHaveTextContent(
+      '84',
+    )
+    expect(box?.querySelector('a, button')).toBeNull()
   })
 
-  it('shows nothing about critics when there is no score', async () => {
+  it('shows no score box when there is no score', async () => {
     const { fetchGame } = await import('../modules/psnStore')
     vi.mocked(fetchGame).mockResolvedValue(baseGame)
 
@@ -86,7 +93,7 @@ describe('GameDetailsPage', () => {
     await waitFor(() => {
       expect(screen.getByText('Detail Game')).toBeInTheDocument()
     })
-    expect(screen.queryByText(/critic/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/igdb|critic/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/metacritic/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/N\/A/)).not.toBeInTheDocument()
   })

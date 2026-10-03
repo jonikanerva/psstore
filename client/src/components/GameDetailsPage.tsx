@@ -205,17 +205,6 @@ const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
                     <dd>{game.genres.join(', ')}</dd>
                   </div>
                 )}
-                {criticScore !== null && (
-                  <div>
-                    <dt>Critics</dt>
-                    <dd>
-                      <span aria-hidden="true">{criticScore}</span>
-                      <span className="sr-only">
-                        Critic score {criticScore} out of 100
-                      </span>
-                    </dd>
-                  </div>
-                )}
               </>
             )}
           </dl>
@@ -234,6 +223,20 @@ const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
               <div className="details-page--price">
                 <span className="details-page--price-label">PS Plus</span>
                 <span className="details-page--price-value">{plusValue}</span>
+              </div>
+            )}
+
+            {!isPlaceholderData && criticScore !== null && (
+              <div className="details-page--price">
+                <span className="details-page--price-label" aria-hidden="true">
+                  IGDB score
+                </span>
+                <span className="details-page--price-value" aria-hidden="true">
+                  {criticScore}
+                </span>
+                <span className="sr-only">
+                  IGDB score {criticScore} out of 100
+                </span>
               </div>
             )}
 
