@@ -1,3 +1,4 @@
+import { QueryClient, dehydrate } from '@tanstack/react-query'
 import { describe, expect, it } from 'vitest'
 import { shouldDehydrateQuery } from '../modules/persistence'
 
@@ -14,5 +15,21 @@ describe('shouldDehydrateQuery', () => {
     expect(persists(['purchased'])).toBe(false)
     expect(persists(['search', 'zelda'])).toBe(false)
     expect(persists([])).toBe(false)
+  })
+})
+
+describe('a fully loaded games query', () => {
+  it('dehydrates as one entry with every page', () => {
+    const client = new QueryClient()
+    client.setQueryData(['games', 'new'], {
+      pages: [
+        { games: [], totalCount: 2, nextOffset: 60 },
+        { games: [], totalCount: 2, nextOffset: null },
+      ],
+      pageParams: [0, 60],
+    })
+    const state = dehydrate(client, { shouldDehydrateQuery })
+    expect(state.queries).toHaveLength(1)
+    expect(state.queries[0]?.queryKey).toEqual(['games', 'new'])
   })
 })

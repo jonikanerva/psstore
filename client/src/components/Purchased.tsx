@@ -1,6 +1,7 @@
-import { filterGamesByName } from '@psstore/shared'
+import { filterGamesByName, sortGames } from '@psstore/shared'
 import { useQuery } from '@tanstack/react-query'
 import { useSearchQuery } from '../modules/searchContext'
+import { useSort } from '../modules/sortContext'
 import { normalizeSearchTerm } from '../modules/searchTerm'
 import { purchasedQueryOptions } from '../modules/purchasedQuery'
 import { HttpError } from '../modules/psnStore'
@@ -13,6 +14,7 @@ import Spinner from './Spinner'
 
 const Purchased = () => {
   const search = useSearchQuery()
+  const sort = useSort()
   const { data, isPending, isError, error, fetchStatus, refetch } = useQuery(
     purchasedQueryOptions,
   )
@@ -41,6 +43,7 @@ const Purchased = () => {
   }
 
   const filtered = filterGamesByName(data.games, search)
+  const ordered = sort === null ? filtered : sortGames(filtered, sort)
 
   const term = normalizeSearchTerm(search)
 
@@ -50,7 +53,7 @@ const Purchased = () => {
 
   return (
     <GameGrid
-      games={filtered}
+      games={ordered}
       label="purchased"
       showPrice={false}
       trailing={term === '' ? null : <SearchAllCard term={term} />}

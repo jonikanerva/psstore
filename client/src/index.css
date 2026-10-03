@@ -56,7 +56,8 @@ body {
 
 .app-shell--tools {
   display: flex;
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: 8px 12px;
   align-items: center;
   justify-self: end;
 }
@@ -166,7 +167,7 @@ body {
   }
 
   .app-shell--search-form {
-    flex: 1;
+    flex: 1 1 160px;
     width: auto;
   }
 }
@@ -704,4 +705,44 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 8px;
+}
+
+.sort-control {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.sort-control--select,
+.sort-control--direction {
+  min-height: 32px;
+  font: inherit;
+  font-size: 14px;
+  color: inherit;
+  background: var(--button-color);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+}
+
+.sort-control--select {
+  min-width: 0;
+  max-width: 100%;
+  padding: 4px 6px;
+}
+
+.sort-control--direction {
+  min-width: 32px;
+  padding: 0 8px;
+  cursor: pointer;
+}
+
+.sort-control--direction:disabled {
+  color: var(--muted-text-color);
+  cursor: not-allowed;
+}
+
+.sort-control--select:focus-visible,
+.sort-control--direction:focus-visible {
+  outline: 2px solid var(--focus-color);
+  outline-offset: 1px;
 }
