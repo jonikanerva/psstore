@@ -1,8 +1,8 @@
 import { filterGamesByName } from '@psstore/shared'
 import { useQuery } from '@tanstack/react-query'
+import type { signedInQueryOptions } from '../modules/signedInQuery'
 import { useSearchQuery } from '../modules/searchContext'
 import { normalizeSearchTerm } from '../modules/searchTerm'
-import { purchasedQueryOptions } from '../modules/purchasedQuery'
 import { HttpError } from '../modules/psnStore'
 import Error from './Error'
 import GameGrid from './GameGrid'
@@ -11,25 +11,37 @@ import SearchAllCard from './SearchAllCard'
 import SignIn from './SignIn'
 import Spinner from './Spinner'
 
-const Purchased = () => {
+interface SignedInListProps {
+  readonly query: ReturnType<typeof signedInQueryOptions>
+  readonly label: string
+  readonly failureMessage: string
+  readonly emptyMessage: string
+}
+
+// A signed-in list view: the user's own Sony data, read-only, without prices.
+const SignedInList = ({
+  query,
+  label,
+  failureMessage,
+  emptyMessage,
+}: SignedInListProps) => {
   const search = useSearchQuery()
-  const { data, isPending, isError, error, fetchStatus, refetch } = useQuery(
-    purchasedQueryOptions,
-  )
+  const { data, isPending, isError, error, fetchStatus, refetch } =
+    useQuery(query)
   if (isPending) {
     return fetchStatus === 'paused' ? <Offline /> : <Spinner />
   }
 
   if (isError) {
     if (error instanceof HttpError && error.status === 401) {
-      return <SignIn />
+      return <SignIn queryKey={query.queryKey} />
     }
     return (
-      <div className="purchased--failure">
-        <Error message="Failed to load your library" />
+      <div className="signed-in-list--failure">
+        <Error message={failureMessage} />
         <button
           type="button"
-          className="purchased--button"
+          className="signed-in-list--button"
           onClick={() => {
             void refetch()
           }}
@@ -45,13 +57,13 @@ const Purchased = () => {
   const term = normalizeSearchTerm(search)
 
   if (filtered.length === 0 && term === '') {
-    return <Error message="No PS5 games in your library" />
+    return <Error message={emptyMessage} />
   }
 
   return (
     <GameGrid
       games={filtered}
-      label="purchased"
+      label={label}
       showPrice={false}
       outbound
       trailing={term === '' ? null : <SearchAllCard term={term} />}
@@ -62,4 +74,4 @@ const Purchased = () => {
   )
 }
 
-export default Purchased
+export default SignedInList

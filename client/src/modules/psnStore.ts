@@ -59,6 +59,12 @@ export const fetchPurchasedGames = async (): Promise<PageResult> =>
     credentials: 'same-origin',
   })
 
+export const fetchWishlistGames = async (): Promise<PageResult> =>
+  getJson('/api/games/wishlist', {
+    cache: 'no-store',
+    credentials: 'same-origin',
+  })
+
 export const signIn = async (npsso: string): Promise<void> => {
   const response = await fetch('/api/session', {
     method: 'POST',

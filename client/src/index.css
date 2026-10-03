@@ -674,7 +674,7 @@ body {
 }
 
 .sign-in--button,
-.purchased--button {
+.signed-in-list--button {
   min-width: 24px;
   min-height: 44px;
   padding: 8px 16px;
@@ -689,7 +689,7 @@ body {
 
 .sign-in--input:focus-visible,
 .sign-in--button:focus-visible,
-.purchased--button:focus-visible,
+.signed-in-list--button:focus-visible,
 .sign-in--steps a:focus-visible {
   outline: 2px solid var(--focus-color);
   outline-offset: 1px;
@@ -699,7 +699,7 @@ body {
   color: #b3261e;
 }
 
-.purchased--failure {
+.signed-in-list--failure {
   display: flex;
   flex-direction: column;
   align-items: center;
