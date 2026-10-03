@@ -75,8 +75,13 @@ const renderPurchased = async (search = '') => {
     path: 'purchased',
     component: Purchased,
   })
+  const searchRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: 'search',
+    component: () => <p>Search view</p>,
+  })
   const router = createRouter({
-    routeTree: rootRoute.addChildren([purchasedRoute]),
+    routeTree: rootRoute.addChildren([purchasedRoute, searchRoute]),
     history: createMemoryHistory({ initialEntries: ['/purchased'] }),
   })
   await router.load()
@@ -275,10 +280,40 @@ describe('Purchased', () => {
     await renderPurchased('beta')
     expect(await screen.findByText('Synthetic Beta')).toBeInTheDocument()
     expect(screen.queryByText('Synthetic Alpha')).not.toBeInTheDocument()
+    expect(
+      screen.getByRole('link', {
+        name: 'Press Enter to search all PS5 games for "beta"',
+      }),
+    ).toBeInTheDocument()
     cleanup()
 
     await renderPurchased('zzz')
-    expect(await screen.findByText('No games found')).toBeInTheDocument()
+    expect(
+      await screen.findByRole('link', {
+        name: 'Press Enter to search all PS5 games for "zzz"',
+      }),
+    ).toBeInTheDocument()
+    expect(screen.queryByText('Synthetic Alpha')).not.toBeInTheDocument()
+  })
+
+  it('goes to the global search on Enter once the library is loaded', async () => {
+    stubFetch(() =>
+      Response.json(library([game('1', 'Synthetic Alpha', 'concept')])),
+    )
+    await renderPurchased('alp')
+    await screen.findByText('Synthetic Alpha')
+
+    fireEvent.submit(screen.getByRole('search'))
+
+    expect(await screen.findByText('Search view')).toBeInTheDocument()
+  })
+
+  it('shows no search hint on the sign-in screen and keeps the search disabled', async () => {
+    stubFetch(() => status(401))
+    await renderPurchased()
+    await screen.findByLabelText('NPSSO token')
+    expect(screen.getByRole('searchbox', { name: 'Search' })).toBeDisabled()
+    expect(screen.queryByRole('link', { name: /Press Enter/ })).toBeNull()
   })
 
   it('says so when the library is empty', async () => {

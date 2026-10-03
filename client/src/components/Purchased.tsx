@@ -1,11 +1,13 @@
 import { filterGamesByName } from '@psstore/shared'
 import { useQuery } from '@tanstack/react-query'
 import { useSearchQuery } from '../modules/searchContext'
+import { normalizeSearchTerm } from '../modules/searchTerm'
 import { purchasedQueryOptions } from '../modules/purchasedQuery'
 import { HttpError } from '../modules/psnStore'
 import Error from './Error'
 import GameGrid from './GameGrid'
 import Offline from './Offline'
+import SearchAllCard from './SearchAllCard'
 import SignIn from './SignIn'
 import Spinner from './Spinner'
 
@@ -40,12 +42,10 @@ const Purchased = () => {
 
   const filtered = filterGamesByName(data.games, search)
 
-  if (data.games.length === 0) {
-    return <Error message="No PS5 games in your library" />
-  }
+  const term = normalizeSearchTerm(search)
 
-  if (filtered.length === 0) {
-    return <Error message="No games found" />
+  if (filtered.length === 0 && term === '') {
+    return <Error message="No PS5 games in your library" />
   }
 
   return (
@@ -54,6 +54,7 @@ const Purchased = () => {
       label="purchased"
       showPrice={false}
       outbound
+      trailing={term === '' ? null : <SearchAllCard term={term} />}
       hasNextPage={false}
       isFetchingNextPage={false}
       fetchNextPage={() => undefined}
