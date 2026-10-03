@@ -12,20 +12,20 @@ Let a Finnish PS5 owner find new, upcoming, discounted, monthly PS Plus, purchas
 
 - **PS5 games, Finnish store, EUR.** Nothing else reaches the user: no other platforms, no add-ons, no other regions or currencies.
 - **Fast and calm.** Only the data the user needs. No marketing, no decorative chrome.
-- **Sony is the source of truth.** We show Sony's data in a cleaner form. We do not create data of our own.
+- **Sony is the source of truth.** Sony stays the source for the catalogue, the scope, and the prices. We show Sony's data in a cleaner form. We do not create data of our own. One supplemental source is allowed: an aggregated critic score for the game page. It adds no games and no prices.
 - **The default view is the most useful one.** The site opens on new PS5 releases, newest first.
 
 ## Product Shape
 
 1. The site opens on NEW: PS5 games, newest release first.
 2. Six views: NEW, UPCOMING, DISCOUNTED, MONTHLY, WISHLIST, PURCHASED. WISHLIST and PURCHASED show the signed-in user's own Sony data, read-only. One search field filters the current view by name. The same field can also search all PS5 games in the Finnish store. The result opens as a list of game cards.
-3. A game card opens the game page: artwork, description, details, both prices, and a link to buy in Sony's store.
+3. A game card opens the game page: artwork, description, details, both prices, one critic score when a trusted one exists, and a link to buy in Sony's store. The critic score sits in a box in the price row, labelled "IGDB score". It is absent when there is no trusted score.
 
 ## Non-Goals
 
 - A storefront — purchases happen in Sony's store.
 - A wishlist, price-history, or deal-alert service of our own. The WISHLIST view only shows the user's Sony wishlist, read-only. We keep no wishlist, price history or alert state.
-- A community or social surface.
+- A community or social surface. User reviews, user ratings, and comments stay out. The one exception is the aggregated critic score on the game page. A second score provider stays out.
 - A multi-region, multi-currency, or multi-platform catalogue.
 - A configurable product — no settings, themes, or remembered preferences.
 - A PS Plus membership manager or claim tracking.
@@ -54,8 +54,9 @@ If any answer is "no", the change must not be added.
 
 ## Persistence and Privacy Posture
 
-- **Stored:** Sony store data, cached briefly to make the site fast.
+- **Stored:** Sony store data, cached briefly to make the site fast. Critic scores are cached in server memory only.
 - **User data:** data from the user's PSN sign-in is used only to show that user their own data. We keep no user profile.
+- **Critic score provider:** the server calls it. The browser never calls it. It receives only a public game title and release year. It never receives user data, a cookie, a header of the visitor, or an IP address of the visitor.
 - **Never:** tracking, analytics, behaviour history, or user preferences.
 
 ## Audience & Voice

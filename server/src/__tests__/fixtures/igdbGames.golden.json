@@ -1,0 +1,34 @@
+[
+  {
+    "id": 900001,
+    "name": "Synthetic Quest",
+    "first_release_date": 1700000000,
+    "aggregated_rating": 84.4,
+    "aggregated_rating_count": 12
+  },
+  {
+    "id": 900002,
+    "name": "Synthetic Quest: Remastered",
+    "first_release_date": 1760000000,
+    "aggregated_rating": 80,
+    "aggregated_rating_count": 5
+  },
+  {
+    "id": 900003,
+    "name": "Synthetic Unrated",
+    "first_release_date": 1700000000
+  },
+  {
+    "id": 900004,
+    "name": "Synthetic Malformed",
+    "first_release_date": "soon",
+    "aggregated_rating": "high",
+    "aggregated_rating_count": -2
+  },
+  {
+    "id": 900005,
+    "first_release_date": 1700000000,
+    "aggregated_rating": 70,
+    "aggregated_rating_count": 4
+  }
+]

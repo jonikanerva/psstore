@@ -5,8 +5,8 @@ import { findCachedGame } from '../modules/cachedGame'
 import {
   fetchGame,
   HttpError,
-  metacriticLink,
   type Game,
+  type GameDetail,
   type PageResult,
 } from '../modules/psnStore'
 import { purchasedQueryOptions } from '../modules/purchasedQuery'
@@ -49,6 +49,12 @@ const plusValueFor = (game: Game): string | null => {
   return game.plusUpsellText
 }
 
+// A game read from the persisted client cache can lack the `criticScore` key.
+const criticScoreOf = (game: GameDetail): number | null =>
+  typeof game.criticScore === 'number' && Number.isFinite(game.criticScore)
+    ? game.criticScore
+    : null
+
 const DetailsSkeleton = () => (
   <article className="details-page" aria-busy="true">
     <Spinner />
@@ -82,9 +88,6 @@ const OwnedGamePage = ({ game }: { game: Game }) => (
               href={storeUrl(game)}
             >
               Open In Store
-            </a>
-            <a className="details-page--link" href={metacriticLink(game.name)}>
-              Metacritic
             </a>
           </div>
         </div>
@@ -153,6 +156,7 @@ const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
   }
 
   const plusValue = plusValueFor(game)
+  const criticScore = criticScoreOf(game)
   const hasDescription = game.description.trim().length > 0
   const hasMedia = game.screenshots.length > 0 || game.videos.length > 0
   const hasDiscount =
@@ -222,18 +226,26 @@ const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
               </div>
             )}
 
+            {!isPlaceholderData && criticScore !== null && (
+              <div className="details-page--price">
+                <span className="details-page--price-label" aria-hidden="true">
+                  IGDB score
+                </span>
+                <span className="details-page--price-value" aria-hidden="true">
+                  {criticScore}
+                </span>
+                <span className="sr-only">
+                  IGDB score {criticScore} out of 100
+                </span>
+              </div>
+            )}
+
             <div className="details-page--actions">
               <a
                 className="details-page--link details-page--link-primary"
                 href={storeUrl(game)}
               >
                 Open In Store
-              </a>
-              <a
-                className="details-page--link"
-                href={metacriticLink(game.name)}
-              >
-                Metacritic
               </a>
             </div>
           </div>

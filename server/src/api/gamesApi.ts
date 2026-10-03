@@ -1,4 +1,4 @@
-import { gameSchema, pageResultSchema } from '@psstore/shared'
+import { gameDetailSchema, pageResultSchema } from '@psstore/shared'
 import { Context, Schema, type Redacted } from 'effect'
 import {
   HttpApi,
@@ -84,7 +84,7 @@ const searchEndpoint = HttpApiEndpoint.get('search', '/search', {
 
 const getByIdEndpoint = HttpApiEndpoint.get('getById', '/:id', {
   params: gameIdParamSchema,
-  success: gameSchema,
+  success: gameDetailSchema,
   error: [
     HttpApiError.BadRequestNoContent,
     GameNotFound.pipe(HttpApiSchema.status(404)),

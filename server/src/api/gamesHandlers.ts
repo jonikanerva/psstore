@@ -8,6 +8,7 @@ import {
 } from '../config/env.js'
 import { SessionRejected } from '../errors/errors.js'
 import { AccountService } from '../services/accountService.js'
+import { CriticScoreService } from '../services/criticScoreService.js'
 import { GamesService } from '../services/gamesService.js'
 import { CurrentNpsso, gamesApi, NpssoAuth, npssoSecurity } from './gamesApi.js'
 
@@ -42,6 +43,7 @@ export const gamesGroupLive = HttpApiBuilder.group(
     Effect.gen(function* () {
       const games = yield* GamesService
       const account = yield* AccountService
+      const critics = yield* CriticScoreService
       return handlers.handleAll({
         new: ({ query }) => games.getNewGames(query.offset, query.size),
         upcoming: ({ query }) =>
@@ -61,7 +63,20 @@ export const gamesGroupLive = HttpApiBuilder.group(
           }),
         search: ({ query }) =>
           games.searchGames(query.q, query.offset, query.size),
-        getById: ({ params }) => games.getGameById(params.id),
+        getById: ({ params }) =>
+          games
+            .getGameById(params.id)
+            .pipe(
+              Effect.flatMap((game) =>
+                critics
+                  .scoreFor(game)
+                  .pipe(
+                    Effect.map((score) =>
+                      score === null ? game : { ...game, criticScore: score },
+                    ),
+                  ),
+              ),
+            ),
       })
     }),
 )

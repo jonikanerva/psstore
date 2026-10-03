@@ -3,9 +3,10 @@ import { Duration } from 'effect'
 // Fixed Sony-contract configuration. These values are part of the contract with
 // Sony's public GraphQL endpoint, not deployment knobs. They must not vary by
 // environment: keep them as plain code constants, not env-driven `Config`
-// values. The only environment-driven setting (`PORT`) is read directly from
-// `process.env` at the HTTP composition root (server.ts). The contract bot
-// edits the persisted-query hashes in this file during `pnpm sony:refresh`.
+// values. The environment-driven settings are read at the HTTP composition
+// root (server.ts): `PORT`, and the optional critic-score credentials
+// `IGDB_CLIENT_ID` and `IGDB_CLIENT_SECRET`. The contract bot edits the
+// persisted-query hashes in this file during `pnpm sony:refresh`.
 
 export const SONY_GRAPHQL_URL =
   'https://web.np.playstation.com/api/graphql/v1/op'
@@ -86,3 +87,15 @@ export const SONY_RETRY_AFTER_MAX_MS = SONY_TIMEOUT_MS
 // per-product DETAIL_TTL (Duration.hours(6)) in gamesService: list windows
 // refresh far more often than individual product metadata.
 export const CACHE_TTL = Duration.millis(30000)
+
+// Critic score provider (IGDB, authenticated through a Twitch app). The
+// endpoints are fixed; only the credentials come from the environment.
+export const IGDB_TOKEN_URL = 'https://id.twitch.tv/oauth2/token'
+export const IGDB_GAMES_URL = 'https://api.igdb.com/v4/games'
+// Candidates read per lookup, and the deadline of one provider call.
+export const IGDB_CANDIDATE_LIMIT = 10
+export const IGDB_TIMEOUT_MS = 1500
+// Total time the game page waits for a critic score before it answers without.
+export const CRITIC_SCORE_BUDGET_MS = 1500
+// A cached token is replaced this long before the provider says it expires.
+export const IGDB_TOKEN_EXPIRY_MARGIN_SECONDS = 300

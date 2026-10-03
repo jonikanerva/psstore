@@ -106,6 +106,11 @@ The server serves `client/build` and handles SPA fallback routing.
 - `PORT` (default: `3000`). The Vite dev proxy in `client/vite.config.ts` targets port
   `3000`. If you change `PORT` in development, change the proxy target too.
 
+- `IGDB_CLIENT_ID` and `IGDB_CLIENT_SECRET` (optional). They are the Twitch app
+  credentials for the IGDB critic score on the game page. Set both to turn the
+  score on. When one is missing, the game page shows no score. Never commit the
+  values.
+
 The Sony contract values are code constants in `server/src/config/env.ts`. They are not
 environment variables. `pnpm run sony:refresh` rotates the persisted-query hashes in that
 file.

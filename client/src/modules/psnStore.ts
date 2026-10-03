@@ -1,4 +1,4 @@
-import type { Game, PageResult } from '@psstore/shared'
+import type { Game, GameDetail, PageResult } from '@psstore/shared'
 
 const jsonHeaders = { Accept: 'application/json' }
 
@@ -69,7 +69,7 @@ export const fetchSearchGames = async (
     `/api/games/search?q=${encodeURIComponent(term)}&offset=${String(offset)}&size=${String(size)}`,
     withSignal(signal),
   )
-export const fetchGame = async (gameId: string): Promise<Game> =>
+export const fetchGame = async (gameId: string): Promise<GameDetail> =>
   getJson(`/api/games/${encodeURIComponent(gameId)}`)
 
 // Signed-in calls. The sign-in cookie is HttpOnly: the browser attaches it, the
@@ -116,7 +116,4 @@ export const signOut = async (): Promise<void> => {
   }
 }
 
-export const metacriticLink = (name: string): string =>
-  `https://www.metacritic.com/search/${encodeURIComponent(name)}/`
-
-export type { Game, PageResult }
+export type { Game, GameDetail, PageResult }
