@@ -12,7 +12,8 @@ The contract is the Finnish store. The contract bot captures from the `fi-fi` pu
 storefront. The server requests data with `en-fi` (English content, same store). The
 response shapes are identical. To check this by hand, run `pnpm test:live`.
 
-No authentication/sign-in workflow is used.
+Capture and probes use no sign-in. One tracked operation is signed-in: the library list.
+No tool in this repository holds an NPSSO or an access token. See Signed-in library operation below.
 
 ## Refresh contract snapshot
 
@@ -31,7 +32,8 @@ Pipeline:
 ## Tracked operations
 
 The manifest holds only the operations the server calls:
-`categoryGridRetrieve`, `metGetProductById`, `productRetrieveForCtasWithPrice`, and `getSearchResults`.
+`categoryGridRetrieve`, `metGetProductById`, `productRetrieveForCtasWithPrice`, `getSearchResults`,
+and the signed-in `getPurchasedGameList`.
 The normalizer drops every other operation Sony fires on a captured page.
 The list lives in `tools/sony-contract-bot/src/contract/trackedOperations.ts`.
 
@@ -74,6 +76,24 @@ The compatibility check is unchanged.
 If the probe fails, refresh stops and names the operation and the hash. Find the new hash
 in the store, update `SONY_PRODUCT_BY_ID_HASH` in `server/src/config/env.ts`, and run
 `pnpm sony:refresh` again. See Failure handling below.
+
+## Signed-in library operation
+
+The server calls `getPurchasedGameList` with the user's access token for the PURCHASED view.
+Capture cannot reach it, and the anonymous probe cannot call it.
+The manifest therefore holds a hand-written entry with feature `purchased`.
+Its variables, header list, and response path mirror the server request. All values are synthetic.
+The entry has no `authorization` header. `observed_status_codes` is empty, because nobody observed it live.
+
+Refresh carries the entry over from the canonical manifest. It sets the hash from
+`SONY_PURCHASED_HASH` in `server/src/config/env.ts` and runs no probe.
+Refresh prints `carried over, NOT verified live`.
+
+The compatibility check compares the operation name, the hash, the response path, and the variables
+with `env.ts` and `sonyClient.ts`. It guards repository-internal consistency only.
+It does NOT detect Sony drift for this operation. Only a live check by the owner can do that.
+The owner runs the check with their own NPSSO, supplied through an environment variable that is never committed.
+A live check is not built yet.
 
 ## PS Plus monthly feed
 

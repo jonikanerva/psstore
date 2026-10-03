@@ -99,6 +99,30 @@
       "observed_status_codes": [200]
     },
     {
+      "feature": "purchased",
+      "operation_name": "getPurchasedGameList",
+      "persisted_query_hash": "827a423f6a8ddca4107ac01395af2ec0eafd8396fc7fa204aaf9b7ed2eefa168",
+      "required_headers": ["x-apollo-operation-name"],
+      "variables_schema": {
+        "isActive": "boolean",
+        "platform": ["string"],
+        "size": "number",
+        "sortBy": "string",
+        "sortDirection": "string",
+        "start": "number"
+      },
+      "sample_variables": {
+        "isActive": true,
+        "platform": ["ps5"],
+        "size": 100,
+        "sortBy": "ACTIVE_DATE",
+        "sortDirection": "desc",
+        "start": 0
+      },
+      "response_path": "data.purchasedTitlesRetrieve.games",
+      "observed_status_codes": []
+    },
+    {
       "feature": "search",
       "operation_name": "getSearchResults",
       "persisted_query_hash": "4df6284f982e57bec70f23c77e2c219dc792eb19af7fb3d3a81767aa3f1958aa",
