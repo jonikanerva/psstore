@@ -11,6 +11,16 @@ export const PINNED_OPERATIONS = [
   },
 ] as const
 
+// Signed-in operations. Capture and the anonymous probe cannot reach them, so
+// the canonical entry carries over with the `env.ts` hash and is never verified
+// live. It guards the repo-internal name and hash only, not Sony drift.
+export const SIGNED_IN_PINNED_OPERATIONS = [
+  {
+    operationNameConstant: 'SONY_PURCHASED_OPERATION_NAME',
+    hashConstant: 'SONY_PURCHASED_HASH',
+  },
+] as const
+
 export interface ProbeRequest {
   readonly url: string
   readonly operationName: string
@@ -34,6 +44,9 @@ export const addPinnedOperations = async (
   canonical: ContractOperation[],
   serverEnvText: string,
   probe: Probe,
+  notice: (message: string) => void = (message) => {
+    console.info(message)
+  },
 ): Promise<ContractOperation[]> => {
   const url = extractDefault(serverEnvText, 'SONY_GRAPHQL_URL')
   if (!url) {
@@ -81,6 +94,34 @@ export const addPinnedOperations = async (
       )
     }
 
+    result.push({ ...entry, persisted_query_hash: hash })
+  }
+
+  for (const pinned of SIGNED_IN_PINNED_OPERATIONS) {
+    const operationName = extractDefault(
+      serverEnvText,
+      pinned.operationNameConstant,
+    )
+    const hash = extractDefault(serverEnvText, pinned.hashConstant)
+    if (!operationName) {
+      throw unreadable(pinned.operationNameConstant)
+    }
+    if (!hash) {
+      throw unreadable(pinned.hashConstant)
+    }
+
+    const entry = canonical.find(
+      (candidate) => candidate.operation_name === operationName,
+    )
+    if (!entry) {
+      throw new Error(
+        `Pinned operation ${operationName} is not in the canonical manifest. Add it to the manifest first (docs/contracts/sony-graphql-runbook.md, Signed-in library operation).`,
+      )
+    }
+
+    notice(
+      `Signed-in operation ${operationName} @ ${hash}: carried over, NOT verified live.`,
+    )
     result.push({ ...entry, persisted_query_hash: hash })
   }
 

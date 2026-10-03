@@ -10,6 +10,8 @@ const GRID_HASH = 'a'.repeat(64)
 const PDP_HASH = 'b'.repeat(64)
 const PRICE_HASH = 'd'.repeat(64)
 const SEARCH_HASH = 'e'.repeat(64)
+const PURCHASED_HASH = '9'.repeat(64)
+const STALE_PURCHASED_HASH = '8'.repeat(64)
 
 const operation = (
   feature: ContractOperation['feature'],
@@ -72,6 +74,31 @@ const search: ContractOperation = {
   sample_variables: { searchTerm: 'elden' },
 }
 
+const purchased: ContractOperation = {
+  feature: 'purchased',
+  operation_name: 'getPurchasedGameList',
+  persisted_query_hash: STALE_PURCHASED_HASH,
+  required_headers: ['x-apollo-operation-name'],
+  variables_schema: {
+    isActive: 'boolean',
+    platform: ['string'],
+    size: 'number',
+    sortBy: 'string',
+    sortDirection: 'string',
+    start: 'number',
+  },
+  sample_variables: {
+    isActive: true,
+    platform: ['ps5'],
+    size: 100,
+    sortBy: 'ACTIVE_DATE',
+    sortDirection: 'desc',
+    start: 0,
+  },
+  response_path: 'data.purchasedTitlesRetrieve.games',
+  observed_status_codes: [],
+}
+
 const envText = [
   'export const SONY_GRAPHQL_URL =',
   "  'https://web.np.playstation.com/api/graphql/v1/op'",
@@ -82,6 +109,8 @@ const envText = [
   `export const SONY_PRODUCT_PRICE_HASH =\n  '${PRICE_HASH}'`,
   "export const SONY_SEARCH_OPERATION_NAME = 'getSearchResults'",
   `export const SONY_SEARCH_HASH =\n  '${SEARCH_HASH}'`,
+  "export const SONY_PURCHASED_OPERATION_NAME = 'getPurchasedGameList'",
+  `export const SONY_PURCHASED_HASH =\n  '${PURCHASED_HASH}'`,
 ].join('\n')
 
 const captured = [
@@ -92,10 +121,17 @@ const captured = [
   search,
 ]
 
+const canonical = [pdp, purchased]
+
 describe('addPinnedOperations', () => {
   it('adds the pinned operation with the env hash when the probe passes', async () => {
     const probe = vi.fn().mockResolvedValue(undefined)
-    const result = await addPinnedOperations(captured, [pdp], envText, probe)
+    const result = await addPinnedOperations(
+      captured,
+      canonical,
+      envText,
+      probe,
+    )
 
     expect(probe).toHaveBeenCalledOnce()
     expect(probe).toHaveBeenCalledWith({
@@ -114,9 +150,10 @@ describe('addPinnedOperations', () => {
     const operations = normalizeOperations(
       await addPinnedOperations(
         captured,
-        [pdp],
+        canonical,
         envText,
         vi.fn().mockResolvedValue(undefined),
+        vi.fn(),
       ),
     )
     const manifest = createManifest(
@@ -134,7 +171,7 @@ describe('addPinnedOperations', () => {
       validateBackendCompatibility(manifest, {
         serverEnvText: envText,
         sonyClientText:
-          "'x-apollo-operation-name': strategy.operationName categoryGridRetrieve productRetrieve universalSearch",
+          "'x-apollo-operation-name': strategy.operationName categoryGridRetrieve productRetrieve universalSearch SONY_PURCHASED_HASH",
         mapperText: 'conceptToGame',
         serviceText: 'fetchConceptsByFeature',
       })
@@ -147,7 +184,7 @@ describe('addPinnedOperations', () => {
       .mockRejectedValue(new Error('PersistedQueryNotFound (hash rotated)'))
 
     await expect(
-      addPinnedOperations(captured, [pdp], envText, probe),
+      addPinnedOperations(captured, canonical, envText, probe),
     ).rejects.toThrow(
       /metGetProductById @ b{64} failed: PersistedQueryNotFound.*sony-graphql-runbook\.md, Failure handling/,
     )
@@ -157,26 +194,75 @@ describe('addPinnedOperations', () => {
     const probe = vi.fn().mockResolvedValue(undefined)
     const result = await addPinnedOperations(
       [...captured, pdp],
-      [pdp],
+      canonical,
       envText,
       probe,
     )
 
     expect(probe).not.toHaveBeenCalled()
-    expect(result).toHaveLength(captured.length + 1)
+    expect(result).toHaveLength(captured.length + 2)
   })
 
   it('fails when the canonical manifest lacks the operation', async () => {
     const probe = vi.fn()
     await expect(
-      addPinnedOperations(captured, [], envText, probe),
+      addPinnedOperations(captured, [purchased], envText, probe),
     ).rejects.toThrow(/not in the canonical manifest/)
     expect(probe).not.toHaveBeenCalled()
   })
 
   it('fails when the env constants are unreadable', async () => {
     await expect(
-      addPinnedOperations(captured, [pdp], 'nothing', vi.fn()),
+      addPinnedOperations(captured, canonical, 'nothing', vi.fn()),
     ).rejects.toThrow(/SONY_GRAPHQL_URL/)
+  })
+  it('carries the signed-in operation over with the env hash and no probe', async () => {
+    const probe = vi.fn().mockResolvedValue(undefined)
+    const notice = vi.fn()
+    const result = await addPinnedOperations(
+      captured,
+      canonical,
+      envText,
+      probe,
+      notice,
+    )
+
+    const carried = result.find(
+      (entry) => entry.operation_name === 'getPurchasedGameList',
+    )
+    expect(carried?.persisted_query_hash).toBe(PURCHASED_HASH)
+    expect(carried?.observed_status_codes).toEqual([])
+    expect(probe).not.toHaveBeenCalledWith(
+      expect.objectContaining({ operationName: 'getPurchasedGameList' }),
+    )
+    expect(notice).toHaveBeenCalledWith(
+      expect.stringContaining('carried over, NOT verified live'),
+    )
+  })
+
+  it('keeps the signed-in operation through normalization', async () => {
+    const operations = normalizeOperations(
+      await addPinnedOperations(
+        captured,
+        canonical,
+        envText,
+        vi.fn().mockResolvedValue(undefined),
+        vi.fn(),
+      ),
+    )
+
+    expect(operations.map((entry) => entry.feature)).toContain('purchased')
+  })
+
+  it('fails when the canonical manifest lacks the signed-in operation', async () => {
+    await expect(
+      addPinnedOperations(
+        captured,
+        [pdp],
+        envText,
+        vi.fn().mockResolvedValue(undefined),
+        vi.fn(),
+      ),
+    ).rejects.toThrow(/getPurchasedGameList is not in the canonical manifest/)
   })
 })

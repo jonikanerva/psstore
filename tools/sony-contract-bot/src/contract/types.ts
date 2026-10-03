@@ -1,5 +1,5 @@
 export type ContractFeature =
-  'new' | 'upcoming' | 'discounted' | 'details' | 'search'
+  'new' | 'upcoming' | 'discounted' | 'details' | 'search' | 'purchased'
 
 export interface ContractOperation {
   feature: ContractFeature
