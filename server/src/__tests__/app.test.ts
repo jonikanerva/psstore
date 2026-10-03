@@ -73,7 +73,6 @@ const ACCESS_TOKEN = 'synthetic-access-token-qrstuvwxyz'
 
 const libraryEntry: PurchasedEntry = {
   productId: 'EP9000-PPSA00009_00-LIBRARY000000000',
-  conceptId: '10000001',
   name: 'Library Game',
   imageUrl: 'https://img/library',
 }
@@ -685,8 +684,8 @@ describe('purchased games API', () => {
     expect(body.totalCount).toBe(1)
     expect(body.nextOffset).toBeNull()
     expect(body.games[0]).toMatchObject({
-      id: '10000001',
-      idKind: 'concept',
+      id: libraryEntry.productId,
+      idKind: 'product',
       price: '',
     })
     expect(app.fake.exchange).toHaveBeenCalledWith(NPSSO)

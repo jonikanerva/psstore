@@ -2,7 +2,13 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import DOMPurify from 'dompurify'
 import { DateTime } from 'luxon'
 import { findCachedGame } from '../modules/cachedGame'
-import { fetchGame, metacriticLink, type Game } from '../modules/psnStore'
+import {
+  fetchGame,
+  HttpError,
+  metacriticLink,
+  type Game,
+} from '../modules/psnStore'
+import { purchasedQueryOptions } from '../modules/purchasedQuery'
 import Error from './Error'
 import Image from './Image'
 import MediaGallery from './MediaGallery'
@@ -53,10 +59,39 @@ const DetailsSkeleton = () => (
   </article>
 )
 
+// A purchased game that Sony's store has no page for (delisted or offline
+// bundle, beta, demo). The library entry is all the data there is.
+const OwnedGamePage = ({ game }: { game: Game }) => (
+  <article className="details-page">
+    <section className="details-page--hero">
+      <div className="details-page--cover">
+        <Image url={game.url} name={game.name} priority />
+      </div>
+      <div className="details-page--info">
+        <h1 className="details-page--title">{game.name}</h1>
+        <div className="details-page--buy">
+          <div className="details-page--actions">
+            <a
+              className="details-page--link details-page--link-primary"
+              href={storeUrl(game.id)}
+            >
+              Open In Store
+            </a>
+            <a className="details-page--link" href={metacriticLink(game.name)}>
+              Metacritic
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </article>
+)
+
 const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
   const queryClient = useQueryClient()
   const {
     data: game,
+    error,
     isPending,
     isError,
     isPlaceholderData,
@@ -69,12 +104,28 @@ const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
     placeholderData: () => findCachedGame(queryClient, gameId),
   })
 
+  const missing = isError && error instanceof HttpError && error.status === 404
+  const library = useQuery({ ...purchasedQueryOptions, enabled: missing })
+
   if (isPending) {
     return fetchStatus === 'paused' ? <Offline /> : <DetailsSkeleton />
   }
 
   if (isError) {
-    return <Error message="Game not found" />
+    if (missing && library.isPending && library.fetchStatus !== 'idle') {
+      return library.fetchStatus === 'paused' ? (
+        <Offline />
+      ) : (
+        <DetailsSkeleton />
+      )
+    }
+
+    const owned = library.data?.games.find((item) => item.id === gameId)
+    return owned ? (
+      <OwnedGamePage game={owned} />
+    ) : (
+      <Error message="Game not found" />
+    )
   }
 
   const plusValue = plusValueFor(game)

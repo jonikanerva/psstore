@@ -26,10 +26,10 @@ const baseGame: Game = {
   idKind: 'product',
 }
 
-vi.mock('../modules/psnStore', () => ({
+vi.mock('../modules/psnStore', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../modules/psnStore')>()),
   fetchGame: vi.fn(),
-  metacriticLink: (name: string) =>
-    `https://www.metacritic.com/search/${encodeURIComponent(name)}/`,
+  fetchPurchasedGames: vi.fn(),
 }))
 
 describe('GameDetailsPage', () => {
@@ -107,6 +107,84 @@ describe('GameDetailsPage', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Game not found')).toBeInTheDocument()
+    })
+  })
+
+  describe('a game that Sony has no page for', () => {
+    const owned: Game = {
+      ...baseGame,
+      id: 'EP0002-PPSA07950_00-CODMW3OFFLBUNDLE',
+      name: 'Owned Bundle',
+      price: '',
+      screenshots: [],
+      videos: [],
+      genres: [],
+      description: '',
+      studio: '',
+    }
+
+    const library = (games: Game[]) => ({
+      games,
+      totalCount: games.length,
+      nextOffset: null,
+    })
+
+    it('shows the library entry with a store link', async () => {
+      const { fetchGame, fetchPurchasedGames, HttpError } =
+        await import('../modules/psnStore')
+      vi.mocked(fetchGame).mockRejectedValue(new HttpError(404))
+      vi.mocked(fetchPurchasedGames).mockResolvedValue(library([owned]))
+
+      await renderWithRouter(<GameDetailsPage gameId={owned.id} />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Owned Bundle')).toBeInTheDocument()
+      })
+      expect(
+        screen.getByRole('link', { name: 'Open In Store' }),
+      ).toHaveAttribute(
+        'href',
+        `https://store.playstation.com/en-fi/product/${owned.id}`,
+      )
+    })
+
+    it('says not found when the game is not in the library', async () => {
+      const { fetchGame, fetchPurchasedGames, HttpError } =
+        await import('../modules/psnStore')
+      vi.mocked(fetchGame).mockRejectedValue(new HttpError(404))
+      vi.mocked(fetchPurchasedGames).mockResolvedValue(library([]))
+
+      await renderWithRouter(<GameDetailsPage gameId={owned.id} />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Game not found')).toBeInTheDocument()
+      })
+    })
+
+    it('says not found when the user is signed out', async () => {
+      const { fetchGame, fetchPurchasedGames, HttpError } =
+        await import('../modules/psnStore')
+      vi.mocked(fetchGame).mockRejectedValue(new HttpError(404))
+      vi.mocked(fetchPurchasedGames).mockRejectedValue(new HttpError(401))
+
+      await renderWithRouter(<GameDetailsPage gameId={owned.id} />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Game not found')).toBeInTheDocument()
+      })
+    })
+
+    it('does not read the library for an upstream failure', async () => {
+      const { fetchGame, fetchPurchasedGames, HttpError } =
+        await import('../modules/psnStore')
+      vi.mocked(fetchGame).mockRejectedValue(new HttpError(502))
+
+      await renderWithRouter(<GameDetailsPage gameId={owned.id} />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Game not found')).toBeInTheDocument()
+      })
+      expect(fetchPurchasedGames).not.toHaveBeenCalled()
     })
   })
 
