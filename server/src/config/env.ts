@@ -21,6 +21,11 @@ export const SONY_PRODUCT_PRICE_OPERATION_NAME =
   'productRetrieveForCtasWithPrice'
 export const SONY_PRODUCT_PRICE_HASH =
   '1f0ca607e170abbfb7d67bd76c9bbc97f21fe2e807be49e5fe764e14566cb605'
+export const SONY_SEARCH_OPERATION_NAME = 'getSearchResults'
+export const SONY_SEARCH_HASH =
+  '4df6284f982e57bec70f23c77e2c219dc792eb19af7fb3d3a81767aa3f1958aa'
+// Sony rejects a search page larger than this with a validation error.
+export const SONY_SEARCH_MAX_PAGE_SIZE = 50
 // The PS Plus monthly games list is a separate anonymous JSON feed outside the
 // GraphQL contract; the content language is SONY_LOCALE.
 export const SONY_PLUS_MONTHLY_URL =

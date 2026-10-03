@@ -1,7 +1,7 @@
 {
   "version": 1,
   "metadata": {
-    "captured_at": "2026-10-02T17:17:37.314Z",
+    "captured_at": "2026-10-03T06:28:52.733Z",
     "captured_by": "calmdonut",
     "region": "fi",
     "locale": "fi-fi",
@@ -96,6 +96,30 @@
         "facetOptions": []
       },
       "response_path": "data.categoryGridRetrieve.products",
+      "observed_status_codes": [200]
+    },
+    {
+      "feature": "search",
+      "operation_name": "getSearchResults",
+      "persisted_query_hash": "4df6284f982e57bec70f23c77e2c219dc792eb19af7fb3d3a81767aa3f1958aa",
+      "required_headers": ["x-apollo-operation-name"],
+      "variables_schema": {
+        "countryCode": "string",
+        "languageCode": "string",
+        "nextCursor": "string",
+        "pageOffset": "number",
+        "pageSize": "number",
+        "searchTerm": "string"
+      },
+      "sample_variables": {
+        "countryCode": "FI",
+        "languageCode": "fi",
+        "nextCursor": "",
+        "pageOffset": 0,
+        "pageSize": 24,
+        "searchTerm": "elden"
+      },
+      "response_path": "data.universalSearch",
       "observed_status_codes": [200]
     },
     {

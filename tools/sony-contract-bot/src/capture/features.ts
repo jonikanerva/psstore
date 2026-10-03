@@ -5,6 +5,11 @@ export interface FeatureRoute {
   url: string
 }
 
+// Fixed sample term for the `search` feature route. Sony fires `getSearchResults`
+// for it. The term must carry no platform, locale, or currency token, because
+// the scope filter matches those tokens inside every variable value.
+const SEARCH_SAMPLE_TERM = 'elden'
+
 // Evergreen PDP product id for the `details` feature route. It captures the
 // price operation the product page fires. The page does not fire
 // `metGetProductById`; refresh verifies that operation with a live probe
@@ -34,5 +39,9 @@ export const coreFeatureRoutes: FeatureRoute[] = [
   {
     feature: 'details',
     url: `https://store.playstation.com/fi-fi/product/${PDP_PRODUCT_ID}`,
+  },
+  {
+    feature: 'search',
+    url: `https://store.playstation.com/fi-fi/search/${SEARCH_SAMPLE_TERM}`,
   },
 ]

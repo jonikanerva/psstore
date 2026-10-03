@@ -86,3 +86,24 @@ describe('filterOperationsByFinnishPs5EurScope filterBy rule', () => {
     ).toHaveLength(0)
   })
 })
+
+describe('filterOperationsByFinnishPs5EurScope search rule', () => {
+  const searchVariables = {
+    countryCode: 'FI',
+    languageCode: 'en',
+    nextCursor: '',
+    pageOffset: 0,
+    pageSize: 24,
+    searchTerm: 'elden',
+  }
+
+  it('keeps the search op, which carries no platform token', () => {
+    const search = {
+      ...makeOperation(searchVariables, searchVariables),
+      feature: 'search' as const,
+      operation_name: 'getSearchResults',
+    }
+
+    expect(filterOperationsByFinnishPs5EurScope([search])).toHaveLength(1)
+  })
+})

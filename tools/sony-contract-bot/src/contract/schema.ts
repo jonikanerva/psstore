@@ -5,6 +5,7 @@ export const contractFeatureSchema = Schema.Literals([
   'upcoming',
   'discounted',
   'details',
+  'search',
 ])
 
 export const contractOperationSchema = Schema.Struct({

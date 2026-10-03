@@ -9,6 +9,7 @@ import { validateManifest } from '../contract/validator.js'
 const GRID_HASH = 'a'.repeat(64)
 const PDP_HASH = 'b'.repeat(64)
 const PRICE_HASH = 'd'.repeat(64)
+const SEARCH_HASH = 'e'.repeat(64)
 
 const operation = (
   feature: ContractOperation['feature'],
@@ -52,6 +53,25 @@ const pdp = operation(
   { productId: 'EP9000-PPSA01341_00-DEMONSSOULS00000' },
 )
 
+const search: ContractOperation = {
+  ...operation(
+    'search',
+    'getSearchResults',
+    SEARCH_HASH,
+    'data.universalSearch',
+    {},
+  ),
+  variables_schema: {
+    countryCode: 'string',
+    languageCode: 'string',
+    nextCursor: 'string',
+    pageOffset: 'number',
+    pageSize: 'number',
+    searchTerm: 'string',
+  },
+  sample_variables: { searchTerm: 'elden' },
+}
+
 const envText = [
   'export const SONY_GRAPHQL_URL =',
   "  'https://web.np.playstation.com/api/graphql/v1/op'",
@@ -60,9 +80,17 @@ const envText = [
   `export const SONY_PRODUCT_BY_ID_HASH =\n  '${PDP_HASH}'`,
   "export const SONY_PRODUCT_PRICE_OPERATION_NAME = 'productRetrieveForCtasWithPrice'",
   `export const SONY_PRODUCT_PRICE_HASH =\n  '${PRICE_HASH}'`,
+  "export const SONY_SEARCH_OPERATION_NAME = 'getSearchResults'",
+  `export const SONY_SEARCH_HASH =\n  '${SEARCH_HASH}'`,
 ].join('\n')
 
-const captured = [grid('new'), grid('upcoming'), grid('discounted'), price]
+const captured = [
+  grid('new'),
+  grid('upcoming'),
+  grid('discounted'),
+  price,
+  search,
+]
 
 describe('addPinnedOperations', () => {
   it('adds the pinned operation with the env hash when the probe passes', async () => {
@@ -106,7 +134,7 @@ describe('addPinnedOperations', () => {
       validateBackendCompatibility(manifest, {
         serverEnvText: envText,
         sonyClientText:
-          "'x-apollo-operation-name': strategy.operationName categoryGridRetrieve productRetrieve",
+          "'x-apollo-operation-name': strategy.operationName categoryGridRetrieve productRetrieve universalSearch",
         mapperText: 'conceptToGame',
         serviceText: 'fetchConceptsByFeature',
       })
