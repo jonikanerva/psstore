@@ -98,6 +98,16 @@ describe('GameCard', () => {
     expect(screen.queryByText('Unknown')).not.toBeInTheDocument()
   })
 
+  it('opens the internal game page for a concept card when asked', async () => {
+    await renderWithRouter(
+      <GameCard
+        internalLink
+        game={{ ...game, id: '10018729', idKind: 'concept' }}
+      />,
+    )
+    expect(screen.getByRole('link')).toHaveAttribute('href', '/g/10018729')
+  })
+
   it('links a concept card out to Sony and shows "Unknown" for the price', async () => {
     await renderWithRouter(
       <GameCard

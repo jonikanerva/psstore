@@ -4,6 +4,7 @@ import { Settings } from 'luxon'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Game } from '@psstore/shared'
 import GameDetailsPage from '../components/GameDetailsPage'
+import { HttpError } from '../modules/psnStore'
 import { renderWithRouter } from './testRouter'
 
 const baseGame: Game = {
@@ -30,12 +31,17 @@ vi.mock('../modules/psnStore', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../modules/psnStore')>()),
   fetchGame: vi.fn(),
   fetchPurchasedGames: vi.fn(),
+  fetchWishlistGames: vi.fn(),
 }))
 
 describe('GameDetailsPage', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks()
     Settings.defaultZone = 'UTC'
+    const { fetchPurchasedGames, fetchWishlistGames } =
+      await import('../modules/psnStore')
+    vi.mocked(fetchPurchasedGames).mockRejectedValue(new HttpError(401))
+    vi.mocked(fetchWishlistGames).mockRejectedValue(new HttpError(401))
   })
 
   afterEach(() => {
@@ -174,8 +180,8 @@ describe('GameDetailsPage', () => {
       })
     })
 
-    it('does not read the library for an upstream failure', async () => {
-      const { fetchGame, fetchPurchasedGames, HttpError } =
+    it('does not read either list for an upstream failure', async () => {
+      const { fetchGame, fetchPurchasedGames, fetchWishlistGames, HttpError } =
         await import('../modules/psnStore')
       vi.mocked(fetchGame).mockRejectedValue(new HttpError(502))
 
@@ -185,6 +191,77 @@ describe('GameDetailsPage', () => {
         expect(screen.getByText('Game not found')).toBeInTheDocument()
       })
       expect(fetchPurchasedGames).not.toHaveBeenCalled()
+      expect(fetchWishlistGames).not.toHaveBeenCalled()
+    })
+
+    it('shows a wishlist entry with a product store link', async () => {
+      const { fetchGame, fetchWishlistGames, HttpError } =
+        await import('../modules/psnStore')
+      vi.mocked(fetchGame).mockRejectedValue(new HttpError(404))
+      vi.mocked(fetchWishlistGames).mockResolvedValue(
+        library([{ ...owned, name: 'Wished Bundle' }]),
+      )
+
+      await renderWithRouter(<GameDetailsPage gameId={owned.id} />)
+
+      expect(await screen.findByText('Wished Bundle')).toBeInTheDocument()
+      expect(
+        screen.getByRole('link', { name: 'Open In Store' }),
+      ).toHaveAttribute(
+        'href',
+        `https://store.playstation.com/en-fi/product/${owned.id}`,
+      )
+    })
+
+    it('shows a wishlist concept entry with a concept store link', async () => {
+      const { fetchGame, fetchWishlistGames, HttpError } =
+        await import('../modules/psnStore')
+      vi.mocked(fetchGame).mockRejectedValue(new HttpError(404))
+      vi.mocked(fetchWishlistGames).mockResolvedValue(
+        library([
+          {
+            ...owned,
+            id: '10000002',
+            name: 'Wished Concept',
+            idKind: 'concept',
+          },
+        ]),
+      )
+
+      await renderWithRouter(<GameDetailsPage gameId="10000002" />)
+
+      expect(await screen.findByText('Wished Concept')).toBeInTheDocument()
+      expect(
+        screen.getByRole('link', { name: 'Open In Store' }),
+      ).toHaveAttribute(
+        'href',
+        'https://store.playstation.com/en-fi/concept/10000002',
+      )
+    })
+
+    it('reads no other list when a loaded list already holds the game', async () => {
+      const { fetchGame, fetchPurchasedGames, fetchWishlistGames, HttpError } =
+        await import('../modules/psnStore')
+      vi.mocked(fetchGame).mockRejectedValue(new HttpError(404))
+      const queryClient = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      })
+      queryClient.setQueryData(
+        ['wishlist'],
+        library([{ ...owned, name: 'Wished Bundle' }]),
+      )
+
+      await renderWithRouter(<GameDetailsPage gameId={owned.id} />, queryClient)
+
+      expect(await screen.findByText('Wished Bundle')).toBeInTheDocument()
+      expect(fetchPurchasedGames).not.toHaveBeenCalled()
+      expect(fetchWishlistGames).not.toHaveBeenCalled()
+    })
+
+    it('never persists either list read by the fallback', async () => {
+      const { shouldDehydrateQuery } = await import('../modules/persistence')
+      expect(shouldDehydrateQuery({ queryKey: ['wishlist'] })).toBe(false)
+      expect(shouldDehydrateQuery({ queryKey: ['purchased'] })).toBe(false)
     })
   })
 

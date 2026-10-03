@@ -69,11 +69,13 @@ const listEndpoint = <const Name extends string>(name: Name) =>
     error: [HttpApiError.BadRequestNoContent, ...upstreamErrors],
   })
 
-// Registered before `getById` so `/purchased` is never read as a game id.
-const purchasedEndpoint = HttpApiEndpoint.get('purchased', '/purchased', {
-  success: pageResultSchema,
-  error: [SessionRejected.pipe(HttpApiSchema.status(401)), ...upstreamErrors],
-}).middleware(NpssoAuth)
+// Signed-in lists are GET-only and read-only. Registered before `getById` so
+// `/purchased` and `/wishlist` are never read as a game id.
+const signedInEndpoint = <const Name extends string>(name: Name) =>
+  HttpApiEndpoint.get(name, `/${name}`, {
+    success: pageResultSchema,
+    error: [SessionRejected.pipe(HttpApiSchema.status(401)), ...upstreamErrors],
+  }).middleware(NpssoAuth)
 const searchEndpoint = HttpApiEndpoint.get('search', '/search', {
   query: searchQuerySchema,
   success: pageResultSchema,
@@ -96,7 +98,8 @@ export const gamesGroup = HttpApiGroup.make('games')
     listEndpoint('upcoming'),
     listEndpoint('discounted'),
     listEndpoint('monthly'),
-    purchasedEndpoint,
+    signedInEndpoint('purchased'),
+    signedInEndpoint('wishlist'),
     searchEndpoint,
     getByIdEndpoint,
   )

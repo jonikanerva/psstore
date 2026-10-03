@@ -12,6 +12,7 @@ describe('shouldDehydrateQuery', () => {
 
   it('never persists the signed-in library or an unknown key', () => {
     expect(persists(['purchased'])).toBe(false)
+    expect(persists(['wishlist'])).toBe(false)
     expect(persists(['search', 'zelda'])).toBe(false)
     expect(persists([])).toBe(false)
   })

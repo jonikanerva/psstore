@@ -7,8 +7,14 @@ import {
   HttpError,
   metacriticLink,
   type Game,
+  type PageResult,
 } from '../modules/psnStore'
 import { purchasedQueryOptions } from '../modules/purchasedQuery'
+import {
+  PURCHASED_QUERY_KEY,
+  WISHLIST_QUERY_KEY,
+} from '../modules/signedInQuery'
+import { wishlistQueryOptions } from '../modules/wishlistQuery'
 import Error from './Error'
 import Image from './Image'
 import MediaGallery from './MediaGallery'
@@ -18,8 +24,8 @@ interface GameDetailsPageProps {
   gameId: string
 }
 
-const storeUrl = (id: string): string =>
-  `https://store.playstation.com/en-fi/product/${id}`
+const storeUrl = (game: Game): string =>
+  `https://store.playstation.com/en-fi/${game.idKind}/${game.id}`
 
 const formatDate = (value: string): string => {
   const parsed = DateTime.fromISO(value)
@@ -59,8 +65,9 @@ const DetailsSkeleton = () => (
   </article>
 )
 
-// A purchased game that Sony's store has no page for (delisted or offline
-// bundle, beta, demo). The library entry is all the data there is.
+// A game from the user's own purchased or wishlist data that the public store
+// has no page for (delisted, offline bundle, beta, demo, or a concept id). The
+// entry is all the data there is.
 const OwnedGamePage = ({ game }: { game: Game }) => (
   <article className="details-page">
     <section className="details-page--hero">
@@ -73,7 +80,7 @@ const OwnedGamePage = ({ game }: { game: Game }) => (
           <div className="details-page--actions">
             <a
               className="details-page--link details-page--link-primary"
-              href={storeUrl(game.id)}
+              href={storeUrl(game)}
             >
               Open In Store
             </a>
@@ -105,22 +112,40 @@ const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
   })
 
   const missing = isError && error instanceof HttpError && error.status === 404
-  const library = useQuery({ ...purchasedQueryOptions, enabled: missing })
+  // The user's own lists are read on a 404 only. A list already in memory that
+  // holds the id makes the other list's request needless.
+  const listHas = (key: readonly unknown[]): boolean =>
+    queryClient
+      .getQueryData<PageResult>(key)
+      ?.games.some((item) => item.id === gameId) ?? false
+  const purchased = useQuery({
+    ...purchasedQueryOptions,
+    enabled: missing && !listHas(WISHLIST_QUERY_KEY),
+  })
+  const wishlist = useQuery({
+    ...wishlistQueryOptions,
+    enabled: missing && !listHas(PURCHASED_QUERY_KEY),
+  })
 
   if (isPending) {
     return fetchStatus === 'paused' ? <Offline /> : <DetailsSkeleton />
   }
 
   if (isError) {
-    if (missing && library.isPending && library.fetchStatus !== 'idle') {
-      return library.fetchStatus === 'paused' ? (
+    const owned = [purchased.data, wishlist.data]
+      .flatMap((list) => list?.games ?? [])
+      .find((item) => item.id === gameId)
+    const waiting = [purchased, wishlist].filter(
+      (query) => query.isPending && query.fetchStatus !== 'idle',
+    )
+    if (missing && owned === undefined && waiting.length > 0) {
+      return waiting.every((query) => query.fetchStatus === 'paused') ? (
         <Offline />
       ) : (
         <DetailsSkeleton />
       )
     }
 
-    const owned = library.data?.games.find((item) => item.id === gameId)
     return owned ? (
       <OwnedGamePage game={owned} />
     ) : (
@@ -201,7 +226,7 @@ const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
             <div className="details-page--actions">
               <a
                 className="details-page--link details-page--link-primary"
-                href={storeUrl(game.id)}
+                href={storeUrl(game)}
               >
                 Open In Store
               </a>

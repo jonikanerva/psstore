@@ -19,6 +19,10 @@ export const SIGNED_IN_PINNED_OPERATIONS = [
     operationNameConstant: 'SONY_PURCHASED_OPERATION_NAME',
     hashConstant: 'SONY_PURCHASED_HASH',
   },
+  {
+    operationNameConstant: 'SONY_WISHLIST_OPERATION_NAME',
+    hashConstant: 'SONY_WISHLIST_HASH',
+  },
 ] as const
 
 export interface ProbeRequest {

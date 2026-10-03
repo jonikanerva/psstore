@@ -4,7 +4,6 @@ import type { SonyContractManifest } from '../contract/types.js'
 import { readJsonFile, readTextFile, writeJsonFile } from '../io/files.js'
 import { paths } from '../io/paths.js'
 
-const OPERATION_LABEL = 'getPurchasedGameList'
 const REQUEST_TIMEOUT_MS = 10_000
 // Same cookie-safe set and length bounds as the server sign-in (STACK.md §14).
 const NPSSO_PATTERN = /^[A-Za-z0-9._~-]{16,512}$/
@@ -18,6 +17,7 @@ export type ProbeTag =
   | 'token-unusable'
   | 'http-status'
   | 'query-rotated'
+  | 'access-denied'
   | 'shape-drift'
   | 'unexpected'
 
@@ -47,6 +47,17 @@ export interface ProbeConfig {
   readonly locale: string
 }
 
+// One signed-in operation the owner can probe: which manifest entry it writes,
+// which `env.ts` constants name it, and what a valid answer looks like.
+export interface SignedInProbe {
+  readonly feature: 'purchased' | 'wishlist'
+  readonly label: string
+  readonly operationNameConstant: string
+  readonly hashConstant: string
+  readonly variables: Readonly<Record<string, unknown>>
+  readonly isValidBody: (body: unknown) => boolean
+}
+
 const CONFIG_CONSTANTS = {
   graphqlUrl: 'SONY_GRAPHQL_URL',
   authBaseUrl: 'SONY_AUTH_BASE_URL',
@@ -54,12 +65,16 @@ const CONFIG_CONSTANTS = {
   redirectUri: 'SONY_AUTH_REDIRECT_URI',
   scope: 'SONY_AUTH_SCOPE',
   basicHeader: 'SONY_AUTH_BASIC_HEADER',
-  operationName: 'SONY_PURCHASED_OPERATION_NAME',
-  hash: 'SONY_PURCHASED_HASH',
   locale: 'SONY_LOCALE',
-} as const satisfies Record<keyof ProbeConfig, string>
+} as const satisfies Record<
+  Exclude<keyof ProbeConfig, 'operationName' | 'hash'>,
+  string
+>
 
-export const readProbeConfig = (serverEnvText: string): ProbeConfig => {
+export const readProbeConfig = (
+  serverEnvText: string,
+  probe: SignedInProbe = PURCHASED_PROBE,
+): ProbeConfig => {
   const read = (constant: string): string => {
     const value = extractDefault(serverEnvText, constant)
     if (value === null) {
@@ -74,8 +89,8 @@ export const readProbeConfig = (serverEnvText: string): ProbeConfig => {
     redirectUri: read(CONFIG_CONSTANTS.redirectUri),
     scope: read(CONFIG_CONSTANTS.scope),
     basicHeader: read(CONFIG_CONSTANTS.basicHeader),
-    operationName: read(CONFIG_CONSTANTS.operationName),
-    hash: read(CONFIG_CONSTANTS.hash),
+    operationName: read(probe.operationNameConstant),
+    hash: read(probe.hashConstant),
     locale: read(CONFIG_CONSTANTS.locale),
   }
 }
@@ -179,25 +194,48 @@ const libraryEnvelopeSchema = Schema.Struct({
   }),
 })
 
-const isLibraryEnvelope = Schema.is(libraryEnvelopeSchema)
+const wishlistEnvelopeSchema = Schema.Struct({
+  data: Schema.Struct({
+    storeWishlistSecure: Schema.Array(Schema.Unknown),
+  }),
+})
 
-// Requests one library item. Resolves with the HTTP status (always 200) only
-// when the response holds a valid `data.purchasedTitlesRetrieve.games` array.
-export const probePurchased = async (
+export const PURCHASED_PROBE: SignedInProbe = {
+  feature: 'purchased',
+  label: 'getPurchasedGameList',
+  operationNameConstant: 'SONY_PURCHASED_OPERATION_NAME',
+  hashConstant: 'SONY_PURCHASED_HASH',
+  variables: {
+    isActive: true,
+    platform: ['ps5'],
+    size: 1,
+    start: 0,
+    sortBy: 'ACTIVE_DATE',
+    sortDirection: 'desc',
+  },
+  isValidBody: Schema.is(libraryEnvelopeSchema),
+}
+
+export const WISHLIST_PROBE: SignedInProbe = {
+  feature: 'wishlist',
+  label: 'storeRetrieveWishlist',
+  operationNameConstant: 'SONY_WISHLIST_OPERATION_NAME',
+  hashConstant: 'SONY_WISHLIST_HASH',
+  variables: {},
+  isValidBody: Schema.is(wishlistEnvelopeSchema),
+}
+
+// Requests the operation once, read-only. Resolves with the HTTP status (always
+// 200) only when the response holds the valid list array for that operation.
+export const probeOperation = async (
+  probe: SignedInProbe,
   accessToken: string,
   config: ProbeConfig,
   fetchFn: typeof fetch,
 ): Promise<number> => {
   const query = new URLSearchParams({
     operationName: config.operationName,
-    variables: JSON.stringify({
-      isActive: true,
-      platform: ['ps5'],
-      size: 1,
-      start: 0,
-      sortBy: 'ACTIVE_DATE',
-      sortDirection: 'desc',
-    }),
+    variables: JSON.stringify(probe.variables),
     extensions: JSON.stringify({
       persistedQuery: { version: 1, sha256Hash: config.hash },
     }),
@@ -216,29 +254,48 @@ export const probePurchased = async (
     throw new ProbeFailure('http-status', response.status)
   }
   const body: unknown = await response.json().catch(() => null)
-  if (JSON.stringify(body).toLowerCase().includes('persistedquerynotfound')) {
+  const text = JSON.stringify(body).toLowerCase()
+  if (text.includes('persistedquerynotfound')) {
     throw new ProbeFailure('query-rotated', response.status)
   }
-  if (!isLibraryEnvelope(body)) {
-    throw new ProbeFailure('shape-drift', response.status)
+  if (!probe.isValidBody(body)) {
+    throw new ProbeFailure(
+      text.includes('access denied') ? 'access-denied' : 'shape-drift',
+      response.status,
+    )
   }
   return response.status
 }
 
-// Sets the hash and the observed status of the purchased entry. Leaves the
+export const probePurchased = (
+  accessToken: string,
+  config: ProbeConfig,
+  fetchFn: typeof fetch,
+): Promise<number> =>
+  probeOperation(PURCHASED_PROBE, accessToken, config, fetchFn)
+
+export const probeWishlist = (
+  accessToken: string,
+  config: ProbeConfig,
+  fetchFn: typeof fetch,
+): Promise<number> =>
+  probeOperation(WISHLIST_PROBE, accessToken, config, fetchFn)
+
+// Sets the hash and the observed status of the entry for `feature`. Leaves the
 // capture metadata untouched. Throws when the manifest has no such entry.
 export const recordObservedStatus = (
   manifest: SonyContractManifest,
   hash: string,
   status: number,
+  feature: SignedInProbe['feature'] = 'purchased',
 ): SonyContractManifest => {
-  if (!manifest.operations.some((entry) => entry.feature === 'purchased')) {
+  if (!manifest.operations.some((entry) => entry.feature === feature)) {
     throw new ProbeFailure('manifest-entry-missing')
   }
   return {
     ...manifest,
     operations: manifest.operations.map((entry) =>
-      entry.feature === 'purchased'
+      entry.feature === feature
         ? {
             ...entry,
             persisted_query_hash: hash,
@@ -258,8 +315,9 @@ export interface ProbeRunOptions {
 
 // Owner-run check. Prints the operation name, the status code and PASS or
 // FAIL, nothing else. Writes the manifest on PASS only.
-export const runProbePurchased = async (
-  options: ProbeRunOptions = {},
+const runProbe = async (
+  probe: SignedInProbe,
+  options: ProbeRunOptions,
 ): Promise<void> => {
   const {
     env = process.env,
@@ -269,25 +327,33 @@ export const runProbePurchased = async (
   } = options
   try {
     const npsso = parseNpsso(env['SONY_NPSSO'])
-    const config = readProbeConfig(await readTextFile(envFilePath))
+    const config = readProbeConfig(await readTextFile(envFilePath), probe)
     const manifest = await readJsonFile<SonyContractManifest>(manifestPath)
-    if (!manifest.operations.some((entry) => entry.feature === 'purchased')) {
+    if (!manifest.operations.some((entry) => entry.feature === probe.feature)) {
       throw new ProbeFailure('manifest-entry-missing')
     }
 
     const accessToken = await exchangeNpsso(npsso, config, fetchFn)
-    const status = await probePurchased(accessToken, config, fetchFn)
+    const status = await probeOperation(probe, accessToken, config, fetchFn)
     await writeJsonFile(
       manifestPath,
-      recordObservedStatus(manifest, config.hash, status),
+      recordObservedStatus(manifest, config.hash, status, probe.feature),
     )
-    console.info(`${OPERATION_LABEL} ${String(status)} PASS`)
+    console.info(`${probe.label} ${String(status)} PASS`)
   } catch (error) {
     const tag = error instanceof ProbeFailure ? error.tag : 'unexpected'
     const status = error instanceof ProbeFailure ? error.status : null
     console.error(
-      `${OPERATION_LABEL} ${status === null ? '-' : String(status)} FAIL (${tag})`,
+      `${probe.label} ${status === null ? '-' : String(status)} FAIL (${tag})`,
     )
     process.exitCode = 1
   }
 }
+
+export const runProbePurchased = (
+  options: ProbeRunOptions = {},
+): Promise<void> => runProbe(PURCHASED_PROBE, options)
+
+export const runProbeWishlist = (
+  options: ProbeRunOptions = {},
+): Promise<void> => runProbe(WISHLIST_PROBE, options)

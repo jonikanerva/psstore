@@ -12,6 +12,7 @@ const PDP_HASH = 'b'.repeat(64)
 const PRICE_HASH = 'd'.repeat(64)
 const SEARCH_HASH = 'f'.repeat(64)
 const PURCHASED_HASH = '9'.repeat(64)
+const WISHLIST_HASH = '7'.repeat(64)
 
 const gridOperation = (feature: ContractFeature): ContractOperation => ({
   feature,
@@ -92,6 +93,17 @@ const purchasedOperation = (): ContractOperation => ({
   observed_status_codes: [],
 })
 
+const wishlistOperation = (): ContractOperation => ({
+  feature: 'wishlist',
+  operation_name: 'storeRetrieveWishlist',
+  persisted_query_hash: WISHLIST_HASH,
+  required_headers: ['x-apollo-operation-name'],
+  variables_schema: {},
+  sample_variables: {},
+  response_path: 'data.storeWishlistSecure',
+  observed_status_codes: [],
+})
+
 const baseMetadata = {
   captured_at: '2026-02-17T00:00:00.000Z',
   captured_by: 'codex',
@@ -118,6 +130,7 @@ const manifest: SonyContractManifest = {
     priceOperation(),
     searchOperation(),
     purchasedOperation(),
+    wishlistOperation(),
   ],
 }
 
@@ -135,12 +148,14 @@ const serverEnvText = [
   `export const SONY_SEARCH_HASH =\n  '${SEARCH_HASH}'`,
   "export const SONY_PURCHASED_OPERATION_NAME = 'getPurchasedGameList'",
   `export const SONY_PURCHASED_HASH =\n  '${PURCHASED_HASH}'`,
+  "export const SONY_WISHLIST_OPERATION_NAME = 'storeRetrieveWishlist'",
+  `export const SONY_WISHLIST_HASH =\n  '${WISHLIST_HASH}'`,
 ].join('\n')
 
 const context = {
   serverEnvText,
   sonyClientText:
-    "headers: { 'x-apollo-operation-name': strategy.operationName }\nreturn json.data?.categoryGridRetrieve?.concepts ?? []\nconst product = json.data?.productRetrieve\nconst search = json.data?.universalSearch\nsha256Hash: SONY_PURCHASED_HASH",
+    "headers: { 'x-apollo-operation-name': strategy.operationName }\nreturn json.data?.categoryGridRetrieve?.concepts ?? []\nconst product = json.data?.productRetrieve\nconst search = json.data?.universalSearch\nsha256Hash: SONY_PURCHASED_HASH\nsha256Hash: SONY_WISHLIST_HASH",
   mapperText: 'export const conceptToGame = (concept) => concept',
   serviceText: "await fetchConceptsByFeature('new', 300)",
 }
@@ -192,6 +207,7 @@ describe('validateBackendCompatibility', () => {
         priceOperation(),
         searchOperation(),
         purchasedOperation(),
+        wishlistOperation(),
       ],
     }
 
@@ -209,6 +225,7 @@ describe('validateBackendCompatibility', () => {
         priceOperation(),
         searchOperation(),
         purchasedOperation(),
+        wishlistOperation(),
       ],
     }
 
@@ -456,5 +473,97 @@ describe('validateBackendCompatibility', () => {
           .join('\n'),
       })
     }).toThrow(/SONY_PURCHASED_OPERATION_NAME/)
+  })
+})
+
+describe('wishlist operation compatibility', () => {
+  const withoutWishlist = () =>
+    manifest.operations.filter((op) => op.feature !== 'wishlist')
+
+  it('accepts the wishlist operation', () => {
+    expect(() => {
+      validateBackendCompatibility(manifest, context)
+    }).not.toThrow()
+  })
+
+  it('rejects a manifest without the wishlist operation', () => {
+    expect(() => {
+      validateBackendCompatibility(
+        { ...manifest, operations: withoutWishlist() },
+        context,
+      )
+    }).toThrow(/Manifest missing wishlist operation/)
+  })
+
+  it('rejects a wishlist operation whose hash does not match the server', () => {
+    expect(() => {
+      validateBackendCompatibility(
+        {
+          ...manifest,
+          operations: [
+            ...withoutWishlist(),
+            { ...wishlistOperation(), persisted_query_hash: '6'.repeat(64) },
+          ],
+        },
+        context,
+      )
+    }).toThrow(/Manifest missing wishlist operation/)
+  })
+
+  it('rejects a wishlist operation with the wrong response_path', () => {
+    expect(() => {
+      validateBackendCompatibility(
+        {
+          ...manifest,
+          operations: [
+            ...withoutWishlist(),
+            { ...wishlistOperation(), response_path: 'data.productRetrieve' },
+          ],
+        },
+        context,
+      )
+    }).toThrow(/Wishlist operation .* response path incompatible/)
+  })
+
+  it('rejects a wishlist operation that declares variables', () => {
+    expect(() => {
+      validateBackendCompatibility(
+        {
+          ...manifest,
+          operations: [
+            ...withoutWishlist(),
+            {
+              ...wishlistOperation(),
+              variables_schema: { id: 'string' },
+            },
+          ],
+        },
+        context,
+      )
+    }).toThrow(/Wishlist operation .* variables_schema incompatible/)
+  })
+
+  it('rejects when sonyClient no longer sends the wishlist hash constant', () => {
+    expect(() => {
+      validateBackendCompatibility(manifest, {
+        ...context,
+        sonyClientText: context.sonyClientText.replace(
+          'SONY_WISHLIST_HASH',
+          '',
+        ),
+      })
+    }).toThrow(/SONY_WISHLIST_HASH/)
+  })
+
+  it('rejects when the server wishlist env constants are unreadable', () => {
+    expect(() => {
+      validateBackendCompatibility(manifest, {
+        ...context,
+        serverEnvText: serverEnvText
+          .split('\n')
+          .filter((line) => !line.includes('SONY_WISHLIST_OPERATION_NAME'))
+          .join('\n'),
+      })
+    }).toThrow(/SONY_WISHLIST_OPERATION_NAME/)
   })
 })

@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { filterTrackedOperations } from '../contract/trackedOperations.js'
+import {
+  filterTrackedOperations,
+  TRACKED_OPERATIONS,
+} from '../contract/trackedOperations.js'
 import type { ContractOperation } from '../contract/types.js'
 
 const operation = (operationName: string): ContractOperation => ({
@@ -21,6 +24,7 @@ describe('filterTrackedOperations', () => {
       'productRetrieveForCtasWithPrice',
       'getSearchResults',
       'getPurchasedGameList',
+      'storeRetrieveWishlist',
       'getDefaultView',
       'queryOracleUserProfileFullSubscription',
       'productRetrieveForUpsellWithCtas',
@@ -30,6 +34,14 @@ describe('filterTrackedOperations', () => {
       filterTrackedOperations(names.map(operation)).map(
         (entry) => entry.operation_name,
       ),
-    ).toEqual(names.slice(0, 5))
+    ).toEqual(names.slice(0, 6))
+  })
+
+  it('never tracks a wishlist write operation', () => {
+    expect(TRACKED_OPERATIONS).toContain('storeRetrieveWishlist')
+    expect(TRACKED_OPERATIONS).not.toContain('removeWishlistItem')
+    expect(filterTrackedOperations([operation('removeWishlistItem')])).toEqual(
+      [],
+    )
   })
 })

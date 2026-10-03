@@ -2,6 +2,7 @@ import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { purchasedQueryOptions } from '../modules/purchasedQuery'
+import { wishlistQueryOptions } from '../modules/wishlistQuery'
 import { SearchContext } from '../modules/searchContext'
 import {
   normalizeSearchTerm,
@@ -24,11 +25,14 @@ const AppShell = () => {
   })
   const onSearchRoute = pathname === SEARCH_PATH
 
-  // The PURCHASED search has nothing to filter until the library list exists,
-  // and Sign out shows only while it does. `enabled: false` observes the shared
+  // A signed-in search has nothing to filter until its list exists, and Sign
+  // out shows while either list does. `enabled: false` observes the shared
   // query without starting a fetch.
   const library = useQuery({ ...purchasedQueryOptions, enabled: false })
-  const searchDisabled = pathname === '/purchased' && library.data === undefined
+  const wishlist = useQuery({ ...wishlistQueryOptions, enabled: false })
+  const searchDisabled =
+    (pathname === '/purchased' && library.data === undefined) ||
+    (pathname === '/wishlist' && wishlist.data === undefined)
 
   // Outside the search route the field filters the current view and clears
   // with the route. On the search route the URL term seeds the field, and
@@ -45,7 +49,9 @@ const AppShell = () => {
         <div className="app-shell--brand">PS Store</div>
         <Navigation />
         <div className="app-shell--tools">
-          {library.data !== undefined && <SignOut />}
+          {(library.data !== undefined || wishlist.data !== undefined) && (
+            <SignOut />
+          )}
           <form
             role="search"
             className="app-shell--search-form"

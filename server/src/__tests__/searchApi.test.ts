@@ -66,6 +66,8 @@ const makeApp = (outcome: SearchPage | SearchFailure) => {
           verifyNpsso: () => Effect.void,
           getPurchasedGames: () =>
             Effect.succeed({ games: [], totalCount: 0, nextOffset: null }),
+          getWishlistGames: () =>
+            Effect.succeed({ games: [], totalCount: 0, nextOffset: null }),
         }),
       ),
     ),

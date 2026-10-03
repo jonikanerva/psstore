@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { PURCHASED_QUERY_KEY } from '../modules/purchasedQuery'
+import { SIGNED_IN_QUERY_KEYS } from '../modules/signedInQuery'
 import { HttpError, signIn } from '../modules/psnStore'
 
 const PLAYSTATION_URL = 'https://www.playstation.com/'
@@ -11,13 +11,25 @@ const errorMessage = (error: unknown): string =>
     ? 'Sign-in failed. Check the token.'
     : 'Sony sign-in is unavailable. Try again later.'
 
-const SignIn = () => {
+interface SignInProps {
+  readonly queryKey: readonly unknown[]
+}
+
+const SignIn = ({ queryKey }: SignInProps) => {
   const queryClient = useQueryClient()
   const [token, setToken] = useState('')
   const mutation = useMutation({
     mutationFn: signIn,
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: PURCHASED_QUERY_KEY }),
+    onSuccess: () => {
+      // The other signed-in lists reset instead of refetching: a reset
+      // refetches only a list that is on screen, so no hidden Sony call.
+      for (const key of SIGNED_IN_QUERY_KEYS) {
+        if (key[0] !== queryKey[0]) {
+          void queryClient.resetQueries({ queryKey: key })
+        }
+      }
+      return queryClient.invalidateQueries({ queryKey })
+    },
   })
 
   const submit = () => {

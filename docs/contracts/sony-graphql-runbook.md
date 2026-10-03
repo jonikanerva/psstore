@@ -33,7 +33,7 @@ Pipeline:
 
 The manifest holds only the operations the server calls:
 `categoryGridRetrieve`, `metGetProductById`, `productRetrieveForCtasWithPrice`, `getSearchResults`,
-and the signed-in `getPurchasedGameList`.
+and the signed-in `getPurchasedGameList` and `storeRetrieveWishlist`.
 The normalizer drops every other operation Sony fires on a captured page.
 The list lives in `tools/sony-contract-bot/src/contract/trackedOperations.ts`.
 
@@ -119,6 +119,35 @@ Commit the hash and the manifest together.
 
 The diff report prints `purchased: unobserved (owner probe pending)` while
 `observed_status_codes` is empty, so an empty list never reads as a pass.
+
+## Signed-in wishlist operation
+
+The server calls `storeRetrieveWishlist` with the user's access token for the WISHLIST view.
+It is one GET request with no variables and no paging. The response list is `data.storeWishlistSecure`.
+The operation is read-only. The server and the tooling never call or track `removeWishlistItem`.
+
+The manifest holds a hand-written entry with feature `wishlist`. `observed_status_codes` is empty.
+Nobody has seen an authorised answer yet. An anonymous request shows that Sony whitelists the hash:
+the answer is HTTP 200 with an "Access denied" error and a `null` list.
+An unknown hash gets HTTP 400 "not whitelisted", which the server reports as `UpstreamQueryRotated`.
+
+Refresh carries the entry over, like the purchased entry. It runs no probe.
+The compatibility check guards the repository-internal name, hash, response path, and the empty variables only.
+
+```bash
+SONY_NPSSO=<your NPSSO> pnpm sony:probe-wishlist
+```
+
+- The probe is owner-run. An agent never holds a real NPSSO and never runs it.
+- The probe follows the same rules as `sony:probe-purchased`.
+- A PASS needs HTTP 200, no `PersistedQueryNotFound`, and a `data.storeWishlistSecure` array.
+- An "Access denied" answer with a `null` list fails with the tag `access-denied`.
+- On PASS the probe records `observed_status_codes: [200]` for `wishlist`. Commit that change.
+- The probe never writes a wishlist.
+
+The wishlist response has no region field, so the server ignores its prices.
+It fills each product card (date, standard price, PS Plus price) from the anonymous Finnish store,
+the same lookup as the game page. A concept entry or a failed lookup keeps a card with name and image only.
 
 ## PS Plus monthly feed
 
