@@ -205,6 +205,28 @@ describe('list view survives a game page round trip', () => {
     expect(router.state.location.search).toEqual({ q: 'halo' })
   })
 
+  it('keeps the sort of the search route', async () => {
+    const router = await renderApp('/search?q=halo')
+    fireEvent.click(screen.getByRole('button', { name: 'Sort by name' }))
+    expect(screen.getByTestId('sort')).toHaveTextContent('name asc')
+
+    await openCard(router, 'two')
+    await goBack(router)
+
+    expect(screen.getByTestId('sort')).toHaveTextContent('name asc')
+  })
+
+  it('drops the sort of the search route for another term', async () => {
+    await renderApp('/search?q=halo')
+    fireEvent.click(screen.getByRole('button', { name: 'Sort by name' }))
+    fireEvent.change(field(), { target: { value: 'doom' } })
+    fireEvent.submit(field())
+
+    await waitFor(() => {
+      expect(screen.getByTestId('sort')).toHaveTextContent('date desc')
+    })
+  })
+
   it('resets the search draft when a new term is submitted', async () => {
     await renderApp('/search?q=halo')
     fireEvent.change(field(), { target: { value: 'doom' } })
