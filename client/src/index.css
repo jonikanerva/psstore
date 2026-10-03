@@ -439,3 +439,21 @@ body {
   align-items: center;
   gap: 8px;
 }
+
+.sign-in--steps {
+  padding-left: 20px;
+  font-size: 13px;
+  color: var(--muted-text-color);
+}
+
+.sign-in--steps a {
+  display: inline-block;
+  min-height: 24px;
+  line-height: 24px;
+  color: #0b5cad;
+}
+
+.sign-in--steps a:focus-visible {
+  outline: 2px solid var(--focus-color);
+  outline-offset: 1px;
+}

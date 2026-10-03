@@ -11,6 +11,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from '@testing-library/react'
 import type { Game, PageResult } from '@psstore/shared'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -121,10 +122,23 @@ describe('Purchased', () => {
     expect(screen.getAllByRole('button')).toHaveLength(1)
     expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /NPSSO/ })).toHaveAttribute(
-      'href',
-      'https://ca.account.sony.com/api/v1/ssocookie',
-    )
+    const steps = within(screen.getByRole('list'))
+    expect(steps.getAllByRole('listitem')).toHaveLength(3)
+    const links = [
+      [
+        steps.getByRole('link', { name: 'playstation.com' }),
+        'https://www.playstation.com/',
+      ],
+      [
+        steps.getByRole('link', { name: 'Get your NPSSO token' }),
+        'https://ca.account.sony.com/api/v1/ssocookie',
+      ],
+    ] as const
+    for (const [link, href] of links) {
+      expect(link).toHaveAttribute('href', href)
+      expect(link).toHaveAttribute('target', '_blank')
+      expect(link).toHaveAttribute('rel', 'noopener noreferrer')
+    }
   })
 
   it('posts the token, clears the field and loads the library', async () => {

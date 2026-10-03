@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { PURCHASED_QUERY_KEY } from '../modules/purchasedQuery'
 import { HttpError, signIn } from '../modules/psnStore'
 
+const PLAYSTATION_URL = 'https://www.playstation.com/'
 const NPSSO_URL = 'https://ca.account.sony.com/api/v1/ssocookie'
 
 const errorMessage = (error: unknown): string =>
@@ -69,11 +70,23 @@ const SignIn = () => {
         The NPSSO token is a full account credential. It is sent once. The
         sign-in stays for 30 days until you sign out.
       </p>
-      <p className="sign-in--help">
-        <a href={NPSSO_URL} target="_blank" rel="noopener noreferrer">
-          Get your NPSSO token
-        </a>
-      </p>
+      <ol className="sign-in--steps">
+        <li>
+          Sign in at{' '}
+          <a href={PLAYSTATION_URL} target="_blank" rel="noopener noreferrer">
+            playstation.com
+          </a>{' '}
+          in this browser.
+        </li>
+        <li>
+          Open{' '}
+          <a href={NPSSO_URL} target="_blank" rel="noopener noreferrer">
+            Get your NPSSO token
+          </a>
+          .
+        </li>
+        <li>Copy the value of npsso and paste it above.</li>
+      </ol>
     </form>
   )
 }
