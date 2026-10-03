@@ -8,7 +8,7 @@ describe('sortConfigForPath', () => {
     ['/discounted', ['date', 'price', 'name'], 'date', 'desc', true],
     ['/monthly', ['date', 'name'], 'date', 'desc', true],
     ['/purchased', ['name'], 'name', 'asc', false],
-    ['/wishlist', ['date', 'price', 'name'], 'date', 'desc', false],
+    ['/wishlist', ['date', 'price', 'name'], 'price', 'asc', false],
   ])(
     'offers the fields and default of %s',
     (path, fields, field, direction, serverOrdered) => {

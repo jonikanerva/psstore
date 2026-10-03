@@ -48,7 +48,7 @@ const CONFIG_BY_PATH: Readonly<Record<string, SortConfig>> = {
   },
   '/wishlist': {
     fields: ['date', 'price', 'name'],
-    defaultSort: { field: 'date', direction: 'desc' },
+    defaultSort: { field: 'price', direction: 'asc' },
     serverOrdered: false,
   },
 }
