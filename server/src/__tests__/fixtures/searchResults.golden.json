@@ -1,0 +1,275 @@
+{
+  "data": {
+    "universalSearch": {
+      "__typename": "UniversalSearchResponse",
+      "next": "",
+      "pageInfo": {
+        "__typename": "PageInfo",
+        "isLast": true,
+        "offset": 0,
+        "size": 50,
+        "totalCount": 9
+      },
+      "results": [
+        {
+          "__typename": "Product",
+          "id": "EP0700-PPSA04609_00-ELDENRING0000000",
+          "localizedStoreDisplayClassification": "Full Game",
+          "media": [
+            {
+              "__typename": "Media",
+              "role": "BACKGROUND",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202108/0410/8BDt7H1bBfOhd2G4X20G6RQv.png"
+            },
+            {
+              "__typename": "Media",
+              "role": "EDITION_KEY_ART",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/img/rnd/202111/0506/hcFeWRVGHYK72uOw6Mn6f4Ms.jpg"
+            }
+          ],
+          "name": "ELDEN RING PS4 & PS5",
+          "npTitleId": "PPSA04609_00",
+          "platforms": ["PS4", "PS5"],
+          "price": {
+            "__typename": "SkuPrice",
+            "skuId": "EP0700-PPSA04609_00-ELDENRING0000000-E005",
+            "basePrice": "\u20ac59,95",
+            "discountText": null,
+            "discountedPrice": "\u20ac59,95",
+            "includesBundleOffer": false,
+            "isExclusive": false,
+            "isFree": false,
+            "isTiedToSubscription": false,
+            "serviceBranding": ["NONE"],
+            "upsellServiceBranding": ["NONE"],
+            "upsellText": null
+          },
+          "skus": [
+            {
+              "__typename": "Sku",
+              "type": "STANDARD"
+            }
+          ],
+          "storeDisplayClassification": "FULL_GAME"
+        },
+        {
+          "__typename": "Product",
+          "id": "EP9000-CUSA00207_00-BLOODBORNE0000EU",
+          "localizedStoreDisplayClassification": "Full Game",
+          "media": [
+            {
+              "__typename": "Media",
+              "role": "BACKGROUND",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/img/rnd/202010/2614/DbHk1vfm0crso6MJZevAqfLA.png"
+            },
+            {
+              "__typename": "Media",
+              "role": "EDITION_KEY_ART",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/img/rnd/202010/2614/KKLEVc2SIIgrFVjsZChZJk1d.jpg"
+            }
+          ],
+          "name": "Bloodborne\u2122",
+          "npTitleId": "CUSA00207_00",
+          "platforms": ["PS4"],
+          "price": {
+            "__typename": "SkuPrice",
+            "skuId": "EP9000-CUSA00207_00-BLOODBORNE0000EU-E009",
+            "basePrice": "\u20ac19,95",
+            "discountText": null,
+            "discountedPrice": "\u20ac19,95",
+            "includesBundleOffer": false,
+            "isExclusive": false,
+            "isFree": false,
+            "isTiedToSubscription": false,
+            "serviceBranding": ["NONE"],
+            "upsellServiceBranding": ["PS_PLUS"],
+            "upsellText": "Extra"
+          },
+          "skus": [
+            {
+              "__typename": "Sku",
+              "type": "STANDARD"
+            }
+          ],
+          "storeDisplayClassification": "FULL_GAME"
+        },
+        {
+          "__typename": "Concept",
+          "id": "10015248",
+          "media": [
+            {
+              "__typename": "Media",
+              "role": "GAMEHUB_COVER_ART",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202605/0600/354da25bbcef12a13a3a7e0532884e865c73368cd0a2ae44.png"
+            },
+            {
+              "__typename": "Media",
+              "role": "LOGO",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202605/0600/203f47928141e8c925df84c0ae93cb3d7800f1d973f87148.png"
+            }
+          ],
+          "name": "The Florist",
+          "price": null,
+          "products": []
+        },
+        {
+          "__typename": "Product",
+          "id": "EP0700-PPSA25381_00-ERSL000000000000",
+          "localizedStoreDisplayClassification": "Full Game",
+          "media": [
+            {
+              "__typename": "Media",
+              "role": "BACKGROUND",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202501/3008/898e99993e030faeaa2b27b7c9e9275f5942b28b29230e3d.png"
+            },
+            {
+              "__typename": "Media",
+              "role": "EDITION_KEY_ART",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202501/3008/4b8274d023372e065669b663015c6f23b8df2d0ce2d3c500.jpg"
+            }
+          ],
+          "name": "ELDEN RING NIGHTREIGN",
+          "npTitleId": "PPSA25381_00",
+          "platforms": ["PS4", "PS5"],
+          "price": {
+            "__typename": "SkuPrice",
+            "skuId": "EP0700-PPSA25381_00-ERSL000000000000-E006",
+            "basePrice": "\u20ac39,95",
+            "discountText": null,
+            "discountedPrice": "\u20ac39,95",
+            "includesBundleOffer": false,
+            "isExclusive": false,
+            "isFree": false,
+            "isTiedToSubscription": false,
+            "serviceBranding": ["NONE"],
+            "upsellServiceBranding": ["NONE"],
+            "upsellText": null
+          },
+          "skus": [
+            {
+              "__typename": "Sku",
+              "type": "STANDARD"
+            }
+          ],
+          "storeDisplayClassification": "FULL_GAME"
+        },
+        {
+          "__typename": "Product",
+          "id": 42,
+          "name": null,
+          "platforms": "PS5"
+        },
+        {
+          "__typename": "Product",
+          "id": "EP0700-PPSA04609_00-ELDENRING0000000",
+          "localizedStoreDisplayClassification": "Full Game",
+          "media": [
+            {
+              "__typename": "Media",
+              "role": "BACKGROUND",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202108/0410/8BDt7H1bBfOhd2G4X20G6RQv.png"
+            },
+            {
+              "__typename": "Media",
+              "role": "EDITION_KEY_ART",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/img/rnd/202111/0506/hcFeWRVGHYK72uOw6Mn6f4Ms.jpg"
+            }
+          ],
+          "name": "ELDEN RING PS4 & PS5",
+          "npTitleId": "PPSA04609_00",
+          "platforms": ["PS4", "PS5"],
+          "price": {
+            "__typename": "SkuPrice",
+            "skuId": "EP0700-PPSA04609_00-ELDENRING0000000-E005",
+            "basePrice": "\u20ac59,95",
+            "discountText": null,
+            "discountedPrice": "\u20ac59,95",
+            "includesBundleOffer": false,
+            "isExclusive": false,
+            "isFree": false,
+            "isTiedToSubscription": false,
+            "serviceBranding": ["NONE"],
+            "upsellServiceBranding": ["NONE"],
+            "upsellText": null
+          },
+          "skus": [
+            {
+              "__typename": "Sku",
+              "type": "STANDARD"
+            }
+          ],
+          "storeDisplayClassification": "FULL_GAME"
+        },
+        {
+          "__typename": "Concept",
+          "id": "10000001",
+          "name": "Synthetic Concept With Product",
+          "price": null,
+          "products": [
+            {
+              "__typename": "Product",
+              "id": "EP0001-PPSA00001_00-SYNTHETIC0000000"
+            }
+          ]
+        },
+        {
+          "__typename": "Product",
+          "id": "EP0700-PPSA04609_00-ELDENRINGDX00001",
+          "localizedStoreDisplayClassification": "Premium Edition",
+          "media": [
+            {
+              "__typename": "Media",
+              "role": "BACKGROUND",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202402/0713/5ca7e68c0391e2e869a129a9a5ec7d8d05b946a8495ac28e.png"
+            },
+            {
+              "__typename": "Media",
+              "role": "EDITION_KEY_ART",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202402/0713/53f1c3c70e8d374a8611ed7ddb57ece57e66d86a31990cf8.jpg"
+            }
+          ],
+          "name": "ELDEN RING Shadow of the Erdtree Deluxe Edition PS4 & PS5",
+          "npTitleId": "PPSA04609_00",
+          "platforms": ["PS4", "PS5"],
+          "price": {
+            "__typename": "SkuPrice",
+            "skuId": "EP0700-PPSA04609_00-ELDENRINGDX00001-E002",
+            "basePrice": "\u20ac99,95",
+            "discountText": null,
+            "discountedPrice": "\u20ac99,95",
+            "includesBundleOffer": false,
+            "isExclusive": false,
+            "isFree": false,
+            "isTiedToSubscription": false,
+            "serviceBranding": ["NONE"],
+            "upsellServiceBranding": ["NONE"],
+            "upsellText": null
+          },
+          "skus": [
+            {
+              "__typename": "Sku",
+              "type": "STANDARD"
+            }
+          ],
+          "storeDisplayClassification": "PREMIUM_EDITION"
+        },
+        {
+          "__typename": "Bundle",
+          "id": "x"
+        }
+      ]
+    }
+  }
+}

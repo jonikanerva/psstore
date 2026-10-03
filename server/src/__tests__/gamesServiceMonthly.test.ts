@@ -55,6 +55,8 @@ const harness = (
         counts.monthly += 1
         return monthly()
       }),
+    fetchSearchPage: () =>
+      Effect.succeed({ candidates: [], isLast: true, rawCount: 0 }),
     fetchProductPrice: () =>
       Effect.suspend(() => {
         counts.price += 1

@@ -42,7 +42,7 @@ const conceptProductRefSchema = Schema.Struct({
   genres: Schema.optional(Schema.NullOr(Schema.Array(Schema.String))),
 })
 
-const conceptSchema = Schema.Struct({
+export const conceptSchema = Schema.Struct({
   id: Schema.optional(Schema.NullOr(Schema.String)),
   name: Schema.optional(Schema.NullOr(Schema.String)),
   media: Schema.optional(Schema.NullOr(Schema.Array(mediaSchema))),
@@ -52,7 +52,7 @@ const conceptSchema = Schema.Struct({
   ),
 })
 
-const categoryGridProductSchema = Schema.Struct({
+export const categoryGridProductSchema = Schema.Struct({
   id: Schema.optional(Schema.NullOr(Schema.String)),
   name: Schema.optional(Schema.NullOr(Schema.String)),
   media: Schema.optional(Schema.NullOr(Schema.Array(mediaSchema))),
