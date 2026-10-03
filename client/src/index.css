@@ -72,6 +72,68 @@ body {
   outline-offset: 1px;
 }
 
+.app-shell--search-form {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  justify-self: end;
+  min-width: 0;
+  width: 220px;
+}
+
+.app-shell--search-form .app-shell--search {
+  width: 100%;
+}
+
+.app-shell--search-all {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 2px 4px;
+  font-size: 13px;
+  color: var(--muted-text-color);
+  overflow-wrap: anywhere;
+}
+
+.app-shell--search-all:focus-visible,
+.search-results--retry:focus-visible {
+  outline: 2px solid var(--focus-color);
+  outline-offset: 1px;
+}
+
+.search-results {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 1320px;
+  margin: 0 auto;
+}
+
+.search-results--heading {
+  font-size: 20px;
+  font-weight: bold;
+  overflow-wrap: anywhere;
+}
+
+.search-results--count {
+  font-size: 14px;
+  color: var(--muted-text-color);
+}
+
+.search-results--retry {
+  align-self: flex-start;
+  min-height: 24px;
+  margin: 0 15px;
+  padding: 4px 12px;
+  font: inherit;
+  color: inherit;
+  background: var(--button-color);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+}
+
 .app-shell--main {
   padding: 12px 16px 24px;
 }
@@ -82,7 +144,7 @@ body {
     gap: 8px;
   }
 
-  .app-shell--search {
+  .app-shell--search-form {
     justify-self: stretch;
     width: auto;
   }

@@ -1,11 +1,9 @@
 import type { PageResult } from '@psstore/shared'
 import { filterGamesByName } from '@psstore/shared'
 import { useInfiniteQuery } from '@tanstack/react-query'
-import { useEffect, useRef } from 'react'
 import { useSearchQuery } from '../modules/searchContext'
 import Error from './Error'
-import GameCard from './GameCard'
-import ScrollToTopOnMount from './ScrollToTopOnMount'
+import GameGrid from './GameGrid'
 import Loading from './Spinner'
 
 const PAGE_SIZE = 60
@@ -22,7 +20,6 @@ const Games = ({
   emptyMessage = 'No games found',
 }: GamesProps) => {
   const query = useSearchQuery()
-  const sentinelRef = useRef<HTMLDivElement>(null)
 
   // Query key is feature only (pagination flows through pageParam); the search
   // text is never part of the key, so the persisted cache carries no search or
@@ -42,27 +39,6 @@ const Games = ({
     getNextPageParam: (lastPage) => lastPage.nextOffset ?? undefined,
   })
 
-  useEffect(() => {
-    const sentinel = sentinelRef.current
-    if (!sentinel) {
-      return
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting && hasNextPage && !isFetchingNextPage) {
-          void fetchNextPage()
-        }
-      },
-      { rootMargin: '200px' },
-    )
-
-    observer.observe(sentinel)
-    return () => {
-      observer.disconnect()
-    }
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage])
-
   if (isError) {
     return <Error message="Failed to load games" />
   }
@@ -79,23 +55,14 @@ const Games = ({
   }
 
   return (
-    <>
-      <ScrollToTopOnMount />
-      <div className="games--content">
-        <div className="games--grid" data-label={feature}>
-          {filtered.map((game) => (
-            <GameCard
-              key={game.id}
-              game={game}
-              showPrice={feature !== 'monthly'}
-            />
-          ))}
-        </div>
-        <div ref={sentinelRef} className="games--sentinel">
-          {isFetchingNextPage && <Loading loading />}
-        </div>
-      </div>
-    </>
+    <GameGrid
+      games={filtered}
+      label={feature}
+      showPrice={feature !== 'monthly'}
+      hasNextPage={hasNextPage}
+      isFetchingNextPage={isFetchingNextPage}
+      fetchNextPage={fetchNextPage}
+    />
   )
 }
 
