@@ -6,7 +6,7 @@
 - Changed: 0
 
 ## Signed-in operations
-- purchased: unobserved (owner probe pending)
+- purchased: observed 200
 
 ## Impacted API Routes
 - /api/games/new
