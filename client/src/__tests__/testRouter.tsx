@@ -14,11 +14,10 @@ import type { ReactNode } from 'react'
 // tests, and a non-persisting client so localStorage stays untouched.
 export const renderWithRouter = async (
   ui: ReactNode,
-): Promise<RenderResult> => {
-  const queryClient = new QueryClient({
+  queryClient: QueryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
-  })
-
+  }),
+): Promise<RenderResult> => {
   const rootRoute = createRootRoute({ component: () => <>{ui}</> })
   const router = createRouter({
     routeTree: rootRoute,

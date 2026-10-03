@@ -1,4 +1,5 @@
-import { cleanup, screen, waitFor } from '@testing-library/react'
+import { QueryClient, onlineManager } from '@tanstack/react-query'
+import { act, cleanup, screen, waitFor } from '@testing-library/react'
 import { useState } from 'react'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import type { Game, PageResult } from '@psstore/shared'
@@ -64,6 +65,7 @@ const MonthlyWithSearch = ({
 describe('Games feature monthly', () => {
   afterEach(() => {
     cleanup()
+    onlineManager.setOnline(true)
   })
 
   it('renders the cards without a price', async () => {
@@ -115,5 +117,61 @@ describe('Games feature monthly', () => {
     await renderWithRouter(<Games feature="new" fetch={fetch} />)
 
     expect(await screen.findByText('-')).toBeInTheDocument()
+  })
+
+  it('shows the offline state instead of the spinner while the first fetch is paused', async () => {
+    onlineManager.setOnline(false)
+    const fetch = vi.fn().mockResolvedValue(page([game('EP1-PPSA1_00-A', 'X')]))
+    const { container } = await renderWithRouter(
+      <Games feature="new" fetch={fetch} />,
+    )
+
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'You are offline. Games load when the connection returns.',
+    )
+    expect(container.querySelector('.spinner')).toBeNull()
+    expect(fetch).not.toHaveBeenCalled()
+  })
+
+  it('loads the games when the connection returns', async () => {
+    onlineManager.setOnline(false)
+    const fetch = vi
+      .fn()
+      .mockResolvedValue(page([game('EP1-PPSA1_00-A', 'Wobbly Life')]))
+    await renderWithRouter(<Games feature="new" fetch={fetch} />)
+    expect(screen.getByRole('status')).toBeInTheDocument()
+
+    act(() => {
+      onlineManager.setOnline(true)
+    })
+
+    expect(await screen.findByText('Wobbly Life')).toBeInTheDocument()
+    expect(screen.queryByText(/You are offline/)).not.toBeInTheDocument()
+  })
+
+  it('shows the spinner, not the offline state, while an online fetch is pending', async () => {
+    const fetch = vi.fn().mockReturnValue(new Promise(() => undefined))
+    const { container } = await renderWithRouter(
+      <Games feature="new" fetch={fetch} />,
+    )
+
+    expect(container.querySelector('.spinner')).not.toBeNull()
+    expect(screen.queryByText(/You are offline/)).not.toBeInTheDocument()
+  })
+
+  it('stays silent when cached games exist and a refetch is paused', async () => {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: 0 } },
+    })
+    client.setQueryData(['games', 'new'], {
+      pages: [page([game('EP1-PPSA1_00-A', 'Wobbly Life')])],
+      pageParams: [0],
+    })
+    onlineManager.setOnline(false)
+    const fetch = vi.fn().mockResolvedValue(page([]))
+    await renderWithRouter(<Games feature="new" fetch={fetch} />, client)
+
+    expect(await screen.findByText('Wobbly Life')).toBeInTheDocument()
+    expect(screen.queryByText(/You are offline/)).not.toBeInTheDocument()
   })
 })

@@ -5,6 +5,7 @@ import { useEffect, useRef } from 'react'
 import { useSearchQuery } from '../modules/searchContext'
 import Error from './Error'
 import GameCard from './GameCard'
+import Offline from './Offline'
 import ScrollToTopOnMount from './ScrollToTopOnMount'
 import Loading from './Spinner'
 
@@ -32,6 +33,7 @@ const Games = ({
     data,
     isPending,
     isError,
+    fetchStatus,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
@@ -68,7 +70,7 @@ const Games = ({
   }
 
   if (isPending) {
-    return <Loading loading />
+    return fetchStatus === 'paused' ? <Offline /> : <Loading loading />
   }
 
   const games = data.pages.flatMap((page) => page.games)
