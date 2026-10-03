@@ -1,4 +1,5 @@
-import { cleanup, screen, waitFor } from '@testing-library/react'
+import { onlineManager } from '@tanstack/react-query'
+import { act, cleanup, screen, waitFor } from '@testing-library/react'
 import { Settings } from 'luxon'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Game } from '@psstore/shared'
@@ -40,6 +41,7 @@ describe('GameDetailsPage', () => {
   afterEach(() => {
     Settings.defaultZone = 'system'
     cleanup()
+    onlineManager.setOnline(true)
   })
 
   it('renders game details when loaded', async () => {
@@ -245,5 +247,47 @@ describe('GameDetailsPage', () => {
       'href',
       `https://store.playstation.com/en-fi/product/${baseGame.id}`,
     )
+  })
+
+  it('shows the offline state instead of the spinner while the fetch is paused', async () => {
+    const { fetchGame } = await import('../modules/psnStore')
+    onlineManager.setOnline(false)
+
+    const { container } = await renderWithRouter(
+      <GameDetailsPage gameId={baseGame.id} />,
+    )
+
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'You are offline. Games load when the connection returns.',
+    )
+    expect(container.querySelector('.spinner')).toBeNull()
+    expect(fetchGame).not.toHaveBeenCalled()
+  })
+
+  it('loads the game when the connection returns', async () => {
+    const { fetchGame } = await import('../modules/psnStore')
+    vi.mocked(fetchGame).mockResolvedValue(baseGame)
+    onlineManager.setOnline(false)
+    await renderWithRouter(<GameDetailsPage gameId={baseGame.id} />)
+    expect(screen.getByRole('status')).toBeInTheDocument()
+
+    act(() => {
+      onlineManager.setOnline(true)
+    })
+
+    expect(await screen.findByText('Detail Game')).toBeInTheDocument()
+    expect(screen.queryByText(/You are offline/)).not.toBeInTheDocument()
+  })
+
+  it('shows the spinner, not the offline state, while an online fetch is pending', async () => {
+    const { fetchGame } = await import('../modules/psnStore')
+    vi.mocked(fetchGame).mockReturnValue(new Promise(() => undefined))
+
+    const { container } = await renderWithRouter(
+      <GameDetailsPage gameId={baseGame.id} />,
+    )
+
+    expect(container.querySelector('.spinner')).not.toBeNull()
+    expect(screen.queryByText(/You are offline/)).not.toBeInTheDocument()
   })
 })

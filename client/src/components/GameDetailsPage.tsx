@@ -4,6 +4,7 @@ import { DateTime } from 'luxon'
 import { fetchGame, metacriticLink, type Game } from '../modules/psnStore'
 import Error from './Error'
 import Image from './Image'
+import Offline from './Offline'
 import Spinner from './Spinner'
 
 interface GameDetailsPageProps {
@@ -39,6 +40,7 @@ const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
     data: game,
     isPending,
     isError,
+    fetchStatus,
   } = useQuery({
     queryKey: ['game', gameId],
     queryFn: () => fetchGame(gameId),
@@ -46,7 +48,7 @@ const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
   })
 
   if (isPending) {
-    return <Spinner />
+    return fetchStatus === 'paused' ? <Offline /> : <Spinner />
   }
 
   if (isError) {
