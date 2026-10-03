@@ -43,8 +43,8 @@ interface TabQuery {
 }
 
 // The views build their queries from the same option objects. Only `queryFn`
-// differs, to carry the abort signal, and `pages: 1` limits a games tab to
-// its first page.
+// differs, to carry the abort signal. `pages: 1` limits a games tab to its
+// first page. `retry: false` keeps a failure from sending a second request.
 const gamesTab = (
   feature: GamesFeature,
   fetch: AbortableGamesFetch,
@@ -56,6 +56,8 @@ const gamesTab = (
       client.infiniteQuery({
         ...options,
         pages: 1,
+        retry: false,
+
         queryFn: ({ pageParam }) => fetch(pageParam, PAGE_SIZE, signal),
       }),
   }
@@ -220,7 +222,7 @@ const prefetchTab = async (
   const unsubscribe = client.getQueryCache().subscribe((event) => {
     if (
       event.type === 'updated' &&
-      event.action.type === 'fetch' &&
+      (event.action.type === 'fetch' || event.action.type === 'continue') &&
       event.query !== own
     ) {
       abort(false)

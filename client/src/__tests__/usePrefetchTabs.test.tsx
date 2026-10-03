@@ -139,7 +139,9 @@ const PURCHASED = '/api/games/purchased'
 
 const newClient = () =>
   new QueryClient({
-    defaultOptions: { queries: { staleTime: 300_000, retry: 1 } },
+    defaultOptions: {
+      queries: { staleTime: 300_000, retry: 1, retryDelay: 0 },
+    },
   })
 
 const buildRouter = (initial: string) => {
