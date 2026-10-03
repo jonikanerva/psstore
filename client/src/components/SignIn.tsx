@@ -38,22 +38,6 @@ const SignIn = () => {
       }}
       aria-busy={mutation.isPending}
     >
-      <ol className="sign-in--steps">
-        <li>
-          Make sure you are signed in to{' '}
-          <a href={PLAYSTATION_URL} target="_blank" rel="noopener noreferrer">
-            playstation.com
-          </a>
-          .
-        </li>
-        <li>
-          <a href={NPSSO_URL} target="_blank" rel="noopener noreferrer">
-            Get your token here
-          </a>{' '}
-          and copy it.
-        </li>
-        <li>Paste it below and click Sign in.</li>
-      </ol>
       <label htmlFor="npsso" className="sign-in--label">
         NPSSO token
       </label>
@@ -82,6 +66,22 @@ const SignIn = () => {
           {errorMessage(mutation.error)}
         </p>
       )}
+      <ol className="sign-in--steps">
+        <li>
+          Make sure you are signed in to{' '}
+          <a href={PLAYSTATION_URL} target="_blank" rel="noopener noreferrer">
+            playstation.com
+          </a>
+          .
+        </li>
+        <li>
+          <a href={NPSSO_URL} target="_blank" rel="noopener noreferrer">
+            Get your token here
+          </a>{' '}
+          and copy it.
+        </li>
+        <li>Paste it above and click Sign in.</li>
+      </ol>
     </form>
   )
 }

@@ -122,8 +122,18 @@ describe('Purchased', () => {
     expect(screen.getAllByRole('button')).toHaveLength(1)
     expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
-    const steps = within(screen.getByRole('list'))
+    const list = screen.getByRole('list')
+    expect(list.tagName).toBe('OL')
+    const follows = (a: Element, b: Element): boolean =>
+      Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING)
+    const button = screen.getByRole('button', { name: 'Sign in' })
+    expect(follows(input, button)).toBe(true)
+    expect(follows(button, list)).toBe(true)
+    const steps = within(list)
     expect(steps.getAllByRole('listitem')).toHaveLength(3)
+    expect(
+      steps.getByText('Paste it above and click Sign in.'),
+    ).toBeInTheDocument()
     const links = [
       [
         steps.getByRole('link', { name: 'playstation.com' }),
@@ -181,9 +191,14 @@ describe('Purchased', () => {
     fireEvent.change(input, { target: { value: TOKEN } })
     fireEvent.click(screen.getByRole('button', { name: 'Sign in' }))
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Sign-in failed. Check the token.',
-    )
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('Sign-in failed. Check the token.')
+    expect(
+      Boolean(
+        alert.compareDocumentPosition(screen.getByRole('list')) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+      ),
+    ).toBe(true)
     expect(input.value).toBe('')
   })
 

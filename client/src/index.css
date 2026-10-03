@@ -386,6 +386,7 @@ body {
   gap: 8px;
   padding-left: 1.5em;
   line-height: 1.5;
+  list-style: decimal;
 }
 
 .sign-in--steps a {
