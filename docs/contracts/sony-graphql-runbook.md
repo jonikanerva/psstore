@@ -39,10 +39,17 @@ The scope filter drops a grid request whose `filterBy` has no PS5 token.
 Sony fires the category grid twice per page, once with an empty `filterBy`
 and once with `targetPlatforms:PS5`. Only the PS5 request reaches the manifest.
 
-The details route capture does not always include `metGetProductById`.
-The compatibility check still requires it. If `pnpm sony:refresh` fails on this
-point, keep the existing `metGetProductById` entry in the manifest and check
-the hash by hand against live Sony.
+The store product page no longer fires `metGetProductById`, so capture cannot see it.
+The server still calls it. Refresh therefore probes it live: one anonymous GET with
+the `env.ts` operation name and hash, a sample product id from the canonical manifest,
+and the same headers the server sends. The probe expects HTTP 200 and `data.productRetrieve`.
+If the capture does not hold the operation and the probe passes, the manifest entry carries
+over with the `env.ts` hash. If the capture holds the operation, no probe runs.
+The compatibility check is unchanged.
+
+If the probe fails, refresh stops and names the operation and the hash. Find the new hash
+in the store, update `SONY_PRODUCT_BY_ID_HASH` in `server/src/config/env.ts`, and run
+`pnpm sony:refresh` again. See Failure handling below.
 
 ## Apply candidate as canonical manifest
 

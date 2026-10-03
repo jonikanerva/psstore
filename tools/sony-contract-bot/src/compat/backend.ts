@@ -11,7 +11,10 @@ export interface CompatibilityContext {
 // constant assignment `NAME = 'literal'` and read the quoted literal. The
 // constants are at module scope with no preceding interface declaration to
 // collide with.
-const extractDefault = (source: string, constName: string): string | null => {
+export const extractDefault = (
+  source: string,
+  constName: string,
+): string | null => {
   const pattern = new RegExp(`${constName}\\s*=\\s*'([^']+)'`, 'm')
   const match = source.match(pattern)
   return match?.[1] ?? null
@@ -175,7 +178,7 @@ export const validateBackendCompatibility = (
     ) {
       if (operation.response_path !== 'data.productRetrieve') {
         throw new Error(
-          `PDP operation ${operation.feature} response path incompatible: ${operation.response_path}`,
+          `Product operation ${operation.operation_name} response path incompatible: ${operation.response_path}`,
         )
       }
 
@@ -186,7 +189,7 @@ export const validateBackendCompatibility = (
         !variablesSchemaEquals(operation.variables_schema, PDP_VARIABLES_SCHEMA)
       ) {
         throw new Error(
-          `PDP operation ${operation.feature} variables_schema incompatible: ${JSON.stringify(operation.variables_schema)}`,
+          `Product operation ${operation.operation_name} variables_schema incompatible: ${JSON.stringify(operation.variables_schema)}`,
         )
       }
     } else {
