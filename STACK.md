@@ -232,6 +232,8 @@ UTC everywhere internally. Convert only at the boundary (`CLAUDE.md → Time`). 
 - **Fixtures:** committed manifests, golden fixtures, and samples never contain a real NPSSO, access token, refresh token, account identifier, or real signed-in response data. Use synthetic values.
 - **XSS:** an XSS bug can no longer read the NPSSO cookie, but it can still make requests as the user. Keep DOMPurify on every Sony-authored HTML string. Add no new `dangerouslySetInnerHTML`.
 
+---
+
 ## 15. Intentional Divergences
 
 | Date       | CLAUDE.md rule                                                                 | Divergence                                                                                                                                                                                                                                                           | Reason                                                                                                                                                                                                                  |

@@ -108,7 +108,7 @@ describe('mapPurchasedToGames', () => {
     const games = mapPurchasedToGames(outcome.entries)
     expect(games.map((entry) => [entry.id, entry.idKind])).toEqual([
       ['10000001', 'concept'],
-      ['EP0001-PPSA00002_00-SYNTHETICBETA000', 'concept'],
+      ['EP0001-PPSA00002_00-SYNTHETICBETA000', 'product'],
     ])
   })
 

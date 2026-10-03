@@ -77,7 +77,7 @@ const Purchased = () => {
           <ScrollToTopOnMount />
           <div className="games--grid" data-label="purchased">
             {filtered.map((game) => (
-              <GameCard key={game.id} game={game} showPrice={false} />
+              <GameCard key={game.id} game={game} showPrice={false} outbound />
             ))}
           </div>
         </>
