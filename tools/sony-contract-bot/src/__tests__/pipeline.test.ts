@@ -10,6 +10,16 @@ import { validateManifest } from '../contract/validator.js'
 
 const GRID_HASH = 'a'.repeat(64)
 const NOISE_HASH = 'f'.repeat(64)
+const SEARCH_HASH = 'e'.repeat(64)
+
+const searchVariables = {
+  countryCode: 'FI',
+  languageCode: 'en',
+  nextCursor: '',
+  pageOffset: 0,
+  pageSize: 24,
+  searchTerm: 'elden',
+}
 
 const record = (
   operationName: string,
@@ -79,6 +89,7 @@ const captured: Array<[ContractFeature, CaptureRecord]> = [
       productId: 'P',
     }),
   ],
+  ['search', record('getSearchResults', SEARCH_HASH, searchVariables)],
 ]
 
 const parsed = captured.map(([feature, entry]) =>
@@ -116,6 +127,7 @@ describe('capture to manifest pipeline', () => {
       `details:productRetrieveForCtasWithPrice:${'c'.repeat(64)}`,
       `discounted:categoryGridRetrieve:${GRID_HASH}`,
       `new:categoryGridRetrieve:${GRID_HASH}`,
+      `search:getSearchResults:${SEARCH_HASH}`,
       `upcoming:categoryGridRetrieve:${GRID_HASH}`,
     ])
     for (const operation of result.filter(

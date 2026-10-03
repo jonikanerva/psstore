@@ -21,6 +21,8 @@ import {
   SONY_PURCHASED_OPERATION_NAME,
   SONY_PURCHASED_PAGE_SIZE,
   SONY_RETRY_COUNT,
+  SONY_SEARCH_HASH,
+  SONY_SEARCH_OPERATION_NAME,
   SONY_TIMEOUT_MS,
 } from '../config/env.js'
 import {
@@ -34,6 +36,7 @@ import {
   HttpStatusError,
   RateLimitedError,
 } from '../lib/http.js'
+import { narrowSearchEntries, type SearchCandidate } from '../domain/listing.js'
 import {
   extractCategoryGridNode,
   parseCategoryGrid,
@@ -42,6 +45,7 @@ import { detectPersistedQueryRotation } from './graphqlErrors.js'
 import { parseProductRetrieve } from './productDetailSchema.js'
 import { parsePlusMonthly, type PlusMonthlyEntry } from './plusMonthlySchema.js'
 import { parsePlusOffer } from './productPriceSchema.js'
+import { parseSearchResponse } from './searchSchema.js'
 import {
   dedupePurchased,
   parsePurchasedPage,
@@ -53,11 +57,8 @@ import {
   type SonyFeature,
   type StrategyContext,
 } from './queryStrategies.js'
-import type {
-  CategoryGridProduct,
-  Concept,
-  ProductRetrieveResponse,
-} from './types.js'
+import { productToConcept } from './mapper.js'
+import type { Concept, ProductRetrieveResponse } from './types.js'
 
 export const localeOverride = (locale: string): string =>
   locale.replace(
@@ -65,14 +66,6 @@ export const localeOverride = (locale: string): string =>
     (_match: string, language: string, region: string) =>
       `${language.toLowerCase()}-${region.toUpperCase()}`,
   )
-
-const productToConcept = (product: CategoryGridProduct): Concept => ({
-  id: product.id,
-  name: product.name,
-  media: product.media,
-  price: product.price,
-  products: [{ id: product.id }],
-})
 
 // ---- Pure response extraction (exported for unit tests) --------------------
 
@@ -91,6 +84,7 @@ export interface ProductDetailResult {
   description: string
   publisherName?: string | undefined
   storeDisplayClassification?: string | undefined
+  platforms?: string[] | undefined
 }
 
 /**
@@ -146,12 +140,17 @@ export const extractProductDetail = (
       ? product.storeDisplayClassification
       : undefined
 
+  const platforms = (product?.platforms ?? []).filter(
+    (value): value is string => typeof value === 'string',
+  )
+
   return {
     releaseDate,
     genres,
     description,
     publisherName,
     storeDisplayClassification,
+    platforms,
   }
 }
 
@@ -298,6 +297,43 @@ const requestProductPriceRaw = async (productId: string): Promise<unknown> => {
   return response.json()
 }
 
+const requestSearchRaw = async (
+  term: string,
+  offset: number,
+  size: number,
+): Promise<unknown> => {
+  const query = new URLSearchParams({
+    operationName: SONY_SEARCH_OPERATION_NAME,
+    variables: JSON.stringify({
+      countryCode: 'FI',
+      languageCode: 'en',
+      nextCursor: '',
+      pageOffset: offset,
+      pageSize: size,
+      searchTerm: term,
+    }),
+    extensions: JSON.stringify({
+      persistedQuery: { version: 1, sha256Hash: SONY_SEARCH_HASH },
+    }),
+  }).toString()
+
+  const response = await fetchWithRetry(
+    `${SONY_GRAPHQL_URL}?${query}`,
+    {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+        'x-apollo-operation-name': SONY_SEARCH_OPERATION_NAME,
+        'x-psn-store-locale-override': localeOverride(SONY_LOCALE),
+      },
+    },
+    SONY_TIMEOUT_MS,
+    SONY_RETRY_COUNT,
+  )
+
+  return response.json()
+}
+
 const requestPlusMonthlyRaw = async (): Promise<unknown> => {
   const query = new URLSearchParams({
     locale: SONY_LOCALE,
@@ -337,6 +373,15 @@ const mapTransportError = (
   })
 }
 
+// One search page read from `data.universalSearch`, after scope narrowing.
+// `isLast` comes from Sony's page info; `rawCount` is the page size before
+// narrowing.
+export interface SearchPage {
+  readonly candidates: readonly SearchCandidate[]
+  readonly isLast: boolean
+  readonly rawCount: number
+}
+
 export interface SonyClientApi {
   readonly fetchConceptsByFeature: (
     feature: SonyFeature,
@@ -356,6 +401,14 @@ export interface SonyClientApi {
     productId: string,
   ) => Effect.Effect<
     PlusOffer | null,
+    UpstreamUnavailable | UpstreamQueryRotated | UpstreamRateLimited
+  >
+  readonly fetchSearchPage: (
+    term: string,
+    offset: number,
+    size: number,
+  ) => Effect.Effect<
+    SearchPage,
     UpstreamUnavailable | UpstreamQueryRotated | UpstreamRateLimited
   >
   readonly fetchPlusMonthly: () => Effect.Effect<
@@ -435,6 +488,53 @@ export const SonyClientLive: Layer.Layer<SonyClient> = Layer.succeed(
               )
             : Effect.succeed(extractProductDetail(json)),
         ),
+      ),
+    fetchSearchPage: (term, offset, size) =>
+      Effect.tryPromise({
+        try: () => requestSearchRaw(term, offset, size),
+        catch: mapTransportError,
+      }).pipe(
+        Effect.flatMap((json) =>
+          detectPersistedQueryRotation(json)
+            ? Effect.fail(
+                new UpstreamQueryRotated({
+                  message:
+                    'Sony rejected the persisted query (hash rotated); re-run pnpm sony:refresh',
+                  operationName: SONY_SEARCH_OPERATION_NAME,
+                }),
+              )
+            : Effect.succeed(json),
+        ),
+        Effect.flatMap((json) => {
+          const outcome = parseSearchResponse(json)
+          if (outcome.kind === 'drift') {
+            // Failing keeps a broken search distinct from "no results". The log
+            // never carries the term.
+            return Effect.logWarning('sony search drift', {
+              event: 'sony.search.drift',
+            }).pipe(
+              Effect.andThen(
+                Effect.fail(
+                  new UpstreamUnavailable({
+                    message: 'Sony search response has an unexpected shape',
+                  }),
+                ),
+              ),
+            )
+          }
+          const page: SearchPage = {
+            candidates: narrowSearchEntries(outcome.entries),
+            isLast: outcome.isLast,
+            rawCount: outcome.entries.length + outcome.dropped,
+          }
+          return outcome.dropped > 0
+            ? Effect.logWarning('sony search element drift', {
+                event: 'sony.search.elementDrift',
+                dropped: outcome.dropped,
+                kept: outcome.entries.length,
+              }).pipe(Effect.as(page))
+            : Effect.succeed(page)
+        }),
       ),
     fetchPlusMonthly: () =>
       Effect.tryPromise({

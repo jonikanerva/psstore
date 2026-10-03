@@ -1,4 +1,5 @@
-export type ContractFeature = 'new' | 'upcoming' | 'discounted' | 'details'
+export type ContractFeature =
+  'new' | 'upcoming' | 'discounted' | 'details' | 'search'
 
 export interface ContractOperation {
   feature: ContractFeature

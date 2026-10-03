@@ -54,6 +54,8 @@ const FakeSony = Layer.succeed(SonyClient, {
         genres: ['Adventure'],
       },
     ]),
+  fetchSearchPage: () =>
+    Effect.succeed({ candidates: [], isLast: true, rawCount: 0 }),
   fetchProductPrice: () => Effect.succeed(null),
   fetchProductDetail: () =>
     Effect.succeed({
@@ -167,6 +169,8 @@ const failHandler = (
       error._tag === 'UpstreamQueryRotated'
         ? Effect.succeed([])
         : Effect.fail(error),
+    fetchSearchPage: () =>
+      Effect.succeed({ candidates: [], isLast: true, rawCount: 0 }),
     fetchProductPrice: () => Effect.succeed(null),
     fetchProductDetail: () => Effect.fail(error),
   })

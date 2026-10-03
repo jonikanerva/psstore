@@ -52,6 +52,8 @@ const harness = (price: (productId: string) => PriceResult): Harness => {
         storeDisplayClassification: 'FULL_GAME',
       }),
     fetchPlusMonthly: () => Effect.succeed([]),
+    fetchSearchPage: () =>
+      Effect.succeed({ candidates: [], isLast: true, rawCount: 0 }),
     fetchProductPrice: (productId) =>
       Effect.suspend(() => {
         priceCalls.push(productId)

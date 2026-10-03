@@ -8,12 +8,18 @@ import AppShell from './components/AppShell'
 import Details from './components/Details'
 import Games from './components/Games'
 import Purchased from './components/Purchased'
+import SearchResults from './components/SearchResults'
 import {
   fetchDiscountedGames,
   fetchMonthlyGames,
   fetchNewGames,
   fetchUpcomingGames,
 } from './modules/psnStore'
+import {
+  parseSearch,
+  readSearchTerm,
+  stringifySearch,
+} from './modules/searchTerm'
 
 // Code-based route tree. Root renders the AppShell (header + Outlet). The index
 // redirects to /new so the default entry is always NEW, newest-first (VISION);
@@ -77,6 +83,21 @@ const detailsRoute = createRoute({
   component: Details,
 })
 
+const searchRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'search',
+  validateSearch: (search: Record<string, unknown>) => ({
+    q: readSearchTerm(search),
+  }),
+  beforeLoad: ({ search }) => {
+    if (search.q === '') {
+      // eslint-disable-next-line @typescript-eslint/only-throw-error -- redirect() is the router's throw-to-navigate contract
+      throw redirect({ to: '/new' })
+    }
+  },
+  component: () => <SearchResults term={searchRoute.useSearch().q} />,
+})
+
 const splatRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '$',
@@ -96,10 +117,11 @@ const routeTree = rootRoute.addChildren([
   monthlyRoute,
   purchasedRoute,
   detailsRoute,
+  searchRoute,
   splatRoute,
 ])
 
-export const router = createRouter({ routeTree })
+export const router = createRouter({ routeTree, parseSearch, stringifySearch })
 
 declare module '@tanstack/react-router' {
   interface Register {

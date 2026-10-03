@@ -54,6 +54,8 @@ export const gamesGroupLive = HttpApiBuilder.group(
             const npsso = yield* CurrentNpsso
             return yield* account.getPurchasedGames(npsso)
           }),
+        search: ({ query }) =>
+          games.searchGames(query.q, query.offset, query.size),
         getById: ({ params }) => games.getGameById(params.id),
       })
     }),

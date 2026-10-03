@@ -31,6 +31,17 @@ const pdpOperation: ContractOperation = {
   observed_status_codes: [200],
 }
 
+const searchOperation: ContractOperation = {
+  feature: 'search',
+  operation_name: 'getSearchResults',
+  persisted_query_hash: 'e'.repeat(64),
+  required_headers: ['x-apollo-operation-name'],
+  variables_schema: { searchTerm: 'string' },
+  sample_variables: { searchTerm: 'elden' },
+  response_path: 'data.universalSearch',
+  observed_status_codes: [200],
+}
+
 const validManifest: SonyContractManifest = {
   version: 1,
   metadata: {
@@ -46,7 +57,11 @@ const validManifest: SonyContractManifest = {
     url: 'https://web.np.playstation.com/api/graphql/v1/op',
     method: 'GET',
   },
-  operations: [...gridFeatures.map(gridOperation), pdpOperation],
+  operations: [
+    ...gridFeatures.map(gridOperation),
+    pdpOperation,
+    searchOperation,
+  ],
 }
 
 describe('validateManifest', () => {

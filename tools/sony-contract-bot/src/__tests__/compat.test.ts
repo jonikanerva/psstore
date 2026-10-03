@@ -10,6 +10,7 @@ const GRID_FEATURES: ContractFeature[] = ['new', 'upcoming', 'discounted']
 const GRID_HASH = 'a'.repeat(64)
 const PDP_HASH = 'b'.repeat(64)
 const PRICE_HASH = 'd'.repeat(64)
+const SEARCH_HASH = 'f'.repeat(64)
 
 const gridOperation = (feature: ContractFeature): ContractOperation => ({
   feature,
@@ -40,6 +41,31 @@ const priceOperation = (): ContractOperation => ({
   persisted_query_hash: PRICE_HASH,
 })
 
+const searchOperation = (): ContractOperation => ({
+  feature: 'search',
+  operation_name: 'getSearchResults',
+  persisted_query_hash: SEARCH_HASH,
+  required_headers: ['x-apollo-operation-name'],
+  variables_schema: {
+    countryCode: 'string',
+    languageCode: 'string',
+    nextCursor: 'string',
+    pageOffset: 'number',
+    pageSize: 'number',
+    searchTerm: 'string',
+  },
+  sample_variables: {
+    countryCode: 'FI',
+    languageCode: 'en',
+    nextCursor: '',
+    pageOffset: 0,
+    pageSize: 24,
+    searchTerm: 'elden',
+  },
+  response_path: 'data.universalSearch',
+  observed_status_codes: [200],
+})
+
 const baseMetadata = {
   captured_at: '2026-02-17T00:00:00.000Z',
   captured_by: 'codex',
@@ -64,6 +90,7 @@ const manifest: SonyContractManifest = {
     ...GRID_FEATURES.map(gridOperation),
     pdpOperation(),
     priceOperation(),
+    searchOperation(),
   ],
 }
 
@@ -77,12 +104,14 @@ const serverEnvText = [
   `export const SONY_PRODUCT_BY_ID_HASH =\n  '${PDP_HASH}'`,
   "export const SONY_PRODUCT_PRICE_OPERATION_NAME = 'productRetrieveForCtasWithPrice'",
   `export const SONY_PRODUCT_PRICE_HASH =\n  '${PRICE_HASH}'`,
+  "export const SONY_SEARCH_OPERATION_NAME = 'getSearchResults'",
+  `export const SONY_SEARCH_HASH =\n  '${SEARCH_HASH}'`,
 ].join('\n')
 
 const context = {
   serverEnvText,
   sonyClientText:
-    "headers: { 'x-apollo-operation-name': strategy.operationName }\nreturn json.data?.categoryGridRetrieve?.concepts ?? []\nconst product = json.data?.productRetrieve",
+    "headers: { 'x-apollo-operation-name': strategy.operationName }\nreturn json.data?.categoryGridRetrieve?.concepts ?? []\nconst product = json.data?.productRetrieve\nconst search = json.data?.universalSearch",
   mapperText: 'export const conceptToGame = (concept) => concept',
   serviceText: "await fetchConceptsByFeature('new', 300)",
 }
@@ -132,6 +161,7 @@ describe('validateBackendCompatibility', () => {
           response_path: 'data.categoryGridRetrieve.products',
         },
         priceOperation(),
+        searchOperation(),
       ],
     }
 
@@ -147,6 +177,7 @@ describe('validateBackendCompatibility', () => {
         ...GRID_FEATURES.map(gridOperation),
         { ...pdpOperation(), variables_schema: { conceptId: 'string' } },
         priceOperation(),
+        searchOperation(),
       ],
     }
 
@@ -223,5 +254,84 @@ describe('validateBackendCompatibility', () => {
     expect(() => {
       validateBackendCompatibility(manifest, withoutPriceEnv)
     }).toThrow(/SONY_PRODUCT_PRICE_OPERATION_NAME/)
+  })
+
+  it('rejects a manifest without the search operation', () => {
+    const withoutSearch: SonyContractManifest = {
+      ...manifest,
+      operations: manifest.operations.filter((op) => op.feature !== 'search'),
+    }
+
+    expect(() => {
+      validateBackendCompatibility(withoutSearch, context)
+    }).toThrow(/Manifest missing search operation/)
+  })
+
+  it('rejects a manifest whose search hash does not match the server', () => {
+    const rotated: SonyContractManifest = {
+      ...manifest,
+      operations: [
+        ...manifest.operations.filter((op) => op.feature !== 'search'),
+        { ...searchOperation(), persisted_query_hash: 'e'.repeat(64) },
+      ],
+    }
+
+    expect(() => {
+      validateBackendCompatibility(rotated, context)
+    }).toThrow(/Manifest missing search operation/)
+  })
+
+  it('rejects a search operation with the wrong response_path', () => {
+    const wrongPath: SonyContractManifest = {
+      ...manifest,
+      operations: [
+        ...manifest.operations.filter((op) => op.feature !== 'search'),
+        { ...searchOperation(), response_path: 'data.productRetrieve' },
+      ],
+    }
+
+    expect(() => {
+      validateBackendCompatibility(wrongPath, context)
+    }).toThrow(/Search operation .* response path incompatible/)
+  })
+
+  it('rejects a search operation with the wrong variables_schema', () => {
+    const wrongVars: SonyContractManifest = {
+      ...manifest,
+      operations: [
+        ...manifest.operations.filter((op) => op.feature !== 'search'),
+        { ...searchOperation(), variables_schema: { searchTerm: 'string' } },
+      ],
+    }
+
+    expect(() => {
+      validateBackendCompatibility(wrongVars, context)
+    }).toThrow(/Search operation .* variables_schema incompatible/)
+  })
+
+  it('rejects when sonyClient no longer extracts universalSearch', () => {
+    const withoutSearchPath = {
+      ...context,
+      sonyClientText: context.sonyClientText.replace('universalSearch', ''),
+    }
+
+    expect(() => {
+      validateBackendCompatibility(manifest, withoutSearchPath)
+    }).toThrow(/universalSearch/)
+  })
+
+  it('rejects when the server search env constants are unreadable', () => {
+    const withoutSearchEnv = {
+      ...context,
+      serverEnvText: serverEnvText
+        .split('\n')
+        .filter((line) => !line.includes('SONY_SEARCH'))
+        .join('\n')
+        .replace(/\n\s*'f{64}'/, ''),
+    }
+
+    expect(() => {
+      validateBackendCompatibility(manifest, withoutSearchEnv)
+    }).toThrow(/SONY_SEARCH_OPERATION_NAME/)
   })
 })

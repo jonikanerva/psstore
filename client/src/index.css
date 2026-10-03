@@ -100,6 +100,57 @@ body {
   outline-offset: 1px;
 }
 
+.app-shell--search-form {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  justify-self: end;
+  min-width: 0;
+  width: 220px;
+}
+
+.app-shell--search-form .app-shell--search {
+  width: 100%;
+}
+
+.search-results--retry:focus-visible,
+.search-all-card:focus-visible {
+  outline: 2px solid var(--focus-color);
+  outline-offset: 1px;
+}
+
+.search-results {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 1320px;
+  margin: 0 auto;
+}
+
+.search-results--heading {
+  font-size: 20px;
+  font-weight: bold;
+  overflow-wrap: anywhere;
+}
+
+.search-results .error {
+  padding: 0;
+}
+
+.search-results--retry {
+  align-self: flex-start;
+  min-height: 24px;
+  margin: 0 15px;
+  padding: 4px 12px;
+  font: inherit;
+  color: inherit;
+  background: var(--button-color);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+}
+
 .app-shell--main {
   padding: 12px 16px 24px;
 }
@@ -114,7 +165,7 @@ body {
     justify-self: stretch;
   }
 
-  .app-shell--search {
+  .app-shell--search-form {
     flex: 1;
     width: auto;
   }
@@ -240,6 +291,24 @@ body {
   margin-top: 2px;
 }
 
+.search-all-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  aspect-ratio: 3 / 4;
+  padding: 12px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--muted-text-color);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+  border: 1px dashed var(--border-color);
+  border-radius: 10px;
+  background: var(--surface-color);
+}
+
 .game-card:focus-visible {
   outline: 2px solid var(--focus-color);
   outline-offset: 1px;
@@ -361,46 +430,44 @@ body {
   padding: 0 15px;
 }
 
-.spinner--modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  height: 100%;
-  width: 100%;
-  z-index: 50;
-}
-
 @keyframes spin {
-  from {
-    transform: rotate(0deg);
-    visibility: visible;
-  }
-
   to {
     transform: rotate(360deg);
   }
 }
 
+@keyframes spinner-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
 .spinner {
-  animation: spin 1.5s infinite linear;
-  animation-delay: 300ms;
-  display: inline-block;
-  visibility: hidden;
-  content: '';
-  border-radius: 50%;
-  transform: translateZ(0);
+  display: block;
   box-sizing: border-box;
-  background: none;
-  width: 60px;
-  height: 60px;
-  border: 3px solid rgb(0 0 0 / 30%);
-  border-left-color: #363738;
-  border-width: 3px;
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  margin-top: -30px;
-  margin-left: -30px;
+  width: 36px;
+  height: 36px;
+  margin: 48px auto;
+  border: 3px solid var(--border-color);
+  border-top-color: var(--text-color);
+  border-radius: 50%;
+  animation:
+    spin 1s linear infinite,
+    spinner-in 0s linear 300ms both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: spinner-in 0s linear 300ms both;
+  }
+}
+
+.search-results--status:empty {
+  display: none;
 }
 
 .sign-in {

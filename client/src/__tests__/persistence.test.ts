@@ -1,15 +1,18 @@
 import { describe, expect, it } from 'vitest'
-import { shouldPersistQuery } from '../modules/persistence'
+import { shouldDehydrateQuery } from '../modules/persistence'
 
-describe('shouldPersistQuery', () => {
+const persists = (queryKey: readonly unknown[]): boolean =>
+  shouldDehydrateQuery({ queryKey })
+
+describe('shouldDehydrateQuery', () => {
   it('persists only the anonymous games and game keys', () => {
-    expect(shouldPersistQuery(['games', 'new'])).toBe(true)
-    expect(shouldPersistQuery(['game', 'EP0001'])).toBe(true)
+    expect(persists(['games', 'new'])).toBe(true)
+    expect(persists(['game', 'EP0001'])).toBe(true)
   })
 
   it('never persists the signed-in library or an unknown key', () => {
-    expect(shouldPersistQuery(['purchased'])).toBe(false)
-    expect(shouldPersistQuery(['search', 'zelda'])).toBe(false)
-    expect(shouldPersistQuery([])).toBe(false)
+    expect(persists(['purchased'])).toBe(false)
+    expect(persists(['search', 'zelda'])).toBe(false)
+    expect(persists([])).toBe(false)
   })
 })

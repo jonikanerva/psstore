@@ -20,6 +20,7 @@ import {
 import {
   gameIdParamSchema,
   paginationQuerySchema,
+  searchQuerySchema,
 } from '../validation/schemas.js'
 
 // The sign-in cookie as a security scheme: the middleware below decodes it from
@@ -73,6 +74,11 @@ const purchasedEndpoint = HttpApiEndpoint.get('purchased', '/purchased', {
   success: pageResultSchema,
   error: [SessionRejected.pipe(HttpApiSchema.status(401)), ...upstreamErrors],
 }).middleware(NpssoAuth)
+const searchEndpoint = HttpApiEndpoint.get('search', '/search', {
+  query: searchQuerySchema,
+  success: pageResultSchema,
+  error: [HttpApiError.BadRequestNoContent, ...upstreamErrors],
+})
 
 const getByIdEndpoint = HttpApiEndpoint.get('getById', '/:id', {
   params: gameIdParamSchema,
@@ -91,6 +97,7 @@ export const gamesGroup = HttpApiGroup.make('games')
     listEndpoint('discounted'),
     listEndpoint('monthly'),
     purchasedEndpoint,
+    searchEndpoint,
     getByIdEndpoint,
   )
   .prefix('/api/games')

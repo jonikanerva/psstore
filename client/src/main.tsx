@@ -3,7 +3,8 @@ import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persist
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client'
 import { RouterProvider } from '@tanstack/react-router'
 import { createRoot } from 'react-dom/client'
-import { shouldPersistQuery } from './modules/persistence'
+import { shouldDehydrateQuery } from './modules/persistence'
+import { syncOnlineState } from './modules/syncOnlineState'
 import { router } from './router'
 import './index.css'
 
@@ -26,6 +27,8 @@ const queryClient = new QueryClient({
 // eslint-disable-next-line @typescript-eslint/no-deprecated -- STACK.md §2 specifies createSyncStoragePersister for localStorage
 const persister = createSyncStoragePersister({ storage: window.localStorage })
 
+syncOnlineState()
+
 const container = document.getElementById('root')
 if (container) {
   createRoot(container).render(
@@ -36,11 +39,10 @@ if (container) {
         maxAge: 1000 * 60 * 30,
         buster: 'sony-en-fi',
         dehydrateOptions: {
-          // Persist ONLY anonymous Sony payload caches (games lists + game
-          // detail). The explicit allow-list keeps the guarantee structural: no
-          // search / view / sort / scroll / behaviour state and no signed-in
-          // data is ever written to localStorage (VISION privacy posture).
-          shouldDehydrateQuery: (query) => shouldPersistQuery(query.queryKey),
+          // Persist ONLY Sony payload caches (games lists + game detail). The
+          // explicit allow-list keeps search terms and behaviour state out of
+          // localStorage (VISION privacy posture).
+          shouldDehydrateQuery,
         },
       }}
     >

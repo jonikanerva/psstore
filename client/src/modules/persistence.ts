@@ -1,6 +1,10 @@
-// Only anonymous Sony payloads reach localStorage. Every other key, the
-// signed-in `purchased` list included, stays in memory.
-const PERSISTED_QUERY_KEYS: ReadonlySet<unknown> = new Set(['games', 'game'])
+import type { Query } from '@tanstack/react-query'
 
-export const shouldPersistQuery = (queryKey: readonly unknown[]): boolean =>
-  PERSISTED_QUERY_KEYS.has(queryKey[0])
+// Only anonymous Sony payload caches reach localStorage. Every other key,
+// including `['search', term]`, stays in memory.
+export const shouldDehydrateQuery = (
+  query: Pick<Query, 'queryKey'>,
+): boolean => {
+  const key = query.queryKey[0]
+  return key === 'games' || key === 'game'
+}

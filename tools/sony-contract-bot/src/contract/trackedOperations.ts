@@ -6,6 +6,7 @@ export const TRACKED_OPERATIONS: readonly string[] = [
   'categoryGridRetrieve',
   'metGetProductById',
   'productRetrieveForCtasWithPrice',
+  'getSearchResults',
 ]
 
 export const filterTrackedOperations = (

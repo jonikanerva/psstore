@@ -5,6 +5,7 @@ export const CORE_FEATURES: ContractFeature[] = [
   'upcoming',
   'discounted',
   'details',
+  'search',
 ]
 
 // The NARROW required-headers contract signal: the header(s) a normalized

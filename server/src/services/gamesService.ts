@@ -5,23 +5,26 @@ import {
   type PlusOffer,
 } from '@psstore/shared'
 import { Cache, Context, Duration, Effect, Exit, Layer, Schema } from 'effect'
-import { CACHE_TTL } from '../config/env.js'
+import { CACHE_TTL, SONY_SEARCH_MAX_PAGE_SIZE } from '../config/env.js'
 import {
   GameNotFound,
   type UpstreamQueryRotated,
   type UpstreamRateLimited,
   type UpstreamUnavailable,
 } from '../errors/errors.js'
+import { conceptToGame } from '../sony/mapper.js'
 import { SonyClient, type ProductDetailResult } from '../sony/sonyClient.js'
 import type { Concept } from '../sony/types.js'
 import {
   applyDateFilter,
   conceptProductId,
   DISCOUNTED_GAME_CLASSIFICATIONS,
+  isPs5Game,
   mapConceptsToGames,
   mapMonthlyToGames,
   mapUpcomingConceptsToGames,
   paginate,
+  type SearchCandidate,
   sortByDate,
   type SortOrder,
 } from '../domain/listing.js'
@@ -45,10 +48,17 @@ const PRICE_TTL = Duration.minutes(10)
 const PRICE_FAILURE_TTL = Duration.seconds(30)
 const MONTHLY_TTL = Duration.hours(1)
 const MONTHLY_FAILURE_TTL = Duration.seconds(30)
+// Raw search pages read for one request when pages narrow to zero games.
+const SEARCH_RAW_PAGE_BOUND = 3
+// Concurrent product detail lookups for one search page. Each page holds at
+// most SONY_SEARCH_MAX_PAGE_SIZE candidates.
+const SEARCH_DETAIL_CONCURRENCY = 10
 
 interface ProductMeta {
   readonly date: string
   readonly classification: string | null
+  readonly genres: readonly string[]
+  readonly platforms: readonly string[]
 }
 
 export interface GamesServiceApi {
@@ -65,6 +75,11 @@ export interface GamesServiceApi {
     size?: number,
   ) => Effect.Effect<PageResult, UpstreamError>
   readonly getMonthlyGames: (
+    offset?: number,
+    size?: number,
+  ) => Effect.Effect<PageResult, UpstreamError>
+  readonly searchGames: (
+    term: string,
     offset?: number,
     size?: number,
   ) => Effect.Effect<PageResult, UpstreamError>
@@ -186,6 +201,8 @@ export const GamesServiceLive: Layer.Layer<GamesService, never, SonyClient> =
           Effect.map((detail) => ({
             date: detail.releaseDate ?? '',
             classification: detail.storeDisplayClassification ?? null,
+            genres: detail.genres,
+            platforms: detail.platforms ?? [],
           })),
         )
 
@@ -317,6 +334,69 @@ export const GamesServiceLive: Layer.Layer<GamesService, never, SonyClient> =
           ),
         )
 
+      // A candidate Sony proved PS5 only by naming its product id is checked
+      // against the product detail; a failed detail lookup drops it. The
+      // search result is never cached, so only the detail lookups are shared.
+      const resolveSearchCandidate = (
+        candidate: SearchCandidate,
+      ): Effect.Effect<Game | null> => {
+        const base = conceptToGame(candidate.concept)
+        return productMeta(base.id).pipe(
+          Effect.map((meta) =>
+            candidate.kind === 'unverified' &&
+            !isPs5Game(meta.platforms, meta.classification)
+              ? null
+              : decodeGame({
+                  ...base,
+                  date: meta.date,
+                  genres:
+                    meta.genres.length > 0 ? [...meta.genres] : base.genres,
+                }),
+          ),
+        )
+      }
+
+      // `nextOffset` follows Sony's raw paging, never the narrowed length. A raw
+      // page that narrows to zero games reads the next one, up to the bound.
+      const searchGames = (
+        term: string,
+        offset = 0,
+        size = SONY_SEARCH_MAX_PAGE_SIZE,
+      ): Effect.Effect<PageResult, UpstreamError> => {
+        const readPage = (
+          rawOffset: number,
+          pagesLeft: number,
+        ): Effect.Effect<PageResult, UpstreamError> =>
+          sony.fetchSearchPage(term, rawOffset, size).pipe(
+            Effect.tapError((error) =>
+              Effect.logWarning('search query failed', {
+                reason: error._tag,
+              }),
+            ),
+            Effect.flatMap((page) => {
+              const nextOffset = page.isLast ? null : rawOffset + size
+              return Effect.forEach(page.candidates, resolveSearchCandidate, {
+                concurrency: SEARCH_DETAIL_CONCURRENCY,
+              }).pipe(
+                Effect.map((resolved) =>
+                  resolved.flatMap((game) => (game === null ? [] : [game])),
+                ),
+                Effect.flatMap((games) =>
+                  games.length === 0 && nextOffset !== null && pagesLeft > 1
+                    ? readPage(nextOffset, pagesLeft - 1)
+                    : Effect.succeed<PageResult>({
+                        games,
+                        totalCount: games.length,
+                        nextOffset,
+                      }),
+                ),
+              )
+            }),
+          )
+
+        return readPage(offset, SEARCH_RAW_PAGE_BOUND)
+      }
+
       const enrichWithDetail = (game: Game): Effect.Effect<Game> =>
         Effect.all(
           [Cache.get(productDetailCache, game.id), plusOfferFor(game)],
@@ -382,6 +462,7 @@ export const GamesServiceLive: Layer.Layer<GamesService, never, SonyClient> =
         getUpcomingGames,
         getDiscountedGames,
         getMonthlyGames,
+        searchGames,
         getGameById,
       })
     }),

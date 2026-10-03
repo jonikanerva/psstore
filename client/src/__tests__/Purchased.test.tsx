@@ -92,7 +92,7 @@ const renderPurchased = async (search = '') => {
     })
     fireEvent.change(box, { target: { value: search } })
   }
-  return result
+  return { ...result, queryClient }
 }
 
 const methodsOf = (mock: ReturnType<typeof stubFetch>): string[] =>
@@ -105,6 +105,13 @@ describe('Purchased', () => {
   let cookieSet: ReturnType<typeof vi.fn<(value: string) => void>>
 
   beforeEach(() => {
+    vi.stubGlobal(
+      'IntersectionObserver',
+      class {
+        observe = vi.fn()
+        disconnect = vi.fn()
+      },
+    )
     setItem = vi.spyOn(Storage.prototype, 'setItem')
     cookieSet = vi.fn<(value: string) => void>()
     Object.defineProperty(document, 'cookie', {
@@ -355,6 +362,68 @@ describe('Purchased', () => {
     expect(await screen.findByLabelText('NPSSO token')).toBeInTheDocument()
     expect(screen.queryByText('Synthetic Alpha')).not.toBeInTheDocument()
     expect(methodsOf(mock)).toContain('DELETE /api/session')
+    await waitFor(() => {
+      expect(
+        screen.queryByRole('button', { name: 'Sign out' }),
+      ).not.toBeInTheDocument()
+    })
+  })
+
+  it('clears the purchased query data on sign-out', async () => {
+    let signedOut = false
+    const mock = stubFetch((_url, init) => {
+      if (init?.method === 'DELETE') {
+        signedOut = true
+        return status(204)
+      }
+      return signedOut
+        ? status(401)
+        : Response.json(library([game('1', 'Synthetic Alpha', 'concept')]))
+    })
+    const { queryClient } = await renderPurchased()
+    await screen.findByText('Synthetic Alpha')
+    expect(queryClient.getQueryData(['purchased'])).toBeDefined()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sign out' }))
+
+    await waitFor(() => {
+      expect(queryClient.getQueryData(['purchased'])).toBeUndefined()
+    })
+    expect(methodsOf(mock)).toContain('DELETE /api/session')
+  })
+
+  it('clears the purchased query data when signing out on another view', async () => {
+    const mock = stubFetch((_url, init) =>
+      init?.method === 'DELETE' ? status(204) : status(500),
+    )
+    const queryClient = new QueryClient()
+    queryClient.setQueryData(
+      ['purchased'],
+      library([game('1', 'Synthetic Alpha', 'concept')]),
+    )
+    const rootRoute = createRootRoute({ component: AppShell })
+    const newRoute = createRoute({
+      getParentRoute: () => rootRoute,
+      path: 'new',
+      component: () => <p>New view</p>,
+    })
+    const router = createRouter({
+      routeTree: rootRoute.addChildren([newRoute]),
+      history: createMemoryHistory({ initialEntries: ['/new'] }),
+    })
+    await router.load()
+    render(
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>,
+    )
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Sign out' }))
+
+    await waitFor(() => {
+      expect(queryClient.getQueryData(['purchased'])).toBeUndefined()
+    })
+    expect(methodsOf(mock)).toEqual(['DELETE /api/session'])
     await waitFor(() => {
       expect(
         screen.queryByRole('button', { name: 'Sign out' }),

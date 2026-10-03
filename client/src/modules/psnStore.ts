@@ -40,6 +40,14 @@ export const fetchMonthlyGames = async (
   size: number,
 ): Promise<PageResult> =>
   getJson(`/api/games/monthly?offset=${String(offset)}&size=${String(size)}`)
+export const fetchSearchGames = async (
+  term: string,
+  offset: number,
+  size: number,
+): Promise<PageResult> =>
+  getJson(
+    `/api/games/search?q=${encodeURIComponent(term)}&offset=${String(offset)}&size=${String(size)}`,
+  )
 export const fetchGame = async (gameId: string): Promise<Game> =>
   getJson(`/api/games/${encodeURIComponent(gameId)}`)
 

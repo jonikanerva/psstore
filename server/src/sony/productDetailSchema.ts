@@ -29,6 +29,7 @@ export const productRetrieveSchema = Schema.Struct({
   releaseDate: Schema.optional(Schema.NullOr(Schema.String)),
   publisherName: Schema.optional(Schema.NullOr(Schema.String)),
   storeDisplayClassification: Schema.optional(Schema.NullOr(Schema.String)),
+  platforms: Schema.optional(Schema.NullOr(Schema.Array(Schema.String))),
   descriptions: Schema.optional(
     Schema.NullOr(Schema.Array(sonyDescriptionSchema)),
   ),

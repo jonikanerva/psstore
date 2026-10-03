@@ -1,13 +1,7 @@
 const Spinner = () => (
-  <div className="spinner--modal">
-    <div className="spinner" />
+  <div role="status" className="spinner">
+    <span className="sr-only">Loading</span>
   </div>
 )
 
-interface LoadingProps {
-  loading: boolean
-}
-
-const Loading = ({ loading }: LoadingProps) => (loading ? <Spinner /> : null)
-
-export default Loading
+export default Spinner
