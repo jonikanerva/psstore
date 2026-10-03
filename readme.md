@@ -6,6 +6,10 @@ discounted, and monthly PS Plus **PS5 games** in the Finnish store, priced in **
 `store.playstation.com`. Open the page, see what's new, click out to Sony to buy. No
 preferences, no tracking.
 
+The PURCHASED view shows your own PS5 library. You sign in with your NPSSO token. The
+server keeps the token in an HttpOnly cookie for 30 days. Sign out clears the cookie.
+`STACK.md` section 14 describes the mechanics.
+
 The backend proxies and normalises Sony's public GraphQL API into a clean REST surface scoped
 to PS5 / Finland / EUR; the frontend renders what the backend returns.
 

@@ -8,11 +8,11 @@
 
 - **Shape:** backend service (typed REST via `effect/http-api` HttpApi) + React SPA frontend.
 - **Critical execution path:** the per-request hot path on the server; the browser main thread / React render path on the web.
-- **Applicable states:** web surfaces handle awaiting-first-data, success, empty, degraded, offline, error; a surface that needs the Sony sign-in also handles signed-out and session-expired. API responses are typed success / typed error (the Effect error channel maps to HTTP status). No stored per-user state (§14).
+- **Applicable states:** web surfaces handle awaiting-first-data, success, empty, degraded, offline, error; a surface that needs the Sony sign-in also handles signed-out. API responses are typed success / typed error (the Effect error channel maps to HTTP status). The server stores no per-user state. The browser keeps only the HttpOnly sign-in cookie (§14).
 
 ## Scope boundary
 
-Product scope (from `VISION.md`) is enforced **structurally at the Schema layer, not in the UI**: external data is filtered and narrowed during decode, before it reaches any other code. Anything outside scope is dropped at the boundary. Signed-in data follows the same rule (for example, the purchased list holds PS5 games only). No user preferences, no stored per-user state, no telemetry. Per-user data comes only from the Sony sign-in; §14 fixes its mechanics. If a change cannot fit the scope, surface it rather than expanding it.
+Product scope (from `VISION.md`) is enforced **structurally at the Schema layer, not in the UI**: external data is filtered and narrowed during decode, before it reaches any other code. Anything outside scope is dropped at the boundary. Signed-in data follows the same rule (for example, the purchased list holds PS5 games only). No user preferences, no server-side per-user state, no telemetry. Per-user data comes only from the Sony sign-in; §14 fixes its mechanics. If a change cannot fit the scope, surface it rather than expanding it.
 
 ---
 
@@ -96,7 +96,7 @@ The `package.json` scripts are the single source of truth. Never invoke `tsc`, `
 
 Never schedule or automate either check (§10).
 
-**Signed-in Sony flow.** A live check or a contract capture of the sign-in exchange or of a signed-in Sony operation needs a real NPSSO. Both are owner-run: the owner supplies their own NPSSO through an environment variable that is never committed. Agents never hold a real NPSSO or session token. When a diff touches the signed-in flow, list the live check in the PR as `triggered, pending owner run`, or `ran on <SHA>: PASS`.
+**Signed-in Sony flow.** A live check or a contract capture of the sign-in exchange or of a signed-in Sony operation needs a real NPSSO. Both are owner-run: the owner supplies their own NPSSO through an environment variable that is never committed. Agents never hold a real NPSSO or access token. When a diff touches the signed-in flow, list the live check in the PR as `triggered, pending owner run`, or `ran on <SHA>: PASS`.
 
 ---
 
@@ -109,7 +109,7 @@ TBD. Let's aim for fast.
 ## 6. Persistence shape
 
 - **Server:** in-memory Effect `Cache` only — TTL built in, no manual invalidation. **No database, no on-disk persistence, no per-visitor state.** Purchased-games requests and the sign-in exchange bypass the cache (§14).
-- **Client:** TanStack Query cache persisted to `localStorage`/IndexedDB via the official persister, for anonymous store queries only. **No per-user state of any kind is persisted.** The session token and signed-in responses live in memory only (§14).
+- **Client:** TanStack Query cache persisted to `localStorage`/IndexedDB via the official persister, for anonymous store queries only. Signed-in responses live in memory only. **No per-user value is persisted by script.** The one per-user value the browser keeps is the HttpOnly NPSSO cookie (§14), which JavaScript cannot read.
 - **Persisted entities:** declared by `VISION.md → Persistence and Privacy Posture`.
 - **Forbidden persistence:** accounts, user preferences, per-user state, telemetry, and anything forbidden in `VISION.md → Persistence and Privacy Posture`.
 
@@ -162,7 +162,7 @@ mise is the toolchain bootstrap (§1), not a package dependency. Approved user/p
 - **Effect v3 APIs** (for example `Context.Tag`, `Either`, `Schema.optionalWith`, `@effect/platform`) and **`@stability unstable` Effect modules** other than `effect/http` and `effect/http-api`. Both need an intentional migration and a §15 row.
 - **Writing package code from memory** without the §3 Context7 retrieval.
 - **Local-time instants or hand-rolled UTC-offset arithmetic**, and new ambient `Date.now()` / `new Date()` reads in domain code — see §12.
-- **A Sony credential or per-user data outside its allowed path** — see §14. This covers: an NPSSO, session token, refresh token, account identifier, or signed-in response data in any cache, storage, log, URL, cookie, or committed file; a server-side session or sign-in cookie; and a kept refresh token.
+- **A Sony credential or per-user data outside its allowed path** — see §14. The NPSSO is allowed only in the HttpOnly sign-in cookie and in the body of the sign-in request. Still banned: the NPSSO in any cookie that JavaScript can read, in `localStorage`, `sessionStorage`, IndexedDB, a URL, a log, a cache, or a committed file; the access token anywhere it is persisted or returned to the client; a server-side session store; a kept refresh token; and an account identifier or signed-in response data in any cache, storage, log, URL, or committed file.
 
 ---
 
@@ -171,7 +171,7 @@ mise is the toolchain bootstrap (§1), not a package dependency. Approved user/p
 - **Logger:** Effect's logging (`Effect.log*`) on the server, structured; never `console.*` in shipped code.
 - **No PII / no telemetry.**
 - **Language:** everything the user sees is in English: UI chrome (labels, placeholders, error states), Sony game data, and formatted dates. Request Sony data from the Finnish store (EUR) in English. The content language is a fixed constant (`SONY_LOCALE`, `en-fi`), never a switcher, a stored choice, or a value derived from the browser. Region (Finland, EUR) and content language (English) are separate. Sony request tag: `en-fi` (sent as `en-FI` in the locale override header). Formatted dates: `en-GB`, passed explicitly to luxon. Prices stay Sony's verbatim strings (decimal comma, no reformatting).
-- **Sony credentials:** the server types the NPSSO and the session token as `Redacted<string>` (§14), so a log line prints `<redacted>`. Never log the headers or the body of the sign-in request or a signed-in request, an account identifier, or signed-in response data.
+- **Sony credentials:** the server types the NPSSO and the access token as `Redacted` (§14), so a log line prints `<redacted>`. The cookie value is the NPSSO: never log the `Cookie` header or the `Set-Cookie` header, the `Location` header of the Sony authorize redirect, the headers or the body of a sign-in or signed-in request, an account identifier, or signed-in response data. A failed account request logs only its error tag.
 - **Crash / error reporter:** none by default; if added, declare it in §7 with data-flow justification.
 
 ---
@@ -179,13 +179,13 @@ mise is the toolchain bootstrap (§1), not a package dependency. Approved user/p
 ## 10. Background & lifecycle
 
 - **Allowed:** TTL-bounded cache refresh driven by request access (Effect `Cache`).
-- **Forbidden:** background polling or long-lived connections without active user interaction; any background work that retains data forbidden by `VISION.md`; background session refresh or background refetch of signed-in data.
+- **Forbidden:** background polling or long-lived connections without active user interaction; any background work that retains data forbidden by `VISION.md`; background session refresh or background refetch of signed-in data. The client refetches the signed-in list only on a user action.
 
 ---
 
 ## 11. Definition-of-done additions
 
-On top of `CLAUDE.md → Definition of done`, this stack also requires: `tsc` zero errors; Oxlint zero errors and zero warnings (the §8 `no-any` / `no-unsafe-*` gates); no I/O imported into the pure core; no `throw` in domain logic; any new package usage grounded in §3 Context7-retrieved, version-pinned docs; and no Sony credential or signed-in data in a log, cache, persisted storage, or committed file (§14). The compiler and this checklist are the review — design code so the checklist _can_ catch mistakes.
+On top of `CLAUDE.md → Definition of done`, this stack also requires: `tsc` zero errors; Oxlint zero errors and zero warnings (the §8 `no-any` / `no-unsafe-*` gates); no I/O imported into the pure core; no `throw` in domain logic; any new package usage grounded in §3 Context7-retrieved, version-pinned docs; and no NPSSO outside the HttpOnly cookie and the sign-in request body, and no access token or signed-in data in a log, cache, persisted storage, or committed file (§14). The compiler and this checklist are the review — design code so the checklist _can_ catch mistakes.
 
 ---
 
@@ -220,22 +220,22 @@ UTC everywhere internally. Convert only at the boundary (`CLAUDE.md → Time`). 
 `VISION.md → Persistence and Privacy Posture` sets the policy. This section fixes the mechanics for every feature that uses the user's Sony sign-in. PURCHASED is the first one.
 
 - **Credential:** the user pastes their NPSSO token into the sign-in form. Sony offers no public OAuth for third parties. The NPSSO flow is unofficial and undocumented. Treat the NPSSO as a full account credential. The reference for the exchange and for signed-in operations such as the purchased-games list is the `psn-api` documentation (Context7 `/achievements-app/psn-api`). Adding `psn-api` itself as a dependency needs a §7 entry like any other package.
-- **Exchange:** the client sends the NPSSO once, in a request body, to the backend. The backend exchanges it with Sony for a short-lived session (access) token. The backend returns only the session token and its expiry. The backend discards the NPSSO and any refresh token in the same request.
-- **Client:** the session token lives in React state only. It never goes into `localStorage`, `sessionStorage`, IndexedDB, a cookie, a URL, or a query key. Sign-out, reload, tab close, or expiry discards it.
-- **Requests:** the client sends the session token in the `Authorization` header to each route that needs the sign-in. The backend forwards it to Sony and returns the decoded result. There is no server session and no sign-in cookie.
-- **Server types:** decode the NPSSO and the session token with `Schema.Redacted(Schema.String)`. Read the raw value with `Redacted.value` only at the Sony client call.
-- **Caching:** the sign-in exchange and the signed-in routes never use the Effect `Cache`. On the client, the persister allow-list (`shouldDehydrateQuery` in `client/src/main.tsx`) admits only the anonymous `games` and `game` keys. Never add a signed-in query to the allow-list. Remove signed-in queries from the cache on sign-out.
-- **Scope:** decode signed-in responses with Effect Schema and narrow them to the product scope at the boundary, like anonymous data. For the purchased list, drop PS4 titles, apps, and add-ons.
-- **Errors:** a rejected or expired session maps to a typed error with HTTP 401. The client then discards the token and shows the signed-out state. An unavailable Sony sign-in or signed-in service maps to the same 502 / 503 errors as other upstream failures.
+- **Exchange:** the client sends the NPSSO once, in a JSON request body, to `POST /api/session`. The route requires a JSON content type and sends no CORS headers. The backend exchanges the NPSSO with Sony for a short-lived access token. It discards the access token at once. It keeps no refresh token and no id token: the schema reads only `access_token` and `expires_in`. The response is an empty 204 with no token and no NPSSO in the body. The backend sets the sign-in cookie only after Sony accepted the NPSSO.
+- **Cookie:** the cookie is named `npsso`. Its value is the NPSSO. Its attributes are `HttpOnly; Secure; SameSite=Strict; Path=/api; Max-Age=2592000` (30 days). `DELETE /api/session` clears it with the same attributes and `Max-Age=0`. JavaScript cannot read it. The server never forwards, stores, or reads back a Sony `Set-Cookie`. The NPSSO payload is 16 to 512 characters from the cookie-safe set `A-Za-z0-9._~-`. `Secure` cookies work on `http://localhost` in Chrome and Firefox, not in Safari.
+- **Client:** the client holds no token and no sign-in state of its own. The signed-in status derives from the `['purchased']` query: a 401 shows the sign-in form. The browser attaches the cookie. The client never reads `document.cookie` and never writes the NPSSO to `localStorage`, `sessionStorage`, IndexedDB, a URL, or a query key. The input field is cleared on submit. The `['purchased']` query refetches only on a user action (§10).
+- **Requests:** the browser sends the cookie to `/api` routes. A signed-in route reads it through a cookie security middleware (`HttpApiSecurity.apiKey`, key `npsso`). A missing or empty cookie is a 401 with no Sony call. On every request the backend exchanges the NPSSO for a new access token, forwards the token to Sony, and returns the decoded result. There is no server session store.
+- **Server types:** decode the NPSSO payload with `Schema.RedactedFromValue(Schema.String)`. Decode the Sony access token the same way. `Schema.Redacted` expects an input that is already a `Redacted` value, so it does not fit a JSON string. Read the raw value with `Redacted.value` only at the Sony client calls and in the empty-cookie check of the middleware.
+- **Caching:** the sign-in exchange and the signed-in routes never use the Effect `Cache`. On the client, the persister allow-list (`shouldPersistQuery` in `client/src/modules/persistence.ts`) admits only the anonymous `games` and `game` keys. Never add a signed-in query to the allow-list. Remove signed-in queries from the cache on sign-out.
+- **Scope:** decode signed-in responses with Effect Schema and narrow them to the product scope at the boundary, like anonymous data. The purchased list keeps only an entry with platform exactly `PS5`, a non-empty name, and a valid product id. Everything else is dropped. The library crawl reads pages of 100 in sequence. A library of more than 20 pages fails the request with 502 or 503. It is never cut short.
+- **Errors:** only a definitive Sony rejection maps to HTTP 401 and clears the cookie. That is an authorize redirect without a code, or a 401 or 403 from the token or library call. A 429 maps to 503. A 5xx, an unexpected answer, or a timeout maps to 502 or 503 and keeps the cookie. The client shows the sign-in form on a 401 only.
 - **Contract:** the sign-in exchange and each signed-in operation go through the Sony contract tooling like the anonymous operations. Capture and live checks need a real NPSSO, so the owner runs them (§4 → Other checks).
-- **Fixtures:** committed manifests, golden fixtures, and samples never contain a real NPSSO, session token, refresh token, account identifier, or real signed-in response data. Use synthetic values.
-- **XSS:** an XSS bug can now steal a session token. Keep DOMPurify on every Sony-authored HTML string. Add no new `dangerouslySetInnerHTML`.
-
----
+- **Fixtures:** committed manifests, golden fixtures, and samples never contain a real NPSSO, access token, refresh token, account identifier, or real signed-in response data. Use synthetic values.
+- **XSS:** an XSS bug can no longer read the NPSSO cookie, but it can still make requests as the user. Keep DOMPurify on every Sony-authored HTML string. Add no new `dangerouslySetInnerHTML`.
 
 ## 15. Intentional Divergences
 
-| Date       | CLAUDE.md rule                                                                 | Divergence                                                                                                            | Reason                                                                                                                                                                                                      |
-| ---------- | ------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-10-02 | §2, §7, §8 (Effect and its HTTP layer)                                         | `effect/http` and `effect/http-api` are accepted for the REST layer although Effect marks them `@stability unstable`. | Owner decision: Effect v4 is the current line and the Effect team plans long-term support for it. The exact `effect` pin limits drift of the unstable API. The owner approved it in chat and on issue #94.  |
-| 2026-10-02 | Sony contract tooling scope (readme and runbook: the tooling captures `fi-fi`) | The server requests `en-fi`. The contract bot, the manifest metadata, and the capture routes stay on `fi-fi`.         | Structural parity verified live on 2026-10-02: same ids, order, counts, PDP, and prices. The persisted-query hashes do not depend on locale. The manifest operation variable schemas contain no locale key. |
+| Date       | CLAUDE.md rule                                                                 | Divergence                                                                                                                                                                                                                                                           | Reason                                                                                                                                                                                                                  |
+| ---------- | ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-10-02 | §2, §7, §8 (Effect and its HTTP layer)                                         | `effect/http` and `effect/http-api` are accepted for the REST layer although Effect marks them `@stability unstable`.                                                                                                                                                | Owner decision: Effect v4 is the current line and the Effect team plans long-term support for it. The exact `effect` pin limits drift of the unstable API. The owner approved it in chat and on issue #94.              |
+| 2026-10-02 | Sony contract tooling scope (readme and runbook: the tooling captures `fi-fi`) | The server requests `en-fi`. The contract bot, the manifest metadata, and the capture routes stay on `fi-fi`.                                                                                                                                                        | Structural parity verified live on 2026-10-02: same ids, order, counts, PDP, and prices. The persisted-query hashes do not depend on locale. The manifest operation variable schemas contain no locale key.             |
+| 2026-10-03 | `CLAUDE.md` → Privacy & security; `STACK.md` §14 and §8 (previous text)        | The NPSSO persists in an HttpOnly cookie for 30 days, and the server sets a sign-in cookie. The previous §14 forbade both. The server stays stateless and exchanges the NPSSO on every request. A 401 expires the cookie in the middleware as a pre-response header. | Owner decision (issue #108, 2026-10-03): the user signs in once until Sony expires the NPSSO. The cookie is HttpOnly, Secure, and SameSite=Strict, so script cannot read it and a cross-site request does not carry it. |
