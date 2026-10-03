@@ -1,4 +1,4 @@
-import { cleanup, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, screen, waitFor } from '@testing-library/react'
 import { useState } from 'react'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import type { Game, PageResult } from '@psstore/shared'
@@ -115,5 +115,65 @@ describe('Games feature monthly', () => {
     await renderWithRouter(<Games feature="new" fetch={fetch} />)
 
     expect(await screen.findByText('-')).toBeInTheDocument()
+  })
+})
+
+describe('Games loading indicator', () => {
+  afterEach(() => {
+    cleanup()
+  })
+
+  it('announces loading until the first page resolves', async () => {
+    let resolve: (value: PageResult) => void = () => undefined
+    const fetch = vi.fn(
+      () =>
+        new Promise<PageResult>((r) => {
+          resolve = r
+        }),
+    )
+    await renderWithRouter(<Games feature="new" fetch={fetch} />)
+
+    expect(screen.getByRole('status')).toHaveTextContent('Loading')
+
+    await act(async () => {
+      resolve(page([game('EP1-PPSA1_00-A', 'Wobbly Life')]))
+    })
+
+    expect(await screen.findByText('Wobbly Life')).toBeInTheDocument()
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+  })
+
+  it('shows the indicator while the next page loads and keeps the cards', async () => {
+    let intersect: IntersectionObserverCallback = () => undefined
+    vi.stubGlobal(
+      'IntersectionObserver',
+      class {
+        constructor(callback: IntersectionObserverCallback) {
+          intersect = callback
+        }
+        observe = vi.fn()
+        disconnect = vi.fn()
+      },
+    )
+    const fetch = vi
+      .fn<(offset: number, size: number) => Promise<PageResult>>()
+      .mockResolvedValueOnce({
+        games: [game('EP1-PPSA1_00-A', 'Wobbly Life')],
+        totalCount: 2,
+        nextOffset: 60,
+      })
+      .mockReturnValueOnce(new Promise<PageResult>(() => undefined))
+    await renderWithRouter(<Games feature="new" fetch={fetch} />)
+    expect(await screen.findByText('Wobbly Life')).toBeInTheDocument()
+
+    await act(async () => {
+      intersect(
+        [{ isIntersecting: true } as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      )
+    })
+
+    expect(await screen.findByRole('status')).toHaveTextContent('Loading')
+    expect(screen.getByText('Wobbly Life')).toBeInTheDocument()
   })
 })
