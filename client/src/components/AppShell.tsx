@@ -88,15 +88,6 @@ const AppShell = () => {
       focusReturn.current = null
     }
   }, [pathname, viewKey, onGamePage])
-  const loadRef = useRef<AbortController | null>(null)
-
-  useEffect(
-    () => () => {
-      loadRef.current?.abort()
-    },
-    [pathname],
-  )
-
   const sortConfig = sortConfigForPath(pathname)
 
   // `null` is the route default of a server-ordered view: the server order,
@@ -104,7 +95,6 @@ const AppShell = () => {
   // choosing one loads the remaining pages of the open view. A view that is not
   // server-ordered keeps its default as an applied sort.
   const applySort = (next: GameSort) => {
-    loadRef.current?.abort()
     if (sortConfig === undefined) {
       return
     }
@@ -113,17 +103,26 @@ const AppShell = () => {
       return
     }
     setView((previous) => ({ ...previous, sort: next }))
-    const target = gamesFeatureForPath(pathname)
-    if (target !== undefined) {
-      const controller = new AbortController()
-      loadRef.current = controller
-      void loadAllPages(
-        queryClient,
-        gamesQueryOptions(target.feature, target.fetch),
-        controller.signal,
-      )
-    }
   }
+
+  // The loader owns the load of a kept sort: it starts whenever a sorted list
+  // is on screen, so a list that lost its pages while the game page was open
+  // loads again. Leaving the list aborts it.
+  const sortedTarget = sort === null ? undefined : gamesFeatureForPath(pathname)
+  useEffect(() => {
+    if (sortedTarget === undefined) {
+      return
+    }
+    const controller = new AbortController()
+    void loadAllPages(
+      queryClient,
+      gamesQueryOptions(sortedTarget.feature, sortedTarget.fetch),
+      controller.signal,
+    )
+    return () => {
+      controller.abort()
+    }
+  }, [queryClient, sortedTarget])
 
   const activeSort = sort ?? sortConfig?.defaultSort
   const appliedSort = sortConfig?.serverOrdered === false ? activeSort : sort

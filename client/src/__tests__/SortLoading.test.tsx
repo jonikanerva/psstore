@@ -86,7 +86,7 @@ const deferred = (): Deferred => {
   return { promise, resolve, reject }
 }
 
-const renderApp = async (initialPath = '/new') => {
+const renderApp = async (initialPath = '/new', gcTime = 0) => {
   const rootRoute = createRootRoute({ component: AppShell })
   const newRoute = createRoute({
     getParentRoute: () => rootRoute,
@@ -103,19 +103,32 @@ const renderApp = async (initialPath = '/new') => {
     path: 'monthly',
     component: () => <div>monthly view</div>,
   })
+  const gameRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: 'g/$gameId',
+    component: () => <div>game page</div>,
+  })
   const router = createRouter({
-    routeTree: rootRoute.addChildren([newRoute, upcomingRoute, monthlyRoute]),
+    routeTree: rootRoute.addChildren([
+      newRoute,
+      upcomingRoute,
+      monthlyRoute,
+      gameRoute,
+    ]),
     history: createMemoryHistory({ initialEntries: [initialPath] }),
   })
   await router.load()
   const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false, gcTime: 0 } },
+    defaultOptions: { queries: { retry: false, gcTime, staleTime: gcTime } },
   })
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-    </QueryClientProvider>,
-  )
+  return {
+    router,
+    ...render(
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>,
+    ),
+  }
 }
 
 const cardNames = (): (string | null)[] =>
@@ -158,6 +171,35 @@ describe('sorting a paged view', () => {
       expect(cardNames()).toEqual(['Alpha', 'Bravo', 'Charlie'])
     })
     expect(fetchNewGames).toHaveBeenCalledTimes(2)
+  })
+
+  it('loads the remaining pages again when the list returns from a game page', async () => {
+    const second = deferred()
+    vi.mocked(fetchNewGames)
+      .mockResolvedValueOnce(page([game('1', 'Charlie')], 60))
+      .mockReturnValueOnce(second.promise)
+      .mockResolvedValueOnce(page([game('3', 'Bravo')], null))
+    const { router } = await renderApp('/new', Infinity)
+    expect(await screen.findByText('Charlie')).toBeInTheDocument()
+
+    pickName()
+    await waitFor(() => {
+      expect(fetchNewGames).toHaveBeenCalledTimes(2)
+    })
+    await act(async () => {
+      await router.navigate({ to: '/g/$gameId', params: { gameId: 'x' } })
+    })
+    await act(async () => {
+      second.resolve(page([game('2', 'Alpha')], 120))
+    })
+    await act(async () => {
+      router.history.back()
+    })
+
+    await waitFor(() => {
+      expect(cardNames()).toEqual(['Alpha', 'Bravo', 'Charlie'])
+    })
+    expect(fetchNewGames).toHaveBeenCalledTimes(3)
   })
 
   it('sorts UPCOMING by price with unpriced games last in both directions', async () => {
