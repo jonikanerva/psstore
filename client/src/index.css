@@ -316,14 +316,16 @@ body {
 }
 
 .details-frame {
+  position: relative;
   max-width: 1120px;
   margin: 0 auto;
 }
 
 .details-frame--bar {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 8px;
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 1;
 }
 
 .details-frame--close {
@@ -374,6 +376,7 @@ body {
 }
 
 .details-page--title {
+  padding-right: 48px;
   font-size: 28px;
   line-height: 1.2;
 }
