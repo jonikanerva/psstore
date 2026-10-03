@@ -145,8 +145,9 @@ SONY_NPSSO=<your NPSSO> pnpm sony:probe-wishlist
 - On PASS the probe records `observed_status_codes: [200]` for `wishlist`. Commit that change.
 - The probe never writes a wishlist.
 
-The PASS also lets the owner check the prices: the response has no region field.
-Until then the view shows names and images only.
+The wishlist response has no region field, so the server ignores its prices.
+It fills each product card (date, standard price, PS Plus price) from the anonymous Finnish store,
+the same lookup as the game page. A concept entry or a failed lookup keeps a card with name and image only.
 
 ## PS Plus monthly feed
 

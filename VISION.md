@@ -18,7 +18,7 @@ Let a Finnish PS5 owner find new, upcoming, discounted, monthly PS Plus, purchas
 ## Product Shape
 
 1. The site opens on NEW: PS5 games, newest release first.
-2. Six views: NEW, UPCOMING, DISCOUNTED, MONTHLY, PURCHASED, WISHLIST. PURCHASED and WISHLIST show the signed-in user's own Sony data, read-only. One search field filters the current view by name. The same field can also search all PS5 games in the Finnish store. The result opens as a list of game cards.
+2. Six views: NEW, UPCOMING, DISCOUNTED, MONTHLY, WISHLIST, PURCHASED. WISHLIST and PURCHASED show the signed-in user's own Sony data, read-only. One search field filters the current view by name. The same field can also search all PS5 games in the Finnish store. The result opens as a list of game cards.
 3. A game card opens the game page: artwork, description, details, both prices, and a link to buy in Sony's store.
 
 ## Non-Goals
