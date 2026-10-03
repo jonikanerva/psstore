@@ -57,6 +57,11 @@ export const SONY_WISHLIST_HASH =
 export const SONY_AUTH_DEADLINE_MS = 15000
 export const SONY_PURCHASED_DEADLINE_MS = 30000
 export const SONY_WISHLIST_DEADLINE_MS = 15000
+// Public store lookups that fill each wishlist card with its date and prices:
+// parallel lookups at most, one deadline per entry, and one for the whole list.
+export const WISHLIST_ENRICH_CONCURRENCY = 6
+export const WISHLIST_ENRICH_ENTRY_TIMEOUT_MS = 5000
+export const WISHLIST_ENRICH_TOTAL_TIMEOUT_MS = 12000
 
 // Sign-in cookie. The value is the user's NPSSO; the cookie is HttpOnly.
 export const NPSSO_COOKIE_NAME = 'npsso'

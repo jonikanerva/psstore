@@ -25,9 +25,10 @@ const dirname = path.dirname(fileURLToPath(import.meta.url))
 const clientBuildPath = path.resolve(dirname, '../../../client/build')
 
 // Service graph for the games API handlers.
+const GamesLive = GamesServiceLive.pipe(Layer.provide(SonyClientLive))
 const ServicesLive = Layer.mergeAll(
-  GamesServiceLive.pipe(Layer.provide(SonyClientLive)),
-  AccountServiceLive.pipe(Layer.provide(SonyAccountClientLive)),
+  GamesLive,
+  AccountServiceLive.pipe(Layer.provide([SonyAccountClientLive, GamesLive])),
 )
 
 // Mount the typed REST API (prefixes /api/games and /api/session are declared

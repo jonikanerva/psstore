@@ -16,6 +16,7 @@ import {
 } from '../errors/errors.js'
 import { AccountServiceLive } from '../services/accountService.js'
 import { GamesServiceLive } from '../services/gamesService.js'
+import { fakeGamesLayer } from './fakeGames.js'
 import type { PurchasedEntry } from '../sony/purchasedSchema.js'
 import type { WishlistEntry } from '../sony/wishlistSchema.js'
 import {
@@ -129,9 +130,7 @@ const accountApp = (
     Layer.provide(
       Layer.mergeAll(
         Services,
-        AccountServiceLive.pipe(
-          Layer.provide(Layer.succeed(SonyAccountClient, sony)),
-        ),
+        AccountLive.pipe(Layer.provide(Layer.succeed(SonyAccountClient, sony))),
       ),
     ),
     Layer.provide(Logger.layer([capture])),
@@ -145,6 +144,8 @@ const accountApp = (
   }
 }
 
+const AccountLive = AccountServiceLive.pipe(Layer.provide(fakeGamesLayer()))
+
 const Services = Layer.mergeAll(GamesServiceLive.pipe(Layer.provide(FakeSony)))
 
 const AppLive = HttpApiBuilder.layer(gamesApi).pipe(
@@ -153,7 +154,7 @@ const AppLive = HttpApiBuilder.layer(gamesApi).pipe(
   Layer.provide(
     Layer.mergeAll(
       Services,
-      AccountServiceLive.pipe(
+      AccountLive.pipe(
         Layer.provide(
           Layer.succeed(SonyAccountClient, {
             exchangeNpsso: () => Effect.succeed(Redacted.make(ACCESS_TOKEN)),
@@ -197,7 +198,7 @@ const failHandler = (
     Layer.provide(
       Layer.mergeAll(
         GamesServiceLive.pipe(Layer.provide(FailSony)),
-        AccountServiceLive.pipe(
+        AccountLive.pipe(
           Layer.provide(
             Layer.succeed(SonyAccountClient, {
               exchangeNpsso: () =>
@@ -239,7 +240,7 @@ const fallbackHandler = (
     Layer.provide(
       Layer.mergeAll(
         GamesServiceLive.pipe(Layer.provide(FallbackSony)),
-        AccountServiceLive.pipe(
+        AccountLive.pipe(
           Layer.provide(
             Layer.succeed(SonyAccountClient, {
               exchangeNpsso: () => Effect.succeed(Redacted.make(ACCESS_TOKEN)),

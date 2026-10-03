@@ -38,7 +38,23 @@ export const mapPurchasedToGames = (
   )
 // `idKind` comes from the entry: the wishlist boundary has already checked the
 // id against it.
+const wishlistCard = (entry: WishlistEntry): Game =>
+  libraryCard(entry.id, entry.name, entry.imageUrl, entry.idKind)
+
 export const mapWishlistToGames = (entries: readonly WishlistEntry[]): Game[] =>
-  entries.map((entry) =>
-    libraryCard(entry.id, entry.name, entry.imageUrl, entry.idKind),
-  )
+  entries.map(wishlistCard)
+
+// A wishlist card is the public store's game when the store returned one. The
+// card keeps the wishlist's id and fills a missing name or cover from the entry.
+export const mergeWishlistEntry = (
+  entry: WishlistEntry,
+  found: Game | null,
+): Game =>
+  found === null
+    ? wishlistCard(entry)
+    : {
+        ...found,
+        id: entry.id,
+        name: found.name || entry.name,
+        url: found.url || entry.imageUrl,
+      }

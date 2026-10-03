@@ -9,6 +9,8 @@ import {
   AccountService,
   AccountServiceLive,
 } from '../services/accountService.js'
+import type { GamesServiceApi } from '../services/gamesService.js'
+import { fakeGamesLayer } from './fakeGames.js'
 import {
   SonyAccountClient,
   type SonyAccountClientApi,
@@ -30,6 +32,7 @@ const wishlistEntry = {
 const run = <A, E>(
   overrides: Partial<SonyAccountClientApi>,
   use: (service: AccountService['Service']) => Effect.Effect<A, E>,
+  games: Partial<GamesServiceApi> = {},
 ) => {
   const exchange = vi.fn()
   const sony: SonyAccountClientApi = {
@@ -42,7 +45,10 @@ const run = <A, E>(
     ...overrides,
   }
   const layer = AccountServiceLive.pipe(
-    Layer.provide(Layer.succeed(SonyAccountClient, sony)),
+    Layer.provide([
+      Layer.succeed(SonyAccountClient, sony),
+      fakeGamesLayer(games),
+    ]),
   )
   return {
     exchange,
@@ -213,7 +219,7 @@ describe('AccountService in-flight sharing', () => {
       fetchWishlistGames: () => Effect.succeed([]),
     }
     const layer = AccountServiceLive.pipe(
-      Layer.provide(Layer.succeed(SonyAccountClient, sony)),
+      Layer.provide([Layer.succeed(SonyAccountClient, sony), fakeGamesLayer()]),
     )
     return {
       calls: () => calls,
