@@ -129,7 +129,12 @@ const routeTree = rootRoute.addChildren([
   splatRoute,
 ])
 
-export const router = createRouter({ routeTree, parseSearch, stringifySearch })
+export const router = createRouter({
+  routeTree,
+  parseSearch,
+  stringifySearch,
+  scrollRestoration: true,
+})
 
 declare module '@tanstack/react-router' {
   interface Register {

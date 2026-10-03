@@ -188,7 +188,8 @@ body {
   background: var(--button-color);
 }
 
-.navigation--active {
+.navigation--active,
+.navigation--origin {
   color: var(--text-color);
   border-color: var(--text-color);
 }
@@ -314,6 +315,36 @@ body {
   outline-offset: 1px;
 }
 
+.details-frame {
+  position: relative;
+  max-width: 1120px;
+  margin: 0 auto;
+}
+
+.details-frame--bar {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 1;
+}
+
+.details-frame--close {
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: var(--button-color);
+  color: var(--text-color);
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.details-frame--close:focus-visible {
+  outline: 2px solid var(--focus-color);
+  outline-offset: 2px;
+}
+
 .details-page {
   max-width: 1120px;
   margin: 0 auto;
@@ -345,6 +376,7 @@ body {
 }
 
 .details-page--title {
+  padding-right: 48px;
   font-size: 28px;
   line-height: 1.2;
 }

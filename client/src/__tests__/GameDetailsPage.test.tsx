@@ -472,4 +472,19 @@ describe('GameDetailsPage', () => {
     expect(screen.getByText(/49,99 €/)).toBeInTheDocument()
     expect(screen.queryByLabelText('Description')).not.toBeInTheDocument()
   })
+
+  it('shows one status with the shared spinner while loading', async () => {
+    const { fetchGame } = await import('../modules/psnStore')
+    vi.mocked(fetchGame).mockReturnValue(new Promise(() => undefined))
+
+    const { container } = await renderWithRouter(
+      <GameDetailsPage gameId={baseGame.id} />,
+    )
+
+    await waitFor(() => {
+      expect(screen.getAllByRole('status')).toHaveLength(1)
+    })
+    expect(container.querySelector('.spinner')).not.toBeNull()
+    expect(container.querySelector('[aria-busy="true"]')).not.toBeNull()
+  })
 })

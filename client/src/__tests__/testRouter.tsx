@@ -2,6 +2,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import {
   createMemoryHistory,
   createRootRoute,
+  createRoute,
+  Outlet,
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
@@ -34,4 +36,38 @@ export const renderWithRouter = async (
       <RouterProvider router={router} />
     </QueryClientProvider>,
   )
+}
+
+// Renders a route table under an in-memory router at a chosen history stack,
+// and returns the router so a test can read the location and the history.
+export const renderRoutes = async (
+  routes: Readonly<Record<string, () => ReactNode>>,
+  initialEntries: string[],
+  initialIndex?: number,
+) => {
+  const rootRoute = createRootRoute({ component: Outlet })
+  const children = Object.entries(routes).map(([path, Component]) =>
+    createRoute({
+      getParentRoute: () => rootRoute,
+      path,
+      component: Component,
+    }),
+  )
+  const router = createRouter({
+    routeTree: rootRoute.addChildren(children),
+    history: createMemoryHistory({
+      initialEntries,
+      ...(initialIndex === undefined ? {} : { initialIndex }),
+    }),
+  })
+  await router.load()
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0 } },
+  })
+  render(
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>,
+  )
+  return router
 }
