@@ -239,15 +239,19 @@ describe('Purchased', () => {
     )
   })
 
-  it('renders cards without prices and links out to Sony', async () => {
+  it('renders cards without prices and links to the game page', async () => {
     stubFetch(() =>
       Response.json(
         library([
-          game('10000001', 'Synthetic Alpha', 'concept'),
+          game(
+            'EP0001-PPSA00001_00-SYNTHETICALPHA00',
+            'Synthetic Alpha',
+            'product',
+          ),
           game(
             'EP0001-PPSA00002_00-SYNTHETICBETA000',
             'Synthetic Beta',
-            'concept',
+            'product',
           ),
         ]),
       ),
@@ -257,14 +261,11 @@ describe('Purchased', () => {
     const alpha = await screen.findByRole('link', { name: /Synthetic Alpha/ })
     expect(alpha).toHaveAttribute(
       'href',
-      'https://store.playstation.com/en-fi/concept/10000001',
+      '/g/EP0001-PPSA00001_00-SYNTHETICALPHA00',
     )
     expect(
       screen.getByRole('link', { name: /Synthetic Beta/ }),
-    ).toHaveAttribute(
-      'href',
-      'https://store.playstation.com/en-fi/product/EP0001-PPSA00002_00-SYNTHETICBETA000',
-    )
+    ).toHaveAttribute('href', '/g/EP0001-PPSA00002_00-SYNTHETICBETA000')
     expect(screen.queryByText('Unknown')).not.toBeInTheDocument()
   })
 
