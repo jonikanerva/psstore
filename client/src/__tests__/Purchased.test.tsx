@@ -172,6 +172,40 @@ describe('Purchased', () => {
     }
   })
 
+  it('sorts the library by name in both directions', async () => {
+    stubFetch(() =>
+      Response.json(
+        library([
+          game('10000001', 'Charlie', 'concept'),
+          game('10000002', 'alpha', 'concept'),
+          game('10000003', 'Bravo', 'concept'),
+        ]),
+      ),
+    )
+    await renderPurchased()
+    await screen.findByText('Charlie')
+    const names = () =>
+      screen
+        .getAllByRole('link')
+        .map((link) => link.textContent)
+        .filter((text) => ['Charlie', 'alpha', 'Bravo'].includes(text))
+    expect(names()).toEqual(['Charlie', 'alpha', 'Bravo'])
+
+    const select = await screen.findByRole('combobox', { name: 'Sort by' })
+    expect(
+      within(select)
+        .getAllByRole('option')
+        .map((option) => option.textContent),
+    ).toEqual(['Default', 'Name'])
+    fireEvent.change(select, { target: { value: 'name' } })
+    expect(names()).toEqual(['alpha', 'Bravo', 'Charlie'])
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Sort direction: ascending' }),
+    )
+    expect(names()).toEqual(['Charlie', 'Bravo', 'alpha'])
+  })
+
   it('posts the token, clears the field and loads the library', async () => {
     let signedIn = false
     const mock = stubFetch((url, init) => {

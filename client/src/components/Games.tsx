@@ -1,7 +1,12 @@
-import type { PageResult } from '@psstore/shared'
-import { filterGamesByName } from '@psstore/shared'
+import { filterGamesByName, sortGames } from '@psstore/shared'
 import { useInfiniteQuery } from '@tanstack/react-query'
+import {
+  gamesQueryOptions,
+  type FetchGamesPage,
+  type GamesFeature,
+} from '../modules/gamesQuery'
 import { useSearchQuery } from '../modules/searchContext'
+import { useSort } from '../modules/sortContext'
 import Error from './Error'
 import { normalizeSearchTerm } from '../modules/searchTerm'
 import GameGrid from './GameGrid'
@@ -9,11 +14,9 @@ import Offline from './Offline'
 import SearchAllCard from './SearchAllCard'
 import Spinner from './Spinner'
 
-const PAGE_SIZE = 60
-
 interface GamesProps {
-  feature: 'new' | 'upcoming' | 'discounted' | 'monthly'
-  fetch: (offset: number, size: number) => Promise<PageResult>
+  feature: GamesFeature
+  fetch: FetchGamesPage
   emptyMessage?: string
 }
 
@@ -23,11 +26,8 @@ const Games = ({
   emptyMessage = 'No games found',
 }: GamesProps) => {
   const query = useSearchQuery()
+  const sort = useSort()
 
-  // Query key is feature only (pagination flows through pageParam); the search
-  // text is never part of the key, so the persisted cache carries no search or
-  // behaviour state. useInfiniteQuery accumulates pages: each page's
-  // `nextOffset` becomes the next pageParam, or undefined to stop.
   const {
     data,
     isPending,
@@ -36,12 +36,7 @@ const Games = ({
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-  } = useInfiniteQuery({
-    queryKey: ['games', feature],
-    queryFn: ({ pageParam }) => fetch(pageParam, PAGE_SIZE),
-    initialPageParam: 0,
-    getNextPageParam: (lastPage) => lastPage.nextOffset ?? undefined,
-  })
+  } = useInfiniteQuery(gamesQueryOptions(feature, fetch))
 
   if (isError) {
     return <Error message="Failed to load games" />
@@ -51,8 +46,15 @@ const Games = ({
     return fetchStatus === 'paused' ? <Offline /> : <Spinner />
   }
 
+  // A sort covers every page: until the last one arrives the list stays
+  // hidden rather than half sorted.
+  if (sort !== null && hasNextPage) {
+    return fetchStatus === 'paused' ? <Offline /> : <Spinner />
+  }
+
   const games = data.pages.flatMap((page) => page.games)
   const filtered = filterGamesByName(games, query)
+  const ordered = sort === null ? filtered : sortGames(filtered, sort)
 
   const term = normalizeSearchTerm(query)
 
@@ -62,7 +64,7 @@ const Games = ({
 
   return (
     <GameGrid
-      games={filtered}
+      games={ordered}
       label={feature}
       showPrice={feature !== 'monthly'}
       trailing={term === '' ? null : <SearchAllCard term={term} />}

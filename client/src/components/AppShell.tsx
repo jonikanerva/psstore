@@ -1,9 +1,21 @@
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
-import { useQuery } from '@tanstack/react-query'
-import { useEffect, useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useEffect, useRef, useState } from 'react'
+import {
+  NATURAL_DIRECTION,
+  type GameSort,
+  type SortField,
+} from '@psstore/shared'
+import {
+  gamesFeatureForPath,
+  gamesQueryOptions,
+  loadAllPages,
+} from '../modules/gamesQuery'
 import { purchasedQueryOptions } from '../modules/purchasedQuery'
 import { wishlistQueryOptions } from '../modules/wishlistQuery'
 import { SearchContext } from '../modules/searchContext'
+import { SortContext } from '../modules/sortContext'
+import { sortFieldsForPath } from '../modules/sortFields'
 import {
   normalizeSearchTerm,
   readSearchTerm,
@@ -11,6 +23,7 @@ import {
 } from '../modules/searchTerm'
 import Navigation from './Navigation'
 import SignOut from './SignOut'
+import SortControl from './SortControl'
 
 const SEARCH_PATH = '/search'
 
@@ -24,6 +37,62 @@ const AppShell = () => {
     select: (state) => readSearchTerm(state.location.search),
   })
   const onSearchRoute = pathname === SEARCH_PATH
+  const queryClient = useQueryClient()
+
+  // The sort belongs to the route it was chosen on: arriving on another
+  // pathname drops it.
+  const [sortState, setSortState] = useState<{
+    pathname: string
+    sort: GameSort | null
+  }>({ pathname, sort: null })
+  if (sortState.pathname !== pathname) {
+    setSortState({ pathname, sort: null })
+  }
+  const sort = sortState.pathname === pathname ? sortState.sort : null
+  const loadRef = useRef<AbortController | null>(null)
+
+  useEffect(
+    () => () => {
+      loadRef.current?.abort()
+    },
+    [pathname],
+  )
+
+  // A sort needs every page, so picking one loads the remaining pages of the
+  // open view. Nothing loads while the sort is idle.
+  const changeField = (field: SortField | null) => {
+    loadRef.current?.abort()
+    if (field === null) {
+      setSortState({ pathname, sort: null })
+      return
+    }
+    setSortState({
+      pathname,
+      sort: { field, direction: NATURAL_DIRECTION[field] },
+    })
+    const target = gamesFeatureForPath(pathname)
+    if (target !== undefined) {
+      const controller = new AbortController()
+      loadRef.current = controller
+      void loadAllPages(
+        queryClient,
+        gamesQueryOptions(target.feature, target.fetch),
+        controller.signal,
+      )
+    }
+  }
+
+  const toggleDirection = () => {
+    if (sort !== null) {
+      setSortState({
+        pathname,
+        sort: {
+          field: sort.field,
+          direction: sort.direction === 'asc' ? 'desc' : 'asc',
+        },
+      })
+    }
+  }
 
   // A signed-in search has nothing to filter until its list exists, and Sign
   // out shows while either list does. `enabled: false` observes the shared
@@ -33,6 +102,7 @@ const AppShell = () => {
   const searchDisabled =
     (pathname === '/purchased' && library.data === undefined) ||
     (pathname === '/wishlist' && wishlist.data === undefined)
+  const sortFields = searchDisabled ? [] : sortFieldsForPath(pathname)
 
   // Outside the search route the field filters the current view and clears
   // with the route. On the search route the URL term seeds the field, and
@@ -51,6 +121,14 @@ const AppShell = () => {
         <div className="app-shell--tools">
           {(library.data !== undefined || wishlist.data !== undefined) && (
             <SignOut />
+          )}
+          {sortFields.length > 0 && (
+            <SortControl
+              fields={sortFields}
+              sort={sort}
+              onFieldChange={changeField}
+              onToggleDirection={toggleDirection}
+            />
           )}
           <form
             role="search"
@@ -85,7 +163,9 @@ const AppShell = () => {
       </header>
       <main className="app-shell--main">
         <SearchContext.Provider value={onSearchRoute ? '' : query}>
-          <Outlet />
+          <SortContext.Provider value={sort}>
+            <Outlet />
+          </SortContext.Provider>
         </SearchContext.Provider>
       </main>
     </div>

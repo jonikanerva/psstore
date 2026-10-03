@@ -16,10 +16,19 @@ import {
 import { afterEach, describe, expect, it } from 'vitest'
 import AppShell from '../components/AppShell'
 import { useSearchQuery } from '../modules/searchContext'
+import { useSort } from '../modules/sortContext'
 
 const QueryProbe = () => {
   const query = useSearchQuery()
-  return <div data-testid="probe-query">{query}</div>
+  const sort = useSort()
+  return (
+    <>
+      <div data-testid="probe-query">{query}</div>
+      <div data-testid="probe-sort">
+        {sort === null ? 'default' : `${sort.field} ${sort.direction}`}
+      </div>
+    </>
+  )
 }
 
 const renderShellAt = async (initial: string) => {
@@ -44,12 +53,24 @@ const renderShellAt = async (initial: string) => {
     path: 'wishlist',
     component: QueryProbe,
   })
+  const upcomingRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: 'upcoming',
+    component: QueryProbe,
+  })
+  const searchRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: 'search',
+    component: QueryProbe,
+  })
   const router = createRouter({
     routeTree: rootRoute.addChildren([
       newRoute,
+      upcomingRoute,
       discountedRoute,
       purchasedRoute,
       wishlistRoute,
+      searchRoute,
     ]),
     history: createMemoryHistory({ initialEntries: [initial] }),
   })
@@ -169,5 +190,85 @@ describe('AppShell', () => {
     }
     expect(links.at(-2)).toHaveTextContent('Wishlist')
     expect(links.at(-1)).toHaveTextContent('Purchased')
+  })
+
+  describe('sort control', () => {
+    const optionLabels = () =>
+      within(screen.getByRole('combobox', { name: 'Sort by' }))
+        .getAllByRole('option')
+        .map((option) => option.textContent)
+
+    it('offers the fields of the current route', async () => {
+      await renderShellAt('/upcoming')
+      expect(optionLabels()).toEqual(['Default', 'Release date', 'Name'])
+      cleanup()
+
+      await renderShellAt('/discounted')
+      expect(optionLabels()).toEqual([
+        'Default',
+        'Release date',
+        'Price',
+        'Name',
+      ])
+    })
+
+    it('is hidden on the search route', async () => {
+      await renderShellAt('/search')
+      expect(
+        screen.queryByRole('combobox', { name: 'Sort by' }),
+      ).not.toBeInTheDocument()
+    })
+
+    it('is hidden on PURCHASED until the library list exists', async () => {
+      await renderShellAt('/purchased')
+      expect(
+        screen.queryByRole('combobox', { name: 'Sort by' }),
+      ).not.toBeInTheDocument()
+    })
+
+    it('disables the direction button while Default is chosen', async () => {
+      await renderShellAt('/upcoming')
+      expect(
+        screen.getByRole('button', { name: 'Sort direction' }),
+      ).toBeDisabled()
+    })
+
+    it('starts at the natural direction and toggles it', async () => {
+      await renderShellAt('/upcoming')
+      fireEvent.change(screen.getByRole('combobox', { name: 'Sort by' }), {
+        target: { value: 'name' },
+      })
+      expect(screen.getByTestId('probe-sort')).toHaveTextContent('name asc')
+      const button = screen.getByRole('button', {
+        name: 'Sort direction: ascending',
+      })
+      expect(button).toBeEnabled()
+      expect(button).not.toHaveAttribute('aria-pressed')
+
+      fireEvent.click(button)
+
+      expect(screen.getByTestId('probe-sort')).toHaveTextContent('name desc')
+      expect(
+        screen.getByRole('button', { name: 'Sort direction: descending' }),
+      ).toBeInTheDocument()
+    })
+
+    it('resets when the route changes, also when coming back', async () => {
+      await renderShellAt('/upcoming')
+      fireEvent.change(screen.getByRole('combobox', { name: 'Sort by' }), {
+        target: { value: 'date' },
+      })
+      expect(screen.getByTestId('probe-sort')).toHaveTextContent('date desc')
+
+      fireEvent.click(screen.getByRole('link', { name: 'Discounted' }))
+      expect(screen.getByTestId('probe-sort')).toHaveTextContent('default')
+      expect(
+        screen.getByRole<HTMLSelectElement>('combobox', { name: 'Sort by' })
+          .value,
+      ).toBe('')
+
+      fireEvent.click(screen.getByRole('link', { name: 'Upcoming' }))
+      expect(screen.getByTestId('probe-sort')).toHaveTextContent('default')
+    })
   })
 })
