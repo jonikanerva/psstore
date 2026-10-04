@@ -1,0 +1,9 @@
+# Gitleaks findings triaged as false positives (STACK.md → 4. Build & verify commands → Security scans).
+# Each fingerprint is bound to one commit, file, rule, and line. A new commit that changes the line gives a new finding.
+
+# Synthetic NPSSO test value ('synthetic-npsso-...'), not a credential.
+e48ca7bac97856b23241ab6d8eb33ddb312ccf71:client/src/__tests__/Wishlist.test.tsx:generic-api-key:52
+47a23381fe9ad996a5ddcf967b58befec17f8c7c:client/src/__tests__/Purchased.test.tsx:generic-api-key:46
+
+# SONY_AUTH_CLIENT_ID: the public client id of Sony's mobile app. It identifies the app, not a user, and is not a secret.
+656730364e8227b8918327c6cc2a76c40dcaacbb:server/src/config/env.ts:generic-api-key:34

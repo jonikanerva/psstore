@@ -29,8 +29,8 @@ narrows the data at the Schema boundary, and serves the normalised result.
 
 ## Development
 
-Prerequisite: [mise](https://mise.jdx.dev/). The `mise.toml` file pins the Node and pnpm
-versions.
+Prerequisite: [mise](https://mise.jdx.dev/). The `mise.toml` file pins the Node, pnpm, and
+Gitleaks versions.
 
 ```bash
 mise install
@@ -55,8 +55,12 @@ before committing and before opening a PR:
 pnpm test-all
 ```
 
-This runs type-check, lint, build, tests, and the Sony contract validate + diff steps in
-order. Individual stages can also be run while iterating:
+This runs the format check, type-check, lint, the secret scan (Gitleaks), the dependency scan
+(`pnpm audit`), build, tests, and the Sony contract validate + diff steps in order. The
+dependency scan needs network access to the npm registry. `STACK.md → 4. Build & verify
+commands → Security scans` gives the thresholds and the triage rules.
+
+Individual stages can also be run while iterating:
 
 ```bash
 pnpm run lint
