@@ -1,67 +1,54 @@
-<!--
-Fill every section. Remove this comment before saving.
-The /implement skill drafts this for you. Verify, then ship.
-Use Simplified Technical English.
-Write short sentences.
-Use active voice and plain terms.
--->
+<!-- Keep this proportional to the change. Use short, active English sentences.
+Remove instructions and replace placeholders before saving. -->
 
-## Why
+## Purpose and scope
 
-`<One-paragraph motivation. What problem is this PR solving and which VISION.md / operating-contract / STACK.md rule is at play.>`
+<Problem, intended outcome, and what this change delivers.>
+<Put any decisive unresolved owner decision or product blocker first.>
+<Link a fully resolved issue with Closes #N when applicable.>
 
-Closes #`<issue number, if this PR resolves a GitHub issue>`
+## Acceptance criteria
 
-## What
+<Observable behaviour, important failure cases, and the evidence for each.>
+<Trace criteria to the original request or source evidence. Separate material
+assumptions from requirements and observed facts; state unresolved user-visible effects.>
 
-`<Bulleted technical summary of the changes. Files added / removed / changed.>`
+## Decisions and authority
 
-- `<change 1>`
-- `<change 2>`
-- `<change 3>`
+<Material choices and relevant product constraints. Link significant ADRs only.>
+<Owner-reserved review, testing, merge, or release; required escalations and their outcome.>
 
 ## VISION decision filter
 
-The four questions in `VISION.md → Decision Filter`:
-
-1. `<Question 1 verbatim>` — **`<yes / no>`**. `<one-line rationale>`.
-2. `<Question 2 verbatim>` — **`<yes / no>`**. `<one-line rationale>`.
-3. `<Question 3 verbatim>` — **`<yes / no>`**. `<one-line rationale>`.
-4. `<Question 4 verbatim>` — **`<yes / no>`**. `<one-line rationale>`.
-
-If any answer is `no`, this PR documents the conflict in the **Why** section above and proposes the smallest idiomatic alternative — and, if the rejection establishes a binding constraint for future work, also states it in the linked issue. Otherwise: all four are `yes`.
-
-## Rules involved
-
-- `<CLAUDE.md or AGENTS.md> → <rule by name>` — `<one-line how this PR honours it>`
-- `STACK.md → <section>` — `<one-line>`
-
-## Verification
-
-- [ ] `$VERIFY_CMD` (per `STACK.md → Build & verify commands`) ran once on the pushed head and is green: `<summary line, or the stamp line when STACK.md defines one>`.
-- [ ] `$FORMAT_CMD` is idempotent (re-running produces no diff).
-- [ ] Tests added or updated for new logic.
-- [ ] Previews / stories / fixtures cover the new states.
-- [ ] Privacy declaration updated if a new required-reason / required-data API was adopted.
-- [ ] Owner-run checks (per `STACK.md`): `none triggered`, `none declared`, or each triggered check as `ran on <SHA>: PASS` or `triggered, pending owner run`.
-- [ ] The issue this PR resolves is linked with `Closes #<N>` above. Any binding decision introduced (if any) is stated in plain language in this description and the issue.
+<Answer each question in `VISION.md → Decision Filter` with yes or no and a
+one-line reason. A "no" blocks the change; propose the smallest alternative.>
 
 ## States handled
 
-For changes that affect a user- or caller-facing surface, list every state it renders:
+<For a change to a user-facing surface, list each applicable `STACK.md → 0.
+Project shape` state that the change renders, or write not applicable.>
 
-- [ ] loading / awaiting first data
-- [ ] success
-- [ ] empty
-- [ ] degraded
-- [ ] permission-blocked
-- [ ] offline / error
-- [ ] `<product-specific state from VISION.md>`
+## Verification
 
-## Notes for reviewer
+- Version and integration base: <head SHA and base SHA>
+- Environment: <toolchain, configuration, platform, and relevant fixtures>
+- Required checks: <command or CI job, result, and evidence for this version>
+- Reproduction: <procedure/script, safe inputs or reconstruction, expected
+  outcomes and sources, retained result links; agent trial inputs/settings if used>
+- Independent review: <required or not, reason, and review link when complete>
+- Required owner-only checks: <none triggered, or each `STACK.md → 4. Build & verify commands → Other checks`
+  entry as `ran on <SHA>: PASS` or `triggered, pending owner run`>
 
-`<Anything the reviewer should know that the diff alone does not surface — e.g. an autonomy-fallback default taken, a deferred decision, an open risk.>`
+## Unverified work and exceptions
 
----
+<Lead with any decisive unresolved risk. State what was not verified and its
+effect on acceptance. Unrepeatable claims are limitations, not passed checks.
+Use none with a reason
+when all applicable evidence is present. Missing required evidence blocks merge.
+Link each approved exception with its scope, compensating evidence, approver,
+and expiry or reassessment condition.>
 
-**Next step:** run `/codereview` in Claude or `$codereview` in Codex on this branch. The autonomous flow runs it automatically; if you opened this PR by hand, run the matching host skill before requesting merge.
+## Release and recovery
+
+<Applicable release trigger, migration/compatibility evidence, recovery path,
+and post-release checks. Use not applicable with a reason for non-release work.>
