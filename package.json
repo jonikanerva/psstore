@@ -11,7 +11,7 @@
     "test": "pnpm --filter @psstore/shared run test && pnpm --filter @psstore/server run test && pnpm --filter @psstore/client run test && pnpm --filter @psstore/sony-contract-bot run test",
     "test-all": "pnpm run format:check && pnpm run typecheck && pnpm run lint && pnpm run scan:secrets && pnpm run scan:deps && pnpm run build && pnpm run test && pnpm run sony:validate && pnpm run sony:diff -- --ci",
     "test:live": "pnpm --filter @psstore/server run test:live",
-    "scan:secrets": "gitleaks git --no-banner --redact --log-opts=\"--full-history HEAD\" .",
+    "scan:secrets": "gitleaks git --no-banner --redact --config .gitleaks.toml --log-opts=\"--full-history HEAD\" .",
     "scan:deps": "pnpm audit --audit-level low",
     "build": "pnpm run clean && pnpm --filter @psstore/shared run build && pnpm --filter @psstore/client run build && pnpm --filter @psstore/server run build && pnpm --filter @psstore/sony-contract-bot run build",
     "clean": "rm -rf build client/build server/dist shared/dist tools/sony-contract-bot/dist",

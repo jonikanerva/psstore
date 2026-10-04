@@ -1,0 +1,18 @@
+# Gitleaks configuration for `pnpm scan:secrets` (STACK.md → 4. Build & verify commands → Security scans).
+# The default rules apply. The default rules do not detect the Sony NPSSO, the highest-risk credential
+# of this project (STACK.md → 0 and 14), so this file adds one rule for it.
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "sony-npsso"
+description = "Sony NPSSO: a 64-character value directly after a name that contains npsso and a separator"
+# psn-api documents the NPSSO as 64 characters. The character set is an assumption: the value uses the
+# cookie-safe set of STACK.md → 14, with a letter or digit as the first and the last character.
+# Only white space and one quote can come between the separator (:, =, (, or ,) and the value.
+# Matches, for example, `npsso=...`, `SONY_NPSSO=...`, `"npsso": "..."`, `const npsso = '...'`,
+# `exchangeNpsso('...')`, and `set('npsso', '...')`. STACK.md → Security scans lists the known gaps.
+regex = '''(?i)npsso[\w-]*['"]?\s*[:=(,]\s*['"]?([A-Za-z0-9][A-Za-z0-9._~-]{62}[A-Za-z0-9])(?:[^A-Za-z0-9]|$)'''
+secretGroup = 1
+keywords = ["npsso"]
