@@ -1,6 +1,10 @@
 # STACK.md — TypeScript + Effect profile
 
+Policy revision: 2
+
 > Effect-backed TypeScript: an `effect/http-api` HttpApi backend (typed REST + generated OpenAPI) plus a React + Vite SPA, in a pnpm monorepo sharing Effect Schema across server ↔ client. Effect is the backbone because correctness must be machine-checkable: typed errors and Layer-provided dependencies maximise what the compiler proves. **Normative** — MUST / MUST NOT are binding; surface conflicts before deviating.
+>
+> `DOCTRINE.md` defines P1–P9. `CLAUDE.md` defines agent operation and authority. This file gives their concrete application for this project.
 
 ---
 
@@ -11,6 +15,9 @@ The game page shows one critic score from IGDB. The server calls `https://api.ig
 ---
 
 ## 0. Project shape
+
+- **Project risk rationale:** one owner uses the site as a personal PS5 store view. The project has no production deployment and no persisted server data, so most failures are recoverable by a fix or a revert. The highest-risk surface is the Sony sign-in: the NPSSO is a full account credential (§14). A leak of the NPSSO cannot be undone by a revert. Upstream drift (Sony GraphQL, the PS Plus feed, IGDB) is the main correctness uncertainty; §4 → Other checks covers it.
+- **Change risk:** assess the surfaces that each task affects against this rationale. A change to §14, to logging, or to caching of signed-in data is high risk. A risk label does not waive a required check or review.
 
 - **Shape:** backend service (typed REST via `effect/http-api` HttpApi) + React SPA frontend.
 - **Critical execution path:** the per-request hot path on the server; the browser main thread / React render path on the web.
@@ -196,13 +203,13 @@ mise is the toolchain bootstrap (§1), not a package dependency. Approved user/p
 
 ## 11. Definition-of-done additions
 
-On top of `CLAUDE.md → Definition of done`, this stack also requires: `tsc` zero errors; Oxlint zero errors and zero warnings (the §8 `no-any` / `no-unsafe-*` gates); no I/O imported into the pure core; no `throw` in domain logic; any new package usage grounded in §3 Context7-retrieved, version-pinned docs; and no NPSSO outside the HttpOnly cookie and the sign-in request body, and no access token or signed-in data in a log, cache, persisted storage, or committed file (§14). The compiler and this checklist are the review — design code so the checklist _can_ catch mistakes.
+On top of `DOCTRINE.md` P3 and P6, this stack also requires: `tsc` zero errors; Oxlint zero errors and zero warnings (the §8 `no-any` / `no-unsafe-*` gates); no I/O imported into the pure core; no `throw` in domain logic; any new package usage grounded in §3 Context7-retrieved, version-pinned docs; and no NPSSO outside the HttpOnly cookie and the sign-in request body, and no access token or signed-in data in a log, cache, persisted storage, or committed file (§14). The compiler and this checklist are the review — design code so the checklist _can_ catch mistakes.
 
 ---
 
 ## 12. Time & timezones
 
-UTC everywhere internally. Convert only at the boundary (`CLAUDE.md → Time`). This section pins the mechanics.
+UTC everywhere internally. Convert only at the boundary (`DOCTRINE.md` P5). This section pins the mechanics.
 
 - **Internal representation:** an instant is a UTC ISO-8601 string with a `Z` suffix (for example `Game.date`), or epoch milliseconds for a comparison. A value with an implicit local offset is forbidden. A missing or unparseable upstream date maps to the empty string, never to a guessed instant.
 - **Inbound boundary (server):** the Sony mapper (`server/src/sony/mapper.ts`) normalises each upstream date to UTC: `Date.parse`, then `new Date(ms).toISOString()`.
@@ -246,7 +253,19 @@ UTC everywhere internally. Convert only at the boundary (`CLAUDE.md → Time`). 
 
 ---
 
-## 15. Intentional Divergences
+## 15. Scoped exceptions and intentional divergences
+
+Do not weaken a rule or a check to make a change pass. The responsible lead resolves an exception within project authority, with an independent reviewer. The change author must not approve their own weaker acceptance or checks. Escalate a change beyond that authority, or an unresolved material risk, to the owner. Record a significant design decision in a short `docs/adr/` file.
+
+### Scoped exceptions
+
+| Rule / scope | Reason and consequences | Compensating evidence | Responsible lead / reviewer / approval | Expiry or reassessment |
+| ------------ | ----------------------- | --------------------- | -------------------------------------- | ---------------------- |
+| _(none)_     | —                       | —                     | —                                      | —                      |
+
+### Intentional divergences
+
+The owner approved each row below as a permanent project decision. A row has no expiry. Reassess a row when its reason no longer holds.
 
 | Date       | CLAUDE.md rule                                                                 | Divergence                                                                                                                                                                                                                                                           | Reason                                                                                                                                                                                                                  |
 | ---------- | ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -254,3 +273,29 @@ UTC everywhere internally. Convert only at the boundary (`CLAUDE.md → Time`). 
 | 2026-10-02 | Sony contract tooling scope (readme and runbook: the tooling captures `fi-fi`) | The server requests `en-fi`. The contract bot, the manifest metadata, and the capture routes stay on `fi-fi`.                                                                                                                                                        | Structural parity verified live on 2026-10-02: same ids, order, counts, PDP, and prices. The persisted-query hashes do not depend on locale. The manifest operation variable schemas contain no locale key.             |
 | 2026-10-03 | `CLAUDE.md` → Privacy & security; `STACK.md` §14 and §8 (previous text)        | The NPSSO persists in an HttpOnly cookie for 30 days, and the server sets a sign-in cookie. The previous §14 forbade both. The server stays stateless and exchanges the NPSSO on every request. A 401 expires the cookie in the middleware as a pre-response header. | Owner decision (issue #108, 2026-10-03): the user signs in once until Sony expires the NPSSO. The cookie is HttpOnly, Secure, and SameSite=Strict, so script cannot read it and a cross-site request does not carry it. |
 | 2026-10-03 | `STACK.md` §10 and §14 (previous text)                                         | The client fetches WISHLIST and PURCHASED once per page load without a click, in the tab prefetch (§14 → Prefetch). The previous text allowed signed-in fetches only on a user action.                                                                               | Owner decision (issue #134, 2026-10-03): the other tabs load fast when the user opens them. Cost: a signed-in user triggers up to 2 token exchanges and up to 21 Sony library calls on each page load.                  |
+
+---
+
+## 16. Applicability and evidence
+
+P1–P9 refer to `DOCTRINE.md`. Run the required tests and the full `$VERIFY_CMD` locally on the exact version to merge, integrated with the current `main`. A failed or missing required local check blocks merge. The repository has no CI pipeline. A missing CI pipeline does not block merge. Missing pre-merge evidence blocks merge. Missing post-release evidence blocks a claim of a successful release.
+
+| Doctrine / applicability                  | Required evidence                                                                                                                                    | Environment / gap to resolve                                                                                                                                                                         |
+| ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| P1, P6: every task                        | Acceptance criteria, material failure cases, assumptions, and their check mapping in the issue or the PR                                             | The lead prepares them. A material change gets an independent review.                                                                                                                                |
+| P2–P5: changed code and dependencies      | `pnpm test-all`: format check, type-check, type-aware lint, build, Vitest, `sony:validate`, `sony:diff -- --ci`. A §7 entry for each new dependency. | Local, Node and pnpm from `mise.toml`.                                                                                                                                                               |
+| P5–P6: changed data boundaries            | Schema decode and scope tests, golden fixtures, tests for one invalid item among valid items and for a whole-response failure where each can occur   | Golden fixtures hold synthetic data only (§14 → Fixtures).                                                                                                                                           |
+| P5–P6: upstream contracts                 | The checks in §4 → Other checks, with their triggers and owners                                                                                      | `pnpm test:live` needs network access to Sony and IGDB. The owner runs the signed-in probes with a real NPSSO.                                                                                       |
+| P3, P7: security and dependencies         | Known gap: `pnpm test-all` runs no secret scanner and no dependency-vulnerability scan.                                                              | Compensating controls: `.env` is ignored by Git, §14 → Fixtures bans real credentials in committed files, and the reviewer checks the diff for secrets. A `follow-up` issue tracks adding the scans. |
+| P5–P7: web surfaces and critical journeys | Vitest tests of the state owners for each applicable §0 state; the WCAG thresholds in §13                                                            | Known gap: no browser end-to-end test. A material UI change needs a manual check in `pnpm dev`, recorded in the PR.                                                                                  |
+| P7: release and recovery                  | §17                                                                                                                                                  | Not applicable while the project has no deployment.                                                                                                                                                  |
+| P8–P9: material changes                   | Current docs, a short ADR for a significant durable decision, independent review of the integrated result, explicit limitations                      | Separate reviewer context. Read ADRs only when they are relevant.                                                                                                                                    |
+
+---
+
+## 17. Release, recovery, and maintenance
+
+- **Release:** not applicable. The project has no production deployment (readme). A merge to `main` deploys nothing. Reassess this section before the first deployment.
+- **Observe:** not applicable while there is no deployment. Local diagnosis uses the structured server log (§9).
+- **Recover:** revert the merge commit on a feature branch and merge the revert. The server keeps no durable data, so no data migration or restore applies. A leaked NPSSO cannot be recovered by a revert: the owner signs out of Sony to invalidate it.
+- **Data:** the server keeps only the in-memory Effect `Cache` (§6). The client persists only the anonymous `games` and `game` queries (§14 → Caching). The browser keeps the HttpOnly `npsso` cookie for 30 days at most.

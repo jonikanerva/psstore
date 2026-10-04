@@ -79,7 +79,7 @@ export const SONY_TIMEOUT_MS = 6000
 // before the single retry. Derived from (and equal to) the per-attempt timeout
 // so the honoured delay can never exceed the request's existing budget: an
 // upstream sending a multi-minute `Retry-After` must not stall an interactive
-// request (CLAUDE.md → Responsiveness). Seconds, never minutes — a larger
+// request. Seconds, never minutes — a larger
 // upstream value is clamped to this ceiling.
 export const SONY_RETRY_AFTER_MAX_MS = SONY_TIMEOUT_MS
 
