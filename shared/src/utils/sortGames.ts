@@ -45,6 +45,27 @@ const dateKey = (game: Game): number | null => {
   return Number.isFinite(ts) ? ts : null
 }
 
+// The PS Plus label on a list card (Sony's `upsellText`) for a game that a
+// tier includes. Live 2026-10-05: "Extra" is a game catalog entry
+// (UPSELL_PS_PLUS_GAME_CATALOG) and "Essential" a free PS Plus item.
+// "Premium" is a game trial (UPSELL_PS_PLUS_TRIAL), not the game, and
+// "Save 10%" is a discount, so both keep the standard price.
+const PLUS_INCLUDED_LABELS: ReadonlySet<string> = new Set([
+  'essential',
+  'extra',
+])
+
+// A game the viewer gets at no cost sorts as 0 €. The product assumes a PS
+// Plus Premium member, who has every tier, so a game that any tier includes
+// is free. The game page and the wishlist know the PS Plus offer; the list
+// cards know only the label.
+const priceKey = (game: Game): number | null => {
+  const label = game.plusUpsellText?.trim().toLowerCase() ?? ''
+  return game.plusOffer?.kind === 'included' || PLUS_INCLUDED_LABELS.has(label)
+    ? 0
+    : parsePrice(game.price)
+}
+
 const nameKey = (game: Game): string | null =>
   game.name.trim() === '' ? null : game.name
 
@@ -74,7 +95,7 @@ export const sortGames = (games: readonly Game[], sort: GameSort): Game[] => {
       ),
     )
   }
-  const key = field === 'date' ? dateKey : (g: Game) => parsePrice(g.price)
+  const key = field === 'date' ? dateKey : priceKey
   return [...games].sort((a, b) =>
     compareKeys(key(a), key(b), direction, numeric),
   )

@@ -284,7 +284,7 @@ describe('Wishlist', () => {
     ).toHaveAttribute('aria-pressed', 'true')
   })
 
-  it('sorts a Free game as the lowest price and an unknown price last', async () => {
+  it('sorts a Free game and a PS Plus game as the lowest price and an unknown price last', async () => {
     stubFetch(() =>
       Response.json(
         library([
@@ -297,6 +297,11 @@ describe('Wishlist', () => {
             ...game('EP0001-PPSA00004_00-SYNTHETICFREE000', 'Delta', 'product'),
             price: 'Free',
           },
+          {
+            ...game('EP0001-PPSA00005_00-SYNTHETICPLUS000', 'Echo', 'product'),
+            price: '€39,99',
+            plusOffer: { kind: 'included' },
+          },
         ]),
       ),
     )
@@ -306,12 +311,12 @@ describe('Wishlist', () => {
         (element) => element.textContent,
       )
     await screen.findByText('Delta')
-    expect(names()).toEqual(['Delta', 'Alpha', 'Bravo'])
+    expect(names()).toEqual(['Delta', 'Echo', 'Alpha', 'Bravo'])
 
     fireEvent.click(
       screen.getByRole('button', { name: 'Sort by price, ascending' }),
     )
-    expect(names()).toEqual(['Alpha', 'Delta', 'Bravo'])
+    expect(names()).toEqual(['Alpha', 'Delta', 'Echo', 'Bravo'])
   })
 
   it('says so when the wishlist is empty', async () => {
