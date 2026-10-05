@@ -20,13 +20,17 @@ const nameCollator = new Intl.Collator('en', {
 
 // Accepts "12,99 €", "€44,95", "1 234,50 €" and "1.234,50 €": an optional
 // euro sign on either side, digit groups of three split by a space, NBSP or
-// dot, and a decimal comma with one or two digits. Anything else (for example
-// "Included", "Game Trial", "12.99", "1,234") is not a price.
+// dot, and a decimal comma with one or two digits. Sony's "Free" is a price of
+// 0. Anything else (for example "Included", "Game Trial", "12.99", "1,234") is
+// not a price.
 const PRICE_PATTERN =
   /^(?:€\s?)?(\d{1,3}(?:[ .]\d{3})+|\d+)(?:,(\d{1,2}))?(?:\s?€)?$/u
 
 export const parsePrice = (text: string): number | null => {
   const normalized = text.replace(/[  ]/gu, ' ').trim()
+  if (normalized.toLowerCase() === 'free') {
+    return 0
+  }
   const match = PRICE_PATTERN.exec(normalized)
   if (match === null) {
     return null

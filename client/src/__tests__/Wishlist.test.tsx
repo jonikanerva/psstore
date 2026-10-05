@@ -284,6 +284,36 @@ describe('Wishlist', () => {
     ).toHaveAttribute('aria-pressed', 'true')
   })
 
+  it('sorts a Free game as the lowest price and an unknown price last', async () => {
+    stubFetch(() =>
+      Response.json(
+        library([
+          {
+            ...game('EP0001-PPSA00001_00-SYNTHETICALPHA00', 'Alpha', 'product'),
+            price: '€59,99',
+          },
+          game('10000002', 'Bravo', 'concept'),
+          {
+            ...game('EP0001-PPSA00004_00-SYNTHETICFREE000', 'Delta', 'product'),
+            price: 'Free',
+          },
+        ]),
+      ),
+    )
+    await renderWishlist()
+    const names = () =>
+      Array.from(document.querySelectorAll('.game-card--name')).map(
+        (element) => element.textContent,
+      )
+    await screen.findByText('Delta')
+    expect(names()).toEqual(['Delta', 'Alpha', 'Bravo'])
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Sort by price, ascending' }),
+    )
+    expect(names()).toEqual(['Alpha', 'Delta', 'Bravo'])
+  })
+
   it('says so when the wishlist is empty', async () => {
     stubFetch(() => Response.json(library([])))
     await renderWishlist()

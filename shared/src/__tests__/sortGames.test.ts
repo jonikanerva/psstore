@@ -32,6 +32,9 @@ describe('parsePrice', () => {
     ['€7,95', 7.95],
     ['12 €', 12],
     ['0,00 €', 0],
+    ['Free', 0],
+    ['FREE', 0],
+    [' Free ', 0],
     ['12,9 €', 12.9],
     ['12,99 €', 12.99],
     ['€ 12,99', 12.99],
@@ -49,7 +52,7 @@ describe('parsePrice', () => {
     'Included',
     'Game Trial',
     'Ei saatavilla',
-    'Free',
+    'Free to Play',
     '12.99',
     '1,234',
     '12,999 €',
@@ -122,6 +125,25 @@ describe('sortGames', () => {
     expect(
       ids(sortGames(input, { field: 'price', direction: 'desc' })),
     ).toEqual(['big', 'mid', 'small', 'free', 'none'])
+  })
+
+  it('sorts a Free game as 0 € and keeps unknown prices last', () => {
+    // Owner request 2026-10-05: "Free" equals 0 €. Unknown prices stay last
+    // in both directions.
+    const input = [
+      game('included', { price: 'Included' }),
+      game('free', { price: 'Free' }),
+      game('big', { price: '59,95 €' }),
+      game('none'),
+      game('zero', { price: '0,00 €' }),
+      game('small', { price: '€4,95' }),
+    ]
+    expect(ids(sortGames(input, { field: 'price', direction: 'asc' }))).toEqual(
+      ['free', 'zero', 'small', 'big', 'included', 'none'],
+    )
+    expect(
+      ids(sortGames(input, { field: 'price', direction: 'desc' })),
+    ).toEqual(['big', 'small', 'free', 'zero', 'included', 'none'])
   })
 
   it('sorts names case-insensitively with numeric order', () => {
