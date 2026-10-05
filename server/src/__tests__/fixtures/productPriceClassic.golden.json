@@ -1,0 +1,60 @@
+{
+  "data": {
+    "productRetrieve": {
+      "id": "UP0102-PPSA38464_00-CLASSICMXCM00001",
+      "name": "Mega Man X: Command Mission",
+      "webctas": [
+        {
+          "type": "UPSELL_PS_PLUS_CLASSIC_GAME_COLLECTION",
+          "meta": {
+            "upSellService": "PS_PLUS"
+          },
+          "price": {
+            "applicability": "UPSELL",
+            "basePrice": "€9,95",
+            "basePriceValue": 995,
+            "currencyCode": "EUR",
+            "discountedPrice": "Included",
+            "discountedValue": 0,
+            "displayDiscountText": "Included",
+            "displayUpsellText": "Subscribe to PlayStation Plus Premium to access this game and more",
+            "endTime": null,
+            "history": null,
+            "isExclusive": false,
+            "isFree": true,
+            "isTiedToSubscription": true,
+            "membershipType": "PS_PLUS",
+            "savingTag": "",
+            "serviceBranding": ["PS_PLUS"],
+            "tierLabel": "TIER_30"
+          }
+        },
+        {
+          "type": "ADD_TO_CART",
+          "meta": {
+            "upSellService": "NONE"
+          },
+          "price": {
+            "applicability": "APPLICABLE",
+            "basePrice": "€9,95",
+            "basePriceValue": 995,
+            "currencyCode": "EUR",
+            "discountedPrice": "€9,95",
+            "discountedValue": 995,
+            "displayDiscountText": null,
+            "displayUpsellText": null,
+            "endTime": null,
+            "history": null,
+            "isExclusive": false,
+            "isFree": false,
+            "isTiedToSubscription": false,
+            "membershipType": null,
+            "savingTag": "",
+            "serviceBranding": ["NONE"],
+            "tierLabel": null
+          }
+        }
+      ]
+    }
+  }
+}

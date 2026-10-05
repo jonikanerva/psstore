@@ -47,9 +47,11 @@ const dateKey = (game: Game): number | null => {
 
 // The PS Plus label on a list card (Sony's `upsellText`) for a game that a
 // tier includes. Live 2026-10-05: "Extra" is a game catalog entry
-// (UPSELL_PS_PLUS_GAME_CATALOG) and "Essential" a free PS Plus item.
-// "Premium" is a game trial (UPSELL_PS_PLUS_TRIAL), not the game, and
-// "Save 10%" is a discount, so both keep the standard price.
+// (UPSELL_PS_PLUS_GAME_CATALOG) and "Essential" a free PS Plus item. "Save
+// 10%" is a discount. "Premium" is a game trial (UPSELL_PS_PLUS_TRIAL) on 67
+// of 71 live games and a Premium Classic on 4. The list data cannot tell them
+// apart, so a "Premium" label keeps the standard price (owner decision
+// 2026-10-05). The game page and the wishlist read the exact offer type.
 const PLUS_INCLUDED_LABELS: ReadonlySet<string> = new Set([
   'essential',
   'extra',
