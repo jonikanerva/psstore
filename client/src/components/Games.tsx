@@ -1,5 +1,6 @@
 import { filterGamesByName, sortGames } from '@psstore/shared'
 import { useInfiniteQuery } from '@tanstack/react-query'
+import { DateTime } from 'luxon'
 import {
   gamesQueryOptions,
   type FetchGamesPage,
@@ -8,6 +9,7 @@ import {
 import { useSearchQuery } from '../modules/searchContext'
 import { useSort } from '../modules/sortContext'
 import Error from './Error'
+import { nextLocalDayStart, splitByReleaseDay } from '../modules/releaseDay'
 import { normalizeSearchTerm } from '../modules/searchTerm'
 import GameGrid from './GameGrid'
 import Offline from './Offline'
@@ -52,13 +54,19 @@ const Games = ({
     return fetchStatus === 'paused' ? <Offline /> : <Spinner />
   }
 
-  const games = data.pages.flatMap((page) => page.games)
+  const games = splitByReleaseDay(
+    feature,
+    data.pages.flatMap((page) => page.games),
+    nextLocalDayStart(DateTime.now()),
+  )
   const filtered = filterGamesByName(games, query)
   const ordered = sort === null ? filtered : sortGames(filtered, sort)
 
   const term = normalizeSearchTerm(query)
 
-  if (filtered.length === 0 && term === '') {
+  // The release-day split can empty a loaded page; the grid then loads the
+  // next one.
+  if (filtered.length === 0 && term === '' && !hasNextPage) {
     return <Error message={emptyMessage} />
   }
 
