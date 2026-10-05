@@ -16,8 +16,8 @@ import type { Concept } from '../sony/types.js'
 
 // Pure domain core: sorting, pagination, scope filtering, and concept→game
 // mapping. No I/O (no fetch, cache, clock-as-service) is imported here — those
-// live in the infrastructure/service layer. `Date.now()` / `Date.parse` are the
-// only ambient reads and are confined to the date predicates below.
+// live in the infrastructure/service layer. The current instant arrives as a
+// parameter; `Date.parse` is the only date read.
 
 const decodeGames = Schema.decodeUnknownSync(gamesSchema)
 
@@ -70,15 +70,60 @@ export const paginate = (
   return { games: page, totalCount: games.length, nextOffset }
 }
 
-export type DateFilter = 'released' | 'none'
+// NEW and UPCOMING split at the start of the viewer's next local day. The
+// client makes that split (docs/adr/0001-new-upcoming-day-split.md). In every
+// time zone, the next local midnight is at most 25 hours after the current
+// instant (24 hours, plus 1 hour on the day that daylight saving time ends).
+// The margin absorbs a client clock that is up to 12 hours off. The server
+// therefore sends each list a superset of the client's result: the games in
+// the overlap reach both lists, and the client keeps each in one.
+const MAX_LOCAL_DAY_MS = 25 * 60 * 60 * 1000
+const CLIENT_CLOCK_MARGIN_MS = 12 * 60 * 60 * 1000
 
-export const applyDateFilter = (
+const releaseMs = (game: Game): number => Date.parse(game.date)
+
+// The released grid holds released games. A product of that grid without a
+// parseable date (for example after a failed detail lookup) is dropped: it is
+// not shown as upcoming.
+export const hasReleaseDate = (game: Game): boolean =>
+  !Number.isNaN(releaseMs(game))
+
+// NEW: a dated game that is released, or released before the latest possible
+// local midnight. A game without a parseable date is never NEW.
+export const inNewWindow = (games: readonly Game[], nowMs: number): Game[] =>
+  games.filter(
+    (game) =>
+      releaseMs(game) < nowMs + MAX_LOCAL_DAY_MS + CLIENT_CLOCK_MARGIN_MS,
+  )
+
+// UPCOMING: a game released after the earliest possible local midnight, or a
+// game without a parseable date. Only the upcoming grid supplies undated games:
+// a concept-only announcement, or a product whose date is unknown.
+export const inUpcomingWindow = (
   games: readonly Game[],
-  filter: DateFilter,
+  nowMs: number,
+): Game[] =>
+  games.filter((game) => {
+    const ms = releaseMs(game)
+    return Number.isNaN(ms) || ms >= nowMs - CLIENT_CLOCK_MARGIN_MS
+  })
+
+// Sony files a game in the released grid (`last_thirty_days`) or the upcoming
+// grid (`next_thirty_days`) by the concept release date. A product can be out
+// while its concept is still upcoming, so NEW and UPCOMING read both grids and
+// classify by the product date. The first occurrence of a repeated id wins.
+export const mergeReleaseGrids = (
+  released: readonly Game[],
+  upcoming: readonly Game[],
 ): Game[] => {
-  if (filter === 'none') return [...games]
-  const now = Date.now()
-  return games.filter((game) => Date.parse(game.date) <= now)
+  const seen = new Set<string>()
+  return [...released, ...upcoming].filter((game) => {
+    if (seen.has(game.id)) {
+      return false
+    }
+    seen.add(game.id)
+    return true
+  })
 }
 
 export const mapConceptsToGames = (concepts: readonly Concept[]): Game[] => {

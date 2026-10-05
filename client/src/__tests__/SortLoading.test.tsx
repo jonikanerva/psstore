@@ -44,7 +44,12 @@ beforeAll(() => {
   )
 })
 
-const game = (id: string, name: string, date = '', price = ''): Game => ({
+const game = (
+  id: string,
+  name: string,
+  date = '2025-01-01T00:00:00Z',
+  price = '',
+): Game => ({
   id,
   name,
   date,

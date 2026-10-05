@@ -34,10 +34,14 @@ import {
   fetchUpcomingGames,
 } from '../modules/psnStore'
 
-const game = (id: string, name: string): Game => ({
+const RELEASED = '2025-09-18T17:00:00Z'
+// UPCOMING shows only a game released after the viewer's current local day.
+const UNRELEASED = '2099-01-01T00:00:00Z'
+
+const game = (id: string, name: string, date = RELEASED): Game => ({
   id,
   name,
-  date: '2025-09-18T17:00:00Z',
+  date,
   url: 'https://img.test/x.png',
   price: '',
   originalPrice: '',
@@ -54,9 +58,13 @@ const game = (id: string, name: string): Game => ({
   idKind: 'product',
 })
 
-const pageOf = (name: string, nextOffset: number | null): Response =>
+const pageOf = (
+  name: string,
+  nextOffset: number | null,
+  date = RELEASED,
+): Response =>
   Response.json({
-    games: [game(name, name)],
+    games: [game(name, name, date)],
     totalCount: 120,
     nextOffset,
   } satisfies PageResult)
@@ -252,7 +260,7 @@ describe('usePrefetchTabs', () => {
   it('leaves a prefetched games tab with a next page, like an unprefetched view', async () => {
     const client = newClient()
     await openNew(client)
-    await answer(UPCOMING, pageOf('Synthetic Upcoming', 60))
+    await answer(UPCOMING, pageOf('Synthetic Upcoming', 60, UNRELEASED))
     await settle()
 
     const prefetched = new InfiniteQueryObserver(
@@ -381,7 +389,7 @@ describe('usePrefetchTabs', () => {
     expect(upcoming.signal?.aborted).toBe(false)
     expect(callsTo(UPCOMING)).toHaveLength(1)
 
-    await answer(UPCOMING, pageOf('Synthetic Upcoming', 60))
+    await answer(UPCOMING, pageOf('Synthetic Upcoming', 60, UNRELEASED))
     expect(await screen.findByText('Synthetic Upcoming')).toBeInTheDocument()
     await waitFor(() => {
       expect(callsTo(DISCOUNTED)).toHaveLength(1)

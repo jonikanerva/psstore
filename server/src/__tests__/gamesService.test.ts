@@ -227,7 +227,10 @@ describe('gamesService', () => {
     expect(games.map((g) => g.name)).toEqual(['released'])
   })
 
-  it('upcoming keeps trailing-edge survivors whose date has just passed', async () => {
+  // The server UPCOMING list keeps a game released inside the 12-hour clock
+  // margin. The client hides it from UPCOMING by its local day
+  // (docs/adr/0001-new-upcoming-day-split.md).
+  it('upcoming keeps a game released inside the clock margin', async () => {
     const now = Date.now()
     const justPassedIso = new Date(now - 60 * 60 * 1000).toISOString()
     const futureIso = new Date(now + 5 * 24 * 60 * 60 * 1000).toISOString()
@@ -433,7 +436,7 @@ describe('gamesService', () => {
     conceptsFor = (feature) =>
       feature === 'upcoming'
         ? [makeConcept('later'), makeConcept('sooner')]
-        : [makeConcept('base')]
+        : []
 
     const { games } = await run((s) => s.getUpcomingGames())
     expect(games.map((g) => g.name)).toEqual(['sooner', 'later'])
@@ -887,9 +890,14 @@ describe('gamesService cache TTL (TestClock)', () => {
     },
     use: (svc: GamesServiceApi) => Effect.Effect<A, E>,
   ): Promise<A> => {
+    // `concepts` drives and counts the released grid only. NEW also reads the
+    // upcoming grid, which stays empty here.
     const CountingSony = Layer.succeed(SonyClient, {
-      fetchConceptsByFeature: () =>
+      fetchConceptsByFeature: (feature) =>
         Effect.suspend(() => {
+          if (feature !== 'new') {
+            return Effect.succeed<Concept[]>([])
+          }
           counters.concepts += 1
           return sony.concepts()
         }),
@@ -915,7 +923,10 @@ describe('gamesService cache TTL (TestClock)', () => {
     })
     const Services = GamesServiceLive.pipe(Layer.provide(CountingSony))
     return Effect.runPromise(
-      GamesService.pipe(
+      // TestClock starts at epoch 0. NEW keeps a game released before the
+      // current instant, so the clock starts after PAST_DATE.
+      TestClock.setTime(Date.parse('2026-01-01T00:00:00Z')).pipe(
+        Effect.andThen(GamesService),
         Effect.flatMap(use),
         Effect.provide(Services),
         Effect.provide(TestClock.layer()),

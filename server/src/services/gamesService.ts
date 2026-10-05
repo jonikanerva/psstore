@@ -4,7 +4,16 @@ import {
   type PageResult,
   type PlusOffer,
 } from '@psstore/shared'
-import { Cache, Context, Duration, Effect, Exit, Layer, Schema } from 'effect'
+import {
+  Cache,
+  Clock,
+  Context,
+  Duration,
+  Effect,
+  Exit,
+  Layer,
+  Schema,
+} from 'effect'
 import { CACHE_TTL, SONY_SEARCH_MAX_PAGE_SIZE } from '../config/env.js'
 import {
   GameNotFound,
@@ -17,14 +26,17 @@ import type { ProductPrice } from '../sony/productPriceSchema.js'
 import { SonyClient, type ProductDetailResult } from '../sony/sonyClient.js'
 import type { Concept } from '../sony/types.js'
 import {
-  applyDateFilter,
   conceptProductId,
   DISCOUNTED_GAME_CLASSIFICATIONS,
+  hasReleaseDate,
+  inNewWindow,
+  inUpcomingWindow,
   isPs5Game,
   isValidProductId,
   mapConceptsToGames,
   mapMonthlyToGames,
   mapUpcomingConceptsToGames,
+  mergeReleaseGrids,
   paginate,
   type SearchCandidate,
   sortByDate,
@@ -261,20 +273,51 @@ export const GamesServiceLive: Layer.Layer<GamesService, never, SonyClient> =
           Effect.map((concepts) => mapConceptsToGames(concepts)),
         )
 
-      const enrichedListing = (
-        games: Game[],
+      // NEW and UPCOMING both read the released and the upcoming grid, in
+      // parallel. A failure of either grid fails the list: one grid alone can
+      // silently omit a released game that Sony files as upcoming. The
+      // released grid keeps dated product SKUs only. The upcoming grid also
+      // keeps undated products and concept-only announcements. The product
+      // boundary is never called on a bare concept id.
+      const releaseGames = (): Effect.Effect<Game[], UpstreamError> =>
+        Effect.all([baseGames(), featureConcepts('upcoming')], {
+          concurrency: 'unbounded',
+        }).pipe(
+          Effect.flatMap(([released, upcoming]) =>
+            Effect.all(
+              [
+                Effect.forEach(released, enrichDate, {
+                  concurrency: 'unbounded',
+                }).pipe(Effect.map((games) => games.filter(hasReleaseDate))),
+                Effect.forEach(
+                  mapUpcomingConceptsToGames(upcoming),
+                  (game) =>
+                    game.idKind === 'product'
+                      ? enrichDate(game)
+                      : Effect.succeed(game),
+                  { concurrency: 'unbounded' },
+                ),
+              ],
+              { concurrency: 'unbounded' },
+            ),
+          ),
+          Effect.map(([released, upcoming]) =>
+            mergeReleaseGrids(released, upcoming),
+          ),
+        )
+
+      // The windows are supersets of the client's local-day split (see
+      // `inNewWindow`). NEW is newest first. UPCOMING is soonest first; the
+      // +Infinity ascending sentinel puts undated cards last, in grid order.
+      const releaseListing = (
+        window: (games: readonly Game[], nowMs: number) => Game[],
         order: SortOrder,
-        dateFilter: 'released' | 'none',
         offset: number,
         size: number,
-      ): Effect.Effect<PageResult> =>
-        Effect.forEach(games, enrichDate, { concurrency: 'unbounded' }).pipe(
-          Effect.map((enriched) =>
-            enriched.filter((game) => Boolean(game.date)),
-          ),
-          Effect.map((withDates) => applyDateFilter(withDates, dateFilter)),
-          Effect.map((filtered) =>
-            paginate(sortByDate(filtered, order), offset, size),
+      ): Effect.Effect<PageResult, UpstreamError> =>
+        Effect.all([releaseGames(), Clock.currentTimeMillis]).pipe(
+          Effect.map(([games, nowMs]) =>
+            paginate(sortByDate(window(games, nowMs), order), offset, size),
           ),
         )
 
@@ -282,39 +325,13 @@ export const GamesServiceLive: Layer.Layer<GamesService, never, SonyClient> =
         offset = 0,
         size = 60,
       ): Effect.Effect<PageResult, UpstreamError> =>
-        baseGames().pipe(
-          Effect.flatMap((games) =>
-            enrichedListing(games, 'date-desc', 'released', offset, size),
-          ),
-        )
+        releaseListing(inNewWindow, 'date-desc', offset, size)
 
-      // UPCOMING surfaces ALL anonymously-available upcoming PS5 games: priced
-      // product SKUs (internal PDP cards) AND concept-only announcements (price
-      // "Unknown", linking out). It does NOT use enrichedListing: it keeps
-      // SKU-less concept cards, enriches dates ONLY for product SKUs (never calls
-      // the product boundary on a bare concept id), and applies no date filter.
-      // The +Infinity ascending sentinel + stable index tiebreaker put dated SKU
-      // cards first and undated concept cards after, in Sony grid order.
       const getUpcomingGames = (
         offset = 0,
         size = 60,
       ): Effect.Effect<PageResult, UpstreamError> =>
-        featureConcepts('upcoming').pipe(
-          Effect.map((concepts) => mapUpcomingConceptsToGames(concepts)),
-          Effect.flatMap((games) =>
-            Effect.forEach(
-              games,
-              (game) =>
-                game.idKind === 'product'
-                  ? enrichDate(game)
-                  : Effect.succeed(game),
-              { concurrency: 'unbounded' },
-            ),
-          ),
-          Effect.map((enriched) =>
-            paginate(sortByDate(enriched, 'date-asc'), offset, size),
-          ),
-        )
+        releaseListing(inUpcomingWindow, 'date-asc', offset, size)
 
       // DISCOUNTED enriches each grid concept once, reading release date AND store
       // classification, then keeps only full-game SKUs (DLC / currency / themes /

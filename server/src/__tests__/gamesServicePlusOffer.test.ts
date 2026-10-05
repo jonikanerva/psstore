@@ -13,6 +13,7 @@ import type { Concept } from '../sony/types.js'
 
 const SKU = 'EP0001-PPSA00001_00-PLUSOFFER0000000'
 const OTHER_SKU = 'EP0001-PPSA00002_00-PLUSOFFER0000001'
+const LIST_NOW = Date.parse('2026-01-01T00:00:00Z')
 
 const concept = (sku: string, name: string): Concept => ({
   id: sku,
@@ -72,7 +73,10 @@ const harness = (price: (productId: string) => PriceResult): Harness => {
     logs,
     run: (use) =>
       Effect.runPromise(
-        GamesService.pipe(
+        // TestClock starts at epoch 0. NEW keeps a game released before the
+        // current instant, so the clock starts after the fixture dates.
+        TestClock.setTime(LIST_NOW).pipe(
+          Effect.andThen(GamesService),
           Effect.flatMap(use),
           Effect.provide(Services),
           Effect.provide(Logger.layer([capture])),

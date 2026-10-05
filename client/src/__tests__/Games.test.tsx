@@ -1,7 +1,15 @@
 import { QueryClient, onlineManager } from '@tanstack/react-query'
 import { act, cleanup, screen, waitFor } from '@testing-library/react'
 import { useState } from 'react'
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest'
 import type { Game, PageResult } from '@psstore/shared'
 import Games from '../components/Games'
 import { SearchContext } from '../modules/searchContext'
@@ -233,5 +241,83 @@ describe('Games loading indicator', () => {
 
     expect(await screen.findByRole('status')).toHaveTextContent('Loading')
     expect(screen.getByText('Wobbly Life')).toBeInTheDocument()
+  })
+})
+
+// The day boundary is the viewer's next local midnight. At 12:00Z that
+// midnight is between 1 and 24 hours away in every time zone, so these dates
+// give the same split on any test machine.
+describe('Games release-day split', () => {
+  const NOW = Date.parse('2026-10-05T12:00:00Z')
+  const dated = (id: string, name: string, offsetHours: number): Game => ({
+    ...game(id, name),
+    date: new Date(NOW + offsetHours * 60 * 60 * 1000).toISOString(),
+  })
+  // The server sends a game near the boundary to both lists.
+  const serverPage = page([
+    dated('EP1-PPSA1_00-A', 'Released Last Week', -7 * 24),
+    dated('EP1-PPSA2_00-B', 'Later Today', 0.5),
+    dated('EP1-PPSA3_00-C', 'In Two Days', 48),
+    { ...game('10019999', 'Announcement'), date: '', idKind: 'concept' },
+  ])
+
+  beforeAll(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(NOW)
+  })
+
+  afterAll(() => {
+    vi.useRealTimers()
+  })
+
+  afterEach(() => {
+    cleanup()
+  })
+
+  it('shows in NEW only the games released before tomorrow', async () => {
+    const fetch = vi.fn().mockResolvedValue(serverPage)
+    await renderWithRouter(<Games feature="new" fetch={fetch} />)
+
+    expect(await screen.findByText('Released Last Week')).toBeInTheDocument()
+    expect(screen.getByText('Later Today')).toBeInTheDocument()
+    expect(screen.queryByText('In Two Days')).not.toBeInTheDocument()
+    expect(screen.queryByText('Announcement')).not.toBeInTheDocument()
+  })
+
+  it('shows in UPCOMING only tomorrow onwards and undated games', async () => {
+    const fetch = vi.fn().mockResolvedValue(serverPage)
+    await renderWithRouter(<Games feature="upcoming" fetch={fetch} />)
+
+    expect(await screen.findByText('In Two Days')).toBeInTheDocument()
+    expect(screen.getByText('Announcement')).toBeInTheDocument()
+    expect(screen.queryByText('Released Last Week')).not.toBeInTheDocument()
+    expect(screen.queryByText('Later Today')).not.toBeInTheDocument()
+  })
+
+  it('does not show the empty text for a split-out page when more pages exist', async () => {
+    const fetch = vi.fn().mockResolvedValue({
+      games: [dated('EP1-PPSA3_00-C', 'In Two Days', 48)],
+      totalCount: 61,
+      nextOffset: 60,
+    } satisfies PageResult)
+    const { container } = await renderWithRouter(
+      <Games feature="new" fetch={fetch} />,
+    )
+
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalled()
+      expect(container.querySelector('.games--grid')).not.toBeNull()
+    })
+    expect(screen.queryByText('No games found')).not.toBeInTheDocument()
+    expect(screen.queryByText('In Two Days')).not.toBeInTheDocument()
+  })
+
+  it('shows the empty text when the split empties the last page', async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValue(page([dated('EP1-PPSA3_00-C', 'In Two Days', 48)]))
+    await renderWithRouter(<Games feature="new" fetch={fetch} />)
+
+    expect(await screen.findByText('No games found')).toBeInTheDocument()
   })
 })

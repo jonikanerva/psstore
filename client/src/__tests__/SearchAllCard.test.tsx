@@ -28,7 +28,7 @@ import {
 const game = (id: string, name: string): Game => ({
   id,
   name,
-  date: '',
+  date: '2025-09-18T17:00:00Z',
   url: 'https://example.com/cover.png',
   price: '€9,99',
   originalPrice: '',
