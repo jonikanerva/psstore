@@ -32,6 +32,9 @@ describe('parsePrice', () => {
     ['€7,95', 7.95],
     ['12 €', 12],
     ['0,00 €', 0],
+    ['Free', 0],
+    ['FREE', 0],
+    [' Free ', 0],
     ['12,9 €', 12.9],
     ['12,99 €', 12.99],
     ['€ 12,99', 12.99],
@@ -49,7 +52,7 @@ describe('parsePrice', () => {
     'Included',
     'Game Trial',
     'Ei saatavilla',
-    'Free',
+    'Free to Play',
     '12.99',
     '1,234',
     '12,999 €',
@@ -122,6 +125,68 @@ describe('sortGames', () => {
     expect(
       ids(sortGames(input, { field: 'price', direction: 'desc' })),
     ).toEqual(['big', 'mid', 'small', 'free', 'none'])
+  })
+
+  it('sorts a Free game as 0 € and keeps unknown prices last', () => {
+    // Owner request 2026-10-05: "Free" equals 0 €. Unknown prices stay last
+    // in both directions.
+    const input = [
+      game('included', { price: 'Included' }),
+      game('free', { price: 'Free' }),
+      game('big', { price: '59,95 €' }),
+      game('none'),
+      game('zero', { price: '0,00 €' }),
+      game('small', { price: '€4,95' }),
+    ]
+    expect(ids(sortGames(input, { field: 'price', direction: 'asc' }))).toEqual(
+      ['free', 'zero', 'small', 'big', 'included', 'none'],
+    )
+    expect(
+      ids(sortGames(input, { field: 'price', direction: 'desc' })),
+    ).toEqual(['big', 'small', 'free', 'zero', 'included', 'none'])
+  })
+
+  it('sorts a game that PS Plus includes as 0 € and keeps trials and discounts at their price', () => {
+    // Owner request 2026-10-05: a PS Plus game sorts as 0 €, for a Premium
+    // member. Live labels: "Extra" (catalog) and "Essential" are included.
+    // "Premium" is a game trial and "Save 10%" a discount.
+    const input = [
+      game('trial', { price: '€9,95', plusUpsellText: 'Premium' }),
+      game('discount', { price: '€19,95', plusUpsellText: 'Save 10%' }),
+      game('catalog', { price: '€29,95', plusUpsellText: 'Extra' }),
+      game('essential', { price: '€59,95', plusUpsellText: 'Essential' }),
+      game('offer', {
+        price: '€49,95',
+        plusOffer: { kind: 'included' },
+      }),
+      game('plus-price', {
+        price: '€4,95',
+        plusOffer: { kind: 'price', price: '€3,95' },
+      }),
+      game('unknown', { price: 'Game Trial' }),
+    ]
+    expect(ids(sortGames(input, { field: 'price', direction: 'asc' }))).toEqual(
+      [
+        'catalog',
+        'essential',
+        'offer',
+        'plus-price',
+        'trial',
+        'discount',
+        'unknown',
+      ],
+    )
+    expect(
+      ids(sortGames(input, { field: 'price', direction: 'desc' })),
+    ).toEqual([
+      'discount',
+      'trial',
+      'plus-price',
+      'catalog',
+      'essential',
+      'offer',
+      'unknown',
+    ])
   })
 
   it('sorts names case-insensitively with numeric order', () => {

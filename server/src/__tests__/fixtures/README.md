@@ -55,14 +55,15 @@ kept as captured, including non-breaking spaces. No synthetic fixture
 files exist for this operation. The synthetic malformed cases are inline in
 `productPrice.test.ts` and are marked synthetic there.
 
-| File                                        | Product                        | Shape preserved                                                                       |
-| ------------------------------------------- | ------------------------------ | ------------------------------------------------------------------------------------- |
-| `productPriceDiscountPreorder.golden.json`  | ANOMALITH                      | `UPSELL_PS_PLUS_DISCOUNT` (`€44,95`) plus a `PREORDER` CTA                            |
-| `productPriceDiscountReleased.golden.json`  | RetroSpace (DISCOUNTED view)   | `UPSELL_PS_PLUS_DISCOUNT` (`€17,95`) plus an `ADD_TO_CART` CTA                        |
-| `productPriceIncluded.golden.json`          | Sniper Elite: Resistance       | `UPSELL_PS_PLUS_FREE`, `isTiedToSubscription` true, `Included`, plus `ADD_TO_CART`    |
-| `productPricePlusOnly.golden.json`          | MLB The Show 26 (Plus edition) | `UPSELL_PS_PLUS_FREE` only, no standard CTA                                           |
-| `productPriceTrial.golden.json`             | IRON GUARD: Day Zero           | `UPSELL_PS_PLUS_TRIAL`, tied to the subscription, price text `Game Trial`             |
-| `productPriceOtherSubscription.golden.json` | EA SPORTS FC 25                | `UPSELL_EA_ACCESS_FREE`, `EA_ACCESS` branding, `Included` (must never map to PS Plus) |
+| File                                        | Product                        | Shape preserved                                                                                                        |
+| ------------------------------------------- | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| `productPriceDiscountPreorder.golden.json`  | ANOMALITH                      | `UPSELL_PS_PLUS_DISCOUNT` (`€44,95`) plus a `PREORDER` CTA                                                             |
+| `productPriceDiscountReleased.golden.json`  | RetroSpace (DISCOUNTED view)   | `UPSELL_PS_PLUS_DISCOUNT` (`€17,95`) plus an `ADD_TO_CART` CTA                                                         |
+| `productPriceIncluded.golden.json`          | Sniper Elite: Resistance       | `UPSELL_PS_PLUS_FREE`, `isTiedToSubscription` true, `Included`, plus `ADD_TO_CART`                                     |
+| `productPriceClassic.golden.json`           | Mega Man X: Command Mission    | `UPSELL_PS_PLUS_CLASSIC_GAME_COLLECTION` (Premium Classics), tied, `Included`, plus `ADD_TO_CART`; captured 2026-10-05 |
+| `productPricePlusOnly.golden.json`          | MLB The Show 26 (Plus edition) | `UPSELL_PS_PLUS_FREE` only, no standard CTA                                                                            |
+| `productPriceTrial.golden.json`             | IRON GUARD: Day Zero           | `UPSELL_PS_PLUS_TRIAL`, tied to the subscription, price text `Game Trial`                                              |
+| `productPriceOtherSubscription.golden.json` | EA SPORTS FC 25                | `UPSELL_EA_ACCESS_FREE`, `EA_ACCESS` branding, `Included` (must never map to PS Plus)                                  |
 
 ## PS Plus monthly list fixture
 

@@ -43,11 +43,13 @@ const decodeCta = Schema.decodeUnknownResult(ctaSchema)
 
 const PS_PLUS = 'PS_PLUS'
 
-// CTA types for which Sony includes the game in a PS Plus tier. A trial or any
+// CTA types for which Sony includes the game in a PS Plus tier: the Extra game
+// catalog, a free PS Plus game, and the Premium Classics. A trial or any
 // future tied type is not "included" and maps to no offer.
 const INCLUDED_CTA_TYPES: ReadonlySet<string> = new Set([
   'UPSELL_PS_PLUS_GAME_CATALOG',
   'UPSELL_PS_PLUS_FREE',
+  'UPSELL_PS_PLUS_CLASSIC_GAME_COLLECTION',
 ])
 
 type Cta = typeof ctaSchema.Type

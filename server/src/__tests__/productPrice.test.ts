@@ -4,6 +4,7 @@ import {
   parseProductPrice,
 } from '../sony/productPriceSchema.js'
 import discountPreorder from './fixtures/productPriceDiscountPreorder.golden.json' with { type: 'json' }
+import classic from './fixtures/productPriceClassic.golden.json' with { type: 'json' }
 import discountReleased from './fixtures/productPriceDiscountReleased.golden.json' with { type: 'json' }
 import included from './fixtures/productPriceIncluded.golden.json' with { type: 'json' }
 import otherSubscription from './fixtures/productPriceOtherSubscription.golden.json' with { type: 'json' }
@@ -49,6 +50,10 @@ describe('parsePlusOffer on real captures', () => {
 
   it('returns included for a Plus-only product with no standard CTA', () => {
     expect(parsePlusOffer(plusOnly)).toEqual({ kind: 'included' })
+  })
+
+  it('returns included for a PS Plus Premium Classic', () => {
+    expect(parsePlusOffer(classic)).toEqual({ kind: 'included' })
   })
 
   it('returns no offer for a Plus game trial', () => {
