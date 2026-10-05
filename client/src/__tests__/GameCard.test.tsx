@@ -123,6 +123,57 @@ describe('GameCard', () => {
     expect(screen.queryByText(/^PS\+/)).not.toBeInTheDocument()
   })
 
+  it('renders PS+ Included for an included offer without a Sony label', async () => {
+    // A wishlist card has the PS Plus offer and no label. The price sort
+    // reads an included game as 0 €, so the card shows why.
+    await renderWithRouter(
+      <GameCard game={{ ...game, plusOffer: { kind: 'included' } }} />,
+    )
+
+    expect(screen.getByText('PS+ Included')).toBeInTheDocument()
+  })
+
+  it('prefers an included offer over the Sony label', async () => {
+    // A Premium Classic has the label "Premium" and an included offer. It
+    // sorts as 0 €, so the card must not look like a Premium trial.
+    await renderWithRouter(
+      <GameCard
+        game={{
+          ...game,
+          plusUpsellText: 'Premium',
+          plusOffer: { kind: 'included' },
+        }}
+      />,
+    )
+
+    expect(screen.getByText('PS+ Included')).toBeInTheDocument()
+    expect(screen.queryByText('PS+ Premium')).not.toBeInTheDocument()
+  })
+
+  it('keeps the Sony label next to a PS Plus price offer', async () => {
+    await renderWithRouter(
+      <GameCard
+        game={{
+          ...game,
+          plusUpsellText: 'Save 10%',
+          plusOffer: { kind: 'price', price: '€26,99' },
+        }}
+      />,
+    )
+
+    expect(screen.getByText('PS+ Save 10%')).toBeInTheDocument()
+  })
+
+  it('omits the PS+ indicator for a PS Plus price offer without a label', async () => {
+    await renderWithRouter(
+      <GameCard
+        game={{ ...game, plusOffer: { kind: 'price', price: '€29,99' } }}
+      />,
+    )
+
+    expect(screen.queryByText(/^PS\+/)).not.toBeInTheDocument()
+  })
+
   it('renders an internal PDP link and normal price for a product card', async () => {
     await renderWithRouter(<GameCard game={{ ...game, idKind: 'product' }} />)
 

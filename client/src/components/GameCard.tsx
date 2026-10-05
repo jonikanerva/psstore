@@ -26,6 +26,15 @@ const formatDate = (value: string): string => {
     : ''
 }
 
+// The price sort reads an included PS Plus offer as 0 €, so a card with that
+// offer shows "Included". The offer is the exact signal and wins over Sony's
+// label: a Premium Classic has the label "Premium", which Sony also uses for
+// a trial. The game page uses the same order. A card without an included
+// offer shows Sony's label, for example "Extra". A game from the persisted
+// cache can lack the `plusOffer` key.
+const plusLabel = (game: Game): string | null =>
+  game.plusOffer?.kind === 'included' ? 'Included' : game.plusUpsellText
+
 // Concept-only cards have no product id, so they link to Sony's concept page.
 const storeHref = (conceptId: string): string =>
   `https://store.playstation.com/en-fi/concept/${conceptId}`
@@ -40,6 +49,7 @@ const GameCard = ({
   // Concept-only UPCOMING cards have no anonymously-available price: the price
   // slot shows "Unknown". The internal game page needs a product id.
   const isConcept = game.idKind === 'concept'
+  const plus = plusLabel(game)
   const pdpOrigin = useRouterState({
     select: (state) => pdpOriginForPath(state.location.pathname),
   })
@@ -76,10 +86,8 @@ const GameCard = ({
                     </s>
                   )}
                   {game.price || '-'}
-                  {game.plusUpsellText !== null && (
-                    <span className="game-card--plus">
-                      PS+ {game.plusUpsellText}
-                    </span>
+                  {plus !== null && (
+                    <span className="game-card--plus">PS+ {plus}</span>
                   )}
                 </>
               )}

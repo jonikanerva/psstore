@@ -312,6 +312,9 @@ describe('Wishlist', () => {
       )
     await screen.findByText('Delta')
     expect(names()).toEqual(['Delta', 'Echo', 'Alpha', 'Bravo'])
+    expect(screen.getByRole('link', { name: /Echo/ })).toHaveTextContent(
+      'PS+ Included',
+    )
 
     fireEvent.click(
       screen.getByRole('button', { name: 'Sort by price, ascending' }),
