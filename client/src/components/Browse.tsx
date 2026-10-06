@@ -186,6 +186,7 @@ const BrowseResults = ({ genre, order }: BrowseResultsProps) => {
         <GameGrid
           games={games}
           label="browse"
+          showPreOrder
           trailing={term === '' ? null : <SearchAllCard term={term} />}
           // The name filter covers the loaded pages only. A genre can have
           // thousands of games, so a filter that leaves few cards must not

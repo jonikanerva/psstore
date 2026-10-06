@@ -14,6 +14,7 @@ interface GameGridProps {
   label: string
   showPrice?: boolean
   internalLink?: boolean
+  showPreOrder?: boolean
   trailing?: ReactNode
   hasNextPage: boolean
   isFetchingNextPage: boolean
@@ -27,6 +28,7 @@ const GameGrid = ({
   label,
   showPrice = true,
   internalLink = false,
+  showPreOrder = false,
   trailing = null,
   hasNextPage,
   isFetchingNextPage,
@@ -79,6 +81,7 @@ const GameGrid = ({
               game={game}
               showPrice={showPrice}
               internalLink={internalLink}
+              showPreOrder={showPreOrder}
             />
           ))}
           {trailing}

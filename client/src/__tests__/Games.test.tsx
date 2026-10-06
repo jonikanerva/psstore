@@ -294,6 +294,25 @@ describe('Games release-day split', () => {
     expect(screen.queryByText('Later Today')).not.toBeInTheDocument()
   })
 
+  it.each(['new', 'upcoming'] as const)(
+    'shows no Pre-order label on a %s card',
+    async (feature) => {
+      const fetch = vi
+        .fn()
+        .mockResolvedValue(
+          page(serverPage.games.map((item) => ({ ...item, preOrder: true }))),
+        )
+      await renderWithRouter(<Games feature={feature} fetch={fetch} />)
+
+      expect(
+        await screen.findByText(
+          feature === 'new' ? 'Later Today' : 'In Two Days',
+        ),
+      ).toBeInTheDocument()
+      expect(screen.queryByText('Pre-order')).not.toBeInTheDocument()
+    },
+  )
+
   it('does not show the empty text for a split-out page when more pages exist', async () => {
     const fetch = vi.fn().mockResolvedValue({
       games: [dated('EP1-PPSA3_00-C', 'In Two Days', 48)],
