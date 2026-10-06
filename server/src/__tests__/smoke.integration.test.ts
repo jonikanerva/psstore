@@ -7,6 +7,7 @@ import {
   SONY_TIMEOUT_MS,
 } from '../config/env.js'
 import {
+  browseCandidateIds,
   isPs5Game,
   mapConceptsToGames,
   mapUpcomingConceptsToGames,
@@ -18,11 +19,19 @@ import {
   CriticScoreServiceLive,
 } from '../services/criticScoreService.js'
 import { productDetailToGame } from '../sony/mapper.js'
-import { buildStrategies, type SonyFeature } from '../sony/queryStrategies.js'
+import {
+  BROWSE_GRID_OPERATION,
+  buildBrowseVariables,
+  buildGenreListVariables,
+  buildStrategies,
+  type SonyFeature,
+} from '../sony/queryStrategies.js'
 import {
   SonyClient,
   SonyClientLive,
+  extractBrowsePage,
   extractCategoryGrid,
+  extractGenres,
   localeOverride,
 } from '../sony/sonyClient.js'
 
@@ -35,7 +44,8 @@ import {
 // this suite — which `test-all` cannot, since it only decodes committed fixtures
 // and diffs the manifest against itself.
 //
-// Load fence: exactly one raw fetch per feature + one PDP fetch + one search
+// Load fence: exactly one raw fetch per feature + one genre list + one BROWSE
+// page (no product lookups for it) + one PDP fetch + one search
 // page per term + two product-id lookups (detail and price for one search-only
 // PS5 id, detail for one PS4-only id). NEVER drive GamesServiceLive (its enrichment fans out at
 // concurrency:'unbounded' -> dozens-to-hundreds of real calls = a load test).
@@ -48,7 +58,16 @@ const describeSmoke = SMOKE ? describe : describe.skip
 // `fetchConceptsByFeature` result hides).
 const fetchRawGrid = async (feature: SonyFeature): Promise<unknown> => {
   const strategy = buildStrategies()[feature]
-  const variables = strategy.buildVariables({ size: 60, offset: 0 })
+  return fetchRawGridWith(
+    strategy,
+    strategy.buildVariables({ size: 60, offset: 0 }),
+  )
+}
+
+const fetchRawGridWith = async (
+  strategy: { operationName: string; persistedQueryHash: string },
+  variables: Record<string, unknown>,
+): Promise<unknown> => {
   const query = new URLSearchParams({
     operationName: strategy.operationName,
     variables: JSON.stringify(variables),
@@ -109,6 +128,48 @@ describeSmoke(
       const raw = await fetchRawGrid('discounted')
       const count = assertNoSilentDrops(raw, mapConceptsToGames)
       globalThis.console.log(`[test:live] DISCOUNTED concepts=${String(count)}`)
+    }, 20_000)
+
+    it('GENRES: the genre facet decodes to genres that include FPS and RPG', async () => {
+      const raw = await fetchRawGridWith(
+        BROWSE_GRID_OPERATION,
+        buildGenreListVariables(),
+      )
+      const outcome = extractGenres(raw)
+      expect(outcome.kind).toBe('ok')
+      if (outcome.kind !== 'ok') return
+      expect(outcome.dropped).toBe(0)
+      const keys = outcome.genres.map((genre) => genre.key)
+      expect(keys).toContain('FIRST_PERSON_SHOOTER')
+      expect(keys).toContain('ROLE_PLAYING_GAMES')
+      globalThis.console.log(
+        `[test:live] GENRES count=${String(outcome.genres.length)}`,
+      )
+    }, 20_000)
+
+    it('BROWSE: one genre page decodes with no drops and names product ids', async () => {
+      const size = 60
+      const raw = await fetchRawGridWith(
+        BROWSE_GRID_OPERATION,
+        buildBrowseVariables({
+          genre: 'FIRST_PERSON_SHOOTER',
+          order: 'best-selling',
+          offset: 0,
+          size,
+        }),
+      )
+      const outcome = extractBrowsePage(raw, size)
+      expect(outcome.kind).toBe('ok')
+      if (outcome.kind !== 'ok') return
+      expect(outcome.dropped).toBe(0)
+      expect(outcome.page.concepts.length).toBeGreaterThan(0)
+      const withCandidates = outcome.page.concepts.filter(
+        (concept) => browseCandidateIds(concept).length > 0,
+      ).length
+      expect(withCandidates).toBeGreaterThan(0)
+      globalThis.console.log(
+        `[test:live] BROWSE concepts=${String(outcome.page.concepts.length)} withProductIds=${String(withCandidates)} isLast=${String(outcome.page.isLast)}`,
+      )
     }, 20_000)
 
     it('MONTHLY: the PS Plus monthly list decodes to at least one PS5 game', async () => {

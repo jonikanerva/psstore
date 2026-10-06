@@ -187,3 +187,99 @@ export const extractCategoryGridNode = (json: unknown): unknown => {
     ? result.success.data?.categoryGridRetrieve
     : undefined
 }
+
+// ---- BROWSE: page info and the genre facet ---------------------------------
+//
+// The same `categoryGridRetrieve` node also carries `pageInfo` and
+// `facetOptions`. Only the BROWSE view reads them. The decode is tolerant like
+// the rest of this file: a missing or odd field is a signal for the caller, not
+// a thrown error.
+
+const pageInfoNodeSchema = Schema.Struct({
+  pageInfo: Schema.optional(
+    Schema.NullOr(
+      Schema.Struct({
+        isLast: Schema.optional(Schema.NullOr(Schema.Boolean)),
+      }),
+    ),
+  ),
+})
+
+const decodePageInfoNode = Schema.decodeUnknownResult(pageInfoNodeSchema)
+
+/**
+ * Sony's `pageInfo.isLast` for one grid page, or `null` when the node has no
+ * readable value. The caller then derives the end of the list from the page
+ * length.
+ */
+export const parseGridIsLast = (node: unknown): boolean | null => {
+  const result = decodePageInfoNode(node)
+  return Result.isSuccess(result)
+    ? (result.success.pageInfo?.isLast ?? null)
+    : null
+}
+
+const facetValueSchema = Schema.Struct({
+  key: Schema.optional(Schema.NullOr(Schema.String)),
+  displayName: Schema.optional(Schema.NullOr(Schema.String)),
+})
+
+const facetSchema = Schema.Struct({
+  name: Schema.optional(Schema.NullOr(Schema.String)),
+  values: Schema.optional(Schema.NullOr(Schema.Array(Schema.Unknown))),
+})
+
+const facetNodeSchema = Schema.Struct({
+  facetOptions: Schema.optional(Schema.NullOr(Schema.Array(Schema.Unknown))),
+})
+
+const decodeFacetNode = Schema.decodeUnknownResult(facetNodeSchema)
+const decodeFacet = Schema.decodeUnknownResult(facetSchema)
+const decodeFacetValue = Schema.decodeUnknownResult(facetValueSchema)
+
+// Sony's facet name for the concept genre.
+export const GENRE_FACET_NAME = 'conceptGenres'
+
+export interface RawGenre {
+  readonly key: string
+  readonly name: string
+}
+
+export interface ParsedGenreFacet {
+  readonly genres: readonly RawGenre[]
+  readonly dropped: number
+}
+
+/**
+ * The values of the genre facet, decoded per element. Returns `null` when the
+ * node has no genre facet: the caller treats that as drift. A value without a
+ * key or a display name is dropped and counted in `dropped`. Key format checks
+ * belong to the domain (`listing.ts`), not to this decode.
+ */
+export const parseGenreFacet = (node: unknown): ParsedGenreFacet | null => {
+  const raw = decodeFacetNode(node)
+  if (Result.isFailure(raw)) {
+    return null
+  }
+  const facet = (raw.success.facetOptions ?? [])
+    .map((value) => decodeFacet(value))
+    .flatMap((result) => (Result.isSuccess(result) ? [result.success] : []))
+    .find((candidate) => candidate.name === GENRE_FACET_NAME)
+  const values = facet?.values
+  if (values === undefined || values === null) {
+    return null
+  }
+  const genres: RawGenre[] = []
+  let dropped = 0
+  for (const item of values) {
+    const value = decodeFacetValue(item)
+    const key = Result.isSuccess(value) ? value.success.key : null
+    const name = Result.isSuccess(value) ? value.success.displayName : null
+    if (key && name) {
+      genres.push({ key, name })
+    } else {
+      dropped += 1
+    }
+  }
+  return { genres, dropped }
+}

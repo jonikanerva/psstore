@@ -45,6 +45,8 @@ const makeApp = (outcome: SearchPage | SearchFailure) => {
   const FakeSony = Layer.succeed(SonyClient, {
     fetchConceptsByFeature: () => Effect.succeed([]),
     fetchPlusMonthly: () => Effect.succeed([]),
+    fetchBrowsePage: () => Effect.succeed({ concepts: [], isLast: true }),
+    fetchGenres: () => Effect.succeed([]),
     fetchProductPrice: () =>
       Effect.succeed({ plusOffer: null, standard: null }),
     fetchProductDetail: () =>

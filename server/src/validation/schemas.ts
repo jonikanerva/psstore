@@ -1,3 +1,4 @@
+import { browseOrderSchema, GENRE_KEY_PATTERN } from '@psstore/shared'
 import { Effect, Schema } from 'effect'
 import { SONY_SEARCH_MAX_PAGE_SIZE } from '../config/env.js'
 
@@ -45,4 +46,20 @@ export const searchQuerySchema = Schema.Struct({
       Schema.optional,
       Schema.withDecodingDefaultType(Effect.succeed(SONY_SEARCH_MAX_PAGE_SIZE)),
     ),
+})
+
+// BROWSE: one Sony genre key and one of our order keys. The genre is checked by
+// format only. Sony answers an unknown key with an empty grid, and the client
+// sends only keys from the genre list.
+export const browseQuerySchema = Schema.Struct({
+  genre: Schema.String.check(Schema.isPattern(GENRE_KEY_PATTERN)),
+  order: browseOrderSchema,
+  offset: offsetFromString.pipe(
+    Schema.optional,
+    Schema.withDecodingDefaultType(Effect.succeed(0)),
+  ),
+  size: sizeFromString.pipe(
+    Schema.optional,
+    Schema.withDecodingDefaultType(Effect.succeed(60)),
+  ),
 })

@@ -60,6 +60,8 @@ const FakeSony = Layer.succeed(SonyClient, {
     ]),
   fetchSearchPage: () =>
     Effect.succeed({ candidates: [], isLast: true, rawCount: 0 }),
+  fetchBrowsePage: () => Effect.succeed({ concepts: [], isLast: true }),
+  fetchGenres: () => Effect.succeed([]),
   fetchProductPrice: () => Effect.succeed({ plusOffer: null, standard: null }),
   fetchProductDetail: () =>
     Effect.succeed({
@@ -191,6 +193,8 @@ const failHandler = (
         : Effect.fail(error),
     fetchSearchPage: () =>
       Effect.succeed({ candidates: [], isLast: true, rawCount: 0 }),
+    fetchBrowsePage: () => Effect.succeed({ concepts: [], isLast: true }),
+    fetchGenres: () => Effect.succeed([]),
     fetchProductPrice: () =>
       Effect.succeed({ plusOffer: null, standard: null }),
     fetchProductDetail: () => Effect.fail(error),
@@ -234,6 +238,8 @@ const fallbackHandler = (
     fetchPlusMonthly: () => Effect.succeed([]),
     fetchSearchPage: () =>
       Effect.succeed({ candidates: [], isLast: true, rawCount: 0 }),
+    fetchBrowsePage: () => Effect.succeed({ concepts: [], isLast: true }),
+    fetchGenres: () => Effect.succeed([]),
     fetchProductPrice: () =>
       Effect.succeed({ plusOffer: null, standard: null }),
     fetchProductDetail: () => detail,

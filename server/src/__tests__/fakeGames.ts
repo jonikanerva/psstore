@@ -14,6 +14,8 @@ export const fakeGames = (
   getMonthlyGames: () => emptyPage,
   searchGames: () => emptyPage,
   getGameById: (id) => Effect.fail(new GameNotFound({ id })),
+  getGenres: () => Effect.succeed({ genres: [] }),
+  getBrowseGames: () => emptyPage,
   ...overrides,
 })
 

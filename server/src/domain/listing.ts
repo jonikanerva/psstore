@@ -1,15 +1,19 @@
 import {
   gamesSchema,
+  isGenreKey,
   isValidProductId,
   type Game,
+  type Genre,
   type PageResult,
 } from '@psstore/shared'
 import { Schema } from 'effect'
 import {
   conceptToGame,
+  isConceptDiscounted,
   monthlyEntryToGame,
   productToConcept,
 } from '../sony/mapper.js'
+import type { RawGenre } from '../sony/categoryGridSchema.js'
 import type { PlusMonthlyEntry } from '../sony/plusMonthlySchema.js'
 import type { SearchEntry } from '../sony/searchSchema.js'
 import type { Concept } from '../sony/types.js'
@@ -245,4 +249,82 @@ export const narrowSearchEntries = (
     }
   }
   return candidates
+}
+
+// ---- BROWSE ----------------------------------------------------------------
+
+// Sony's genre facet narrowed to keys that the API accepts. The first entry of
+// a repeated key wins. Sorted by display name, so the genre menu is
+// alphabetical.
+export const narrowGenres = (genres: readonly RawGenre[]): Genre[] => {
+  const seen = new Set<string>()
+  return genres
+    .filter((genre) => {
+      if (!isGenreKey(genre.key) || seen.has(genre.key)) {
+        return false
+      }
+      seen.add(genre.key)
+      return true
+    })
+    .map((genre) => ({ key: genre.key, name: genre.name }))
+    .sort((a, b) => a.name.localeCompare(b.name, 'en'))
+}
+
+// A PS5 title id has the `PPSA` prefix in the product id, for example
+// `EP0006-PPSA04874_00-APEXLEGENDRSPWN1`. A PS4 title id has `CUSA`.
+const PS5_TITLE_PRODUCT_ID = /^[A-Z]{2}\d{4}-PPSA\d{5}_00-/
+
+// Product lookups for one BROWSE concept at most. Observed 2026-10-06 on the
+// First Person Shooter genre: 228 of 232 concepts resolve, 221 at the first
+// candidate and none after the third.
+export const BROWSE_MAX_CANDIDATES = 3
+
+/**
+ * The product ids to try for one BROWSE concept, in order. Sony's first
+ * product of a concept can be the PS4 version, a demo, or a premium edition.
+ * PS5 title ids come first and otherwise Sony's order stays. The prefix is an
+ * ordering hint only: the caller accepts a candidate only after its product
+ * detail proves a PS5 game (`isPs5Game`). A concept without a product id
+ * returns no candidate and is dropped.
+ */
+export const browseCandidateIds = (concept: Concept): string[] => {
+  const ids = [
+    ...new Set(
+      (concept.products ?? []).flatMap((product) =>
+        product.id && isValidProductId(product.id) ? [product.id] : [],
+      ),
+    ),
+  ]
+  return [
+    ...ids.filter((id) => PS5_TITLE_PRODUCT_ID.test(id)),
+    ...ids.filter((id) => !PS5_TITLE_PRODUCT_ID.test(id)),
+  ].slice(0, BROWSE_MAX_CANDIDATES)
+}
+
+/**
+ * The BROWSE card of a concept, built for the product that passed the scope
+ * check. The name, cover and list price come from the concept; the date and
+ * genres come from that product's detail. `nowMs` sets the pre-order flag.
+ */
+export const browseConceptToGame = (
+  concept: Concept,
+  productId: string,
+  detail: { readonly releaseDate: string; readonly genres: readonly string[] },
+  nowMs: number,
+): Game => {
+  const base = conceptToGame(concept)
+  const releaseMs = Date.parse(detail.releaseDate)
+  const date = Number.isNaN(releaseMs) ? '' : new Date(releaseMs).toISOString()
+  return (
+    decodeGames([
+      {
+        ...base,
+        id: productId,
+        date,
+        discountDate: isConceptDiscounted(concept) ? date : '',
+        genres: detail.genres.length > 0 ? [...detail.genres] : base.genres,
+        preOrder: date !== '' && releaseMs > nowMs,
+      },
+    ])[0] ?? base
+  )
 }

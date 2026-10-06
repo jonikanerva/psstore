@@ -58,6 +58,8 @@ const harness = (
       }),
     fetchSearchPage: () =>
       Effect.succeed({ candidates: [], isLast: true, rawCount: 0 }),
+    fetchBrowsePage: () => Effect.succeed({ concepts: [], isLast: true }),
+    fetchGenres: () => Effect.succeed([]),
     fetchProductPrice: () =>
       Effect.suspend(() => {
         counts.price += 1
