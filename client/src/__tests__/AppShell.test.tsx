@@ -117,6 +117,7 @@ describe('AppShell', () => {
       'Upcoming',
       'Discounted',
       'Monthly',
+      'Browse',
       'Wishlist',
       'Purchased',
     ])
@@ -316,15 +317,16 @@ describe('AppShell', () => {
     expect(screen.getByRole('searchbox', { name: 'Search' })).toBeDisabled()
   })
 
-  it('renders six anchor links with Purchased last', async () => {
+  it('renders seven anchor links with Browse before the signed-in views', async () => {
     await renderShellAt('/new')
     const nav = screen.getByRole('navigation', { name: 'Top navigation' })
     const links = within(nav).getAllByRole('link')
-    expect(links).toHaveLength(6)
+    expect(links).toHaveLength(7)
     for (const link of links) {
       expect(link.tagName).toBe('A')
       expect(link).toHaveAttribute('href')
     }
+    expect(links.at(-3)).toHaveTextContent('Browse')
     expect(links.at(-2)).toHaveTextContent('Wishlist')
     expect(links.at(-1)).toHaveTextContent('Purchased')
   })

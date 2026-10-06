@@ -1,6 +1,8 @@
 import {
   gameSchema,
+  type BrowseOrder,
   type Game,
+  type GenreList,
   type PageResult,
   type PlusOffer,
 } from '@psstore/shared'
@@ -8,6 +10,7 @@ import {
   Cache,
   Clock,
   Context,
+  Data,
   Duration,
   Effect,
   Exit,
@@ -26,6 +29,8 @@ import type { ProductPrice } from '../sony/productPriceSchema.js'
 import { SonyClient, type ProductDetailResult } from '../sony/sonyClient.js'
 import type { Concept } from '../sony/types.js'
 import {
+  browseCandidateIds,
+  browseConceptToGame,
   conceptProductId,
   DISCOUNTED_GAME_CLASSIFICATIONS,
   hasReleaseDate,
@@ -72,6 +77,29 @@ const SEARCH_RAW_PAGE_BOUND = 3
 // Concurrent product detail lookups for one search page. Each page holds at
 // most SONY_SEARCH_MAX_PAGE_SIZE candidates.
 const SEARCH_DETAIL_CONCURRENCY = 10
+// BROWSE: concurrent concept resolutions for one page, raw pages read for one
+// request when pages narrow to zero games, and the genre list lifetime.
+const BROWSE_DETAIL_CONCURRENCY = 10
+const BROWSE_RAW_PAGE_BOUND = 3
+const BROWSE_PAGE_CAPACITY = 64
+const GENRES_TTL = Duration.hours(1)
+const GENRES_FAILURE_TTL = Duration.seconds(30)
+
+// One BROWSE page request. A `Data.Class` compares by value, so equal requests
+// share one cache entry.
+class BrowsePageKey extends Data.Class<{
+  readonly genre: string
+  readonly order: BrowseOrder
+  readonly offset: number
+  readonly size: number
+}> {}
+
+// The outcome of one BROWSE concept: its card, a scope drop, or a failed
+// product lookup.
+type BrowseResolution =
+  | { readonly kind: 'game'; readonly game: Game }
+  | { readonly kind: 'dropped' }
+  | { readonly kind: 'failed' }
 
 interface ProductMeta {
   readonly date: string
@@ -105,6 +133,13 @@ export interface GamesServiceApi {
   readonly getGameById: (
     id: string,
   ) => Effect.Effect<Game, GameNotFound | UpstreamError>
+  readonly getGenres: () => Effect.Effect<GenreList, UpstreamError>
+  readonly getBrowseGames: (
+    genre: string,
+    order: BrowseOrder,
+    offset?: number,
+    size?: number,
+  ) => Effect.Effect<PageResult, UpstreamError>
 }
 
 export class GamesService extends Context.Service<
@@ -555,6 +590,144 @@ export const GamesServiceLive: Layer.Layer<GamesService, never, SonyClient> =
           return yield* fromProductId(id)
         })
 
+      // ---- BROWSE ----------------------------------------------------------
+
+      const genresCache = yield* Cache.makeWith<
+        'genres',
+        GenreList,
+        UpstreamError
+      >(() => sony.fetchGenres().pipe(Effect.map((genres) => ({ genres }))), {
+        capacity: 1,
+        timeToLive: (exit) =>
+          Exit.isSuccess(exit) ? GENRES_TTL : GENRES_FAILURE_TTL,
+      })
+
+      const getGenres = (): Effect.Effect<GenreList, UpstreamError> =>
+        Cache.get(genresCache, 'genres').pipe(
+          Effect.tapError((error) =>
+            Effect.logWarning('genre list query failed', {
+              reason: error._tag,
+            }),
+          ),
+        )
+
+      // The first candidate product whose detail proves a PS5 game becomes the
+      // card. The game page applies the same check, so a BROWSE card never
+      // leads to a missing game page.
+      const resolveBrowseConcept = (
+        concept: Concept,
+        nowMs: number,
+      ): Effect.Effect<BrowseResolution> =>
+        Effect.gen(function* () {
+          for (const productId of browseCandidateIds(concept)) {
+            const detail = yield* Cache.get(strictDetailCache, productId)
+            if (
+              isPs5Game(detail.platforms, detail.storeDisplayClassification)
+            ) {
+              const game = browseConceptToGame(
+                concept,
+                productId,
+                {
+                  releaseDate: detail.releaseDate ?? '',
+                  genres: detail.genres,
+                },
+                nowMs,
+              )
+              return { kind: 'game', game } as const
+            }
+          }
+          return { kind: 'dropped' } as const
+        }).pipe(Effect.catch(() => Effect.succeed({ kind: 'failed' } as const)))
+
+      // `nextOffset` follows Sony's raw paging, never the narrowed length. A
+      // raw page that narrows to zero games reads the next one, up to the
+      // bound. A failed product lookup drops its concept from this response;
+      // when no concept resolves and a lookup failed, the page fails, so an
+      // outage never reads as an empty genre.
+      const readBrowsePage = (
+        key: BrowsePageKey,
+        pagesLeft: number,
+      ): Effect.Effect<PageResult, UpstreamError> =>
+        Effect.all([sony.fetchBrowsePage(key), Clock.currentTimeMillis]).pipe(
+          Effect.flatMap(([page, nowMs]) =>
+            Effect.forEach(
+              page.concepts,
+              (concept) => resolveBrowseConcept(concept, nowMs),
+              { concurrency: BROWSE_DETAIL_CONCURRENCY },
+            ).pipe(
+              Effect.flatMap((resolved) => {
+                const failed = resolved.filter(
+                  (entry) => entry.kind === 'failed',
+                ).length
+                const seen = new Set<string>()
+                const games = resolved.flatMap((entry) => {
+                  if (entry.kind !== 'game' || seen.has(entry.game.id)) {
+                    return []
+                  }
+                  seen.add(entry.game.id)
+                  return [entry.game]
+                })
+                if (failed > 0 && games.length === 0) {
+                  return Effect.fail(
+                    new UpstreamUnavailable({
+                      message: 'Sony product lookups failed for a browse page',
+                    }),
+                  )
+                }
+                const nextOffset = page.isLast ? null : key.offset + key.size
+                const result: PageResult = {
+                  games,
+                  totalCount: games.length,
+                  nextOffset,
+                }
+                const next =
+                  games.length === 0 && nextOffset !== null && pagesLeft > 1
+                    ? readBrowsePage(
+                        new BrowsePageKey({
+                          genre: key.genre,
+                          order: key.order,
+                          offset: nextOffset,
+                          size: key.size,
+                        }),
+                        pagesLeft - 1,
+                      )
+                    : Effect.succeed(result)
+                return failed > 0
+                  ? Effect.logWarning('browse product lookups failed', {
+                      failed,
+                      kept: games.length,
+                    }).pipe(Effect.andThen(next))
+                  : next
+              }),
+            ),
+          ),
+        )
+
+      const browsePageCache = yield* Cache.make<
+        BrowsePageKey,
+        PageResult,
+        UpstreamError
+      >({
+        capacity: BROWSE_PAGE_CAPACITY,
+        timeToLive: listTtl,
+        lookup: (key) => readBrowsePage(key, BROWSE_RAW_PAGE_BOUND),
+      })
+
+      const getBrowseGames = (
+        genre: string,
+        order: BrowseOrder,
+        offset = 0,
+        size = 60,
+      ): Effect.Effect<PageResult, UpstreamError> =>
+        Cache.get(
+          browsePageCache,
+          new BrowsePageKey({ genre, order, offset, size }),
+        ).pipe(
+          Effect.tapError((error) =>
+            Effect.logWarning('browse query failed', { reason: error._tag }),
+          ),
+        )
+
       return GamesService.of({
         getNewGames,
         getUpcomingGames,
@@ -562,6 +735,8 @@ export const GamesServiceLive: Layer.Layer<GamesService, never, SonyClient> =
         getMonthlyGames,
         searchGames,
         getGameById,
+        getGenres,
+        getBrowseGames,
       })
     }),
   )

@@ -44,6 +44,21 @@ id, a product with a wrong-typed `id`, and an element with an unknown typename.
 | --------------------------- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `searchResults.golden.json` | `data.universalSearch`, 9 elements | PS4 and PS5 products, a PS4-only full game, a premium edition, a repeated id, a concept with `products: []`, and `pageInfo.isLast`; the synthetic elements above |
 
+## Browse fixture
+
+`categoryGridBrowse.golden.json` is a trimmed response of the category grid
+operation (`categoryGridRetrieve`) for the BROWSE view. The request was the
+"All PS5 games" category with the filter `conceptGenres:FIRST_PERSON_SHOOTER`
+and the sort `sales30`, locale `en-FI`, captured on 2026-10-06. Trimming kept
+three concepts and dropped `personalizedMeta`, `telemetryData`, and
+`__typename`. Trimming kept up to two cover or screenshot media entries per
+concept, all values of the genre facet, and two values of each other facet.
+It holds public store data only. No element is synthetic.
+
+| File                             | Envelope                       | Real-data shapes preserved                                                                                                               |
+| -------------------------------- | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `categoryGridBrowse.golden.json` | `concepts`, `pageInfo`, facets | a concept whose first product is the PS4 SKU (`CUSA`), a concept with 7 products, `pageInfo.isLast` false, 35 genres with a `/` in a key |
+
 ## Price operation fixtures
 
 The `productPrice*.golden.json` files are lightly-trimmed real anonymous

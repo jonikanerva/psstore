@@ -1,4 +1,10 @@
-import type { Game, GameDetail, PageResult } from '@psstore/shared'
+import type {
+  BrowseOrder,
+  Game,
+  GameDetail,
+  GenreList,
+  PageResult,
+} from '@psstore/shared'
 
 const jsonHeaders = { Accept: 'application/json' }
 
@@ -67,6 +73,19 @@ export const fetchSearchGames = async (
 ): Promise<PageResult> =>
   getJson(
     `/api/games/search?q=${encodeURIComponent(term)}&offset=${String(offset)}&size=${String(size)}`,
+    withSignal(signal),
+  )
+export const fetchGenres = async (signal?: AbortSignal): Promise<GenreList> =>
+  getJson('/api/games/genres', withSignal(signal))
+export const fetchBrowseGames = async (
+  genre: string,
+  order: BrowseOrder,
+  offset: number,
+  size: number,
+  signal?: AbortSignal,
+): Promise<PageResult> =>
+  getJson(
+    `/api/games/browse?genre=${encodeURIComponent(genre)}&order=${order}&offset=${String(offset)}&size=${String(size)}`,
     withSignal(signal),
   )
 export const fetchGame = async (gameId: string): Promise<GameDetail> =>

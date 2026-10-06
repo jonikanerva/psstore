@@ -1,4 +1,8 @@
-import { gameDetailSchema, pageResultSchema } from '@psstore/shared'
+import {
+  gameDetailSchema,
+  genreListSchema,
+  pageResultSchema,
+} from '@psstore/shared'
 import { Context, Schema, type Redacted } from 'effect'
 import {
   HttpApi,
@@ -18,6 +22,7 @@ import {
   UpstreamUnavailable,
 } from '../errors/errors.js'
 import {
+  browseQuerySchema,
   gameIdParamSchema,
   paginationQuerySchema,
   searchQuerySchema,
@@ -82,6 +87,19 @@ const searchEndpoint = HttpApiEndpoint.get('search', '/search', {
   error: [HttpApiError.BadRequestNoContent, ...upstreamErrors],
 })
 
+// BROWSE: Sony's genre list, and one genre in one Sony order. Registered before
+// `getById` so `/genres` and `/browse` are never read as a game id.
+const genresEndpoint = HttpApiEndpoint.get('genres', '/genres', {
+  success: genreListSchema,
+  error: upstreamErrors,
+})
+
+const browseEndpoint = HttpApiEndpoint.get('browse', '/browse', {
+  query: browseQuerySchema,
+  success: pageResultSchema,
+  error: [HttpApiError.BadRequestNoContent, ...upstreamErrors],
+})
+
 const getByIdEndpoint = HttpApiEndpoint.get('getById', '/:id', {
   params: gameIdParamSchema,
   success: gameDetailSchema,
@@ -101,6 +119,8 @@ export const gamesGroup = HttpApiGroup.make('games')
     signedInEndpoint('purchased'),
     signedInEndpoint('wishlist'),
     searchEndpoint,
+    genresEndpoint,
+    browseEndpoint,
     getByIdEndpoint,
   )
   .prefix('/api/games')

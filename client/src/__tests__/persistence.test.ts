@@ -15,6 +15,8 @@ describe('shouldDehydrateQuery', () => {
     expect(persists(['purchased'])).toBe(false)
     expect(persists(['wishlist'])).toBe(false)
     expect(persists(['search', 'zelda'])).toBe(false)
+    expect(persists(['browse', 'ACTION', 'newest'])).toBe(false)
+    expect(persists(['genres'])).toBe(false)
     expect(persists([])).toBe(false)
   })
 })

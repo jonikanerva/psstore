@@ -1,0 +1,478 @@
+{
+  "data": {
+    "categoryGridRetrieve": {
+      "id": "d0446d4b-dc9a-4f1e-86ec-651f099c9b29",
+      "concepts": [
+        {
+          "id": "203897",
+          "media": [
+            {
+              "role": "GAMEHUB_COVER_ART",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202609/2213/e19593846f740893286a8bce38716c25c368b4b12139388b.jpg"
+            },
+            {
+              "role": "SCREENSHOT",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202608/3112/607df95113331fe724d22828ba97245aed3334e8f0f1596d.jpg"
+            }
+          ],
+          "name": "Tom Clancy's Rainbow Six Siege",
+          "price": {
+            "basePrice": "Free",
+            "discountText": null,
+            "discountedPrice": "Free",
+            "includesBundleOffer": false,
+            "isExclusive": false,
+            "isFree": true,
+            "isTiedToSubscription": false,
+            "serviceBranding": ["NONE"],
+            "telemetryData": {
+              "experimentData": [],
+              "experimentNotShownData": []
+            },
+            "upsellServiceBranding": ["NONE"],
+            "upsellText": null
+          },
+          "products": [
+            {
+              "id": "EP0001-PPSA01397_00-RB6SIEGEELITEY10"
+            },
+            {
+              "id": "EP0001-CUSA01788_00-R6SIEGEFREEACESS"
+            },
+            {
+              "id": "EP0001-PPSA01397_00-R6SIEGEFREEACESS"
+            },
+            {
+              "id": "EP0001-PPSA01397_00-RB6SIEGEEULTIY11"
+            }
+          ]
+        },
+        {
+          "id": "232352",
+          "media": [
+            {
+              "role": "GAMEHUB_COVER_ART",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202607/3013/0fa9c806e86a5cc429feca1a1a3e3e857c48aff3bfe24af1.png"
+            },
+            {
+              "role": "SCREENSHOT",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202607/3013/b2133db7dd8e618021675517254a176d9b7fecfe6d3ab9c0.jpg"
+            }
+          ],
+          "name": "Apex Legends™",
+          "price": {
+            "basePrice": "Free",
+            "discountText": null,
+            "discountedPrice": "Free",
+            "includesBundleOffer": false,
+            "isExclusive": false,
+            "isFree": true,
+            "isTiedToSubscription": false,
+            "serviceBranding": ["NONE"],
+            "telemetryData": {
+              "experimentData": [],
+              "experimentNotShownData": []
+            },
+            "upsellServiceBranding": ["NONE"],
+            "upsellText": null
+          },
+          "products": [
+            {
+              "id": "EP0006-CUSA12552_00-APEXLEGENDRSPWN1"
+            },
+            {
+              "id": "EP0006-PPSA04874_00-APEXLEGENDRSPWN1"
+            }
+          ]
+        },
+        {
+          "id": "10001130",
+          "media": [
+            {
+              "role": "GAMEHUB_COVER_ART",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202605/2718/95bb62536d827f18d0103a680bd2cd479a8e8e53247d8d81.png"
+            },
+            {
+              "role": "SCREENSHOT",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202605/2216/6efef757dc2f5c06c3ffa95871cc5fc94523ee2739043c83.jpg"
+            }
+          ],
+          "name": "Call of Duty®",
+          "price": {
+            "basePrice": "€79,95",
+            "discountText": null,
+            "discountedPrice": "€79,95",
+            "includesBundleOffer": false,
+            "isExclusive": false,
+            "isFree": false,
+            "isTiedToSubscription": false,
+            "serviceBranding": ["NONE"],
+            "telemetryData": {
+              "experimentData": [],
+              "experimentNotShownData": []
+            },
+            "upsellServiceBranding": ["NONE"],
+            "upsellText": null
+          },
+          "products": [
+            {
+              "id": "EP0002-PPSA07950_00-CODMW4STANDARD01"
+            },
+            {
+              "id": "EP0002-PPSA07950_00-CODMW4VAULT00001"
+            },
+            {
+              "id": "EP0002-PPSA07950_00-CODBO7CROSSGEN01"
+            },
+            {
+              "id": "EP0002-PPSA07950_00-CODBO6CROSSGEN01"
+            },
+            {
+              "id": "EP0002-PPSA07950_00-CODMW2CROSSGEN01"
+            },
+            {
+              "id": "EP0002-PPSA07950_00-CODMW3CROSSGEN01"
+            },
+            {
+              "id": "EP0002-PPSA07950_00-CODWZ2BUNDLE0001"
+            }
+          ]
+        }
+      ],
+      "products": [],
+      "pageInfo": {
+        "isLast": false,
+        "offset": 0,
+        "size": 12,
+        "totalCount": 232
+      },
+      "facetOptions": [
+        {
+          "name": "webBasePrice",
+          "displayName": "Price",
+          "values": [
+            {
+              "count": 147,
+              "displayName": "Free",
+              "key": "0-0"
+            },
+            {
+              "count": 299,
+              "displayName": "Under €1",
+              "key": "0-99"
+            }
+          ]
+        },
+        {
+          "name": "conceptGenres",
+          "displayName": "Genre",
+          "values": [
+            {
+              "count": 2230,
+              "displayName": "Action",
+              "key": "ACTION"
+            },
+            {
+              "count": 1967,
+              "displayName": "Adventure",
+              "key": "ADVENTURE"
+            },
+            {
+              "count": 856,
+              "displayName": "Puzzle",
+              "key": "PUZZLE"
+            },
+            {
+              "count": 827,
+              "displayName": "Casual",
+              "key": "CASUAL"
+            },
+            {
+              "count": 745,
+              "displayName": "Arcade",
+              "key": "ARCADE"
+            },
+            {
+              "count": 726,
+              "displayName": "Role Playing Games",
+              "key": "ROLE_PLAYING_GAMES"
+            },
+            {
+              "count": 629,
+              "displayName": "Platformer",
+              "key": "PLATFORMER"
+            },
+            {
+              "count": 534,
+              "displayName": "Simulation",
+              "key": "SIMULATION"
+            },
+            {
+              "count": 516,
+              "displayName": "Shooter",
+              "key": "SHOOTER"
+            },
+            {
+              "count": 512,
+              "displayName": "Fantasy",
+              "key": "FANTASY"
+            },
+            {
+              "count": 470,
+              "displayName": "Horror",
+              "key": "HORROR"
+            },
+            {
+              "count": 370,
+              "displayName": "Strategy",
+              "key": "STRATEGY"
+            },
+            {
+              "count": 330,
+              "displayName": "Driving/Racing",
+              "key": "RACING"
+            },
+            {
+              "count": 324,
+              "displayName": "Family",
+              "key": "FAMILY"
+            },
+            {
+              "count": 261,
+              "displayName": "Sport",
+              "key": "SPORTS"
+            },
+            {
+              "count": 232,
+              "displayName": "First Person Shooter",
+              "key": "FIRST_PERSON_SHOOTER"
+            },
+            {
+              "count": 211,
+              "displayName": "Unique",
+              "key": "UNIQUE"
+            },
+            {
+              "count": 205,
+              "displayName": "Simulator",
+              "key": "SIMULATOR"
+            },
+            {
+              "count": 148,
+              "displayName": "Combat",
+              "key": "COMBAT"
+            },
+            {
+              "count": 135,
+              "displayName": "Third Person Shooter",
+              "key": "THIRD_PERSON_SHOOTER"
+            },
+            {
+              "count": 118,
+              "displayName": "Fighting",
+              "key": "FIGHTING"
+            },
+            {
+              "count": 115,
+              "displayName": "Party",
+              "key": "PARTY"
+            },
+            {
+              "count": 84,
+              "displayName": "Adult",
+              "key": "ADULT"
+            },
+            {
+              "count": 84,
+              "displayName": "Music/Rhythm",
+              "key": "MUSIC/RHYTHM"
+            },
+            {
+              "count": 83,
+              "displayName": "Brain Training",
+              "key": "BRAIN_TRAINING"
+            },
+            {
+              "count": 68,
+              "displayName": "Stealth",
+              "key": "STEALTH"
+            },
+            {
+              "count": 48,
+              "displayName": "Educational",
+              "key": "EDUCATIONAL"
+            },
+            {
+              "count": 33,
+              "displayName": "Card Game",
+              "key": "CARD_GAME"
+            },
+            {
+              "count": 18,
+              "displayName": "Quiz",
+              "key": "QUIZ"
+            },
+            {
+              "count": 17,
+              "displayName": "Soccer",
+              "key": "SOCCER"
+            },
+            {
+              "count": 13,
+              "displayName": "American Football",
+              "key": "FOOTBALL"
+            },
+            {
+              "count": 10,
+              "displayName": "Baseball",
+              "key": "BASEBALL"
+            },
+            {
+              "count": 10,
+              "displayName": "Massively Multiplayer Online Role Playing Game",
+              "key": "MASSIVELY_MULTIPLAYER_ONLINE_ROLE_PLAYING_GAME"
+            },
+            {
+              "count": 9,
+              "displayName": "Fitness",
+              "key": "FITNESS"
+            },
+            {
+              "count": 8,
+              "displayName": "Basketball",
+              "key": "BASKETBALL"
+            }
+          ]
+        },
+        {
+          "name": "targetPlatforms",
+          "displayName": "Platform",
+          "values": [
+            {
+              "count": 7056,
+              "displayName": "PS5",
+              "key": "PS5"
+            },
+            {
+              "count": 2750,
+              "displayName": "PS4",
+              "key": "PS4"
+            }
+          ]
+        },
+        {
+          "name": "conceptCompatibilityNotices",
+          "displayName": "Supported Features",
+          "values": [
+            {
+              "count": 311,
+              "displayName": "PS5 Pro Enhanced",
+              "key": "GRAPHICS_ENHANCED"
+            },
+            {
+              "count": 1615,
+              "displayName": "Remote Play",
+              "key": "REMOTE_PLAY_SUPPORTED"
+            }
+          ]
+        },
+        {
+          "name": "conceptReleaseDate",
+          "displayName": "Release Date",
+          "values": [
+            {
+              "count": 158,
+              "displayName": "Just Released",
+              "key": "last_thirty_days"
+            },
+            {
+              "count": 69,
+              "displayName": "Coming soon",
+              "key": "next_thirty_days"
+            }
+          ]
+        },
+        {
+          "name": "productVrCompatibility",
+          "displayName": "VR",
+          "values": [
+            {
+              "count": 378,
+              "displayName": "PS VR2",
+              "key": "PSVR2"
+            },
+            {
+              "count": 17,
+              "displayName": "PS VR",
+              "key": "PSVR"
+            }
+          ]
+        },
+        {
+          "name": "ageRating",
+          "displayName": "Age Rating",
+          "values": [
+            {
+              "count": 2338,
+              "displayName": "3 years and over",
+              "key": "PEGI_3"
+            },
+            {
+              "count": 1456,
+              "displayName": "7 years and over",
+              "key": "PEGI_7"
+            }
+          ]
+        }
+      ],
+      "sortedBy": {
+        "displayName": "sales30",
+        "isAscending": false,
+        "name": "sales30"
+      },
+      "sortingOptions": [
+        {
+          "displayName": "Best Selling",
+          "isAscending": false,
+          "name": "sales30"
+        },
+        {
+          "displayName": "Most Downloaded",
+          "isAscending": false,
+          "name": "downloads30"
+        },
+        {
+          "displayName": "Name (A - Z)",
+          "isAscending": true,
+          "name": "conceptName"
+        },
+        {
+          "displayName": "Name (Z - A)",
+          "isAscending": false,
+          "name": "conceptName"
+        },
+        {
+          "displayName": "Release Date (Old - New)",
+          "isAscending": true,
+          "name": "conceptReleaseDate"
+        },
+        {
+          "displayName": "Release Date (New - Old)",
+          "isAscending": false,
+          "name": "conceptReleaseDate"
+        },
+        {
+          "displayName": "Recently Added to PS Plus",
+          "isAscending": false,
+          "name": "contentCollections.contentCollectionStartDate"
+        }
+      ]
+    }
+  }
+}

@@ -10,7 +10,9 @@ export const findCachedGame = (
 ): Game | undefined => {
   const lists = queryClient.getQueriesData<InfiniteData<PageResult>>({
     predicate: (query) =>
-      query.queryKey[0] === 'games' || query.queryKey[0] === 'search',
+      query.queryKey[0] === 'games' ||
+      query.queryKey[0] === 'search' ||
+      query.queryKey[0] === 'browse',
   })
   for (const [, data] of lists) {
     const found = data?.pages

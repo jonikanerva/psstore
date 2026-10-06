@@ -56,7 +56,10 @@ const AppShell = () => {
   const stopSignedInPrefetch = usePrefetchTabs()
 
   const onGamePage = pathname.startsWith(GAME_PAGE_PREFIX)
-  const viewKey = viewKeyFor(pathname, urlTerm)
+  const viewKey = useRouterState({
+    select: (state) =>
+      viewKeyFor(state.location.pathname, state.location.search),
+  })
   const freshView = (): ViewState => ({
     key: viewKey,
     sort: null,

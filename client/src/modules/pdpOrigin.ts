@@ -3,6 +3,7 @@ export const TAB_PATHS = [
   '/upcoming',
   '/discounted',
   '/monthly',
+  '/browse',
   '/wishlist',
   '/purchased',
 ] as const

@@ -56,6 +56,8 @@ const harness = (price: (productId: string) => PriceResult): Harness => {
     fetchPlusMonthly: () => Effect.succeed([]),
     fetchSearchPage: () =>
       Effect.succeed({ candidates: [], isLast: true, rawCount: 0 }),
+    fetchBrowsePage: () => Effect.succeed({ concepts: [], isLast: true }),
+    fetchGenres: () => Effect.succeed([]),
     fetchProductPrice: (productId) =>
       Effect.suspend(() => {
         priceCalls.push(productId)

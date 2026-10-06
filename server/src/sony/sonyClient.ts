@@ -1,3 +1,4 @@
+import type { Genre } from '@psstore/shared'
 import { Context, Effect, Layer, Redacted } from 'effect'
 import {
   SONY_AUTH_BASE_URL,
@@ -38,10 +39,16 @@ import {
   HttpStatusError,
   RateLimitedError,
 } from '../lib/http.js'
-import { narrowSearchEntries, type SearchCandidate } from '../domain/listing.js'
+import {
+  narrowGenres,
+  narrowSearchEntries,
+  type SearchCandidate,
+} from '../domain/listing.js'
 import {
   extractCategoryGridNode,
   parseCategoryGrid,
+  parseGenreFacet,
+  parseGridIsLast,
 } from './categoryGridSchema.js'
 import { detectPersistedQueryRotation } from './graphqlErrors.js'
 import { parseProductRetrieve } from './productDetailSchema.js'
@@ -56,7 +63,12 @@ import {
 import { parseWishlist, type WishlistEntry } from './wishlistSchema.js'
 import { extractAccessCode, parseTokenResponse } from './sessionSchema.js'
 import {
+  BROWSE_GRID_OPERATION,
+  buildBrowseVariables,
+  buildGenreListVariables,
   buildStrategies,
+  type BrowseRequest,
+  type GridOperation,
   type SonyFeature,
   type StrategyContext,
 } from './queryStrategies.js'
@@ -210,13 +222,12 @@ export const extractCategoryGrid = (json: unknown): CategoryGridOutcome => {
 
 // ---- SonyClient service (the network boundary) -----------------------------
 
-const requestConceptsRaw = async (
-  feature: SonyFeature,
-  context: StrategyContext,
+// One GET of the category grid. NEW, UPCOMING, DISCOUNTED and BROWSE share
+// the operation and the persisted query; only the variables differ.
+const requestCategoryGridRaw = async (
+  strategy: GridOperation,
+  variables: Record<string, unknown>,
 ): Promise<unknown> => {
-  const strategy = buildStrategies()[feature]
-  const variables = strategy.buildVariables(context)
-
   const extensions = {
     persistedQuery: { version: 1, sha256Hash: strategy.persistedQueryHash },
   }
@@ -244,6 +255,14 @@ const requestConceptsRaw = async (
   // Untrusted until decoded — returned as `unknown`; rotation detection and the
   // Schema decode run in the Effect layer below.
   return response.json()
+}
+
+const requestConceptsRaw = async (
+  feature: SonyFeature,
+  context: StrategyContext,
+): Promise<unknown> => {
+  const strategy = buildStrategies()[feature]
+  return requestCategoryGridRaw(strategy, strategy.buildVariables(context))
 }
 
 const requestProductDetailRaw = async (
@@ -394,6 +413,78 @@ export interface SearchPage {
   readonly rawCount: number
 }
 
+// One BROWSE grid page in Sony's order. `isLast` comes from Sony's page info,
+// or from a short page when the page info is missing.
+export interface BrowsePage {
+  readonly concepts: readonly Concept[]
+  readonly isLast: boolean
+}
+
+/**
+ * Pure BROWSE page extraction (exported for unit tests). A missing or
+ * unintelligible grid node is `drift`. BROWSE does not degrade drift to an
+ * empty page: an empty genre would read as "no games" instead of an error.
+ */
+export const extractBrowsePage = (
+  json: unknown,
+  size: number,
+):
+  | { readonly kind: 'drift' }
+  | {
+      readonly kind: 'ok'
+      readonly page: BrowsePage
+      readonly dropped: number
+    } => {
+  const node = extractCategoryGridNode(json)
+  const grid =
+    node === undefined || node === null ? null : parseCategoryGrid(node)
+  if (grid === null) {
+    return { kind: 'drift' }
+  }
+  const isLast = parseGridIsLast(node) ?? grid.concepts.length < size
+  return {
+    kind: 'ok',
+    page: { concepts: grid.concepts, isLast },
+    dropped: grid.dropped,
+  }
+}
+
+/**
+ * Pure genre list extraction (exported for unit tests). A grid without a
+ * genre facet, or a facet without one usable genre, is `drift`.
+ */
+export const extractGenres = (
+  json: unknown,
+):
+  | { readonly kind: 'drift' }
+  | {
+      readonly kind: 'ok'
+      readonly genres: readonly Genre[]
+      readonly dropped: number
+    } => {
+  const node = extractCategoryGridNode(json)
+  const facet =
+    node === undefined || node === null ? null : parseGenreFacet(node)
+  if (facet === null) {
+    return { kind: 'drift' }
+  }
+  const genres = narrowGenres(facet.genres)
+  return genres.length === 0
+    ? { kind: 'drift' }
+    : {
+        kind: 'ok',
+        genres,
+        dropped: facet.dropped + facet.genres.length - genres.length,
+      }
+}
+
+const gridRotated = () =>
+  new UpstreamQueryRotated({
+    message:
+      'Sony rejected the persisted query (hash rotated); re-run pnpm sony:refresh',
+    operationName: BROWSE_GRID_OPERATION.operationName,
+  })
+
 export interface SonyClientApi {
   readonly fetchConceptsByFeature: (
     feature: SonyFeature,
@@ -426,6 +517,16 @@ export interface SonyClientApi {
   readonly fetchPlusMonthly: () => Effect.Effect<
     readonly PlusMonthlyEntry[],
     UpstreamUnavailable | UpstreamRateLimited
+  >
+  readonly fetchBrowsePage: (
+    request: BrowseRequest,
+  ) => Effect.Effect<
+    BrowsePage,
+    UpstreamUnavailable | UpstreamQueryRotated | UpstreamRateLimited
+  >
+  readonly fetchGenres: () => Effect.Effect<
+    readonly Genre[],
+    UpstreamUnavailable | UpstreamQueryRotated | UpstreamRateLimited
   >
 }
 
@@ -546,6 +647,82 @@ export const SonyClientLive: Layer.Layer<SonyClient> = Layer.succeed(
                 kept: outcome.entries.length,
               }).pipe(Effect.as(page))
             : Effect.succeed(page)
+        }),
+      ),
+    fetchBrowsePage: (request) =>
+      Effect.tryPromise({
+        try: () =>
+          requestCategoryGridRaw(
+            BROWSE_GRID_OPERATION,
+            buildBrowseVariables(request),
+          ),
+        catch: mapTransportError,
+      }).pipe(
+        Effect.flatMap((json) =>
+          detectPersistedQueryRotation(json)
+            ? Effect.fail(gridRotated())
+            : Effect.succeed(json),
+        ),
+        Effect.flatMap((json) => {
+          const outcome = extractBrowsePage(json, request.size)
+          if (outcome.kind === 'drift') {
+            return Effect.logWarning('sony browse grid drift', {
+              event: 'sony.browse.drift',
+            }).pipe(
+              Effect.andThen(
+                Effect.fail(
+                  new UpstreamUnavailable({
+                    message: 'Sony browse grid has an unexpected shape',
+                  }),
+                ),
+              ),
+            )
+          }
+          return outcome.dropped > 0
+            ? Effect.logWarning('sony browse grid element drift', {
+                event: 'sony.browse.elementDrift',
+                dropped: outcome.dropped,
+                kept: outcome.page.concepts.length,
+              }).pipe(Effect.as(outcome.page))
+            : Effect.succeed(outcome.page)
+        }),
+      ),
+    fetchGenres: () =>
+      Effect.tryPromise({
+        try: () =>
+          requestCategoryGridRaw(
+            BROWSE_GRID_OPERATION,
+            buildGenreListVariables(),
+          ),
+        catch: mapTransportError,
+      }).pipe(
+        Effect.flatMap((json) =>
+          detectPersistedQueryRotation(json)
+            ? Effect.fail(gridRotated())
+            : Effect.succeed(json),
+        ),
+        Effect.flatMap((json) => {
+          const outcome = extractGenres(json)
+          if (outcome.kind === 'drift') {
+            return Effect.logWarning('sony genre facet drift', {
+              event: 'sony.genres.drift',
+            }).pipe(
+              Effect.andThen(
+                Effect.fail(
+                  new UpstreamUnavailable({
+                    message: 'Sony genre facet has an unexpected shape',
+                  }),
+                ),
+              ),
+            )
+          }
+          return outcome.dropped > 0
+            ? Effect.logWarning('sony genre facet element drift', {
+                event: 'sony.genres.elementDrift',
+                dropped: outcome.dropped,
+                kept: outcome.genres.length,
+              }).pipe(Effect.as(outcome.genres))
+            : Effect.succeed(outcome.genres)
         }),
       ),
     fetchPlusMonthly: () =>

@@ -6,7 +6,6 @@ import {
   useFocusReturn,
   viewKeyFor,
 } from '../modules/focusReturn'
-import { readSearchTerm } from '../modules/searchTerm'
 import GameCard from './GameCard'
 import Spinner from './Spinner'
 
@@ -38,10 +37,7 @@ const GameGrid = ({
   const focusReturn = useFocusReturn()
   const viewKey = useRouterState({
     select: (state) =>
-      viewKeyFor(
-        state.location.pathname,
-        readSearchTerm(state.location.search),
-      ),
+      viewKeyFor(state.location.pathname, state.location.search),
   })
 
   // Runs on the first render of the grid only: a later change of the list must

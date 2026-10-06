@@ -37,6 +37,8 @@ const FakeSony = Layer.succeed(SonyClient, {
   fetchPlusMonthly: () => Effect.succeed([]),
   fetchSearchPage: () =>
     Effect.succeed({ candidates: [], isLast: true, rawCount: 0 }),
+  fetchBrowsePage: () => Effect.succeed({ concepts: [], isLast: true }),
+  fetchGenres: () => Effect.succeed([]),
   fetchProductPrice: () => Effect.succeed({ plusOffer: null, standard: null }),
   fetchProductDetail: (productId) => Effect.sync(() => detailFor(productId)),
 })
@@ -665,6 +667,8 @@ describe('gamesService', () => {
       fetchPlusMonthly: () => Effect.succeed([]),
       fetchSearchPage: () =>
         Effect.succeed({ candidates: [], isLast: true, rawCount: 0 }),
+      fetchBrowsePage: () => Effect.succeed({ concepts: [], isLast: true }),
+      fetchGenres: () => Effect.succeed([]),
       fetchProductPrice: () =>
         Effect.succeed({ plusOffer: null, standard: null }),
       fetchProductDetail: () =>
@@ -738,6 +742,8 @@ describe('getGameById detail enrichment', () => {
       fetchPlusMonthly: () => Effect.succeed([]),
       fetchSearchPage: () =>
         Effect.succeed({ candidates: [], isLast: true, rawCount: 0 }),
+      fetchBrowsePage: () => Effect.succeed({ concepts: [], isLast: true }),
+      fetchGenres: () => Effect.succeed([]),
       fetchProductPrice: () =>
         Effect.succeed({ plusOffer: null, standard: null }),
       fetchProductDetail: () => Effect.fail(upstream('boom')),
@@ -782,6 +788,8 @@ describe('upstream error propagation on all list tabs', () => {
       fetchPlusMonthly: () => Effect.succeed([]),
       fetchSearchPage: () =>
         Effect.succeed({ candidates: [], isLast: true, rawCount: 0 }),
+      fetchBrowsePage: () => Effect.succeed({ concepts: [], isLast: true }),
+      fetchGenres: () => Effect.succeed([]),
       fetchProductPrice: () =>
         Effect.succeed({ plusOffer: null, standard: null }),
       fetchProductDetail: () => Effect.fail(error),
@@ -852,6 +860,8 @@ describe('upstream error propagation on all list tabs', () => {
       fetchPlusMonthly: () => Effect.succeed([]),
       fetchSearchPage: () =>
         Effect.succeed({ candidates: [], isLast: true, rawCount: 0 }),
+      fetchBrowsePage: () => Effect.succeed({ concepts: [], isLast: true }),
+      fetchGenres: () => Effect.succeed([]),
       fetchProductPrice: () =>
         Effect.succeed({ plusOffer: null, standard: null }),
       fetchProductDetail: () =>
@@ -904,6 +914,8 @@ describe('gamesService cache TTL (TestClock)', () => {
       fetchPlusMonthly: () => Effect.succeed([]),
       fetchSearchPage: () =>
         Effect.succeed({ candidates: [], isLast: true, rawCount: 0 }),
+      fetchBrowsePage: () => Effect.succeed({ concepts: [], isLast: true }),
+      fetchGenres: () => Effect.succeed([]),
       fetchProductPrice: () =>
         Effect.succeed({ plusOffer: null, standard: null }),
       fetchProductDetail: () =>

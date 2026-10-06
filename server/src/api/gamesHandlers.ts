@@ -63,6 +63,14 @@ export const gamesGroupLive = HttpApiBuilder.group(
           }),
         search: ({ query }) =>
           games.searchGames(query.q, query.offset, query.size),
+        genres: () => games.getGenres(),
+        browse: ({ query }) =>
+          games.getBrowseGames(
+            query.genre,
+            query.order,
+            query.offset,
+            query.size,
+          ),
         getById: ({ params }) =>
           games
             .getGameById(params.id)

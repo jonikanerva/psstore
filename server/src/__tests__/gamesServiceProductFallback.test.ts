@@ -83,6 +83,8 @@ const harness = (behaviour: Partial<Behaviour> = {}) => {
         calls.detail += 1
         return (behaviour.detail ?? (() => Effect.succeed(detail())))()
       }),
+    fetchBrowsePage: () => Effect.succeed({ concepts: [], isLast: true }),
+    fetchGenres: () => Effect.succeed([]),
     fetchProductPrice: () =>
       Effect.suspend(() => {
         calls.price += 1
