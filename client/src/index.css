@@ -270,6 +270,13 @@ body {
   color: var(--muted-text-color);
 }
 
+.game-card--preorder {
+  display: block;
+  margin-top: 2px;
+  font-weight: 700;
+  color: var(--text-color);
+}
+
 .game-card--price {
   font-weight: 700;
   font-size: 14px;

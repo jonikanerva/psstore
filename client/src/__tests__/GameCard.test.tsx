@@ -117,6 +117,30 @@ describe('GameCard', () => {
     expect(screen.getByText('PS+ Save 10%')).toBeInTheDocument()
   })
 
+  it('labels an unreleased game as Pre-order when the view asks for it', async () => {
+    await renderWithRouter(
+      <GameCard game={{ ...game, preOrder: true }} showPreOrder />,
+    )
+
+    const label = screen.getByText('Pre-order')
+    expect(label).toHaveClass('game-card--preorder')
+    expect(label.closest('.game-card--date')?.textContent).toBe(
+      '15 Jun 2025 Pre-order',
+    )
+  })
+
+  it('shows no Pre-order label for a released game', async () => {
+    await renderWithRouter(<GameCard game={game} showPreOrder />)
+
+    expect(screen.queryByText('Pre-order')).not.toBeInTheDocument()
+  })
+
+  it('shows no Pre-order label when the view does not ask for it', async () => {
+    await renderWithRouter(<GameCard game={{ ...game, preOrder: true }} />)
+
+    expect(screen.queryByText('Pre-order')).not.toBeInTheDocument()
+  })
+
   it('omits the PS+ indicator when plusUpsellText is null', async () => {
     await renderWithRouter(<GameCard game={game} />)
 

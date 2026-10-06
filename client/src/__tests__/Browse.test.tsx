@@ -24,7 +24,7 @@ import { readBrowseParams } from '../modules/browseParams'
 import { SearchContext } from '../modules/searchContext'
 import { parseSearch, stringifySearch } from '../modules/searchTerm'
 
-const game = (id: string, name: string): Game => ({
+const game = (id: string, name: string, preOrder = false): Game => ({
   id,
   name,
   date: '2024-01-01T00:00:00.000Z',
@@ -38,7 +38,7 @@ const game = (id: string, name: string): Game => ({
   genres: [],
   description: '',
   studio: '',
-  preOrder: false,
+  preOrder,
   plusUpsellText: null,
   plusOffer: null,
   idKind: 'product',
@@ -352,6 +352,22 @@ describe('Browse', () => {
     act(scrollToEnd)
     await settle()
     expect(browseCalls()).toHaveLength(1)
+  })
+
+  it('labels only the unreleased games as Pre-order', async () => {
+    browseHandler = () =>
+      json(
+        page(
+          [game('EP1-A', 'Alpha', true), game('EP1-B', 'Beta', false)],
+          null,
+        ),
+      )
+    await renderBrowseAt('/browse?genre=ACTION&order=newest')
+    await screen.findByText('Alpha')
+
+    const labels = screen.getAllByText('Pre-order')
+    expect(labels).toHaveLength(1)
+    expect(labels[0]?.closest('a')).toHaveAttribute('data-game-id', 'EP1-A')
   })
 
   it('says so when the genre has no PS5 game', async () => {

@@ -10,6 +10,9 @@ interface GameCardProps {
   showPrice?: boolean
   // Open the internal game page even for a concept id.
   internalLink?: boolean
+  // Label a game that is not released yet. BROWSE mixes released and
+  // unreleased games, so the label saves reading the date.
+  showPreOrder?: boolean
 }
 
 const formatDate = (value: string): string => {
@@ -42,6 +45,7 @@ const GameCard = ({
   game,
   showPrice = true,
   internalLink = false,
+  showPreOrder = false,
 }: GameCardProps) => {
   const hasDiscount =
     Boolean(game.originalPrice) && game.originalPrice !== game.price
@@ -69,7 +73,15 @@ const GameCard = ({
           {game.name}
         </div>
         <div className="game-card--meta">
-          <span className="game-card--date">{formatDate(game.date)}</span>
+          <span className="game-card--date">
+            {formatDate(game.date)}
+            {showPreOrder && game.preOrder && (
+              <>
+                {/* The space keeps date and label apart in the link name. */}{' '}
+                <span className="game-card--preorder">Pre-order</span>
+              </>
+            )}
+          </span>
           {showPrice && (
             <span className="game-card--price">
               {isConcept ? (
