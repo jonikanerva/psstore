@@ -778,3 +778,69 @@ body {
   outline: 2px solid var(--focus-color);
   outline-offset: 1px;
 }
+
+.browse-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: flex-end;
+  padding-bottom: 8px;
+}
+
+.browse-form--field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.browse-form--label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted-text-color);
+}
+
+.browse-form--select {
+  min-width: 0;
+  width: 260px;
+  max-width: 100%;
+  min-height: 36px;
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 14px;
+  color: inherit;
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+}
+
+.browse-form--button {
+  min-width: 24px;
+  min-height: 36px;
+  padding: 6px 16px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-color);
+  background: var(--button-color);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.browse-form--select:focus-visible,
+.browse-form--button:focus-visible {
+  outline: 2px solid var(--focus-color);
+  outline-offset: 1px;
+}
+
+@media (width <= 600px) {
+  .browse-form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .browse-form--select {
+    width: 100%;
+  }
+}

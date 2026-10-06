@@ -3,7 +3,6 @@ import { DateTime } from 'luxon'
 import type { Game } from '@psstore/shared'
 import { useFocusReturn, viewKeyFor } from '../modules/focusReturn'
 import { pdpOriginForPath } from '../modules/pdpOrigin'
-import { readSearchTerm } from '../modules/searchTerm'
 import Image from './Image'
 
 interface GameCardProps {
@@ -57,10 +56,7 @@ const GameCard = ({
   const focusReturn = useFocusReturn()
   const viewKey = useRouterState({
     select: (state) =>
-      viewKeyFor(
-        state.location.pathname,
-        readSearchTerm(state.location.search),
-      ),
+      viewKeyFor(state.location.pathname, state.location.search),
   })
 
   const body = (

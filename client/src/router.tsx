@@ -3,8 +3,10 @@ import {
   createRoute,
   createRouter,
   redirect,
+  type SearchSchemaInput,
 } from '@tanstack/react-router'
 import AppShell from './components/AppShell'
+import Browse from './components/Browse'
 import Details from './components/Details'
 import Games from './components/Games'
 import Purchased from './components/Purchased'
@@ -16,6 +18,7 @@ import {
   fetchNewGames,
   fetchUpcomingGames,
 } from './modules/psnStore'
+import { readBrowseParams } from './modules/browseParams'
 import {
   parseSearch,
   readSearchTerm,
@@ -72,6 +75,17 @@ const monthlyRoute = createRoute({
   ),
 })
 
+const browseRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'browse',
+  // The input type keeps both keys optional, so a link to `/browse` needs no
+  // search values.
+  validateSearch: (
+    search: { genre?: unknown; order?: unknown } & SearchSchemaInput,
+  ) => readBrowseParams(search),
+  component: () => <Browse params={browseRoute.useSearch()} />,
+})
+
 const wishlistRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'wishlist',
@@ -122,6 +136,7 @@ const routeTree = rootRoute.addChildren([
   upcomingRoute,
   discountedRoute,
   monthlyRoute,
+  browseRoute,
   wishlistRoute,
   purchasedRoute,
   detailsRoute,

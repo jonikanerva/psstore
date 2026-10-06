@@ -6,6 +6,7 @@ const TABS: readonly { to: TabPath; label: string }[] = [
   { to: '/upcoming', label: 'Upcoming' },
   { to: '/discounted', label: 'Discounted' },
   { to: '/monthly', label: 'Monthly' },
+  { to: '/browse', label: 'Browse' },
   { to: '/wishlist', label: 'Wishlist' },
   { to: '/purchased', label: 'Purchased' },
 ]
