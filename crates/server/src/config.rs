@@ -26,6 +26,9 @@ pub struct Config {
     /// The log line format (`PSSTORE_LOG_FORMAT`): `json`, the default, or
     /// `text`.
     pub log_format: LogFormat,
+    /// The Git commit of the deployment (`RAILWAY_GIT_COMMIT_SHA`). Railway
+    /// sets it on every deployment; a local run has none.
+    pub commit: Option<String>,
     /// The settings that had an invalid value. Each one uses its default.
     pub invalid: Vec<InvalidSetting>,
 }
@@ -35,6 +38,8 @@ pub struct Config {
 pub enum InvalidSetting {
     /// `PSSTORE_LOG_FORMAT` was not `json` or `text`.
     LogFormat,
+    /// `RAILWAY_GIT_COMMIT_SHA` was not 7 to 64 hexadecimal digits.
+    CommitSha,
 }
 
 impl InvalidSetting {
@@ -43,6 +48,26 @@ impl InvalidSetting {
     pub fn tag(self) -> &'static str {
         match self {
             Self::LogFormat => "invalid_log_format",
+            Self::CommitSha => "invalid_commit_sha",
+        }
+    }
+}
+
+/// The identity of the running build, for `GET /version`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BuildInfo {
+    /// The version of the server crate.
+    pub version: &'static str,
+    /// The Git commit of the deployment, or `unknown`.
+    pub commit: String,
+}
+
+impl Default for BuildInfo {
+    /// The crate version and an `unknown` commit.
+    fn default() -> Self {
+        Self {
+            version: env!("CARGO_PKG_VERSION"),
+            commit: "unknown".to_owned(),
         }
     }
 }
@@ -67,8 +92,8 @@ impl std::fmt::Debug for IgdbCredentials {
 }
 
 impl Config {
-    /// Reads `PORT`, `IGDB_CLIENT_ID`, `IGDB_CLIENT_SECRET`, and
-    /// `PSSTORE_LOG_FORMAT`.
+    /// Reads `PORT`, `IGDB_CLIENT_ID`, `IGDB_CLIENT_SECRET`,
+    /// `PSSTORE_LOG_FORMAT`, and `RAILWAY_GIT_COMMIT_SHA`.
     #[must_use]
     pub fn from_env() -> Self {
         Self::from_lookup(|name| std::env::var(name).ok())
@@ -92,14 +117,38 @@ impl Config {
                 LogFormat::default()
             }),
         };
+        let commit = non_empty("RAILWAY_GIT_COMMIT_SHA").and_then(|value| {
+            let commit = parse_commit(&value);
+            if commit.is_none() {
+                invalid.push(InvalidSetting::CommitSha);
+            }
+            commit
+        });
         Self {
             port: parse_port(lookup("PORT").as_deref()),
             igdb,
             web_build: PathBuf::from(WEB_BUILD_DIR),
             log_format,
+            commit,
             invalid,
         }
     }
+
+    /// The build identity that `GET /version` shows.
+    #[must_use]
+    pub fn build_info(&self) -> BuildInfo {
+        BuildInfo {
+            commit: self.commit.clone().unwrap_or_else(|| "unknown".to_owned()),
+            ..BuildInfo::default()
+        }
+    }
+}
+
+/// A Git commit id: 7 to 64 hexadecimal digits. The check keeps any other
+/// text, such as a path, out of the `GET /version` answer.
+fn parse_commit(value: &str) -> Option<String> {
+    let valid = (7..=64).contains(&value.len()) && value.bytes().all(|b| b.is_ascii_hexdigit());
+    valid.then(|| value.to_owned())
 }
 
 /// The port of `PORT`. A missing, invalid, or zero value is the default port,
@@ -156,6 +205,40 @@ mod tests {
         let typo = config(&[("PSSTORE_LOG_FORMAT", "txt")]);
         assert_eq!(typo.log_format, LogFormat::Json);
         assert_eq!(typo.invalid, vec![InvalidSetting::LogFormat]);
+    }
+
+    #[test]
+    fn reads_the_deployed_commit() {
+        const SHA: &str = "0123456789abcdef0123456789abcdef01234567";
+        let local = config(&[]);
+        assert_eq!(local.commit, None);
+        assert_eq!(local.build_info().commit, "unknown");
+        assert_eq!(local.build_info().version, env!("CARGO_PKG_VERSION"));
+
+        let deployed = config(&[("RAILWAY_GIT_COMMIT_SHA", SHA)]);
+        assert_eq!(deployed.commit.as_deref(), Some(SHA));
+        assert_eq!(deployed.build_info().commit, SHA);
+        assert_eq!(deployed.invalid, Vec::<InvalidSetting>::new());
+        assert_eq!(
+            config(&[("RAILWAY_GIT_COMMIT_SHA", "4581df1")])
+                .commit
+                .as_deref(),
+            Some("4581df1")
+        );
+
+        let too_long = "a".repeat(65);
+        for value in [
+            "main",
+            "4581df",
+            "../../etc/passwd",
+            "4581df1 ",
+            too_long.as_str(),
+        ] {
+            let invalid = config(&[("RAILWAY_GIT_COMMIT_SHA", value)]);
+            assert_eq!(invalid.commit, None, "{value}");
+            assert_eq!(invalid.build_info().commit, "unknown", "{value}");
+            assert_eq!(invalid.invalid, vec![InvalidSetting::CommitSha], "{value}");
+        }
     }
 
     #[test]

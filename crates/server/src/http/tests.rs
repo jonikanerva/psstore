@@ -211,6 +211,7 @@ fn harness_with(
         critics: Arc::new(FixedScore(score)),
         account: account_api,
         site: Arc::new(site),
+        build: Arc::default(),
     };
     Harness {
         games,
@@ -1127,4 +1128,58 @@ async fn the_app_logs_each_request_with_a_request_id() {
     assert_eq!(lines.len(), 1, "{}", logs.text());
     assert_eq!(lines[0]["route"], "/api/games/new");
     assert!(is_uuid_v4(lines[0]["request_id"].as_str().unwrap()));
+}
+
+// ---- Version and readiness ---------------------------------------------------
+
+#[tokio::test]
+async fn version_answers_the_crate_version_and_the_commit() {
+    let h = harness();
+    let response = h.get("/version").await;
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(response.headers()[CONTENT_TYPE], "application/json");
+    let expected = format!(
+        r#"{{"version":"{}","commit":"unknown"}}"#,
+        env!("CARGO_PKG_VERSION")
+    );
+    assert_eq!(body(response).await, expected);
+
+    let mut deployed = harness();
+    deployed.state.build = Arc::new(crate::config::BuildInfo {
+        commit: "0123456789abcdef0123456789abcdef01234567".into(),
+        ..crate::config::BuildInfo::default()
+    });
+    let response = deployed.get("/version").await;
+    assert!(
+        body(response)
+            .await
+            .ends_with(r#","commit":"0123456789abcdef0123456789abcdef01234567"}"#)
+    );
+}
+
+#[tokio::test]
+async fn readiness_answers_ready_without_an_upstream_call() {
+    let h = harness();
+    let response = h.get("/readyz").await;
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(response.headers()[CONTENT_TYPE], "application/json");
+    assert_eq!(body(response).await, r#"{"ready":true}"#);
+    assert_eq!(h.account_calls(), 0);
+    assert!(h.games.pages.lock().unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn the_operational_routes_answer_get_only_and_come_before_the_client_build() {
+    let dir = BuildDir::new();
+    let h = dir.harness();
+    for path in ["/version", "/readyz"] {
+        let response = h.get_with(path, ACCEPT.as_str(), BROWSER_ACCEPT).await;
+        assert_eq!(response.status(), StatusCode::OK, "{path}");
+        assert!(body(response).await.starts_with('{'), "{path}");
+        let post = h
+            .send(Request::post(path).body(Body::empty()).unwrap())
+            .await;
+        assert_eq!(post.status(), StatusCode::NOT_FOUND, "{path}");
+        assert_eq!(body(post).await, "", "{path}");
+    }
 }

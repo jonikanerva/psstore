@@ -27,6 +27,7 @@ pub fn state(config: &Config, sony: &SonyContract) -> AppState {
         critics: critic_scores(config),
         account: account(sony, games),
         site: Arc::new(StaticSite::new(config.web_build.clone())),
+        build: Arc::new(config.build_info()),
     }
 }
 

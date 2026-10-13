@@ -900,6 +900,7 @@ fn router_for(h: &Harness) -> axum::Router {
         critics: Arc::new(NoCriticScores),
         account,
         site: Arc::new(StaticSite::new("/nonexistent/psstore-build")),
+        build: Arc::default(),
     })
 }
 

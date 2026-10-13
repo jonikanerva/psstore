@@ -8,6 +8,7 @@
 pub mod errors;
 mod games;
 pub mod params;
+mod probes;
 mod session;
 pub mod static_files;
 
@@ -29,6 +30,7 @@ use tower::util::MapRequestLayer;
 use tracing::Instrument;
 
 use crate::application::{AccountApi, CriticScores, GamesApi};
+use crate::config::BuildInfo;
 use static_files::StaticSite;
 
 /// The services and the client build that the handlers use.
@@ -38,6 +40,8 @@ pub struct AppState {
     pub critics: Arc<dyn CriticScores>,
     pub account: Arc<dyn AccountApi>,
     pub site: Arc<StaticSite>,
+    /// The build identity for `GET /version`.
+    pub build: Arc<BuildInfo>,
 }
 
 /// The service that `main` serves: the router behind trailing-slash
@@ -54,6 +58,8 @@ pub fn app(state: AppState) -> tower::util::MapRequest<Router, fn(Request) -> Re
 pub fn router(state: AppState) -> Router {
     Router::new()
         .route("/healthz", get(health).fallback(not_found))
+        .route("/readyz", get(probes::readiness).fallback(not_found))
+        .route("/version", get(probes::version).fallback(not_found))
         .route("/api/games/new", get(games::new_games).fallback(not_found))
         .route(
             "/api/games/upcoming",
