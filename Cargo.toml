@@ -1,0 +1,9 @@
+# The Rust workspace. The server crate is the only member.
+[workspace]
+members = ["server-rs"]
+resolver = "3"
+
+[profile.release]
+codegen-units = 1
+lto = "thin"
+strip = "symbols"

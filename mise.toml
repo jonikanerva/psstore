@@ -1,6 +1,12 @@
 # Source of truth for the toolchain. Update the mirrors in the same commit;
-# see STACK.md → 1. Language & Runtime.
+# see STACK.md → 1. Language & Runtime. The Rust version comes only from
+# rust-toolchain.toml.
+[settings]
+idiomatic_version_file_enable_tools = ["rust"]
+
 [tools]
 node = "24.21.0"
 pnpm = "12.8.1"
 gitleaks = "8.30.1"
+cargo-deny = "0.20.2"
+"cargo:cargo-audit" = "0.22.2"
