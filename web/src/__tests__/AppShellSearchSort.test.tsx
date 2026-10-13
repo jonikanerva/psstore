@@ -14,7 +14,7 @@ import {
   screen,
   waitFor,
 } from '@testing-library/react'
-import type { Game, PageResult } from '@psstore/shared'
+import type { Game, PageResult } from '@psstore/api-client'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import AppShell from '../components/AppShell'
 import SearchResults from '../components/SearchResults'

@@ -1,12 +1,12 @@
 import {
-  BROWSE_ORDER_LABELS,
   BROWSE_ORDERS,
-  filterGamesByName,
   isBrowseOrder,
   type BrowseOrder,
   type Game,
   type Genre,
-} from '@psstore/shared'
+} from '@psstore/api-client'
+import { filterGamesByName } from '../modules/filterGames'
+import { BROWSE_ORDER_LABELS } from '../modules/browseOrders'
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { useEffect, useId, useState } from 'react'

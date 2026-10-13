@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { Game } from '../types/game.js'
-import { NATURAL_DIRECTION, parsePrice, sortGames } from '../utils/sortGames.js'
+import type { Game } from '@psstore/api-client'
+import { NATURAL_DIRECTION, parsePrice, sortGames } from '../modules/sortGames'
 
 const game = (id: string, patch: Partial<Game> = {}): Game => ({
   id,

@@ -1,22 +1,17 @@
-import { Result, Schema } from 'effect'
-
 export const SEARCH_TERM_MAX_LENGTH = 100
 
 // The submitted term: trimmed, then capped at the server limit.
 export const normalizeSearchTerm = (value: string): string =>
   value.trim().slice(0, SEARCH_TERM_MAX_LENGTH)
 
-const searchParamsSchema = Schema.Struct({ q: Schema.optional(Schema.String) })
-
-const decodeSearchParams = Schema.decodeUnknownResult(searchParamsSchema)
-
 // Reads `q` from an untrusted location search record. A missing or non-string
 // value reads as the empty term.
 export const readSearchTerm = (search: unknown): string => {
-  const result = decodeSearchParams(search)
-  return Result.isSuccess(result)
-    ? normalizeSearchTerm(result.success.q ?? '')
-    : ''
+  if (typeof search !== 'object' || search === null) {
+    return ''
+  }
+  const q: unknown = Reflect.get(search, 'q')
+  return typeof q === 'string' ? normalizeSearchTerm(q) : ''
 }
 
 // The router reads and writes every search value as a plain string. The

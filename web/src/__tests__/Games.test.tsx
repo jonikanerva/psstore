@@ -10,7 +10,7 @@ import {
   it,
   vi,
 } from 'vitest'
-import type { Game, PageResult } from '@psstore/shared'
+import type { Game, PageResult } from '@psstore/api-client'
 import Games from '../components/Games'
 import { SearchContext } from '../modules/searchContext'
 import { renderWithRouter } from './testRouter'

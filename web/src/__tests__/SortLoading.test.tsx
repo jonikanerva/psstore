@@ -14,18 +14,18 @@ import {
   screen,
   waitFor,
 } from '@testing-library/react'
-import type { Game, PageResult } from '@psstore/shared'
+import type { Game, PageResult } from '@psstore/api-client'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import AppShell from '../components/AppShell'
 import Games from '../components/Games'
-import { fetchNewGames, fetchUpcomingGames } from '../modules/psnStore'
+import { fetchNewGames, fetchUpcomingGames } from '@psstore/api-client'
 
 // The prefetch has its own tests; here it would add requests to the counts.
 vi.mock('../modules/usePrefetchTabs', () => ({
   usePrefetchTabs: () => () => undefined,
 }))
 
-vi.mock('../modules/psnStore', () => ({
+vi.mock('@psstore/api-client', () => ({
   fetchNewGames: vi.fn(),
   fetchUpcomingGames: vi.fn(),
   fetchDiscountedGames: vi.fn(),

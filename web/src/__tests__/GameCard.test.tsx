@@ -1,7 +1,7 @@
 import { act, cleanup, screen, waitFor } from '@testing-library/react'
 import { Settings } from 'luxon'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import type { Game } from '@psstore/shared'
+import type { Game } from '@psstore/api-client'
 import GameCard from '../components/GameCard'
 import { readPdpOrigin } from '../modules/pdpOrigin'
 import { renderRoutes, renderWithRouter } from './testRouter'

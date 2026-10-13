@@ -20,7 +20,7 @@ import {
   waitFor,
 } from '@testing-library/react'
 import { StrictMode } from 'react'
-import type { Game, PageResult } from '@psstore/shared'
+import type { Game, PageResult } from '@psstore/api-client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import AppShell from '../components/AppShell'
 import Games from '../components/Games'
@@ -32,7 +32,8 @@ import {
   fetchMonthlyGames,
   fetchNewGames,
   fetchUpcomingGames,
-} from '../modules/psnStore'
+} from '@psstore/api-client'
+import { sentRequest } from './sentRequest'
 
 const RELEASED = '2025-09-18T17:00:00Z'
 // UPCOMING shows only a game released after the viewer's current local day.
@@ -74,17 +75,12 @@ const status = (code: number): Response => new Response(null, { status: code })
 interface Call {
   readonly url: string
   readonly method: string
-  readonly signal: AbortSignal | null | undefined
+  readonly signal: AbortSignal
   answered: boolean
   readonly respond: (response: Response) => void
 }
 
 let calls: Call[] = []
-
-const urlText = (input: RequestInfo | URL): string => {
-  if (typeof input === 'string') return input
-  return input instanceof URL ? input.href : input.url
-}
 
 const stubFetch = () => {
   calls = []
@@ -93,13 +89,14 @@ const stubFetch = () => {
     vi.fn(
       (input: RequestInfo | URL, init?: RequestInit) =>
         new Promise<Response>((resolve, reject) => {
-          init?.signal?.addEventListener('abort', () => {
+          const sent = sentRequest(input, init)
+          sent.signal.addEventListener('abort', () => {
             reject(new DOMException('Aborted', 'AbortError'))
           })
           calls.push({
-            url: urlText(input),
-            method: init?.method ?? 'GET',
-            signal: init?.signal,
+            url: sent.url,
+            method: sent.method,
+            signal: sent.signal,
             answered: false,
             respond: resolve,
           })
@@ -115,7 +112,7 @@ const callsTo = (prefix: string): Call[] =>
   calls.filter((call) => call.url.startsWith(prefix))
 
 const unanswered = (): Call[] =>
-  calls.filter((call) => !call.answered && call.signal?.aborted !== true)
+  calls.filter((call) => !call.answered && !call.signal.aborted)
 
 // Answers the oldest unanswered call to `prefix`, waiting for it to appear.
 const answer = async (prefix: string, response: Response): Promise<Call> => {
@@ -335,11 +332,11 @@ describe('usePrefetchTabs', () => {
       expect(call).toBeDefined()
       return call as Call
     })
-    expect(upcoming.signal?.aborted).toBe(false)
+    expect(upcoming.signal.aborted).toBe(false)
 
     fireEvent.click(screen.getByRole('link', { name: 'Discounted' }))
     await waitFor(() => {
-      expect(upcoming.signal?.aborted).toBe(true)
+      expect(upcoming.signal.aborted).toBe(true)
     })
     expect(client.getQueryState(['games', 'upcoming'])?.status).toBe('pending')
     expect(client.getQueryState(['games', 'upcoming'])?.error).toBeNull()
@@ -367,7 +364,7 @@ describe('usePrefetchTabs', () => {
     ).fetchNextPage()
 
     await waitFor(() => {
-      expect(upcoming.signal?.aborted).toBe(true)
+      expect(upcoming.signal.aborted).toBe(true)
     })
     await answer(`${NEW}?offset=60`, pageOf('Synthetic New Two', null))
     await waitFor(() => {
@@ -386,7 +383,7 @@ describe('usePrefetchTabs', () => {
 
     fireEvent.click(screen.getByRole('link', { name: 'Upcoming' }))
     await settle()
-    expect(upcoming.signal?.aborted).toBe(false)
+    expect(upcoming.signal.aborted).toBe(false)
     expect(callsTo(UPCOMING)).toHaveLength(1)
 
     await answer(UPCOMING, pageOf('Synthetic Upcoming', 60, UNRELEASED))
@@ -419,7 +416,7 @@ describe('usePrefetchTabs', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'Sign out' }))
     await waitFor(() => {
-      expect(purchased.signal?.aborted).toBe(true)
+      expect(purchased.signal.aborted).toBe(true)
     })
     await answer('/api/session', status(204))
     await settle()
@@ -439,7 +436,7 @@ describe('usePrefetchTabs', () => {
     })
     unmount()
     await waitFor(() => {
-      expect(upcoming.signal?.aborted).toBe(true)
+      expect(upcoming.signal.aborted).toBe(true)
     })
   })
 

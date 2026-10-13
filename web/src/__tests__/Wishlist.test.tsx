@@ -17,11 +17,12 @@ import {
   screen,
   waitFor,
 } from '@testing-library/react'
-import type { Game, PageResult } from '@psstore/shared'
+import type { Game, PageResult } from '@psstore/api-client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import AppShell from '../components/AppShell'
 import Purchased from '../components/Purchased'
 import Wishlist from '../components/Wishlist'
+import { sentRequest, type SentRequest } from './sentRequest'
 
 // The prefetch has its own tests; here it would add requests to the counts.
 vi.mock('../modules/usePrefetchTabs', () => ({
@@ -56,20 +57,19 @@ const library = (games: Game[]): PageResult => ({
 
 const TOKEN = 'synthetic-npsso-0123456789abcdef'
 
-const urlText = (input: RequestInfo | URL): string => {
-  if (typeof input === 'string') return input
-  return input instanceof URL ? input.href : input.url
-}
-
-type Responder = (url: string, init: RequestInit | undefined) => Response
+type Responder = (url: string, init: SentRequest) => Response
 
 const stubFetch = (responder: Responder) => {
-  const mock = vi.fn((input: RequestInfo | URL, init?: RequestInit) =>
-    Promise.resolve(responder(urlText(input), init)),
-  )
+  const mock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+    const sent = sentRequest(input, init)
+    return Promise.resolve(responder(sent.url, sent))
+  })
   vi.stubGlobal('fetch', mock)
   return mock
 }
+
+const sentRequests = (mock: ReturnType<typeof stubFetch>): SentRequest[] =>
+  mock.mock.calls.map(([input, init]) => sentRequest(input, init))
 
 const status = (code: number): Response => new Response(null, { status: code })
 
@@ -119,12 +119,10 @@ const renderWishlist = async (search = '', initial = '/wishlist') => {
 }
 
 const methodsOf = (mock: ReturnType<typeof stubFetch>): string[] =>
-  mock.mock.calls.map(
-    ([url, init]) => `${init?.method ?? 'GET'} ${urlText(url)}`,
-  )
+  sentRequests(mock).map((sent) => `${sent.method} ${sent.url}`)
 
-const sessionOk = (init: RequestInit | undefined): Response | null =>
-  init?.method === 'POST' || init?.method === 'DELETE' ? status(204) : null
+const sessionOk = (init: SentRequest): Response | null =>
+  init.method === 'POST' || init.method === 'DELETE' ? status(204) : null
 
 describe('Wishlist', () => {
   let setItem: ReturnType<typeof vi.spyOn>
@@ -161,8 +159,8 @@ describe('Wishlist', () => {
     await renderWishlist()
     await screen.findByText('Synthetic Alpha')
     expect(methodsOf(mock)).toEqual(['GET /api/games/wishlist'])
-    expect(mock.mock.calls[0]?.[1]?.cache).toBe('no-store')
-    expect(mock.mock.calls[0]?.[1]?.credentials).toBe('same-origin')
+    expect(sentRequests(mock)[0]?.cache).toBe('no-store')
+    expect(sentRequests(mock)[0]?.credentials).toBe('same-origin')
   })
 
   it('shows the sign-in form on 401', async () => {
@@ -428,7 +426,7 @@ describe('Wishlist', () => {
   it('shows Sign out when only the wishlist exists and resets both lists', async () => {
     let signedOut = false
     const mock = stubFetch((_url, init) => {
-      if (init?.method === 'DELETE') {
+      if (init.method === 'DELETE') {
         signedOut = true
         return status(204)
       }
@@ -462,11 +460,11 @@ describe('Wishlist', () => {
   it('never writes the token or the list to browser storage', async () => {
     let signedIn = false
     stubFetch((_url, init) => {
-      if (init?.method === 'POST') {
+      if (init.method === 'POST') {
         signedIn = true
         return status(204)
       }
-      if (init?.method === 'DELETE') {
+      if (init.method === 'DELETE') {
         signedIn = false
         return status(204)
       }

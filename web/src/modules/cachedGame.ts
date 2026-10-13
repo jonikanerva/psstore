@@ -1,5 +1,5 @@
 import type { InfiniteData, QueryClient } from '@tanstack/react-query'
-import type { Game, PageResult } from '@psstore/shared'
+import type { Game, PageResult } from '@psstore/api-client'
 
 // Finds a game that a list view already loaded, so the game page can paint
 // the name, cover, and prices before its own request finishes. The result is

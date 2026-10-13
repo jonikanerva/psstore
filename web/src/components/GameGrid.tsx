@@ -1,4 +1,4 @@
-import type { Game } from '@psstore/shared'
+import type { Game } from '@psstore/api-client'
 import { useEffect, useRef, type ReactNode } from 'react'
 import { useRouterState } from '@tanstack/react-router'
 import {

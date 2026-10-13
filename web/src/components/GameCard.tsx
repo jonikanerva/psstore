@@ -1,6 +1,6 @@
 import { Link, useRouterState } from '@tanstack/react-router'
 import { DateTime } from 'luxon'
-import type { Game } from '@psstore/shared'
+import type { Game } from '@psstore/api-client'
 import { useFocusReturn, viewKeyFor } from '../modules/focusReturn'
 import { pdpOriginForPath } from '../modules/pdpOrigin'
 import Image from './Image'

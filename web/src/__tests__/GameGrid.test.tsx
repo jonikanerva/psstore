@@ -1,6 +1,6 @@
 import { cleanup, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { Game } from '@psstore/shared'
+import type { Game } from '@psstore/api-client'
 import GameGrid from '../components/GameGrid'
 import { renderWithRouter } from './testRouter'
 

@@ -3,13 +3,13 @@ import {
   InfiniteQueryObserver,
   type QueryClient,
 } from '@tanstack/react-query'
-import type { PageResult } from '@psstore/shared'
+import type { PageResult } from '@psstore/api-client'
 import {
   fetchDiscountedGames,
   fetchMonthlyGames,
   fetchNewGames,
   fetchUpcomingGames,
-} from './psnStore'
+} from '@psstore/api-client'
 
 export const PAGE_SIZE = 60
 

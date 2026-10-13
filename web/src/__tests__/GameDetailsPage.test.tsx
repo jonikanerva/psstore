@@ -2,9 +2,9 @@ import { onlineManager, QueryClient } from '@tanstack/react-query'
 import { act, cleanup, screen, waitFor } from '@testing-library/react'
 import { Settings } from 'luxon'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { Game } from '@psstore/shared'
+import type { Game } from '@psstore/api-client'
 import GameDetailsPage from '../components/GameDetailsPage'
-import { HttpError } from '../modules/psnStore'
+import { ApiError } from '@psstore/api-client'
 import { renderWithRouter } from './testRouter'
 
 const baseGame: Game = {
@@ -27,8 +27,8 @@ const baseGame: Game = {
   idKind: 'product',
 }
 
-vi.mock('../modules/psnStore', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../modules/psnStore')>()),
+vi.mock('@psstore/api-client', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@psstore/api-client')>()),
   fetchGame: vi.fn(),
   fetchPurchasedGames: vi.fn(),
   fetchWishlistGames: vi.fn(),
@@ -39,9 +39,13 @@ describe('GameDetailsPage', () => {
     vi.clearAllMocks()
     Settings.defaultZone = 'UTC'
     const { fetchPurchasedGames, fetchWishlistGames } =
-      await import('../modules/psnStore')
-    vi.mocked(fetchPurchasedGames).mockRejectedValue(new HttpError(401))
-    vi.mocked(fetchWishlistGames).mockRejectedValue(new HttpError(401))
+      await import('@psstore/api-client')
+    vi.mocked(fetchPurchasedGames).mockRejectedValue(
+      new ApiError(401, 'session_rejected'),
+    )
+    vi.mocked(fetchWishlistGames).mockRejectedValue(
+      new ApiError(401, 'session_rejected'),
+    )
   })
 
   afterEach(() => {
@@ -51,7 +55,7 @@ describe('GameDetailsPage', () => {
   })
 
   it('renders game details when loaded', async () => {
-    const { fetchGame } = await import('../modules/psnStore')
+    const { fetchGame } = await import('@psstore/api-client')
     vi.mocked(fetchGame).mockResolvedValue(baseGame)
 
     await renderWithRouter(<GameDetailsPage gameId={baseGame.id} />)
@@ -65,7 +69,7 @@ describe('GameDetailsPage', () => {
   })
 
   it('shows the critic score in a price-style box with an accessible name', async () => {
-    const { fetchGame } = await import('../modules/psnStore')
+    const { fetchGame } = await import('@psstore/api-client')
     vi.mocked(fetchGame).mockResolvedValue({ ...baseGame, criticScore: 84 })
 
     await renderWithRouter(<GameDetailsPage gameId={baseGame.id} />)
@@ -85,7 +89,7 @@ describe('GameDetailsPage', () => {
   })
 
   it('shows no score box when there is no score', async () => {
-    const { fetchGame } = await import('../modules/psnStore')
+    const { fetchGame } = await import('@psstore/api-client')
     vi.mocked(fetchGame).mockResolvedValue(baseGame)
 
     await renderWithRouter(<GameDetailsPage gameId={baseGame.id} />)
@@ -99,7 +103,7 @@ describe('GameDetailsPage', () => {
   })
 
   it('renders description section only when description exists', async () => {
-    const { fetchGame } = await import('../modules/psnStore')
+    const { fetchGame } = await import('@psstore/api-client')
     vi.mocked(fetchGame).mockResolvedValue(baseGame)
 
     await renderWithRouter(<GameDetailsPage gameId={baseGame.id} />)
@@ -110,7 +114,7 @@ describe('GameDetailsPage', () => {
   })
 
   it('hides description section when description is empty', async () => {
-    const { fetchGame } = await import('../modules/psnStore')
+    const { fetchGame } = await import('@psstore/api-client')
     vi.mocked(fetchGame).mockResolvedValue({ ...baseGame, description: '' })
 
     await renderWithRouter(<GameDetailsPage gameId={baseGame.id} />)
@@ -123,7 +127,7 @@ describe('GameDetailsPage', () => {
   })
 
   it('renders media section only when screenshots or videos exist', async () => {
-    const { fetchGame } = await import('../modules/psnStore')
+    const { fetchGame } = await import('@psstore/api-client')
     vi.mocked(fetchGame).mockResolvedValue({
       ...baseGame,
       screenshots: [],
@@ -140,7 +144,7 @@ describe('GameDetailsPage', () => {
   })
 
   it('shows error state on fetch failure', async () => {
-    const { fetchGame } = await import('../modules/psnStore')
+    const { fetchGame } = await import('@psstore/api-client')
     vi.mocked(fetchGame).mockRejectedValue(new Error('not found'))
 
     await renderWithRouter(<GameDetailsPage gameId="bad-id" />)
@@ -170,9 +174,11 @@ describe('GameDetailsPage', () => {
     })
 
     it('shows the library entry with a store link', async () => {
-      const { fetchGame, fetchPurchasedGames, HttpError } =
-        await import('../modules/psnStore')
-      vi.mocked(fetchGame).mockRejectedValue(new HttpError(404))
+      const { fetchGame, fetchPurchasedGames, ApiError } =
+        await import('@psstore/api-client')
+      vi.mocked(fetchGame).mockRejectedValue(
+        new ApiError(404, 'game_not_found'),
+      )
       vi.mocked(fetchPurchasedGames).mockResolvedValue(library([owned]))
 
       await renderWithRouter(<GameDetailsPage gameId={owned.id} />)
@@ -189,9 +195,11 @@ describe('GameDetailsPage', () => {
     })
 
     it('says not found when the game is not in the library', async () => {
-      const { fetchGame, fetchPurchasedGames, HttpError } =
-        await import('../modules/psnStore')
-      vi.mocked(fetchGame).mockRejectedValue(new HttpError(404))
+      const { fetchGame, fetchPurchasedGames, ApiError } =
+        await import('@psstore/api-client')
+      vi.mocked(fetchGame).mockRejectedValue(
+        new ApiError(404, 'game_not_found'),
+      )
       vi.mocked(fetchPurchasedGames).mockResolvedValue(library([]))
 
       await renderWithRouter(<GameDetailsPage gameId={owned.id} />)
@@ -202,10 +210,14 @@ describe('GameDetailsPage', () => {
     })
 
     it('says not found when the user is signed out', async () => {
-      const { fetchGame, fetchPurchasedGames, HttpError } =
-        await import('../modules/psnStore')
-      vi.mocked(fetchGame).mockRejectedValue(new HttpError(404))
-      vi.mocked(fetchPurchasedGames).mockRejectedValue(new HttpError(401))
+      const { fetchGame, fetchPurchasedGames, ApiError } =
+        await import('@psstore/api-client')
+      vi.mocked(fetchGame).mockRejectedValue(
+        new ApiError(404, 'game_not_found'),
+      )
+      vi.mocked(fetchPurchasedGames).mockRejectedValue(
+        new ApiError(401, 'session_rejected'),
+      )
 
       await renderWithRouter(<GameDetailsPage gameId={owned.id} />)
 
@@ -215,9 +227,11 @@ describe('GameDetailsPage', () => {
     })
 
     it('does not read either list for an upstream failure', async () => {
-      const { fetchGame, fetchPurchasedGames, fetchWishlistGames, HttpError } =
-        await import('../modules/psnStore')
-      vi.mocked(fetchGame).mockRejectedValue(new HttpError(502))
+      const { fetchGame, fetchPurchasedGames, fetchWishlistGames, ApiError } =
+        await import('@psstore/api-client')
+      vi.mocked(fetchGame).mockRejectedValue(
+        new ApiError(502, 'upstream_unavailable'),
+      )
 
       await renderWithRouter(<GameDetailsPage gameId={owned.id} />)
 
@@ -229,9 +243,11 @@ describe('GameDetailsPage', () => {
     })
 
     it('shows a wishlist entry with a product store link', async () => {
-      const { fetchGame, fetchWishlistGames, HttpError } =
-        await import('../modules/psnStore')
-      vi.mocked(fetchGame).mockRejectedValue(new HttpError(404))
+      const { fetchGame, fetchWishlistGames, ApiError } =
+        await import('@psstore/api-client')
+      vi.mocked(fetchGame).mockRejectedValue(
+        new ApiError(404, 'game_not_found'),
+      )
       vi.mocked(fetchWishlistGames).mockResolvedValue(
         library([{ ...owned, name: 'Wished Bundle' }]),
       )
@@ -248,9 +264,11 @@ describe('GameDetailsPage', () => {
     })
 
     it('shows a wishlist concept entry with a concept store link', async () => {
-      const { fetchGame, fetchWishlistGames, HttpError } =
-        await import('../modules/psnStore')
-      vi.mocked(fetchGame).mockRejectedValue(new HttpError(404))
+      const { fetchGame, fetchWishlistGames, ApiError } =
+        await import('@psstore/api-client')
+      vi.mocked(fetchGame).mockRejectedValue(
+        new ApiError(404, 'game_not_found'),
+      )
       vi.mocked(fetchWishlistGames).mockResolvedValue(
         library([
           {
@@ -274,9 +292,11 @@ describe('GameDetailsPage', () => {
     })
 
     it('reads no other list when a loaded list already holds the game', async () => {
-      const { fetchGame, fetchPurchasedGames, fetchWishlistGames, HttpError } =
-        await import('../modules/psnStore')
-      vi.mocked(fetchGame).mockRejectedValue(new HttpError(404))
+      const { fetchGame, fetchPurchasedGames, fetchWishlistGames, ApiError } =
+        await import('@psstore/api-client')
+      vi.mocked(fetchGame).mockRejectedValue(
+        new ApiError(404, 'game_not_found'),
+      )
       const queryClient = new QueryClient({
         defaultOptions: { queries: { retry: false } },
       })
@@ -300,7 +320,7 @@ describe('GameDetailsPage', () => {
   })
 
   it('renders a PS Plus row with Sony upsellText verbatim when set', async () => {
-    const { fetchGame } = await import('../modules/psnStore')
+    const { fetchGame } = await import('@psstore/api-client')
     vi.mocked(fetchGame).mockResolvedValue({
       ...baseGame,
       plusUpsellText: 'Save 10%',
@@ -316,7 +336,7 @@ describe('GameDetailsPage', () => {
   })
 
   it('omits the PS Plus row when plusUpsellText is null', async () => {
-    const { fetchGame } = await import('../modules/psnStore')
+    const { fetchGame } = await import('@psstore/api-client')
     vi.mocked(fetchGame).mockResolvedValue(baseGame)
 
     await renderWithRouter(<GameDetailsPage gameId={baseGame.id} />)
@@ -329,7 +349,7 @@ describe('GameDetailsPage', () => {
   })
 
   it('shows the Standard and PS Plus prices as labelled values', async () => {
-    const { fetchGame } = await import('../modules/psnStore')
+    const { fetchGame } = await import('@psstore/api-client')
     vi.mocked(fetchGame).mockResolvedValue({
       ...baseGame,
       plusOffer: { kind: 'price', price: '€44,95' },
@@ -344,7 +364,7 @@ describe('GameDetailsPage', () => {
   })
 
   it('shows Included under PS Plus for a subscription game', async () => {
-    const { fetchGame } = await import('../modules/psnStore')
+    const { fetchGame } = await import('@psstore/api-client')
     vi.mocked(fetchGame).mockResolvedValue({
       ...baseGame,
       plusOffer: { kind: 'included' },
@@ -357,7 +377,7 @@ describe('GameDetailsPage', () => {
   })
 
   it('shows only the standard price when there is no Plus offer', async () => {
-    const { fetchGame } = await import('../modules/psnStore')
+    const { fetchGame } = await import('@psstore/api-client')
     vi.mocked(fetchGame).mockResolvedValue(baseGame)
 
     await renderWithRouter(<GameDetailsPage gameId={baseGame.id} />)
@@ -367,7 +387,7 @@ describe('GameDetailsPage', () => {
   })
 
   it('shows the upsell text only under the PS Plus label when the offer is null', async () => {
-    const { fetchGame } = await import('../modules/psnStore')
+    const { fetchGame } = await import('@psstore/api-client')
     vi.mocked(fetchGame).mockResolvedValue({
       ...baseGame,
       plusOffer: null,
@@ -383,7 +403,7 @@ describe('GameDetailsPage', () => {
   })
 
   it('treats a missing plusOffer key from an older cached payload as absent', async () => {
-    const { fetchGame } = await import('../modules/psnStore')
+    const { fetchGame } = await import('@psstore/api-client')
     const legacy = { ...baseGame }
     Reflect.deleteProperty(legacy, 'plusOffer')
     vi.mocked(fetchGame).mockResolvedValue(legacy)
@@ -395,7 +415,7 @@ describe('GameDetailsPage', () => {
   })
 
   it('renders the release date as day, abbreviated month, year (en-GB)', async () => {
-    const { fetchGame } = await import('../modules/psnStore')
+    const { fetchGame } = await import('@psstore/api-client')
     vi.mocked(fetchGame).mockResolvedValue({
       ...baseGame,
       date: '2025-06-15T23:59:59Z',
@@ -409,7 +429,7 @@ describe('GameDetailsPage', () => {
   })
 
   it('renders Unknown for an empty release date', async () => {
-    const { fetchGame } = await import('../modules/psnStore')
+    const { fetchGame } = await import('@psstore/api-client')
     vi.mocked(fetchGame).mockResolvedValue({ ...baseGame, date: '' })
 
     await renderWithRouter(<GameDetailsPage gameId={baseGame.id} />)
@@ -420,7 +440,7 @@ describe('GameDetailsPage', () => {
   })
 
   it('links to the English Finnish-store product page', async () => {
-    const { fetchGame } = await import('../modules/psnStore')
+    const { fetchGame } = await import('@psstore/api-client')
     vi.mocked(fetchGame).mockResolvedValue(baseGame)
 
     await renderWithRouter(<GameDetailsPage gameId={baseGame.id} />)
@@ -439,7 +459,7 @@ describe('GameDetailsPage', () => {
   })
 
   it('shows the offline state instead of the spinner while the fetch is paused', async () => {
-    const { fetchGame } = await import('../modules/psnStore')
+    const { fetchGame } = await import('@psstore/api-client')
     onlineManager.setOnline(false)
 
     const { container } = await renderWithRouter(
@@ -454,7 +474,7 @@ describe('GameDetailsPage', () => {
   })
 
   it('loads the game when the connection returns', async () => {
-    const { fetchGame } = await import('../modules/psnStore')
+    const { fetchGame } = await import('@psstore/api-client')
     vi.mocked(fetchGame).mockResolvedValue(baseGame)
     onlineManager.setOnline(false)
     await renderWithRouter(<GameDetailsPage gameId={baseGame.id} />)
@@ -469,7 +489,7 @@ describe('GameDetailsPage', () => {
   })
 
   it('shows the skeleton, not the offline state, while an online fetch is pending', async () => {
-    const { fetchGame } = await import('../modules/psnStore')
+    const { fetchGame } = await import('@psstore/api-client')
     vi.mocked(fetchGame).mockReturnValue(new Promise(() => undefined))
 
     const { container } = await renderWithRouter(
@@ -481,7 +501,7 @@ describe('GameDetailsPage', () => {
   })
 
   it('paints a game from the list cache before its own request finishes', async () => {
-    const { fetchGame } = await import('../modules/psnStore')
+    const { fetchGame } = await import('@psstore/api-client')
     vi.mocked(fetchGame).mockReturnValue(new Promise(() => undefined))
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false, gcTime: 0 } },
@@ -508,7 +528,7 @@ describe('GameDetailsPage', () => {
   })
 
   it('shows one status with the shared spinner while loading', async () => {
-    const { fetchGame } = await import('../modules/psnStore')
+    const { fetchGame } = await import('@psstore/api-client')
     vi.mocked(fetchGame).mockReturnValue(new Promise(() => undefined))
 
     const { container } = await renderWithRouter(

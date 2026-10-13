@@ -1,5 +1,8 @@
-import { isBrowseOrder, isGenreKey, type BrowseOrder } from '@psstore/shared'
-import { Result, Schema } from 'effect'
+import {
+  isBrowseOrder,
+  isGenreKey,
+  type BrowseOrder,
+} from '@psstore/api-client'
 
 export const BROWSE_PATH = '/browse'
 
@@ -11,22 +14,15 @@ export interface BrowseParams {
   readonly order: BrowseOrder | undefined
 }
 
-const browseSearchSchema = Schema.Struct({
-  genre: Schema.optional(Schema.Unknown),
-  order: Schema.optional(Schema.Unknown),
-})
-
-const decodeBrowseSearch = Schema.decodeUnknownResult(browseSearchSchema)
-
 // Reads `genre` and `order` from an untrusted location search record. The
 // genre key is checked by format here; the view also checks it against Sony's
 // genre list before it fetches.
 export const readBrowseParams = (search: unknown): BrowseParams => {
-  const result = decodeBrowseSearch(search)
-  if (Result.isFailure(result)) {
+  if (typeof search !== 'object' || search === null) {
     return { genre: undefined, order: undefined }
   }
-  const { genre, order } = result.success
+  const genre: unknown = Reflect.get(search, 'genre')
+  const order: unknown = Reflect.get(search, 'order')
   return {
     genre: typeof genre === 'string' && isGenreKey(genre) ? genre : undefined,
     order: isBrowseOrder(order) ? order : undefined,

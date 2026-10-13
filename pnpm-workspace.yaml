@@ -1,6 +1,5 @@
 packages:
   - 'web'
-  - 'shared'
   - 'packages/*'
   - 'tools/*'
 pmOnFail: error

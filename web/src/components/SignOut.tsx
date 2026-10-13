@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { SIGNED_IN_QUERY_KEYS } from '../modules/signedInQuery'
-import { signOut } from '../modules/psnStore'
+import { signOut } from '@psstore/api-client'
 
 interface SignOutProps {
   readonly onSignOut: () => void

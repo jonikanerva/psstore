@@ -1,13 +1,13 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { SIGNED_IN_QUERY_KEYS } from '../modules/signedInQuery'
-import { HttpError, signIn } from '../modules/psnStore'
+import { ApiError, signIn } from '@psstore/api-client'
 
 const PLAYSTATION_URL = 'https://www.playstation.com/'
 const NPSSO_URL = 'https://ca.account.sony.com/api/v1/ssocookie'
 
 const errorMessage = (error: unknown): string =>
-  error instanceof HttpError && (error.status === 400 || error.status === 401)
+  error instanceof ApiError && (error.status === 400 || error.status === 401)
     ? 'Sign-in failed. Check the token.'
     : 'Sony sign-in is unavailable. Try again later.'
 

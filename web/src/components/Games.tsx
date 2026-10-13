@@ -1,4 +1,5 @@
-import { filterGamesByName, sortGames } from '@psstore/shared'
+import { sortGames } from '../modules/sortGames'
+import { filterGamesByName } from '../modules/filterGames'
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { DateTime } from 'luxon'
 import {

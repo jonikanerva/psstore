@@ -14,10 +14,11 @@ import {
   waitFor,
   within,
 } from '@testing-library/react'
-import type { Game, PageResult } from '@psstore/shared'
+import type { Game, PageResult } from '@psstore/api-client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import AppShell from '../components/AppShell'
 import Purchased from '../components/Purchased'
+import { sentRequest, type SentRequest } from './sentRequest'
 
 // The prefetch has its own tests; here it would add requests to the counts.
 vi.mock('../modules/usePrefetchTabs', () => ({
@@ -52,20 +53,19 @@ const library = (games: Game[]): PageResult => ({
 
 const TOKEN = 'synthetic-npsso-0123456789abcdef'
 
-const urlText = (input: RequestInfo | URL): string => {
-  if (typeof input === 'string') return input
-  return input instanceof URL ? input.href : input.url
-}
-
-type Responder = (url: string, init: RequestInit | undefined) => Response
+type Responder = (url: string, init: SentRequest) => Response
 
 const stubFetch = (responder: Responder) => {
-  const mock = vi.fn((input: RequestInfo | URL, init?: RequestInit) =>
-    Promise.resolve(responder(urlText(input), init)),
-  )
+  const mock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+    const sent = sentRequest(input, init)
+    return Promise.resolve(responder(sent.url, sent))
+  })
   vi.stubGlobal('fetch', mock)
   return mock
 }
+
+const sentRequests = (mock: ReturnType<typeof stubFetch>): SentRequest[] =>
+  mock.mock.calls.map(([input, init]) => sentRequest(input, init))
 
 const status = (code: number): Response => new Response(null, { status: code })
 
@@ -106,9 +106,7 @@ const renderPurchased = async (search = '') => {
 }
 
 const methodsOf = (mock: ReturnType<typeof stubFetch>): string[] =>
-  mock.mock.calls.map(
-    ([url, init]) => `${init?.method ?? 'GET'} ${urlText(url)}`,
-  )
+  sentRequests(mock).map((sent) => `${sent.method} ${sent.url}`)
 
 describe('Purchased', () => {
   let setItem: ReturnType<typeof vi.spyOn>
@@ -219,7 +217,7 @@ describe('Purchased', () => {
   it('posts the token, clears the field and loads the library', async () => {
     let signedIn = false
     const mock = stubFetch((url, init) => {
-      if (init?.method === 'POST') {
+      if (init.method === 'POST') {
         signedIn = true
         return status(204)
       }
@@ -236,9 +234,9 @@ describe('Purchased', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Sign in' }))
 
     expect(await screen.findByText('Synthetic Alpha')).toBeInTheDocument()
-    const post = mock.mock.calls.find(([, init]) => init?.method === 'POST')
-    expect(post?.[1]?.body).toBe(JSON.stringify({ npsso: TOKEN }))
-    expect(post?.[1]?.credentials).toBe('same-origin')
+    const post = sentRequests(mock).find((sent) => sent.method === 'POST')
+    expect(await post?.body()).toBe(JSON.stringify({ npsso: TOKEN }))
+    expect(post?.credentials).toBe('same-origin')
     expect(methodsOf(mock)).toEqual([
       'GET /api/games/purchased',
       'POST /api/session',
@@ -248,7 +246,7 @@ describe('Purchased', () => {
 
   it('clears the field and shows an alert when the token is wrong', async () => {
     stubFetch((_url, init) =>
-      init?.method === 'POST' ? status(401) : status(401),
+      init.method === 'POST' ? status(401) : status(401),
     )
     await renderPurchased()
 
@@ -269,7 +267,7 @@ describe('Purchased', () => {
 
   it('shows a short upstream message when Sony is unavailable', async () => {
     stubFetch((_url, init) =>
-      init?.method === 'POST' ? status(502) : status(401),
+      init.method === 'POST' ? status(502) : status(401),
     )
     await renderPurchased()
 
@@ -390,7 +388,7 @@ describe('Purchased', () => {
   it('shows Sign out in the header only while the list exists', async () => {
     let signedIn = false
     stubFetch((_url, init) => {
-      if (init?.method === 'POST') {
+      if (init.method === 'POST') {
         signedIn = true
         return status(204)
       }
@@ -427,7 +425,7 @@ describe('Purchased', () => {
   it('signs out, drops the list and shows the form again', async () => {
     let signedOut = false
     const mock = stubFetch((_url, init) => {
-      if (init?.method === 'DELETE') {
+      if (init.method === 'DELETE') {
         signedOut = true
         return status(204)
       }
@@ -452,7 +450,7 @@ describe('Purchased', () => {
   it('clears the purchased query data on sign-out', async () => {
     let signedOut = false
     const mock = stubFetch((_url, init) => {
-      if (init?.method === 'DELETE') {
+      if (init.method === 'DELETE') {
         signedOut = true
         return status(204)
       }
@@ -474,7 +472,7 @@ describe('Purchased', () => {
 
   it('clears the purchased query data when signing out on another view', async () => {
     const mock = stubFetch((_url, init) =>
-      init?.method === 'DELETE' ? status(204) : status(500),
+      init.method === 'DELETE' ? status(204) : status(500),
     )
     const queryClient = new QueryClient()
     queryClient.setQueryData(
@@ -513,7 +511,7 @@ describe('Purchased', () => {
 
   it('shows an alert and keeps the list when sign-out fails', async () => {
     stubFetch((_url, init) =>
-      init?.method === 'DELETE'
+      init.method === 'DELETE'
         ? status(500)
         : Response.json(library([game('1', 'Synthetic Alpha', 'concept')])),
     )
@@ -540,11 +538,11 @@ describe('Purchased', () => {
   it('never writes the token or the list to browser storage', async () => {
     let signedIn = false
     stubFetch((_url, init) => {
-      if (init?.method === 'POST') {
+      if (init.method === 'POST') {
         signedIn = true
         return status(204)
       }
-      if (init?.method === 'DELETE') {
+      if (init.method === 'DELETE') {
         signedIn = false
         return status(204)
       }

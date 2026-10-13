@@ -5,7 +5,7 @@ import {
   NATURAL_DIRECTION,
   type GameSort,
   type SortField,
-} from '@psstore/shared'
+} from '../modules/sortGames'
 import {
   gamesFeatureForPath,
   gamesQueryOptions,

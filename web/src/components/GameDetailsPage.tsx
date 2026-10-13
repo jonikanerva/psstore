@@ -4,11 +4,11 @@ import { DateTime } from 'luxon'
 import { findCachedGame } from '../modules/cachedGame'
 import {
   fetchGame,
-  HttpError,
+  ApiError,
   type Game,
   type GameDetail,
   type PageResult,
-} from '../modules/psnStore'
+} from '@psstore/api-client'
 import { purchasedQueryOptions } from '../modules/purchasedQuery'
 import {
   PURCHASED_QUERY_KEY,
@@ -113,7 +113,7 @@ const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
     placeholderData: () => findCachedGame(queryClient, gameId),
   })
 
-  const missing = isError && error instanceof HttpError && error.status === 404
+  const missing = isError && error instanceof ApiError && error.status === 404
   // The user's own lists are read on a 404 only. A list already in memory that
   // holds the id makes the other list's request needless.
   const listHas = (key: readonly unknown[]): boolean =>

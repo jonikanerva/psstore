@@ -1,5 +1,5 @@
 import { QueryClient } from '@tanstack/react-query'
-import type { Game, PageResult } from '@psstore/shared'
+import type { Game, PageResult } from '@psstore/api-client'
 import { describe, expect, it } from 'vitest'
 import { readBrowseParams } from '../modules/browseParams'
 import { findCachedGame } from '../modules/cachedGame'

@@ -1,4 +1,4 @@
-import type { Game } from '@psstore/shared'
+import type { Game } from '@psstore/api-client'
 import { DateTime } from 'luxon'
 import { describe, expect, it } from 'vitest'
 import { nextLocalDayStart, splitByReleaseDay } from '../modules/releaseDay'

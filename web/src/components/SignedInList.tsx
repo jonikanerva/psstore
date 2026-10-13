@@ -1,10 +1,11 @@
-import { filterGamesByName, sortGames } from '@psstore/shared'
+import { sortGames } from '../modules/sortGames'
+import { filterGamesByName } from '../modules/filterGames'
 import { useQuery } from '@tanstack/react-query'
 import type { signedInQueryOptions } from '../modules/signedInQuery'
 import { useSearchQuery } from '../modules/searchContext'
 import { useSort } from '../modules/sortContext'
 import { normalizeSearchTerm } from '../modules/searchTerm'
-import { HttpError } from '../modules/psnStore'
+import { ApiError } from '@psstore/api-client'
 import Error from './Error'
 import GameGrid from './GameGrid'
 import Offline from './Offline'
@@ -38,7 +39,7 @@ const SignedInList = ({
   }
 
   if (isError) {
-    if (error instanceof HttpError && error.status === 401) {
+    if (error instanceof ApiError && error.status === 401) {
       return <SignIn queryKey={query.queryKey} />
     }
     return (

@@ -1,6 +1,6 @@
 import { infiniteQueryOptions, queryOptions } from '@tanstack/react-query'
-import type { BrowseOrder, PageResult } from '@psstore/shared'
-import { fetchBrowseGames, fetchGenres } from './psnStore'
+import type { BrowseOrder, PageResult } from '@psstore/api-client'
+import { fetchBrowseGames, fetchGenres } from '@psstore/api-client'
 
 export const BROWSE_PAGE_SIZE = 60
 

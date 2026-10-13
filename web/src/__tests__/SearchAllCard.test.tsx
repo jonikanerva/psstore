@@ -15,10 +15,10 @@ import {
   within,
 } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { Game, PageResult } from '@psstore/shared'
+import type { Game, PageResult } from '@psstore/api-client'
 import AppShell from '../components/AppShell'
 import Games from '../components/Games'
-import { fetchNewGames } from '../modules/psnStore'
+import { fetchNewGames } from '@psstore/api-client'
 import {
   parseSearch,
   readSearchTerm,

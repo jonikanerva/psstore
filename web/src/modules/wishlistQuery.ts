@@ -1,4 +1,4 @@
-import { fetchWishlistGames } from './psnStore'
+import { fetchWishlistGames } from '@psstore/api-client'
 import { signedInQueryOptions, WISHLIST_QUERY_KEY } from './signedInQuery'
 
 export const wishlistQueryOptions = signedInQueryOptions(

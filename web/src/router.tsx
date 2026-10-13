@@ -17,7 +17,7 @@ import {
   fetchMonthlyGames,
   fetchNewGames,
   fetchUpcomingGames,
-} from './modules/psnStore'
+} from '@psstore/api-client'
 import { readBrowseParams } from './modules/browseParams'
 import {
   parseSearch,

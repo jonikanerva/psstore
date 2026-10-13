@@ -17,7 +17,7 @@ import {
   waitFor,
 } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { Game } from '@psstore/shared'
+import type { Game } from '@psstore/api-client'
 import AppShell from '../components/AppShell'
 import GameGrid from '../components/GameGrid'
 import { useSearchQuery } from '../modules/searchContext'

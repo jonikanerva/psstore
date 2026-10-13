@@ -18,11 +18,12 @@ import {
   within,
 } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { Game, GenreList, PageResult } from '@psstore/shared'
+import type { Game, GenreList, PageResult } from '@psstore/api-client'
 import Browse from '../components/Browse'
 import { readBrowseParams } from '../modules/browseParams'
 import { SearchContext } from '../modules/searchContext'
 import { parseSearch, stringifySearch } from '../modules/searchTerm'
+import { sentRequest } from './sentRequest'
 
 const game = (id: string, name: string, preOrder = false): Game => ({
   id,
@@ -66,7 +67,11 @@ const page = (games: Game[], nextOffset: number | null): PageResult => ({
 
 let browseHandler: (url: URL) => Response
 let genresHandler: () => Response
-let fetchMock: ReturnType<typeof vi.fn>
+let fetchMock: ReturnType<
+  typeof vi.fn<
+    (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
+  >
+>
 let observerCallbacks: IntersectionObserverCallback[]
 
 // Tells every grid sentinel that it scrolled into view.
@@ -81,7 +86,10 @@ const scrollToEnd = () => {
 
 const browseCalls = (): URL[] =>
   fetchMock.mock.calls
-    .map((call) => new URL(String(call[0]), 'http://localhost'))
+    .map(
+      ([input, init]) =>
+        new URL(sentRequest(input, init).url, 'http://localhost'),
+    )
     .filter((url) => url.pathname === '/api/games/browse')
 
 beforeEach(() => {
@@ -98,8 +106,8 @@ beforeEach(() => {
   )
   genresHandler = () => json(GENRES)
   browseHandler = () => json(page([game('EP1-A', 'Alpha')], null))
-  fetchMock = vi.fn((input: string) => {
-    const url = new URL(input, 'http://localhost')
+  fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+    const url = new URL(sentRequest(input, init).url, 'http://localhost')
     return Promise.resolve(
       url.pathname === '/api/games/genres'
         ? genresHandler()

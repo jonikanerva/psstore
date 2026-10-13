@@ -2,10 +2,12 @@ import { onlineManager } from '@tanstack/react-query'
 import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react'
 import { useState } from 'react'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
-import type { Game, GameSort, PageResult } from '@psstore/shared'
+import type { Game, PageResult } from '@psstore/api-client'
+import type { GameSort } from '../modules/sortGames'
 import SearchResults from '../components/SearchResults'
 import { SortContext } from '../modules/sortContext'
 import { renderWithRouter } from './testRouter'
+import { sentRequest } from './sentRequest'
 
 beforeAll(() => {
   vi.stubGlobal(
@@ -63,12 +65,15 @@ const respond = (body: PageResult): Response =>
   })
 
 const stubFetch = (handler: (url: URL) => Response | Promise<Response>) => {
-  const mock = vi.fn((input: string) =>
-    Promise.resolve(handler(new URL(input, 'http://localhost'))),
+  const mock = vi.fn((input: RequestInfo | URL, init?: RequestInit) =>
+    Promise.resolve(handler(sentUrl(input, init))),
   )
   vi.stubGlobal('fetch', mock)
   return mock
 }
+
+const sentUrl = (input: RequestInfo | URL, init?: RequestInit): URL =>
+  new URL(sentRequest(input, init).url, 'http://localhost')
 
 describe('SearchResults', () => {
   it('shows a loading state, then the games with a result count', async () => {
@@ -88,7 +93,8 @@ describe('SearchResults', () => {
     await renderWithRouter(<SearchResults term={'a & b <c> "d"'} />)
 
     await screen.findByText('A')
-    const url = new URL(fetchMock.mock.calls[0]?.[0] ?? '', 'http://localhost')
+    const [input, init] = fetchMock.mock.calls[0] ?? ['']
+    const url = sentUrl(input, init)
     expect(url.pathname).toBe('/api/games/search')
     expect(url.searchParams.get('q')).toBe('a & b <c> "d"')
     expect(url.searchParams.get('offset')).toBe('0')
@@ -223,8 +229,8 @@ describe('SearchResults', () => {
 
     expect(await screen.findByText('Beta')).toBeInTheDocument()
     expect(screen.getAllByText('Alpha')).toHaveLength(1)
-    const offsets = fetchMock.mock.calls.map((call) =>
-      new URL(call[0], 'http://localhost').searchParams.get('offset'),
+    const offsets = fetchMock.mock.calls.map(([input, init]) =>
+      sentUrl(input, init).searchParams.get('offset'),
     )
     expect(offsets).toEqual(['0', '50'])
     expect(screen.getByRole('status')).toHaveTextContent('2 PS5 games found')

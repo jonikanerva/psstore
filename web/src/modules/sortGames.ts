@@ -1,4 +1,4 @@
-import type { Game } from '../types/game.js'
+import type { Game } from '@psstore/api-client'
 
 export type SortField = 'date' | 'price' | 'name'
 export type SortDirection = 'asc' | 'desc'

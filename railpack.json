@@ -15,7 +15,6 @@
       "secrets": [],
       "commands": [
         "pnpm install --frozen-lockfile --filter @psstore/web...",
-        "pnpm --filter @psstore/shared run build",
         "pnpm --filter @psstore/web run build",
         "mkdir -p bin",
         "cargo build --release --locked --package psstore-server",

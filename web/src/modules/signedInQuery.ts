@@ -1,5 +1,5 @@
 import { queryOptions, type QueryKey } from '@tanstack/react-query'
-import type { PageResult } from '@psstore/shared'
+import type { PageResult } from '@psstore/api-client'
 
 export const PURCHASED_QUERY_KEY = ['purchased'] as const
 export const WISHLIST_QUERY_KEY = ['wishlist'] as const

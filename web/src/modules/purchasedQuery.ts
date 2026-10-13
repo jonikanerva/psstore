@@ -1,4 +1,4 @@
-import { fetchPurchasedGames } from './psnStore'
+import { fetchPurchasedGames } from '@psstore/api-client'
 import { PURCHASED_QUERY_KEY, signedInQueryOptions } from './signedInQuery'
 
 export const purchasedQueryOptions = signedInQueryOptions(

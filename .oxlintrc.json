@@ -14,7 +14,6 @@
     "node_modules/**",
     "build/**",
     "web/build/**",
-    "shared/dist/**",
     "packages/api-client/build/**",
     "packages/api-client/src/generated/**",
     "tools/sony-contract-bot/dist/**",
@@ -223,11 +222,7 @@
       "plugins": ["react"]
     },
     {
-      "files": [
-        "web/src/**/*.{ts,tsx}",
-        "shared/src/**/*.ts",
-        "tools/*/src/**/*.ts"
-      ],
+      "files": ["web/src/**/*.{ts,tsx}", "tools/*/src/**/*.ts"],
       "rules": {
         "no-restricted-imports": [
           "error",
@@ -242,13 +237,25 @@
                   "@effect/platform-node",
                   "@effect/platform-node/*"
                 ],
-                "message": "effect/http, effect/http-api, and @effect/platform-node are @stability unstable or server-only; STACK.md §8 bans them in the client, shared, and the tooling."
+                "message": "effect/http, effect/http-api, and @effect/platform-node are @stability unstable or server-only; STACK.md §8 bans them in the client and the tooling."
               }
             ]
           }
         ]
       },
       "plugins": ["typescript"]
+    },
+    {
+      "files": ["web/src/**/*.{ts,tsx}"],
+      "rules": {
+        "no-restricted-globals": [
+          "error",
+          {
+            "name": "fetch",
+            "message": "The web app calls the API only through @psstore/api-client."
+          }
+        ]
+      }
     },
     {
       "files": ["**/__tests__/**/*.{ts,tsx}", "**/*.test.{ts,tsx}"],

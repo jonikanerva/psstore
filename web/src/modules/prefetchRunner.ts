@@ -4,7 +4,7 @@ import {
   type QueryClient,
   type QueryKey,
 } from '@tanstack/react-query'
-import type { PageResult } from '@psstore/shared'
+import type { PageResult } from '@psstore/api-client'
 import {
   gamesFeatureForPath,
   gamesQueryOptions,
@@ -24,8 +24,8 @@ import {
   fetchPurchasedGames,
   fetchUpcomingGames,
   fetchWishlistGames,
-  HttpError,
-} from './psnStore'
+  ApiError,
+} from '@psstore/api-client'
 import { purchasedQueryOptions } from './purchasedQuery'
 import { PURCHASED_QUERY_KEY, WISHLIST_QUERY_KEY } from './signedInQuery'
 import { wishlistQueryOptions } from './wishlistQuery'
@@ -274,7 +274,7 @@ export const runPrefetch = async (
     if (outcome.kind === 'failed') {
       if (
         isSignedInTab(tab) &&
-        outcome.error instanceof HttpError &&
+        outcome.error instanceof ApiError &&
         outcome.error.status === 401
       ) {
         session.access = 'denied'

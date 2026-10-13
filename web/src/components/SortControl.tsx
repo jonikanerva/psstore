@@ -1,5 +1,5 @@
 import { useId } from 'react'
-import type { GameSort, SortField } from '@psstore/shared'
+import type { GameSort, SortField } from '../modules/sortGames'
 import { SORT_FIELD_LABELS } from '../modules/sortFields'
 
 interface SortControlProps {

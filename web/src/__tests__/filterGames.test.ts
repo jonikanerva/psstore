@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { Game } from '../types/game.js'
-import { filterGamesByName, sortByDateDesc } from '../utils/filters.js'
+import type { Game } from '@psstore/api-client'
+import { filterGamesByName } from '../modules/filterGames'
 
 const games: Game[] = [
   {
@@ -42,26 +42,6 @@ const games: Game[] = [
     idKind: 'product',
   },
 ]
-
-describe('filters', () => {
-  it('sorts newest first', () => {
-    expect(sortByDateDesc(games).map((g) => g.id)).toEqual(['1', '2'])
-  })
-
-  it('pushes invalid dates to the end', () => {
-    const first = games[0]
-    if (!first) {
-      throw new Error('fixture missing first game')
-    }
-    const withInvalid: Game[] = [
-      ...games,
-      { ...first, id: '3', date: '' },
-      { ...first, id: '4', date: 'not-a-date' },
-    ]
-    const sorted = sortByDateDesc(withInvalid)
-    expect(sorted.map((g) => g.id)).toEqual(['1', '2', '3', '4'])
-  })
-})
 
 describe('filterGamesByName', () => {
   const first = games[0]

@@ -1,4 +1,4 @@
-import type { GameSort, SortField } from '@psstore/shared'
+import type { GameSort, SortField } from './sortGames'
 
 export const SORT_FIELD_LABELS = {
   date: 'Date',
