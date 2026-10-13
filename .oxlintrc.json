@@ -14,7 +14,6 @@
     "node_modules/**",
     "build/**",
     "client/build/**",
-    "server/dist/**",
     "shared/dist/**",
     "tools/sony-contract-bot/dist/**",
     "coverage/**",
@@ -222,7 +221,11 @@
       "plugins": ["react"]
     },
     {
-      "files": ["server/src/**/*.ts"],
+      "files": [
+        "client/src/**/*.{ts,tsx}",
+        "shared/src/**/*.ts",
+        "tools/*/src/**/*.ts"
+      ],
       "rules": {
         "no-restricted-imports": [
           "error",
@@ -237,28 +240,13 @@
                   "@effect/platform-node",
                   "@effect/platform-node/*"
                 ],
-                "message": "Import effect/http, effect/http-api, and @effect/platform-node only from api/gamesApi.ts, api/gamesHandlers.ts, or http/server.ts (HttpApi is confined to the interface layer)."
+                "message": "effect/http, effect/http-api, and @effect/platform-node are @stability unstable or server-only; STACK.md §8 bans them in the client, shared, and the tooling."
               }
             ]
           }
         ]
       },
       "plugins": ["typescript"]
-    },
-    {
-      "files": [
-        "server/src/api/gamesApi.ts",
-        "server/src/api/gamesHandlers.ts",
-        "server/src/http/server.ts",
-        "server/src/__tests__/app.test.ts",
-        "server/src/__tests__/browseApi.test.ts",
-        "server/src/__tests__/criticScoreApi.test.ts",
-        "server/src/__tests__/searchApi.test.ts",
-        "server/src/__tests__/staticServer.test.ts"
-      ],
-      "rules": {
-        "no-restricted-imports": "off"
-      }
     },
     {
       "files": ["**/__tests__/**/*.{ts,tsx}", "**/*.test.{ts,tsx}"],

@@ -4,7 +4,7 @@ export const repoRoot = process.cwd()
 
 // The server crate root, relative to the repository root. The compatibility
 // check reads the Sony client, the mapper, and the games service there.
-export const SERVER_CRATE_DIR = 'server-rs'
+export const SERVER_CRATE_DIR = 'server'
 
 // The files of the bot under one repository root. The tests use another root.
 export const pathsFor = (root: string) => {

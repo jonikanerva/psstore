@@ -1,6 +1,6 @@
 # The Rust workspace. The server crate is the only member.
 [workspace]
-members = ["server-rs"]
+members = ["server"]
 resolver = "3"
 
 [profile.release]
