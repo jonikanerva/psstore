@@ -64,15 +64,19 @@ pub struct Attempts {
     pub retry_after_max: Duration,
 }
 
-/// A failed call.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// A failed call. The `Display` texts are fixed: they show no URL, header,
+/// or body.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
 pub enum TransportError {
     /// The service answered 429 and the retry budget is used up.
+    #[error("the service limited the request rate")]
     RateLimited { retry_after: Option<Duration> },
     /// A non-2xx answer: a 4xx at once, other statuses after the retries.
+    #[error("the service answered with an error status")]
     Status(u16),
     /// A timeout, a connection failure, or a body that is unreadable or too
     /// large, after the retries.
+    #[error("the request to the service failed")]
     Failed,
 }
 

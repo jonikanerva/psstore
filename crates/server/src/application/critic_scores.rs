@@ -28,13 +28,15 @@ pub const SCORE_BUDGET: Duration = Duration::from_millis(1500);
 
 /// A failure of the critic score provider. The variants carry no data, so an
 /// error value cannot hold a credential, a URL, or a title.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
 pub enum CriticSourceError {
     /// The provider refused the credentials or the token (HTTP 400, 401, or
     /// 403).
+    #[error("the critic score provider rejected the credentials")]
     Rejected,
     /// Any other failure: an outage, a timeout, the time budget, or an
     /// unexpected answer.
+    #[error("the critic score provider is unavailable")]
     Unavailable,
 }
 

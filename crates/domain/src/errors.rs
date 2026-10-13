@@ -5,20 +5,26 @@
 //! compile error until the mapping handles it. A `message` is a fixed text
 //! that this crate chooses. It never contains a credential, a URL, or the text
 //! of a transport error.
+//!
+//! The `Display` text of each variant is a fixed text too. It interpolates no
+//! field, so it cannot show an id from a request or a value from Sony.
 
 /// A failure of an upstream store call.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum UpstreamError {
     /// An outage, a timeout, an unexpected answer, or a broken contract
     /// (HTTP 502).
+    #[error("the upstream store is unavailable")]
     Unavailable { message: String },
     /// Sony no longer knows a persisted-query hash. The fix is
     /// `pnpm sony:refresh` (HTTP 502).
+    #[error("the upstream store no longer knows a persisted query")]
     QueryRotated {
         message: String,
         operation_name: String,
     },
     /// Sony answered 429 after the retry budget (HTTP 503).
+    #[error("the upstream store limited the request rate")]
     RateLimited {
         message: String,
         retry_after_seconds: Option<u64>,
@@ -44,31 +50,25 @@ impl UpstreamError {
 }
 
 /// A failure of the game page lookup.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum GameLookupError {
     /// No PS5 game has this id in the Finnish store (HTTP 404).
-    NotFound {
-        id: String,
-    },
-    Upstream(UpstreamError),
-}
-
-impl From<UpstreamError> for GameLookupError {
-    fn from(error: UpstreamError) -> Self {
-        Self::Upstream(error)
-    }
+    #[error("no PS5 game has this id")]
+    NotFound { id: String },
+    #[error(transparent)]
+    Upstream(#[from] UpstreamError),
 }
 
 /// A failure of a signed-in request.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum AccountError {
     /// Sony definitively rejected the NPSSO or the token derived from it, or
     /// the request had no NPSSO (HTTP 401). Only this failure clears the
     /// sign-in cookie.
-    SessionRejected {
-        message: String,
-    },
-    Upstream(UpstreamError),
+    #[error("Sony rejected the sign-in")]
+    SessionRejected { message: String },
+    #[error(transparent)]
+    Upstream(#[from] UpstreamError),
 }
 
 impl AccountError {
@@ -88,8 +88,57 @@ impl AccountError {
     }
 }
 
-impl From<UpstreamError> for AccountError {
-    fn from(error: UpstreamError) -> Self {
-        Self::Upstream(error)
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn display_texts_are_fixed_and_show_no_field() {
+        let rotated = UpstreamError::QueryRotated {
+            message: "synthetic message".into(),
+            operation_name: "syntheticOperation".into(),
+        };
+        let limited = UpstreamError::RateLimited {
+            message: "synthetic message".into(),
+            retry_after_seconds: Some(37),
+        };
+        let cases = [
+            (
+                UpstreamError::unavailable("synthetic message").to_string(),
+                "the upstream store is unavailable",
+            ),
+            (
+                rotated.to_string(),
+                "the upstream store no longer knows a persisted query",
+            ),
+            (
+                limited.to_string(),
+                "the upstream store limited the request rate",
+            ),
+            (
+                GameLookupError::NotFound {
+                    id: "synthetic-id".into(),
+                }
+                .to_string(),
+                "no PS5 game has this id",
+            ),
+            (
+                GameLookupError::from(UpstreamError::unavailable("synthetic message")).to_string(),
+                "the upstream store is unavailable",
+            ),
+            (
+                AccountError::session_rejected("synthetic message").to_string(),
+                "Sony rejected the sign-in",
+            ),
+            (
+                AccountError::from(limited).to_string(),
+                "the upstream store limited the request rate",
+            ),
+        ];
+        for (text, expected) in cases {
+            assert_eq!(text, expected);
+            assert!(!text.contains("synthetic"), "{text}");
+            assert!(!text.contains("37"), "{text}");
+        }
     }
 }

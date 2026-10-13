@@ -31,7 +31,8 @@ use crate::domain::errors::{GameLookupError, UpstreamError};
 
 /// The failure value of a lookup task that panicked. The panic itself is
 /// logged by the panic hook. The outcome is not cached.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
+#[error("a lookup task panicked")]
 pub struct LookupPanicked;
 
 impl From<LookupPanicked> for UpstreamError {
