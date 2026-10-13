@@ -96,7 +96,7 @@ body {
 }
 
 .app-shell--search:focus {
-  outline: 2px solid var(--border-color);
+  outline: 2px solid var(--focus-color);
   outline-offset: 1px;
 }
 
