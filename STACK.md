@@ -147,7 +147,7 @@ Every `/api` failure answers RFC 9457 Problem Details with `content-type: applic
 | `session_rejected`       | 401    | No usable `npsso` cookie, or a definitive Sony rejection (§2.5)        |
 | `not_found`              | 404    | An unknown `/api` path, or another method on a documented `/api` path  |
 | `game_not_found`         | 404    | No PS5 game has this id in the Finnish store                           |
-| `payload_too_large`      | 413    | A request body over the 2 MiB limit                                    |
+| `payload_too_large`      | 413    | A request body over axum's default limit of 2 MiB (a test pins it)     |
 | `unsupported_media_type` | 415    | A sign-in body that is not JSON                                        |
 | `internal_error`         | 500    | A contained panic                                                      |
 | `upstream_unavailable`   | 502    | An upstream outage, timeout, unexpected answer, or broken contract     |
@@ -232,7 +232,7 @@ The owner set no budget (2026-10-13, ADR 0003: "ei mitata mitään"). The table 
 | Release size                   | Not set                                                        |
 | Web experience                 | Not set                                                        |
 
-Resource bounds that do exist: the response body limit (16 MiB), the request body limit (2 MiB), the cache capacities (product details 10 000, critic scores 5 000), the per-attempt deadlines, and the bounded lookup concurrency.
+Resource bounds that do exist: the response body limit (16 MiB), the request body limit (axum's default of 2 MiB, pinned by a test), the cache capacities (product details 10 000, critic scores 5 000), the per-attempt deadlines, and the bounded lookup concurrency.
 
 ---
 

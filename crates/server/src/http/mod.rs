@@ -105,8 +105,8 @@ fn trim_trailing_slash(mut request: Request) -> Request {
 }
 
 /// Runs each request in a `request` span, writes one log line per request,
-/// contains a panic in request handling as an empty 500, and adds the
-/// security headers to every response.
+/// contains a panic in request handling as the `internal_error` problem
+/// (500), and adds the security headers to every response.
 ///
 /// The span carries a random request id (UUID v4), the route pattern, and the
 /// method, so every event inside the request has them. A lookup that a cache

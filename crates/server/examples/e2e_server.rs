@@ -524,7 +524,7 @@ impl FakeAccount {
     fn check(&self, npsso: &Secret) -> Result<(), AccountError> {
         match self.scenario {
             Scenario::Outage => Err(AccountError::Upstream(outage(false))),
-            Scenario::Healthy if npsso.expose() == SYNTHETIC_NPSSO => Ok(()),
+            Scenario::Healthy if *npsso == Secret::new(SYNTHETIC_NPSSO) => Ok(()),
             Scenario::Healthy => Err(AccountError::session_rejected("synthetic rejection")),
         }
     }
