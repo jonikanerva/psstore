@@ -2,5 +2,6 @@
 //! IGDB critic score. Each adapter decodes and narrows the external data at
 //! its boundary before any other code sees it.
 
+pub mod igdb;
 pub mod sony;
 pub mod transport;

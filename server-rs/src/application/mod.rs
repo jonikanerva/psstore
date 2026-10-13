@@ -12,6 +12,7 @@
 pub mod account;
 pub mod cache;
 pub mod clock;
+pub mod critic_scores;
 pub mod in_flight;
 
 use std::future::Future;
