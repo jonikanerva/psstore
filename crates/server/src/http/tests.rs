@@ -1244,10 +1244,15 @@ async fn the_operational_routes_answer_get_only_and_come_before_the_client_build
 
 // ---- Security headers --------------------------------------------------------
 
-/// Fails unless the response has the four security headers.
+/// The policy, written out so that the test does not take it from the code
+/// under test.
+const CSP: &str = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https:; media-src 'self' https:; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'";
+
+/// Fails unless the response has the five security headers.
 fn assert_security_headers(response: &Response, what: &str) {
     let headers = response.headers();
     for (name, value) in [
+        ("content-security-policy", CSP),
         ("x-content-type-options", "nosniff"),
         ("referrer-policy", "strict-origin-when-cross-origin"),
         ("x-frame-options", "DENY"),
@@ -1259,9 +1264,10 @@ fn assert_security_headers(response: &Response, what: &str) {
             "{name} on {what}"
         );
     }
-    assert!(
-        headers.get("content-security-policy").is_none(),
-        "no CSP yet on {what}"
+    assert_eq!(
+        headers.get_all("content-security-policy").iter().count(),
+        1,
+        "one CSP on {what}"
     );
 }
 

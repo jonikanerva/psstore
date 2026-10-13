@@ -23,7 +23,10 @@ use std::sync::Arc;
 
 use axum::Router;
 use axum::extract::{MatchedPath, Request};
-use axum::http::header::{REFERRER_POLICY, X_CONTENT_TYPE_OPTIONS, X_FRAME_OPTIONS};
+use axum::http::header::{
+    CONTENT_SECURITY_POLICY as CONTENT_SECURITY_POLICY_HEADER, REFERRER_POLICY,
+    X_CONTENT_TYPE_OPTIONS, X_FRAME_OPTIONS,
+};
 use axum::http::{HeaderMap, HeaderName, HeaderValue, StatusCode, Uri};
 use axum::middleware::{self, Next};
 use axum::response::{IntoResponse, Response};
@@ -157,12 +160,23 @@ async fn request_context(request: Request, next: Next) -> Response {
     .await
 }
 
+/// The Content-Security-Policy of every response.
+///
+/// Scripts, styles, fonts, and API calls come only from this origin; the
+/// built client has no inline script or style. Images and videos come from
+/// Sony's CDNs. `img-src` and `media-src` allow every `https:` host instead
+/// of named Sony hosts, because only the owner's signed-in run can show the
+/// image host of the purchased list (STACK.md §15). The browser journeys
+/// (`e2e/`) fail on any violation.
+const CONTENT_SECURITY_POLICY: &str = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https:; media-src 'self' https:; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'";
+
 /// Sets the security headers of every response: API answers, client files,
 /// 404s, and the 500 of a contained panic.
-///
-/// There is no `Content-Security-Policy` yet. Images and videos come from
-/// Sony CDNs, so a policy first needs browser evidence of zero violations.
 fn add_security_headers(headers: &mut HeaderMap) {
+    headers.insert(
+        CONTENT_SECURITY_POLICY_HEADER,
+        HeaderValue::from_static(CONTENT_SECURITY_POLICY),
+    );
     headers.insert(X_CONTENT_TYPE_OPTIONS, HeaderValue::from_static("nosniff"));
     headers.insert(
         REFERRER_POLICY,
