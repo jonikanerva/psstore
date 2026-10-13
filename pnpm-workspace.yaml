@@ -2,6 +2,7 @@ packages:
   - 'web'
   - 'packages/*'
   - 'tools/*'
+  - 'e2e'
 pmOnFail: error
 minimumReleaseAgeStrict: true
 allowBuilds:

@@ -29,9 +29,9 @@ run = [
   "mise install",
   "pnpm install --frozen-lockfile",
   "cargo fetch --locked",
-  # The browser build matches the locked Playwright version of the Sony
-  # contract bot (1.63.0). The browser tests use the same version.
-  "pnpm --filter @psstore/sony-contract-bot exec playwright install chromium",
+  # The browser build matches the locked Playwright version (1.63.0) of the
+  # browser journeys and of the Sony contract bot.
+  "pnpm --filter @psstore/e2e exec playwright install chromium",
 ]
 
 [tasks.format]
@@ -52,7 +52,7 @@ run = [
 description = "Clippy, type-aware Oxlint, and the type check of every TypeScript package"
 run = [
   "cargo clippy --workspace --all-targets --locked -- -D warnings",
-  "pnpm exec oxlint --type-aware --deny-warnings web/src packages/api-client/src packages/api-client/scripts tools/sony-contract-bot/src",
+  "pnpm exec oxlint --type-aware --deny-warnings web/src packages/api-client/src packages/api-client/scripts tools/sony-contract-bot/src e2e",
   # pnpm runs the packages in dependency order, so the API client comes
   # before the web app.
   "pnpm --recursive --if-present run typecheck",
@@ -94,11 +94,23 @@ run = [
 ]
 
 [tasks.test]
-description = "Nextest, the doc tests, and Vitest in every TypeScript package"
+description = "Nextest, the doc tests, Vitest in every TypeScript package, and the browser journeys"
 run = [
   "cargo nextest run --workspace --locked",
   "cargo test --doc --workspace --locked",
+  # The e2e package has no `test` script, so this runs Vitest only.
   "pnpm --recursive --if-present run test",
+  { task = "test:e2e" },
+]
+
+[tasks."test:e2e"]
+description = "Playwright and axe journeys against the deterministic test server (STACK.md → 11)"
+run = [
+  # The journeys test the current client and test server, so both are built
+  # first. The web build takes about a second.
+  "pnpm --filter @psstore/web run build",
+  "cargo build --release --locked -p psstore-server --example e2e_server",
+  "pnpm --filter @psstore/e2e run e2e",
 ]
 
 [tasks.verify]
