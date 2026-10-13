@@ -97,7 +97,7 @@ This fixture and `pnpm test:live` are its only drift guards. Response headers
 | ------------------------- | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | `plusMonthly.golden.json` | 27 alphabetical buckets, list | 6 entries: 4 PS5 games kept; a PS4-only entry (`CUSA` id) and an entry with `device: []` dropped; two entries that share one `conceptId` |
 
-To re-capture, repeat the live fetch with the current `config/env.ts` hashes and
+To re-capture, repeat the live fetch with the current hashes from `docs/contracts/sony-constants.json` and
 re-trim, preserving nulls.
 
 ## Signed-in library fixture
