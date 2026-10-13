@@ -37,6 +37,8 @@ pub const ALLOWED_FIELDS: &[&str] = &[
     "priced",
     "dropped",
     "kept",
+    "event",
+    "failed",
     "out_of_scope",
 ];
 
