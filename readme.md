@@ -70,8 +70,9 @@ mise run verify
 
 This runs the format check (rustfmt and Prettier), lint (Clippy, Oxlint, and the TypeScript
 type check), the API contract check, the secret scan (Gitleaks), the dependency scans
-(`pnpm audit`, `cargo deny`, `cargo shear`), the build, the tests (nextest, the doc tests, and
-Vitest), and the Sony contract validate and diff steps, in that order. The dependency scans need
+(`pnpm audit`, `cargo deny`, `cargo shear`), the build, the tests (nextest, the doc tests,
+Vitest, and the Playwright and axe browser journeys of `mise run test:e2e`), and the Sony
+contract validate and diff steps, in that order. The dependency scans need
 network access to the npm registry, GitHub, and crates.io. `STACK.md` section 14 gives the
 thresholds and the triage rules.
 
