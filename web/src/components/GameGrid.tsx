@@ -1,5 +1,5 @@
 import type { Game } from '@psstore/api-client'
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useEffectEvent, useRef, type ReactNode } from 'react'
 import { useRouterState } from '@tanstack/react-router'
 import {
   consumeFocusReturn,
@@ -43,11 +43,15 @@ const GameGrid = ({
   })
 
   // Runs on the first render of the grid only: a later change of the list must
-  // not pull focus.
-  useEffect(() => {
+  // not pull focus. The effect event reads the current values without making
+  // them dependencies of the effect.
+  const restoreFocus = useEffectEvent(() => {
     if (focusReturn !== null && gridRef.current !== null) {
       consumeFocusReturn(focusReturn, viewKey, gridRef.current)
     }
+  })
+  useEffect(() => {
+    restoreFocus()
   }, [])
 
   useEffect(() => {

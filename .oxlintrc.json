@@ -230,8 +230,11 @@
             "name": "fetch",
             "message": "The web app calls the API only through @psstore/api-client."
           }
-        ]
-      }
+        ],
+        "react/rules-of-hooks": "error",
+        "react/exhaustive-deps": "error"
+      },
+      "plugins": ["react"]
     },
     {
       "files": ["**/__tests__/**/*.{ts,tsx}", "**/*.test.{ts,tsx}"],

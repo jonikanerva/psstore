@@ -88,7 +88,7 @@ export const runNormalize = async (
 
   const manifest = createManifest(
     {
-      capturedBy: process.env.USER || 'unknown',
+      capturedBy: process.env['USER'] || 'unknown',
       endpointUrl: 'https://web.np.playstation.com/api/graphql/v1/op',
     },
     operations,
