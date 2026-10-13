@@ -7,13 +7,17 @@ use crate::js::parse_date_ms;
 
 const HOUR: i64 = 60 * 60 * 1000;
 
+fn pid(id: &str) -> ProductId {
+    id.parse().unwrap()
+}
+
 fn now() -> i64 {
     parse_date_ms("2026-10-05T12:00:00Z").unwrap()
 }
 
 fn game(id: &str, date: &str) -> Game {
     Game {
-        id: id.into(),
+        id: id.parse().unwrap(),
         name: id.into(),
         date: date.into(),
         url: String::new(),
@@ -201,7 +205,11 @@ fn browse_candidates_are_capped_and_drop_invalid_and_repeated_ids() {
     let mut input = vec!["10020880", many[0].as_str(), ""];
     input.extend(many.iter().map(String::as_str));
     let candidates = browse_candidate_ids(&concept(&input));
-    assert_eq!(candidates, many[..BROWSE_MAX_CANDIDATES]);
+    let expected: Vec<&str> = many[..BROWSE_MAX_CANDIDATES]
+        .iter()
+        .map(String::as_str)
+        .collect();
+    assert_eq!(candidates, expected);
     let found = browse_candidate_ids(&concept(&[]));
     assert!(found.is_empty(), "{found:?}");
     let found = browse_candidate_ids(&Concept::default());
@@ -259,7 +267,7 @@ fn a_browse_card_uses_the_chosen_product_and_the_concept_name() {
     let shooter = vec!["Shooter".to_owned()];
     let game = browse_concept_to_game(
         &apex(),
-        PS5_A,
+        &pid(PS5_A),
         "2026-11-01T00:00:00+02:00",
         &shooter,
         browse_now(),
@@ -276,14 +284,20 @@ fn a_browse_card_uses_the_chosen_product_and_the_concept_name() {
 
 #[test]
 fn a_browse_card_reads_the_pre_order_flag_from_the_given_time() {
-    let game = browse_concept_to_game(&apex(), PS5_A, "2026-10-01T00:00:00Z", &[], browse_now());
+    let game = browse_concept_to_game(
+        &apex(),
+        &pid(PS5_A),
+        "2026-10-01T00:00:00Z",
+        &[],
+        browse_now(),
+    );
     assert!(!game.pre_order);
 }
 
 #[test]
 fn a_browse_card_never_guesses_a_date() {
     for date in ["soon", ""] {
-        let game = browse_concept_to_game(&apex(), PS5_A, date, &[], browse_now());
+        let game = browse_concept_to_game(&apex(), &pid(PS5_A), date, &[], browse_now());
         assert_eq!(game.date, "", "{date}");
         assert_eq!(game.discount_date, "", "{date}");
         assert!(!game.pre_order, "{date}");
@@ -296,24 +310,25 @@ fn a_browse_card_keeps_concept_genres_without_detail_genres() {
     if let Some(products) = with_genres.products.as_mut() {
         products[0].genres = Some(vec!["Concept genre".into()]);
     }
-    let game = browse_concept_to_game(&with_genres, PS5_A, "", &[], browse_now());
+    let game = browse_concept_to_game(&with_genres, &pid(PS5_A), "", &[], browse_now());
     assert_eq!(game.genres, ["Concept genre"]);
 }
 
 #[test]
 fn monthly_games_are_newest_first() {
-    let entry = |id: &str, date: &str| PlusMonthlyEntry {
-        product_id: id.into(),
-        name: id.into(),
+    let entry = |n: u8, name: &str, date: &str| PlusMonthlyEntry {
+        product_id: pid(&format!("EP0001-PPSA0000{n}_00-MONTHLY000000000")),
+        name: name.into(),
         image_url: String::new(),
         release_date: date.into(),
         genres: vec![],
     };
     let games = map_monthly_to_games(&[
-        entry("old", "2024-01-01T00:00:00Z"),
-        entry("undated", ""),
-        entry("new", "2026-01-01T00:00:00Z"),
+        entry(1, "old", "2024-01-01T00:00:00Z"),
+        entry(2, "undated", ""),
+        entry(3, "new", "2026-01-01T00:00:00Z"),
     ]);
-    assert_eq!(ids(&games), ["new", "old", "undated"]);
+    let names: Vec<_> = games.iter().map(|g| g.name.as_str()).collect();
+    assert_eq!(names, ["new", "old", "undated"]);
     assert_eq!(games[0].date, "2026-01-01T00:00:00.000Z");
 }

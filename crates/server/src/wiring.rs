@@ -11,6 +11,7 @@ use crate::config::Config;
 use crate::domain::browse::{BrowseOrder, GenreKey};
 use crate::domain::errors::{AccountError, GameLookupError, UpstreamError};
 use crate::domain::game::{CriticScore, Game, GenreList, PageResult};
+use crate::domain::id::GameId;
 use crate::domain::secret::Secret;
 use crate::http::AppState;
 use crate::http::static_files::StaticSite;
@@ -138,7 +139,7 @@ impl GamesApi for NotConnected {
     ) -> ServiceFuture<'_, Result<PageResult, UpstreamError>> {
         outage()
     }
-    fn game_by_id(&self, _: String) -> ServiceFuture<'_, Result<Game, GameLookupError>> {
+    fn game_by_id(&self, _: GameId) -> ServiceFuture<'_, Result<Game, GameLookupError>> {
         outage()
     }
 }

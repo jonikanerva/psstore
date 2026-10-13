@@ -8,8 +8,9 @@ fn search_sku(n: usize) -> String {
 }
 
 fn known(n: usize) -> SearchCandidate {
-    SearchCandidate::Known(product_to_concept(
-        &crate::domain::catalog::CategoryGridProduct {
+    SearchCandidate::Known {
+        product_id: search_sku(n).parse().unwrap(),
+        concept: product_to_concept(&crate::domain::catalog::CategoryGridProduct {
             id: Some(search_sku(n)),
             name: Some(format!("Game {n}")),
             media: Some(vec![]),
@@ -19,13 +20,13 @@ fn known(n: usize) -> SearchCandidate {
                 ..ConceptPrice::default()
             }),
             ..Default::default()
-        },
-    ))
+        }),
+    }
 }
 
 fn unverified(n: usize) -> SearchCandidate {
     SearchCandidate::Unverified {
-        product_id: search_sku(n),
+        product_id: search_sku(n).parse().unwrap(),
         concept: Concept {
             id: Some(n.to_string()),
             name: Some(format!("Concept {n}")),
@@ -190,7 +191,7 @@ async fn an_unverified_concept_needs_a_ps5_game_detail() {
         ..FakeSony::default()
     });
     let result = svc.search_games("x".into(), page(0, 50)).await.unwrap();
-    let ids: Vec<_> = result.games.iter().map(|g| g.id.clone()).collect();
+    let ids: Vec<_> = result.games.iter().map(|g| g.id.as_str()).collect();
     assert_eq!(ids, [search_sku(1)]);
 
     let (svc, _) = service(FakeSony {

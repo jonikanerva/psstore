@@ -63,7 +63,7 @@ async fn the_fallback_builds_a_game_from_the_detail_and_the_price() {
         price: "€34,99".into(),
     });
     let (svc, _) = service(fallback(destiny(), price));
-    let game = svc.game_by_id(ID.into()).await.unwrap();
+    let game = svc.game_by_id(ID.parse().unwrap()).await.unwrap();
     assert_eq!(game.id, ID);
     assert_eq!(game.name, "Destiny 2");
     assert_eq!(game.date, "2019-10-01T00:00:00.000Z");
@@ -92,7 +92,7 @@ async fn the_fallback_builds_a_game_from_the_detail_and_the_price() {
 #[tokio::test(start_paused = true)]
 async fn the_fallback_keeps_sony_price_strings() {
     let (svc, _) = service(fallback(destiny(), standard("€39,99", "€19,99", "-50%")));
-    let game = svc.game_by_id(ID.into()).await.unwrap();
+    let game = svc.game_by_id(ID.parse().unwrap()).await.unwrap();
     assert_eq!(
         (
             game.price.as_str(),
@@ -102,19 +102,21 @@ async fn the_fallback_keeps_sony_price_strings() {
         ("€19,99", "€39,99", "-50%")
     );
     let (svc, _) = service(fallback(destiny(), standard("Free", "Free", "")));
-    let game = svc.game_by_id(ID.into()).await.unwrap();
+    let game = svc.game_by_id(ID.parse().unwrap()).await.unwrap();
     assert_eq!(
         (game.price.as_str(), game.original_price.as_str()),
         ("Free", "")
     );
     let (svc, _) = service(fallback(destiny(), ProductPrice::default()));
-    let game = svc.game_by_id(ID.into()).await.unwrap();
+    let game = svc.game_by_id(ID.parse().unwrap()).await.unwrap();
     assert_eq!((game.price.as_str(), game.name.as_str()), ("", "Destiny 2"));
 }
 
 #[tokio::test(start_paused = true)]
 async fn the_fallback_answers_not_found_for_a_game_out_of_scope() {
-    let not_found = Err(GameLookupError::NotFound { id: ID.into() });
+    let not_found = Err(GameLookupError::NotFound {
+        id: ID.parse().unwrap(),
+    });
     let cases = [
         ProductDetail {
             platforms: vec!["PS4".into()],
@@ -128,7 +130,7 @@ async fn the_fallback_answers_not_found_for_a_game_out_of_scope() {
     ];
     for detail in cases {
         let (svc, _) = service(fallback(detail, ProductPrice::default()));
-        assert_eq!(svc.game_by_id(ID.into()).await, not_found);
+        assert_eq!(svc.game_by_id(ID.parse().unwrap()).await, not_found);
     }
 }
 
@@ -142,7 +144,7 @@ async fn a_ps5_product_without_a_name_is_unavailable() {
         ProductPrice::default(),
     ));
     assert_eq!(
-        svc.game_by_id(ID.into()).await,
+        svc.game_by_id(ID.parse().unwrap()).await,
         Err(GameLookupError::Upstream(UpstreamError::unavailable(
             "Sony returned a PS5 product without a name"
         )))
@@ -153,9 +155,9 @@ async fn a_ps5_product_without_a_name_is_unavailable() {
 async fn an_invalid_id_is_not_found_without_a_product_call() {
     let (svc, fake) = service(FakeSony::default());
     assert_eq!(
-        svc.game_by_id("not-a-product-id".into()).await,
+        svc.game_by_id("not-a-product-id".parse().unwrap()).await,
         Err(GameLookupError::NotFound {
-            id: "not-a-product-id".into()
+            id: "not-a-product-id".parse().unwrap()
         })
     );
     let calls = fake.calls();
@@ -182,7 +184,7 @@ async fn a_failed_detail_lookup_propagates_instead_of_not_found() {
             ..FakeSony::default()
         });
         assert_eq!(
-            svc.game_by_id(ID.into()).await,
+            svc.game_by_id(ID.parse().unwrap()).await,
             Err(GameLookupError::Upstream(error))
         );
     }
@@ -197,7 +199,7 @@ async fn a_failed_price_lookup_leaves_the_game_without_a_price() {
     });
     let logs = CapturedLogs::default();
     let _guard = logs.install();
-    let game = svc.game_by_id(ID.into()).await.unwrap();
+    let game = svc.game_by_id(ID.parse().unwrap()).await.unwrap();
     assert_eq!(
         (
             game.name.as_str(),
@@ -242,7 +244,7 @@ async fn a_listed_id_does_not_use_the_fallback() {
         ..FakeSony::default()
     });
     let game = svc
-        .game_by_id("EP0001-PPSA00001_00-LISTED0000000000".into())
+        .game_by_id("EP0001-PPSA00001_00-LISTED0000000000".parse().unwrap())
         .await
         .unwrap();
     assert_eq!(game.name, "Listed");
@@ -274,11 +276,11 @@ async fn the_fallback_retries_a_failed_detail_after_30_seconds() {
             Ok(destiny())
         }
     }));
-    assert!(svc.game_by_id(ID.into()).await.is_err());
+    assert!(svc.game_by_id(ID.parse().unwrap()).await.is_err());
     tokio::time::advance(Duration::from_millis(29_999)).await;
-    assert!(svc.game_by_id(ID.into()).await.is_err());
+    assert!(svc.game_by_id(ID.parse().unwrap()).await.is_err());
     tokio::time::advance(Duration::from_millis(1)).await;
-    assert!(svc.game_by_id(ID.into()).await.is_ok());
+    assert!(svc.game_by_id(ID.parse().unwrap()).await.is_ok());
     assert_eq!(attempts.load(Ordering::SeqCst), 2);
 }
 
@@ -286,22 +288,22 @@ async fn the_fallback_retries_a_failed_detail_after_30_seconds() {
 async fn the_fallback_caches_a_miss_for_5_minutes_and_a_hit_for_6_hours() {
     let attempts = Arc::new(AtomicUsize::new(0));
     let (svc, _) = service(counting_detail(&attempts, |_| Ok(ProductDetail::default())));
-    assert!(svc.game_by_id(ID.into()).await.is_err());
+    assert!(svc.game_by_id(ID.parse().unwrap()).await.is_err());
     tokio::time::advance(Duration::from_millis(299_999)).await;
-    assert!(svc.game_by_id(ID.into()).await.is_err());
+    assert!(svc.game_by_id(ID.parse().unwrap()).await.is_err());
     assert_eq!(attempts.load(Ordering::SeqCst), 1);
     tokio::time::advance(Duration::from_millis(1)).await;
-    assert!(svc.game_by_id(ID.into()).await.is_err());
+    assert!(svc.game_by_id(ID.parse().unwrap()).await.is_err());
     assert_eq!(attempts.load(Ordering::SeqCst), 2);
 
     let attempts = Arc::new(AtomicUsize::new(0));
     let (svc, _) = service(counting_detail(&attempts, |_| Ok(destiny())));
-    svc.game_by_id(ID.into()).await.unwrap();
+    svc.game_by_id(ID.parse().unwrap()).await.unwrap();
     tokio::time::advance(Duration::from_millis(6 * 60 * 60 * 1000 - 1)).await;
-    svc.game_by_id(ID.into()).await.unwrap();
+    svc.game_by_id(ID.parse().unwrap()).await.unwrap();
     assert_eq!(attempts.load(Ordering::SeqCst), 1);
     tokio::time::advance(Duration::from_millis(1)).await;
-    svc.game_by_id(ID.into()).await.unwrap();
+    svc.game_by_id(ID.parse().unwrap()).await.unwrap();
     assert_eq!(attempts.load(Ordering::SeqCst), 2);
 }
 
@@ -322,7 +324,7 @@ async fn an_upcoming_only_game_opens_from_its_grid() {
         detail: Box::new(|_| Ok(detail_at(Some(FUTURE_DATE)))),
         ..FakeSony::default()
     });
-    let game = svc.game_by_id(id.clone()).await.unwrap();
+    let game = svc.game_by_id(gid(&id)).await.unwrap();
     assert_eq!(
         (game.id.as_str(), game.name.as_str()),
         (id.as_str(), "upcoming-only")
@@ -342,9 +344,9 @@ async fn a_bare_concept_id_is_not_found_and_never_enriched() {
         ..FakeSony::default()
     });
     assert_eq!(
-        svc.game_by_id("10018729".into()).await,
+        svc.game_by_id("10018729".parse().unwrap()).await,
         Err(GameLookupError::NotFound {
-            id: "10018729".into()
+            id: "10018729".parse().unwrap()
         })
     );
     assert!(
@@ -397,7 +399,7 @@ async fn a_failed_detail_degrades_the_listed_game_page_to_concept_values() {
         detail: Box::new(|_| Err(unavailable())),
         ..FakeSony::default()
     });
-    let game = svc.game_by_id(sku(1, "degraded")).await.unwrap();
+    let game = svc.game_by_id(gid(&sku(1, "degraded"))).await.unwrap();
     assert_eq!(game.description, "");
     assert!(game.genres.is_empty(), "{:?}", game.genres);
     assert_eq!(game.date, "");
@@ -416,7 +418,7 @@ async fn a_grid_outage_is_never_not_found() {
         ..FakeSony::default()
     });
     assert_eq!(
-        svc.game_by_id("EP0001-PPSA09999_00-UPCOMINGONLY00000".into())
+        svc.game_by_id("EP0001-PPSA09999_00-UPCOMINGONLY00000".parse().unwrap())
             .await,
         Err(GameLookupError::Upstream(unavailable()))
     );
@@ -463,7 +465,10 @@ async fn the_game_page_carries_the_plus_offer() {
         })
     })));
     assert_eq!(
-        svc.game_by_id(SKU.into()).await.unwrap().plus_offer,
+        svc.game_by_id(SKU.parse().unwrap())
+            .await
+            .unwrap()
+            .plus_offer,
         Some(PlusOffer::Price {
             price: "€24,95".into()
         })
@@ -477,7 +482,7 @@ async fn a_failed_offer_is_null_and_logs_only_the_tag() {
     })));
     let logs = CapturedLogs::default();
     let _guard = logs.install();
-    let game = svc.game_by_id(SKU.into()).await.unwrap();
+    let game = svc.game_by_id(SKU.parse().unwrap()).await.unwrap();
     assert_eq!((game.id.as_str(), game.plus_offer), (SKU, None));
     let line = logs
         .lines()
@@ -492,14 +497,14 @@ async fn a_failed_offer_is_null_and_logs_only_the_tag() {
 #[tokio::test(start_paused = true)]
 async fn the_offer_is_cached_for_10_minutes_and_a_failure_for_30_seconds() {
     let (svc, fake) = service(plus_offer_fake(Box::new(|_| offer(PlusOffer::Included))));
-    svc.game_by_id(SKU.into()).await.unwrap();
-    svc.game_by_id(SKU.into()).await.unwrap();
+    svc.game_by_id(SKU.parse().unwrap()).await.unwrap();
+    svc.game_by_id(SKU.parse().unwrap()).await.unwrap();
     assert_eq!(fake.calls().prices.len(), 1);
     tokio::time::advance(Duration::from_millis(599_999)).await;
-    svc.game_by_id(SKU.into()).await.unwrap();
+    svc.game_by_id(SKU.parse().unwrap()).await.unwrap();
     assert_eq!(fake.calls().prices.len(), 1);
     tokio::time::advance(Duration::from_millis(1)).await;
-    svc.game_by_id(SKU.into()).await.unwrap();
+    svc.game_by_id(SKU.parse().unwrap()).await.unwrap();
     assert_eq!(fake.calls().prices.len(), 2);
 
     let failing = Arc::new(std::sync::atomic::AtomicBool::new(true));
@@ -511,14 +516,29 @@ async fn the_offer_is_cached_for_10_minutes_and_a_failure_for_30_seconds() {
             offer(PlusOffer::Included)
         }
     })));
-    assert_eq!(svc.game_by_id(SKU.into()).await.unwrap().plus_offer, None);
+    assert_eq!(
+        svc.game_by_id(SKU.parse().unwrap())
+            .await
+            .unwrap()
+            .plus_offer,
+        None
+    );
     failing.store(false, Ordering::SeqCst);
     tokio::time::advance(Duration::from_millis(29_999)).await;
-    assert_eq!(svc.game_by_id(SKU.into()).await.unwrap().plus_offer, None);
+    assert_eq!(
+        svc.game_by_id(SKU.parse().unwrap())
+            .await
+            .unwrap()
+            .plus_offer,
+        None
+    );
     assert_eq!(fake.calls().prices.len(), 1);
     tokio::time::advance(Duration::from_millis(1)).await;
     assert_eq!(
-        svc.game_by_id(SKU.into()).await.unwrap().plus_offer,
+        svc.game_by_id(SKU.parse().unwrap())
+            .await
+            .unwrap()
+            .plus_offer,
         Some(PlusOffer::Included)
     );
     assert_eq!(fake.calls().prices.len(), 2);
@@ -541,7 +561,7 @@ async fn a_monthly_only_game_opens_with_detail_and_offer() {
         price: Box::new(|_| offer(PlusOffer::Included)),
         ..FakeSony::default()
     });
-    let game = svc.game_by_id(OLD_ID.into()).await.unwrap();
+    let game = svc.game_by_id(OLD_ID.parse().unwrap()).await.unwrap();
     assert_eq!(game.id, OLD_ID);
     assert_eq!(game.description, "long text");
     assert_eq!(game.plus_offer, Some(PlusOffer::Included));
@@ -556,13 +576,18 @@ async fn a_monthly_game_page_survives_a_failed_price_and_an_unknown_id_is_not_fo
         ..FakeSony::default()
     });
     assert_eq!(
-        svc.game_by_id(OLD_ID.into()).await.unwrap().plus_offer,
+        svc.game_by_id(OLD_ID.parse().unwrap())
+            .await
+            .unwrap()
+            .plus_offer,
         None
     );
     let missing = "UP0001-PPSA09999_00-MISSING000000000";
     assert_eq!(
-        svc.game_by_id(missing.into()).await,
-        Err(GameLookupError::NotFound { id: missing.into() })
+        svc.game_by_id(missing.parse().unwrap()).await,
+        Err(GameLookupError::NotFound {
+            id: missing.parse().unwrap()
+        })
     );
 }
 
@@ -573,7 +598,7 @@ async fn a_monthly_outage_fails_the_game_page_before_the_fallback() {
         ..FakeSony::default()
     });
     assert_eq!(
-        svc.game_by_id(ID.into()).await,
+        svc.game_by_id(ID.parse().unwrap()).await,
         Err(GameLookupError::Upstream(unavailable()))
     );
     assert!(

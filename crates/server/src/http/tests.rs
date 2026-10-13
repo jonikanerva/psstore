@@ -18,6 +18,7 @@ use crate::application::{AccountApi, CriticScores, GamesApi, Page, ServiceFuture
 use crate::domain::browse::{BrowseOrder, GenreKey};
 use crate::domain::errors::{AccountError, GameLookupError, UpstreamError};
 use crate::domain::game::{CriticScore, Game, Genre, GenreList, IdKind, PageResult};
+use crate::domain::id::GameId;
 use crate::domain::secret::Secret;
 use crate::observability::testing::CapturedLogs;
 
@@ -25,7 +26,7 @@ const NPSSO: &str = "synthetic-npsso-0123456789abcdef";
 
 fn game(id: &str) -> Game {
     Game {
-        id: id.into(),
+        id: id.parse().unwrap(),
         name: "Sample".into(),
         date: "2026-10-14T21:00:00Z".into(),
         url: "https://image.example/cover.png".into(),
@@ -122,8 +123,8 @@ impl GamesApi for FakeGames {
             page,
         )
     }
-    fn game_by_id(&self, id: String) -> ServiceFuture<'_, Result<Game, GameLookupError>> {
-        self.record(&format!("id:{id}"), Page { offset: 0, size: 0 });
+    fn game_by_id(&self, id: GameId) -> ServiceFuture<'_, Result<Game, GameLookupError>> {
+        self.record(&format!("id:{}", id.as_str()), Page { offset: 0, size: 0 });
         let detail = self.detail.clone();
         Box::pin(async move { detail })
     }
@@ -468,7 +469,7 @@ async fn serves_the_game_page_with_and_without_a_critic_score() {
 async fn maps_a_missing_game_to_404_with_its_id() {
     let games = FakeGames {
         detail: Err(GameLookupError::NotFound {
-            id: "EP0000-PPSA00000_00-XXXXXXXXXXXXXXXX".into(),
+            id: "EP0000-PPSA00000_00-XXXXXXXXXXXXXXXX".parse().unwrap(),
         }),
         ..FakeGames::ok()
     };

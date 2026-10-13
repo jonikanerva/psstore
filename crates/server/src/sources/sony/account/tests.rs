@@ -19,7 +19,8 @@ use axum::response::{IntoResponse, Response};
 use serde_json::{Value, json};
 
 use super::*;
-use crate::domain::game::IdKind;
+use crate::domain::id::ConceptId;
+use crate::domain::library::WishlistId;
 use crate::http::errors::ErrorResponse;
 
 const NPSSO: &str = "synthetic-npsso-0123456789abcdef";
@@ -727,8 +728,7 @@ async fn makes_one_wishlist_get_with_the_persisted_query_a_token_and_the_locale(
     assert_eq!(
         entries,
         [WishlistEntry {
-            id: "1".into(),
-            id_kind: IdKind::Concept,
+            id: WishlistId::Concept(ConceptId::parse("1").unwrap()),
             name: "Synthetic 1".into(),
             image_url: "https://img.test/x.png".into(),
         }]

@@ -22,6 +22,7 @@ pub mod catalog;
 pub mod critic_match;
 pub mod errors;
 pub mod game;
+pub mod id;
 pub mod js;
 pub mod library;
 pub mod listing;

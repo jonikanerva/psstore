@@ -10,12 +10,12 @@ use std::collections::HashSet;
 use super::browse::is_genre_key;
 use super::catalog::{Concept, PlusMonthlyEntry, RawGenre, SearchCandidate, SearchEntry};
 use super::game::{Game, Genre, IdKind, PageResult};
+use super::id::{GameId, ProductId};
 use super::js::{locale_compare_en, parse_date_ms, to_iso_string};
 use super::mapper::{
     concept_product_id, concept_to_game, is_concept_discounted, monthly_entry_to_game,
     product_to_concept,
 };
-use super::product_id::is_valid_product_id;
 
 /// The sort direction of a date-sorted list.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -111,8 +111,10 @@ pub fn merge_release_grids(released: Vec<Game>, upcoming: Vec<Game>) -> Vec<Game
 pub fn map_concepts_to_games(concepts: &[Concept], now_ms: i64) -> Vec<Game> {
     concepts
         .iter()
-        .map(|concept| concept_to_game(concept, now_ms))
-        .filter(|game| !game.id.is_empty() && is_valid_product_id(&game.id))
+        .filter_map(|concept| {
+            let id = ProductId::parse(&concept_product_id(concept))?;
+            Some(concept_to_game(concept, id.into(), now_ms))
+        })
         .collect()
 }
 
@@ -132,15 +134,17 @@ pub fn map_monthly_to_games(entries: &[PlusMonthlyEntry]) -> Vec<Game> {
 pub fn map_upcoming_concepts_to_games(concepts: &[Concept], now_ms: i64) -> Vec<Game> {
     concepts
         .iter()
-        .map(|concept| concept_to_game(concept, now_ms))
-        .filter(|game| !game.id.is_empty())
-        .map(|mut game| {
-            game.id_kind = if is_valid_product_id(&game.id) {
+        .filter_map(|concept| {
+            let id = GameId::try_from(concept_product_id(concept)).ok()?;
+            let id_kind = if id.product_id().is_some() {
                 IdKind::Product
             } else {
                 IdKind::Concept
             };
-            game
+            Some(Game {
+                id_kind,
+                ..concept_to_game(concept, id, now_ms)
+            })
         })
         .collect()
 }
@@ -165,30 +169,26 @@ pub fn is_ps5_game(platforms: &[String], classification: Option<&str>) -> bool {
         && is_game_classification(classification)
 }
 
-fn candidate_id(candidate: &SearchCandidate) -> String {
-    match candidate {
-        SearchCandidate::Known(concept) => concept_product_id(concept),
-        SearchCandidate::Unverified { product_id, .. } => product_id.clone(),
-    }
-}
-
 fn narrow_search_entry(entry: SearchEntry) -> Option<SearchCandidate> {
     match entry {
         SearchEntry::Product(product) => {
-            let in_scope = product.id.as_deref().is_some_and(is_valid_product_id)
-                && is_ps5_game(
-                    product.platforms.as_deref().unwrap_or_default(),
-                    product.store_display_classification.as_deref(),
-                );
-            in_scope.then(|| SearchCandidate::Known(product_to_concept(&product)))
+            let product_id = product.id.as_deref().and_then(ProductId::parse)?;
+            let in_scope = is_ps5_game(
+                product.platforms.as_deref().unwrap_or_default(),
+                product.store_display_classification.as_deref(),
+            );
+            in_scope.then(|| SearchCandidate::Known {
+                product_id,
+                concept: product_to_concept(&product),
+            })
         }
         SearchEntry::Concept(concept) => {
             let product_id = concept
                 .products
                 .as_ref()
                 .and_then(|products| products.first())
-                .and_then(|product| product.id.clone())
-                .filter(|id| is_valid_product_id(id))?;
+                .and_then(|product| product.id.as_deref())
+                .and_then(ProductId::parse)?;
             Some(SearchCandidate::Unverified {
                 product_id,
                 concept,
@@ -205,7 +205,7 @@ pub fn narrow_search_entries(entries: Vec<SearchEntry>) -> Vec<SearchCandidate> 
     entries
         .into_iter()
         .filter_map(narrow_search_entry)
-        .filter(|candidate| seen.insert(candidate_id(candidate)))
+        .filter(|candidate| seen.insert(candidate.product_id().clone()))
         .collect()
 }
 
@@ -232,25 +232,25 @@ pub const BROWSE_MAX_CANDIDATES: usize = 3;
 
 /// True for a PS5 title product id (`PPSA`), for example
 /// `EP0006-PPSA04874_00-APEXLEGENDRSPWN1`. A PS4 title id has `CUSA`.
-fn is_ps5_title_product_id(id: &str) -> bool {
-    is_valid_product_id(id) && id.get(7..11) == Some("PPSA")
+fn is_ps5_title_product_id(id: &ProductId) -> bool {
+    id.as_str().get(7..11) == Some("PPSA")
 }
 
 /// The product ids to try for one BROWSE concept, in order: PS5 title ids
 /// first, otherwise Sony's order. The prefix only orders the lookups; the
 /// product detail decides. A concept without a product id has none.
 #[must_use]
-pub fn browse_candidate_ids(concept: &Concept) -> Vec<String> {
+pub fn browse_candidate_ids(concept: &Concept) -> Vec<ProductId> {
     let mut seen = HashSet::new();
-    let ids: Vec<String> = concept
+    let ids: Vec<ProductId> = concept
         .products
         .iter()
         .flatten()
-        .filter_map(|product| product.id.clone())
-        .filter(|id| !id.is_empty() && is_valid_product_id(id) && seen.insert(id.clone()))
+        .filter_map(|product| product.id.as_deref().and_then(ProductId::parse))
+        .filter(|id| seen.insert(id.clone()))
         .collect();
-    let (ps5, other): (Vec<String>, Vec<String>) =
-        ids.into_iter().partition(|id| is_ps5_title_product_id(id));
+    let (ps5, other): (Vec<ProductId>, Vec<ProductId>) =
+        ids.into_iter().partition(is_ps5_title_product_id);
     ps5.into_iter()
         .chain(other)
         .take(BROWSE_MAX_CANDIDATES)
@@ -262,16 +262,15 @@ pub fn browse_candidate_ids(concept: &Concept) -> Vec<String> {
 /// and genres come from that product's detail.
 pub fn browse_concept_to_game(
     concept: &Concept,
-    product_id: &str,
+    product_id: &ProductId,
     release_date: &str,
     genres: &[String],
     now_ms: i64,
 ) -> Game {
-    let base = concept_to_game(concept, now_ms);
+    let base = concept_to_game(concept, product_id.clone().into(), now_ms);
     let release = parse_date_ms(release_date);
     let date = release.and_then(to_iso_string).unwrap_or_default();
     Game {
-        id: product_id.to_owned(),
         discount_date: if is_concept_discounted(concept) {
             date.clone()
         } else {

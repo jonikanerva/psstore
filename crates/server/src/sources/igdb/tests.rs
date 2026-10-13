@@ -322,7 +322,7 @@ async fn never_logs_the_secret_the_token_or_the_client_id() {
 
 fn game() -> Game {
     Game {
-        id: "EP0001-PPSA00001_00-ALPHA00000000000".into(),
+        id: "EP0001-PPSA00001_00-ALPHA00000000000".parse().unwrap(),
         name: "Synthetic Quest".into(),
         date: "2023-11-14T00:00:00Z".into(),
         url: String::new(),

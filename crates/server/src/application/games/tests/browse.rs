@@ -73,7 +73,11 @@ fn genre(key: &str) -> GenreKey {
 }
 
 fn ids(result: &PageResult) -> Vec<String> {
-    result.games.iter().map(|g| g.id.clone()).collect()
+    result
+        .games
+        .iter()
+        .map(|g| g.id.as_str().to_owned())
+        .collect()
 }
 
 #[tokio::test(start_paused = true)]

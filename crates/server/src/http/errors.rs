@@ -81,9 +81,10 @@ impl ErrorResponse for UpstreamError {
 impl ErrorResponse for GameLookupError {
     fn into_error_response(self) -> Response {
         match self {
-            Self::NotFound { id } => {
-                respond(StatusCode::NOT_FOUND, &ErrorBody::GameNotFound { id: &id })
-            }
+            Self::NotFound { id } => respond(
+                StatusCode::NOT_FOUND,
+                &ErrorBody::GameNotFound { id: id.as_str() },
+            ),
             Self::Upstream(error) => error.into_error_response(),
         }
     }

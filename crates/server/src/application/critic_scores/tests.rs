@@ -12,7 +12,7 @@ const GAME_ID: &str = "EP0001-PPSA00001_00-ALPHA00000000000";
 
 fn game() -> Game {
     Game {
-        id: GAME_ID.into(),
+        id: GAME_ID.parse().unwrap(),
         name: "Synthetic Quest".into(),
         date: "2023-11-14T00:00:00Z".into(),
         url: String::new(),
@@ -236,7 +236,7 @@ async fn the_cache_key_is_the_id_the_title_and_the_year() {
     let critics = service(&source);
     critics.score_for(&game()).await;
     let other_id = Game {
-        id: "EP0001-PPSA00002_00-BETA000000000000".into(),
+        id: "EP0001-PPSA00002_00-BETA000000000000".parse().unwrap(),
         ..game()
     };
     critics.score_for(&other_id).await;

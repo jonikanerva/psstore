@@ -644,7 +644,7 @@ async fn a_product_detail_is_cached_for_6_hours() {
 
 pub(super) fn monthly_entry(id: &str, date: &str) -> PlusMonthlyEntry {
     PlusMonthlyEntry {
-        product_id: id.into(),
+        product_id: id.parse().unwrap(),
         name: id.into(),
         image_url: String::new(),
         release_date: date.into(),

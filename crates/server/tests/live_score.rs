@@ -50,9 +50,10 @@ const TITLES: [(&str, &str); 10] = [
     ("Stellar Blade™", "2024-04-26T00:00:00Z"),
 ];
 
+#[expect(clippy::unwrap_used, reason = "the synthetic id is not empty")]
 fn game(index: usize, name: &str, date: &str) -> Game {
     Game {
-        id: format!("LIVE-SCORE-{index}"),
+        id: format!("LIVE-SCORE-{index}").parse().unwrap(),
         name: name.into(),
         date: date.into(),
         url: String::new(),
@@ -124,7 +125,10 @@ async fn score_hit_rate_of_a_sample_of_new_games() {
     let critics = CriticScoreService::new(Arc::new(client));
     let mut scores = Vec::new();
     for mut game in sample {
-        let detail = sony.product_detail(game.id.clone()).await.unwrap();
+        let detail = sony
+            .product_detail(game.id.product_id().unwrap())
+            .await
+            .unwrap();
         game.date = detail.release_date.unwrap_or_default();
         scores.push(critics.score_for(&game).await.map(CriticScore::value));
     }

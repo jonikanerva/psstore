@@ -12,6 +12,7 @@ use super::cache::{LookupPanicked, TtlCache};
 use super::{CriticScores, ServiceFuture};
 use crate::domain::critic_match::{CriticCandidate, match_critic_score, release_year_of};
 use crate::domain::game::{CriticScore, Game};
+use crate::domain::id::GameId;
 
 /// The number of games whose outcome the cache keeps.
 pub const SCORE_CACHE_CAPACITY: usize = 5_000;
@@ -77,7 +78,7 @@ impl std::fmt::Debug for dyn CriticSource {
 /// The cache key: public data only.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 struct CriticKey {
-    id: String,
+    id: GameId,
     title: String,
     year: i32,
 }

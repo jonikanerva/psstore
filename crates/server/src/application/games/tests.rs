@@ -114,8 +114,10 @@ impl SonyCatalog for FakeSony {
 
     fn product_detail(
         &self,
-        product_id: String,
+        product_id: ProductId,
     ) -> ServiceFuture<'_, Result<ProductDetail, UpstreamError>> {
+        // The fake records and answers by the plain text of the id.
+        let product_id = product_id.as_str().to_owned();
         self.calls().details.push(product_id.clone());
         Box::pin(async move {
             let running = self.in_flight.fetch_add(1, Ordering::SeqCst) + 1;
@@ -130,8 +132,9 @@ impl SonyCatalog for FakeSony {
 
     fn product_price(
         &self,
-        product_id: String,
+        product_id: ProductId,
     ) -> ServiceFuture<'_, Result<ProductPrice, UpstreamError>> {
+        let product_id = product_id.as_str().to_owned();
         self.calls().prices.push(product_id.clone());
         ready((self.price)(product_id))
     }
@@ -196,6 +199,11 @@ pub(super) fn unavailable() -> UpstreamError {
 }
 
 /// A product id like the TypeScript tests: `EP0001-PPSA<n>_00-<NAME>`.
+/// A game id from a test text.
+pub(super) fn gid(id: &str) -> GameId {
+    id.parse().unwrap()
+}
+
 pub(super) fn sku(n: usize, name: &str) -> String {
     let mut label: String = name
         .to_uppercase()

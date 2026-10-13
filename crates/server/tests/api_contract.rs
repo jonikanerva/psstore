@@ -109,9 +109,10 @@ const IMAGE: &str = "https://image.api.playstation.com/vulcan/ap/rnd";
 const VIDEO: &str = "https://vulcan.dl.playstation.net/img/rnd";
 
 /// A product card with empty optional fields.
+#[expect(clippy::unwrap_used, reason = "every example id is a valid game id")]
 fn card(id: &str, name: &str) -> Game {
     Game {
-        id: id.into(),
+        id: id.parse().unwrap(),
         name: name.into(),
         date: String::new(),
         url: String::new(),
@@ -285,6 +286,10 @@ const RATE_LIMITED: &str = "Sony upstream rate limited the request (HTTP 429)";
 
 /// The response that the server gives for an example, or `None` for an
 /// unknown file name.
+#[expect(
+    clippy::unwrap_used,
+    reason = "the not-found example id is a valid game id"
+)]
 fn render(name: &str) -> Option<Response> {
     #[expect(
         clippy::unnecessary_wraps,
@@ -309,7 +314,7 @@ fn render(name: &str) -> Option<Response> {
         "genres.json" => json(genres()),
         "error-game-not-found.json" => Some(
             GameLookupError::NotFound {
-                id: "EP0000-PPSA00000_00-UNKNOWNGAME00000".into(),
+                id: "EP0000-PPSA00000_00-UNKNOWNGAME00000".parse().unwrap(),
             }
             .into_error_response(),
         ),

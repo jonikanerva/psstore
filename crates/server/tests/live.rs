@@ -192,10 +192,11 @@ async fn search_narrows_a_ps4_only_title_to_zero() {
 async fn pdp_resolves_for_a_new_sku() {
     let (concepts, _) = grid(SonyFeature::New).await;
     let games = map_concepts_to_games(&concepts, 0);
-    let sku = games.first().map(|game| game.id.clone()).unwrap();
+    let sku = games.first().and_then(|game| game.id.product_id()).unwrap();
     let detail = client().product_detail(sku.clone()).await.unwrap();
     println!(
-        "[test:live] PDP sku={sku} genres={} descLen={}",
+        "[test:live] PDP sku={} genres={} descLen={}",
+        sku.as_str(),
         detail.genres.len(),
         detail.description.encode_utf16().count()
     );
@@ -205,7 +206,7 @@ async fn pdp_resolves_for_a_new_sku() {
 #[ignore = "reaches live Sony"]
 async fn price_resolves_for_a_known_sku() {
     let sku = "EP2640-PPSA29380_00-0000000000000000";
-    let price = client().product_price(sku.into()).await.unwrap();
+    let price = client().product_price(sku.parse().unwrap()).await.unwrap();
     println!(
         "[test:live] PRICE sku={sku} plusOffer={:?} standard={:?}",
         price.plus_offer, price.standard
@@ -218,15 +219,15 @@ async fn a_search_only_cross_gen_id_is_a_ps5_game() {
     let id = "EP0002-PPSA02410_00-DESTINYTHEGAME02";
     let sony = client();
     let (detail, price) = tokio::join!(
-        sony.product_detail(id.into()),
-        sony.product_price(id.into())
+        sony.product_detail(id.parse().unwrap()),
+        sony.product_price(id.parse().unwrap())
     );
     let (detail, price) = (detail.unwrap(), price.unwrap());
     assert!(is_ps5_game(
         &detail.platforms,
         detail.store_display_classification.as_deref()
     ));
-    let game = product_detail_to_game(id, &detail, price.standard.as_ref(), 0);
+    let game = product_detail_to_game(&id.parse().unwrap(), &detail, price.standard.as_ref(), 0);
     assert!(!game.name.is_empty(), "the value is empty");
     assert!(!game.url.is_empty(), "the value is empty");
     println!(
@@ -239,7 +240,7 @@ async fn a_search_only_cross_gen_id_is_a_ps5_game() {
 #[ignore = "reaches live Sony"]
 async fn a_ps4_only_id_is_not_a_ps5_game() {
     let id = "EP9000-CUSA00207_00-BLOODBORNE0000EU";
-    let detail = client().product_detail(id.into()).await.unwrap();
+    let detail = client().product_detail(id.parse().unwrap()).await.unwrap();
     assert!(!is_ps5_game(
         &detail.platforms,
         detail.store_display_classification.as_deref()
@@ -267,14 +268,14 @@ async fn the_service_serves_genres_monthly_and_a_game_page() {
         .unwrap();
     assert!(!monthly.games.is_empty(), "the value is empty");
     let id = "EP0002-PPSA02410_00-DESTINYTHEGAME02";
-    let game = service.game_by_id(id.into()).await.unwrap();
+    let game = service.game_by_id(id.parse().unwrap()).await.unwrap();
     assert_eq!(game.id, id);
     assert!(!game.name.is_empty(), "the value is empty");
     println!(
         "[test:live] SERVICE genres={} monthly={} gamePage={} name={}",
         genres.genres.len(),
         monthly.total_count,
-        game.id,
+        game.id.as_str(),
         game.name
     );
 }

@@ -189,11 +189,11 @@ async fn a_rotation_is_query_rotated_on_every_graphql_path() {
         Err(rotated("categoryGridRetrieve"))
     );
     assert_eq!(
-        client.product_detail(SKU.into()).await,
+        client.product_detail(SKU.parse().unwrap()).await,
         Err(rotated("metGetProductById"))
     );
     assert_eq!(
-        client.product_price(SKU.into()).await,
+        client.product_price(SKU.parse().unwrap()).await,
         Err(rotated("productRetrieveForCtasWithPrice"))
     );
     assert_eq!(
@@ -220,7 +220,7 @@ async fn a_message_only_rotation_on_the_product_path_is_detected() {
     )])
     .await;
     assert!(matches!(
-        client.product_detail(SKU.into()).await,
+        client.product_detail(SKU.parse().unwrap()).await,
         Err(UpstreamError::QueryRotated { .. })
     ));
 }
@@ -241,7 +241,7 @@ async fn a_persistent_429_is_rate_limited_after_one_retry() {
     );
     assert_eq!(upstream.seen().len(), 2);
     assert_eq!(
-        client.product_price("EP0001-X".into()).await.map(|_| ()),
+        client.product_price(SKU.parse().unwrap()).await.map(|_| ()),
         expected
     );
     assert_eq!(client.plus_monthly().await.map(|_| ()), expected);
@@ -260,7 +260,7 @@ async fn a_server_error_is_unavailable_with_its_status() {
     );
     assert_eq!(upstream.seen().len(), 2, "a 5xx answer is retried once");
     assert_eq!(
-        client.product_price("EP0001-X".into()).await.map(|_| ()),
+        client.product_price(SKU.parse().unwrap()).await.map(|_| ()),
         expected
     );
     assert_eq!(client.plus_monthly().await.map(|_| ()), expected);
@@ -270,7 +270,7 @@ async fn a_server_error_is_unavailable_with_its_status() {
 async fn a_client_error_is_not_retried() {
     let (client, upstream) = serve(vec![reply(404, "")]).await;
     assert_eq!(
-        client.product_detail(SKU.into()).await,
+        client.product_detail(SKU.parse().unwrap()).await,
         Err(UpstreamError::unavailable("Sony upstream returned 404"))
     );
     assert_eq!(upstream.seen().len(), 1);
@@ -280,7 +280,7 @@ async fn a_client_error_is_not_retried() {
 async fn a_body_that_is_not_json_is_unavailable() {
     let (client, _) = serve(vec![reply(200, "<html>")]).await;
     assert_eq!(
-        client.product_detail(SKU.into()).await,
+        client.product_detail(SKU.parse().unwrap()).await,
         Err(UpstreamError::unavailable(
             "Sony upstream returned a body that is not JSON"
         ))
@@ -293,7 +293,7 @@ async fn the_price_request_has_the_operation_hash_and_locale() {
         &json!({"data": {"productRetrieve": {"webctas": []}}}),
     )])
     .await;
-    let price = client.product_price("EP0001-X".into()).await.unwrap();
+    let price = client.product_price(SKU.parse().unwrap()).await.unwrap();
     assert_eq!(price, crate::domain::catalog::ProductPrice::default());
     let seen = upstream.seen();
     let request = &seen[0];
@@ -304,7 +304,7 @@ async fn the_price_request_has_the_operation_hash_and_locale() {
     );
     assert_eq!(
         request.param("variables"),
-        Some(r#"{"productId":"EP0001-X"}"#)
+        Some(r#"{"productId":"EP0001-PPSA00001_00-ALPHA00000000000"}"#)
     );
     assert_eq!(
         request.param("extensions"),
@@ -336,7 +336,7 @@ async fn the_price_answer_gives_the_plus_offer() {
         }]}}}),
     )])
     .await;
-    let price = client.product_price("EP0001-X".into()).await.unwrap();
+    let price = client.product_price(SKU.parse().unwrap()).await.unwrap();
     assert_eq!(
         price.plus_offer,
         Some(PlusOffer::Price {

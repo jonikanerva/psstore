@@ -12,9 +12,8 @@ use std::collections::HashSet;
 use serde_json::Value;
 
 use super::fields::{Field, WrongType, nullable_string};
-use crate::domain::game::IdKind;
-use crate::domain::library::WishlistEntry;
-use crate::domain::product_id::is_valid_product_id;
+use crate::domain::id::{ConceptId, ProductId};
+use crate::domain::library::{WishlistEntry, WishlistId};
 
 /// The decoded wishlist.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -123,25 +122,24 @@ fn decode_entry(raw: &Value) -> Field<WishlistEntry> {
     if id.is_empty() || name.is_empty() {
         return Field::Dropped;
     }
-    let Some(id_kind) = id_kind(typename, id) else {
+    let Some(id) = wishlist_id(typename, id) else {
         return Field::OutOfScope;
     };
     if !platforms.iter().any(|p| p.as_str() == Some("PS5")) {
         return Field::OutOfScope;
     }
     Field::Kept(WishlistEntry {
-        id: id.to_owned(),
-        id_kind,
+        id,
         name: name.to_owned(),
         image_url: box_art_url(entry.get("boxArt")).to_owned(),
     })
 }
 
-/// The id kind when the id is valid for the type name.
-fn id_kind(typename: Option<&str>, id: &str) -> Option<IdKind> {
+/// The id when it is valid for the type name.
+fn wishlist_id(typename: Option<&str>, id: &str) -> Option<WishlistId> {
     match typename {
-        Some("Product") if is_valid_product_id(id) => Some(IdKind::Product),
-        Some("Concept") if id.bytes().all(|b| b.is_ascii_digit()) => Some(IdKind::Concept),
+        Some("Product") => ProductId::parse(id).map(WishlistId::Product),
+        Some("Concept") => ConceptId::parse(id).map(WishlistId::Concept),
         _ => None,
     }
 }
@@ -163,6 +161,7 @@ mod tests {
     use serde_json::json;
 
     use super::*;
+    use crate::domain::game::IdKind;
     use crate::domain::library::wishlist_cards;
 
     const PRODUCT: &str = "EP0001-PPSA00001_00-SYNTHETICALPHA00";
@@ -207,8 +206,7 @@ mod tests {
         assert_eq!(
             page.entries,
             [WishlistEntry {
-                id: PRODUCT.into(),
-                id_kind: IdKind::Product,
+                id: WishlistId::Product(PRODUCT.parse().unwrap()),
                 name: "Synthetic Alpha".into(),
                 image_url: IMAGE.into(),
             }]
@@ -222,7 +220,7 @@ mod tests {
             entry(&json!({"platforms": ["PS4", "PS5"]})),
             entry(&json!({"__typename": "Concept", "id": "10000001", "name": "Concept"})),
         ])));
-        let kinds: Vec<_> = page.entries.iter().map(|e| e.id_kind).collect();
+        let kinds: Vec<_> = page.entries.iter().map(|e| e.id.kind()).collect();
         assert_eq!(kinds, [IdKind::Product, IdKind::Concept]);
     }
 

@@ -4,9 +4,19 @@
 //! code reads it. A field is `None` when Sony sent no value or `null`: the
 //! TypeScript server read both the same way. The types keep the shape of
 //! Sony's data; the scope rules live in `listing.rs`.
+//!
+//! The `id` fields of [`Concept`], [`ConceptProductRef`], and
+//! [`CategoryGridProduct`] are Sony's text before any check. The TypeScript
+//! server did not validate them at the boundary: an empty product id hides
+//! the concept id, and UPCOMING keeps an id of another format as a concept
+//! card. The scope functions in `listing.rs` turn them into [`GameId`] and
+//! [`ProductId`] values. The narrowed types below carry the checked ids.
 
 use super::browse::{BrowseOrder, GenreKey};
 use super::game::PlusOffer;
+#[cfg(doc)]
+use super::id::GameId;
+use super::id::ProductId;
 
 /// One media entry of a concept or a product.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -31,6 +41,7 @@ pub struct ConceptPrice {
 /// A product that a concept names.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ConceptProductRef {
+    /// Sony's product id, not checked.
     pub id: Option<String>,
     pub release_date: Option<String>,
     pub provider_name: Option<String>,
@@ -40,6 +51,7 @@ pub struct ConceptProductRef {
 /// A concept of the category grid or of the search result.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Concept {
+    /// Sony's concept id, not checked.
     pub id: Option<String>,
     pub name: Option<String>,
     pub media: Option<Vec<Media>>,
@@ -50,6 +62,7 @@ pub struct Concept {
 /// A product of the category grid or of the search result.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CategoryGridProduct {
+    /// Sony's product id, not checked.
     pub id: Option<String>,
     pub name: Option<String>,
     pub media: Option<Vec<Media>>,
@@ -92,7 +105,7 @@ pub struct ProductPrice {
 /// One PS5 game of the PS Plus monthly feed, in scope.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PlusMonthlyEntry {
-    pub product_id: String,
+    pub product_id: ProductId,
     pub name: String,
     pub image_url: String,
     pub release_date: String,
@@ -106,17 +119,30 @@ pub enum SearchEntry {
     Concept(Concept),
 }
 
-/// A search result that survived the scope check.
+/// A search result that survived the scope check. `product_id` is the id
+/// of the card.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SearchCandidate {
     /// The search response itself proves a PS5 game.
-    Known(Concept),
+    Known {
+        product_id: ProductId,
+        concept: Concept,
+    },
     /// A concept that names a product id. The product detail must prove a
     /// PS5 game.
     Unverified {
-        product_id: String,
+        product_id: ProductId,
         concept: Concept,
     },
+}
+
+impl SearchCandidate {
+    #[must_use]
+    pub fn product_id(&self) -> &ProductId {
+        match self {
+            Self::Known { product_id, .. } | Self::Unverified { product_id, .. } => product_id,
+        }
+    }
 }
 
 /// One search page after the scope check.

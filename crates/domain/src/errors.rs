@@ -9,6 +9,8 @@
 //! The `Display` text of each variant is a fixed text too. It interpolates no
 //! field, so it cannot show an id from a request or a value from Sony.
 
+use super::id::GameId;
+
 /// A failure of an upstream store call.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum UpstreamError {
@@ -54,7 +56,7 @@ impl UpstreamError {
 pub enum GameLookupError {
     /// No PS5 game has this id in the Finnish store (HTTP 404).
     #[error("no PS5 game has this id")]
-    NotFound { id: String },
+    NotFound { id: GameId },
     #[error(transparent)]
     Upstream(#[from] UpstreamError),
 }
@@ -117,7 +119,7 @@ mod tests {
             ),
             (
                 GameLookupError::NotFound {
-                    id: "synthetic-id".into(),
+                    id: "synthetic-id".parse().unwrap(),
                 }
                 .to_string(),
                 "no PS5 game has this id",

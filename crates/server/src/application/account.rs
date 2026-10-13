@@ -21,9 +21,10 @@ use super::cache::LookupPanicked;
 use super::in_flight::InFlight;
 use super::{AccountApi, GamesApi, ServiceFuture};
 use crate::domain::errors::AccountError;
-use crate::domain::game::{Game, IdKind, PageResult};
+use crate::domain::game::{Game, PageResult};
 use crate::domain::library::{
-    PurchasedEntry, WishlistEntry, merge_wishlist_entry, purchased_cards, wishlist_cards,
+    PurchasedEntry, WishlistEntry, WishlistId, merge_wishlist_entry, purchased_cards,
+    wishlist_cards,
 };
 use crate::domain::secret::Secret;
 
@@ -141,15 +142,15 @@ impl AccountService {
     /// A concept entry, a missing game, or a slow or failed lookup keeps the
     /// minimal card.
     async fn enrich_entry(&self, entry: &WishlistEntry) -> Game {
-        let found = match entry.id_kind {
-            IdKind::Product => {
-                let lookup = self.games.game_by_id(entry.id.clone());
+        let found = match &entry.id {
+            WishlistId::Product(product_id) => {
+                let lookup = self.games.game_by_id(product_id.clone().into());
                 match tokio::time::timeout(WISHLIST_ENRICH_ENTRY_TIMEOUT, lookup).await {
                     Ok(Ok(game)) => Some(game),
                     Ok(Err(_)) | Err(_) => None,
                 }
             }
-            IdKind::Concept => None,
+            WishlistId::Concept(_) => None,
         };
         merge_wishlist_entry(entry, found)
     }

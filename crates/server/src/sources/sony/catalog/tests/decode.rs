@@ -11,7 +11,7 @@ use crate::domain::listing::{
     is_ps5_game, map_concepts_to_games, map_monthly_to_games, map_upcoming_concepts_to_games,
     narrow_search_entries,
 };
-use crate::domain::mapper::{concept_to_game, product_detail_to_game};
+use crate::domain::mapper::{concept_product_id, product_detail_to_game};
 
 /// 2026-10-13T00:00:00Z.
 const NOW: i64 = 1_791_849_600_000;
@@ -372,7 +372,12 @@ fn synthetic_cross_gen_detail_reads_name_media_and_platforms() {
     );
     assert_eq!(detail.description, "Synthetic long text.");
 
-    let game = product_detail_to_game("EP0000-PPSA00000_00-SYNTHETICGAME000", &detail, None, NOW);
+    let game = product_detail_to_game(
+        &"EP0000-PPSA00000_00-SYNTHETICGAME000".parse().unwrap(),
+        &detail,
+        None,
+        NOW,
+    );
     assert_eq!(game.url, "https://example.invalid/cover.jpg");
     assert_eq!(game.screenshots, ["https://example.invalid/shot.jpg"]);
     assert_eq!(game.videos, ["https://example.invalid/preview.mp4"]);
@@ -596,10 +601,7 @@ const SYNTHETIC: &str = "EP0001-PPSA00001_00-SYNTHETIC0000000";
 fn candidate_ids(candidates: &[SearchCandidate]) -> Vec<String> {
     candidates
         .iter()
-        .map(|candidate| match candidate {
-            SearchCandidate::Known(concept) => concept.id.clone().unwrap_or_default(),
-            SearchCandidate::Unverified { product_id, .. } => product_id.clone(),
-        })
+        .map(|candidate| candidate.product_id().as_str().to_owned())
         .collect()
 }
 
@@ -624,11 +626,11 @@ fn golden_search_decodes_and_counts_unreadable_elements() {
     assert_eq!(candidate_ids(&candidates), [ELDEN, NIGHTREIGN, SYNTHETIC]);
     let kinds: Vec<_> = candidates
         .iter()
-        .map(|c| matches!(c, SearchCandidate::Known(_)))
+        .map(|c| matches!(c, SearchCandidate::Known { .. }))
         .collect();
     assert_eq!(kinds, [true, true, false]);
     if let Some(SearchCandidate::Unverified { concept, .. }) = candidates.last() {
-        assert_eq!(concept_to_game(concept, NOW).id, SYNTHETIC);
+        assert_eq!(concept_product_id(concept), SYNTHETIC);
     }
 }
 

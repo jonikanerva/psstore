@@ -13,6 +13,7 @@
 
 use crate::application::Page;
 use crate::domain::browse::{BrowseOrder, GenreKey};
+use crate::domain::id::GameId;
 use crate::domain::js::js_trim;
 
 /// The page size of a list when the request has none.
@@ -123,12 +124,8 @@ pub fn browse(raw: Option<&str>) -> Result<(GenreKey, BrowseOrder, Page), Invali
 /// # Errors
 ///
 /// [`Invalid`] when the trimmed segment is empty.
-pub fn game_id(raw: &str) -> Result<String, Invalid> {
-    let id = js_trim(raw);
-    if id.is_empty() {
-        return Err(Invalid);
-    }
-    Ok(id.to_owned())
+pub fn game_id(raw: &str) -> Result<GameId, Invalid> {
+    GameId::from_path(raw).ok_or(Invalid)
 }
 
 /// The largest integer that a JavaScript number holds exactly
@@ -376,9 +373,9 @@ mod tests {
 
     #[test]
     fn game_id_is_trimmed_and_not_empty() {
-        assert_eq!(game_id(" EP0001 "), Ok("EP0001".into()));
+        assert_eq!(game_id(" EP0001 "), Ok("EP0001".parse().unwrap()));
         assert_eq!(game_id("  "), Err(Invalid));
         assert_eq!(game_id("\u{FEFF}"), Err(Invalid));
-        assert_eq!(game_id("\u{85}"), Ok("\u{85}".into()));
+        assert_eq!(game_id("\u{85}"), Ok("\u{85}".parse().unwrap()));
     }
 }

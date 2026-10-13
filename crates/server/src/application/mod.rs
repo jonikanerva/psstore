@@ -22,6 +22,7 @@ use std::pin::Pin;
 use crate::domain::browse::{BrowseOrder, GenreKey};
 use crate::domain::errors::{AccountError, GameLookupError, UpstreamError};
 use crate::domain::game::{CriticScore, Game, GenreList, PageResult};
+use crate::domain::id::GameId;
 use crate::domain::secret::Secret;
 
 pub use clock::{Clock, FixedClock, SystemClock};
@@ -55,8 +56,8 @@ pub trait GamesApi: Send + Sync {
         order: BrowseOrder,
         page: Page,
     ) -> ServiceFuture<'_, Result<PageResult, UpstreamError>>;
-    /// `id` is trimmed and not empty.
-    fn game_by_id(&self, id: String) -> ServiceFuture<'_, Result<Game, GameLookupError>>;
+    /// `id` comes from the game page path or from a wishlist entry.
+    fn game_by_id(&self, id: GameId) -> ServiceFuture<'_, Result<Game, GameLookupError>>;
 }
 
 impl std::fmt::Debug for dyn GamesApi {

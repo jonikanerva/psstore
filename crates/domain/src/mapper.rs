@@ -10,6 +10,7 @@ use super::catalog::{
     ProductDetail, StandardPrice,
 };
 use super::game::{Game, IdKind};
+use super::id::{GameId, ProductId};
 use super::js::{parse_date_ms, to_iso_string};
 
 /// Sony's subscription branding of PS Plus.
@@ -170,10 +171,11 @@ fn plus_upsell_text(concept: &Concept) -> Option<String> {
     non_empty(price.upsell_text.as_deref()).map(str::to_owned)
 }
 
-/// The game card of a concept. `id_kind` is `product`; the UPCOMING mapping
-/// sets `concept` for a concept id.
+/// The game card of a concept. The caller derives `id` from
+/// [`concept_product_id`] and its scope rule. `id_kind` is `product`; the
+/// UPCOMING mapping sets `concept` for a concept id.
 #[must_use]
-pub fn concept_to_game(concept: &Concept, now_ms: i64) -> Game {
+pub fn concept_to_game(concept: &Concept, id: GameId, now_ms: i64) -> Game {
     let product = first_product(concept);
     let release_date = to_iso_or_default(product.and_then(|p| p.release_date.as_deref()));
     let discounted = is_concept_discounted(concept);
@@ -183,7 +185,7 @@ pub fn concept_to_game(concept: &Concept, now_ms: i64) -> Game {
         price.and_then(|p| pick(p).as_deref())
     };
     Game {
-        id: concept_product_id(concept),
+        id,
         name: concept.name.clone().unwrap_or_default(),
         url: concept_cover(concept),
         price: non_empty(text(|p| &p.discounted_price))
@@ -225,13 +227,13 @@ pub fn concept_to_game(concept: &Concept, now_ms: i64) -> Game {
 /// the caller fills them.
 #[must_use]
 pub fn product_detail_to_game(
-    id: &str,
+    id: &ProductId,
     detail: &ProductDetail,
     standard: Option<&StandardPrice>,
     now_ms: i64,
 ) -> Game {
     let concept = Concept {
-        id: Some(id.to_owned()),
+        id: Some(id.as_str().to_owned()),
         name: detail.name.clone(),
         media: Some(detail.media.clone()),
         price: standard.map(|price| ConceptPrice {
@@ -241,20 +243,20 @@ pub fn product_detail_to_game(
             ..ConceptPrice::default()
         }),
         products: Some(vec![ConceptProductRef {
-            id: Some(id.to_owned()),
+            id: Some(id.as_str().to_owned()),
             release_date: detail.release_date.clone(),
             provider_name: detail.publisher_name.clone(),
             genres: Some(detail.genres.clone()),
         }]),
     };
-    concept_to_game(&concept, now_ms)
+    concept_to_game(&concept, id.clone().into(), now_ms)
 }
 
 /// The card of a PS Plus monthly game: no price and no pre-order state.
 #[must_use]
 pub fn monthly_entry_to_game(entry: &PlusMonthlyEntry) -> Game {
     Game {
-        id: entry.product_id.clone(),
+        id: entry.product_id.clone().into(),
         name: entry.name.clone(),
         date: to_iso_or_default(Some(&entry.release_date)),
         url: entry.image_url.clone(),
@@ -280,6 +282,15 @@ mod tests {
 
     /// 2026-10-13T00:00:00Z.
     const NOW: i64 = 1_791_849_600_000;
+
+    /// The card of a concept with the id of the lists: the product id, else
+    /// the concept id. A concept without an id gets a placeholder, because
+    /// these tests check the other fields.
+    fn card(concept: &Concept, now_ms: i64) -> Game {
+        let id = GameId::try_from(concept_product_id(concept))
+            .unwrap_or_else(|_| "placeholder-id".parse().unwrap());
+        concept_to_game(concept, id, now_ms)
+    }
 
     fn image(role: &str, url: &str) -> Media {
         Media {
@@ -310,7 +321,7 @@ mod tests {
 
     #[test]
     fn maps_a_sony_concept_to_a_game() {
-        let game = concept_to_game(
+        let game = card(
             &Concept {
                 id: Some("concept-id".into()),
                 name: Some("Game".into()),
@@ -352,13 +363,13 @@ mod tests {
             }]),
             ..Concept::default()
         };
-        assert!(concept_to_game(&concept, NOW).pre_order);
-        assert!(!concept_to_game(&concept, NOW + 1).pre_order);
+        assert!(card(&concept, NOW).pre_order);
+        assert!(!card(&concept, NOW + 1).pre_order);
     }
 
     #[test]
     fn prefers_cover_art_roles_over_screenshots() {
-        let game = concept_to_game(
+        let game = card(
             &Concept {
                 id: Some("concept-id".into()),
                 name: Some("Game".into()),
@@ -379,7 +390,7 @@ mod tests {
     fn falls_back_to_the_first_image_and_skips_empty_urls() {
         let mut odd = image("BACKGROUND", "https://img/first");
         odd.role = None;
-        let game = concept_to_game(
+        let game = card(
             &Concept {
                 media: Some(vec![
                     image("MASTER", ""),
@@ -406,7 +417,7 @@ mod tests {
 
     #[test]
     fn does_not_invent_a_release_date() {
-        let game = concept_to_game(
+        let game = card(
             &Concept {
                 id: Some("concept-id".into()),
                 name: Some("Game".into()),
@@ -426,7 +437,7 @@ mod tests {
             }]),
             ..Concept::default()
         };
-        assert_eq!(concept_to_game(&unparseable, NOW).date, "");
+        assert_eq!(card(&unparseable, NOW).date, "");
     }
 
     #[test]
@@ -473,17 +484,11 @@ mod tests {
             ..Concept::default()
         };
         assert_eq!(
-            concept_to_game(&with("PS_PLUS", "Save 10%"), NOW).plus_upsell_text,
+            card(&with("PS_PLUS", "Save 10%"), NOW).plus_upsell_text,
             Some("Save 10%".into())
         );
-        assert_eq!(
-            concept_to_game(&with("PS_PLUS", ""), NOW).plus_upsell_text,
-            None
-        );
-        assert_eq!(
-            concept_to_game(&with("NONE", "Save 10%"), NOW).plus_upsell_text,
-            None
-        );
+        assert_eq!(card(&with("PS_PLUS", ""), NOW).plus_upsell_text, None);
+        assert_eq!(card(&with("NONE", "Save 10%"), NOW).plus_upsell_text, None);
     }
 
     #[test]
@@ -493,14 +498,15 @@ mod tests {
             products: Some(vec![ConceptProductRef::default()]),
             ..Concept::default()
         };
-        assert_eq!(concept_to_game(&concept, NOW).id, "10001");
+        assert_eq!(concept_product_id(&concept), "10001");
+        assert_eq!(card(&concept, NOW).id, "10001");
         let empty_product_id = Concept {
             id: Some("10001".into()),
             products: Some(vec![product_ref("")]),
             ..Concept::default()
         };
-        assert_eq!(concept_to_game(&empty_product_id, NOW).id, "");
-        assert_eq!(concept_to_game(&Concept::default(), NOW).id, "");
+        assert_eq!(concept_product_id(&empty_product_id), "");
+        assert_eq!(concept_product_id(&Concept::default()), "");
     }
 
     #[test]
@@ -509,9 +515,9 @@ mod tests {
             price: Some(price(base, discounted)),
             ..Concept::default()
         };
-        assert_eq!(concept_to_game(&concept("€9", ""), NOW).price, "€9");
-        assert_eq!(concept_to_game(&concept("", ""), NOW).price, "");
-        assert_eq!(concept_to_game(&Concept::default(), NOW).price, "");
+        assert_eq!(card(&concept("€9", ""), NOW).price, "€9");
+        assert_eq!(card(&concept("", ""), NOW).price, "");
+        assert_eq!(card(&Concept::default(), NOW).price, "");
     }
 
     const ID: &str = "EP0002-PPSA02410_00-DESTINYTHEGAME02";
@@ -539,7 +545,7 @@ mod tests {
     #[test]
     fn maps_detail_fields_and_a_standard_price() {
         let game = product_detail_to_game(
-            ID,
+            &ID.parse().unwrap(),
             &destiny(),
             Some(&StandardPrice {
                 base_price: "€39,99".into(),
@@ -567,7 +573,8 @@ mod tests {
 
     #[test]
     fn leaves_price_date_and_name_empty_without_data() {
-        let game = product_detail_to_game(ID, &ProductDetail::default(), None, NOW);
+        let game =
+            product_detail_to_game(&ID.parse().unwrap(), &ProductDetail::default(), None, NOW);
         assert_eq!(game.price, "");
         assert_eq!(game.original_price, "");
         assert_eq!(game.date, "");
@@ -578,7 +585,7 @@ mod tests {
     #[test]
     fn maps_a_monthly_entry_without_prices() {
         let game = monthly_entry_to_game(&PlusMonthlyEntry {
-            product_id: "EP0001-PPSA00001_00-ALPHA00000000000".into(),
+            product_id: "EP0001-PPSA00001_00-ALPHA00000000000".parse().unwrap(),
             name: "Alpha".into(),
             image_url: "https://img/alpha".into(),
             release_date: "2025-01-01T00:00:00Z".into(),

@@ -9,8 +9,8 @@
 use serde_json::Value;
 
 use super::fields::{Field, WrongType, nullable_string};
+use crate::domain::id::ProductId;
 use crate::domain::library::PurchasedEntry;
-use crate::domain::product_id::is_valid_product_id;
 
 /// A decoded page.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -76,11 +76,11 @@ fn decode_entry(raw: &Value) -> Field<PurchasedEntry> {
     if name.is_empty() {
         return Field::Dropped;
     }
-    if platform != Some("PS5") || !is_valid_product_id(product_id) {
+    let Some(product_id) = ProductId::parse(product_id).filter(|_| platform == Some("PS5")) else {
         return Field::OutOfScope;
-    }
+    };
     Field::Kept(PurchasedEntry {
-        product_id: product_id.to_owned(),
+        product_id,
         name: name.to_owned(),
         image_url: image_url.unwrap_or_default().to_owned(),
     })

@@ -22,7 +22,9 @@ use super::*;
 use crate::application::Page;
 use crate::domain::browse::{BrowseOrder, GenreKey};
 use crate::domain::errors::{GameLookupError, UpstreamError};
-use crate::domain::game::{GenreList, PlusOffer};
+use crate::domain::game::{GenreList, IdKind, PlusOffer};
+use crate::domain::id::{ConceptId, GameId};
+use crate::domain::library::WishlistId;
 use crate::http::AppState;
 use crate::http::static_files::StaticSite;
 use crate::observability::testing::CapturedLogs;
@@ -58,7 +60,7 @@ fn rotated() -> AccountError {
 
 fn library_entry() -> PurchasedEntry {
     PurchasedEntry {
-        product_id: "EP0001-PPSA00001_00-SYNTHETICALPHA00".into(),
+        product_id: "EP0001-PPSA00001_00-SYNTHETICALPHA00".parse().unwrap(),
         name: "Synthetic Alpha".into(),
         image_url: "https://img.test/alpha.png".into(),
     }
@@ -66,8 +68,7 @@ fn library_entry() -> PurchasedEntry {
 
 fn concept_entry() -> WishlistEntry {
     WishlistEntry {
-        id: "10000002".into(),
-        id_kind: IdKind::Concept,
+        id: WishlistId::Concept(ConceptId::parse("10000002").unwrap()),
         name: "Wish Concept".into(),
         image_url: "https://img.test/concept.png".into(),
     }
@@ -79,8 +80,7 @@ fn sku(index: usize) -> String {
 
 fn product_entry(index: usize) -> WishlistEntry {
     WishlistEntry {
-        id: sku(index),
-        id_kind: IdKind::Product,
+        id: WishlistId::Product(sku(index).parse().unwrap()),
         name: format!("Wish {index}"),
         image_url: format!("https://img.test/wish{index}.png"),
     }
@@ -88,7 +88,7 @@ fn product_entry(index: usize) -> WishlistEntry {
 
 fn store_game(id: &str) -> Game {
     Game {
-        id: id.into(),
+        id: id.parse().unwrap(),
         name: format!("Store {id}"),
         date: "2025-01-02T00:00:00.000Z".into(),
         url: "https://img.test/store.png".into(),
@@ -233,16 +233,16 @@ impl SonyAccount for FakeSony {
 // ---------------------------------------------------------------------------
 
 type LookupFn =
-    Box<dyn Fn(String) -> BoxFuture<'static, Result<Game, GameLookupError>> + Send + Sync>;
+    Box<dyn Fn(GameId) -> BoxFuture<'static, Result<Game, GameLookupError>> + Send + Sync>;
 
 struct FakeGames {
     lookup: LookupFn,
-    lookups: Mutex<Vec<String>>,
+    lookups: Mutex<Vec<GameId>>,
 }
 
 impl FakeGames {
     fn new(
-        lookup: impl Fn(String) -> BoxFuture<'static, Result<Game, GameLookupError>>
+        lookup: impl Fn(GameId) -> BoxFuture<'static, Result<Game, GameLookupError>>
         + Send
         + Sync
         + 'static,
@@ -259,7 +259,7 @@ impl FakeGames {
     }
 
     fn found() -> Self {
-        Self::new(|id| async move { Ok(store_game(&id)) }.boxed())
+        Self::new(|id| async move { Ok(store_game(id.as_str())) }.boxed())
     }
 }
 
@@ -298,7 +298,7 @@ impl GamesApi for FakeGames {
     ) -> ServiceFuture<'_, Result<PageResult, UpstreamError>> {
         no_list()
     }
-    fn game_by_id(&self, id: String) -> ServiceFuture<'_, Result<Game, GameLookupError>> {
+    fn game_by_id(&self, id: GameId) -> ServiceFuture<'_, Result<Game, GameLookupError>> {
         self.lookups.lock().unwrap().push(id.clone());
         (self.lookup)(id)
     }
@@ -750,12 +750,12 @@ async fn degrades_only_the_entry_whose_lookup_failed() {
     let games = FakeGames::new(move |id| {
         let failing = failing.clone();
         async move {
-            if id == failing {
+            if id.as_str() == failing {
                 Err(GameLookupError::Upstream(UpstreamError::unavailable(
                     "down",
                 )))
             } else {
-                Ok(store_game(&id))
+                Ok(store_game(id.as_str()))
             }
         }
         .boxed()
@@ -776,10 +776,10 @@ async fn degrades_an_entry_whose_lookup_is_slower_than_its_deadline() {
     let games = FakeGames::new(move |id| {
         let slow = slow.clone();
         async move {
-            if id == slow {
+            if id.as_str() == slow {
                 std::future::pending::<()>().await;
             }
-            Ok(store_game(&id))
+            Ok(store_game(id.as_str()))
         }
         .boxed()
     });
@@ -799,10 +799,10 @@ async fn falls_back_to_minimal_cards_when_the_whole_list_runs_past_its_deadline(
     let games = FakeGames::new(move |id| {
         let fast = fast.clone();
         async move {
-            if id != fast {
+            if id.as_str() != fast {
                 std::future::pending::<()>().await;
             }
-            Ok(store_game(&id))
+            Ok(store_game(id.as_str()))
         }
         .boxed()
     });
@@ -842,7 +842,7 @@ async fn runs_a_bounded_number_of_lookups_at_once() {
                 peak.fetch_max(now, Ordering::SeqCst);
                 tokio::time::sleep(std::time::Duration::from_millis(100)).await;
                 active.fetch_sub(1, Ordering::SeqCst);
-                Ok(store_game(&id))
+                Ok(store_game(id.as_str()))
             }
             .boxed()
         }

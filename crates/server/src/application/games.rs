@@ -20,6 +20,7 @@ use crate::domain::catalog::{
 };
 use crate::domain::errors::{GameLookupError, UpstreamError};
 use crate::domain::game::{Game, Genre, GenreList, IdKind, PageResult, PlusOffer};
+use crate::domain::id::{GameId, ProductId};
 use crate::domain::listing::{
     SortOrder, browse_candidate_ids, browse_concept_to_game, has_release_date, in_new_window,
     in_upcoming_window, is_game_classification, is_ps5_game, map_concepts_to_games,
@@ -27,7 +28,6 @@ use crate::domain::listing::{
     sort_by_date,
 };
 use crate::domain::mapper::{concept_product_id, concept_to_game, product_detail_to_game};
-use crate::domain::product_id::is_valid_product_id;
 
 /// The anonymous Sony store operations (port of `SonyClientApi`). Each
 /// method decodes and scopes Sony's answer at the boundary.
@@ -43,12 +43,12 @@ pub trait SonyCatalog: Send + Sync {
     /// The product detail. A missing or malformed node is an empty detail.
     fn product_detail(
         &self,
-        product_id: String,
+        product_id: ProductId,
     ) -> ServiceFuture<'_, Result<ProductDetail, UpstreamError>>;
     /// The PS Plus offer and the standard price.
     fn product_price(
         &self,
-        product_id: String,
+        product_id: ProductId,
     ) -> ServiceFuture<'_, Result<ProductPrice, UpstreamError>>;
     /// One raw search page, narrowed to the product scope.
     fn search_page(
@@ -119,6 +119,17 @@ struct ProductMeta {
     platforms: Vec<String>,
 }
 
+impl ProductMeta {
+    fn of(detail: &ProductDetail) -> Self {
+        Self {
+            date: detail.release_date.clone().unwrap_or_default(),
+            classification: detail.store_display_classification.clone(),
+            genres: detail.genres.clone(),
+            platforms: detail.platforms.clone(),
+        }
+    }
+}
+
 /// The outcome of one BROWSE concept.
 enum BrowseResolution {
     Game(Box<Game>),
@@ -147,12 +158,12 @@ struct Inner {
     concepts: TtlCache<SonyFeature, Arc<Vec<Concept>>, UpstreamError>,
     /// Product detail for the list enrichment and the game page. A failed
     /// lookup is an empty detail, so the lists never fail on one product.
-    details: TtlCache<String, Arc<ProductDetail>, UpstreamError>,
+    details: TtlCache<ProductId, Arc<ProductDetail>, UpstreamError>,
     /// The PS Plus offer and the standard price, read by the game page only.
-    prices: TtlCache<String, ProductPrice, UpstreamError>,
+    prices: TtlCache<ProductId, ProductPrice, UpstreamError>,
     /// Product detail for the product-id fallback and BROWSE. A failure stays
     /// a failure, so an outage never reads as "no such game".
-    strict_details: TtlCache<String, Arc<ProductDetail>, UpstreamError>,
+    strict_details: TtlCache<ProductId, Arc<ProductDetail>, UpstreamError>,
     monthly: TtlCache<(), Arc<Vec<Game>>, UpstreamError>,
     genres: TtlCache<(), GenreList, UpstreamError>,
     browse_pages: TtlCache<BrowseRequest, PageResult, UpstreamError>,
@@ -229,42 +240,49 @@ impl Inner {
     }
 
     /// The lenient product detail: a failed lookup is an empty detail.
-    async fn detail(&self, product_id: &str) -> Arc<ProductDetail> {
+    async fn detail(&self, product_id: &ProductId) -> Arc<ProductDetail> {
         let sony = Arc::clone(&self.sony);
-        let id = product_id.to_owned();
+        let id = product_id.clone();
         self.details
-            .get_with(product_id.to_owned(), move || async move {
+            .get_with(product_id.clone(), move || async move {
                 Ok(Arc::new(sony.product_detail(id).await.unwrap_or_default()))
             })
             .await
             .unwrap_or_default()
     }
 
-    async fn product_meta(&self, product_id: &str) -> ProductMeta {
-        let detail = self.detail(product_id).await;
-        ProductMeta {
-            date: detail.release_date.clone().unwrap_or_default(),
-            classification: detail.store_display_classification.clone(),
-            genres: detail.genres.clone(),
-            platforms: detail.platforms.clone(),
+    /// The lenient detail of a card. Only a product has a product detail, so
+    /// a card with another id has the empty detail. The list cards that reach
+    /// this lookup all have product ids.
+    async fn card_detail(&self, id: &GameId) -> Arc<ProductDetail> {
+        match id.product_id() {
+            Some(product_id) => self.detail(&product_id).await,
+            None => Arc::default(),
         }
     }
 
-    async fn strict_detail(&self, product_id: &str) -> Result<Arc<ProductDetail>, UpstreamError> {
+    async fn card_meta(&self, id: &GameId) -> ProductMeta {
+        ProductMeta::of(self.card_detail(id).await.as_ref())
+    }
+
+    async fn strict_detail(
+        &self,
+        product_id: &ProductId,
+    ) -> Result<Arc<ProductDetail>, UpstreamError> {
         let sony = Arc::clone(&self.sony);
-        let id = product_id.to_owned();
+        let id = product_id.clone();
         self.strict_details
-            .get_with(product_id.to_owned(), move || async move {
+            .get_with(product_id.clone(), move || async move {
                 sony.product_detail(id).await.map(Arc::new)
             })
             .await
     }
 
-    async fn price(&self, product_id: &str) -> Result<ProductPrice, UpstreamError> {
+    async fn price(&self, product_id: &ProductId) -> Result<ProductPrice, UpstreamError> {
         let sony = Arc::clone(&self.sony);
-        let id = product_id.to_owned();
+        let id = product_id.clone();
         self.prices
-            .get_with(product_id.to_owned(), move || async move {
+            .get_with(product_id.clone(), move || async move {
                 sony.product_price(id).await
             })
             .await
@@ -281,7 +299,7 @@ impl Inner {
     }
 
     async fn enrich_date(&self, mut game: Game) -> Game {
-        game.date = self.product_meta(&game.id).await.date;
+        game.date = self.card_meta(&game.id).await.date;
         game
     }
 
@@ -336,7 +354,7 @@ impl Inner {
         let concepts = self.feature_concepts(SonyFeature::Discounted).await?;
         let games = map_concepts_to_games(&concepts, self.now_ms());
         let enriched = join_all(games.into_iter().map(|game| async move {
-            let meta = self.product_meta(&game.id).await;
+            let meta = self.card_meta(&game.id).await;
             (game, meta)
         }))
         .await;
@@ -370,12 +388,18 @@ impl Inner {
         candidate: SearchCandidate,
         now_ms: i64,
     ) -> Option<Game> {
-        let (concept, unverified) = match candidate {
-            SearchCandidate::Known(concept) => (concept, false),
-            SearchCandidate::Unverified { concept, .. } => (concept, true),
+        let (product_id, concept, unverified) = match candidate {
+            SearchCandidate::Known {
+                product_id,
+                concept,
+            } => (product_id, concept, false),
+            SearchCandidate::Unverified {
+                product_id,
+                concept,
+            } => (product_id, concept, true),
         };
-        let base = concept_to_game(&concept, now_ms);
-        let meta = self.product_meta(&base.id).await;
+        let base = concept_to_game(&concept, product_id.clone().into(), now_ms);
+        let meta = ProductMeta::of(self.detail(&product_id).await.as_ref());
         if unverified && !is_ps5_game(&meta.platforms, meta.classification.as_deref()) {
             return None;
         }
@@ -433,7 +457,9 @@ impl Inner {
         if game.id_kind != IdKind::Product {
             return None;
         }
-        match self.price(&game.id).await {
+        // A product card always has a product id.
+        let product_id = game.id.product_id()?;
+        match self.price(&product_id).await {
             Ok(price) => price.plus_offer,
             Err(error) => {
                 tracing::warn!(reason = error.tag(), "plus offer lookup failed");
@@ -443,7 +469,8 @@ impl Inner {
     }
 
     async fn enrich_with_detail(&self, game: Game) -> Game {
-        let (detail, plus_offer) = join(self.detail(&game.id), self.plus_offer_for(&game)).await;
+        let (detail, plus_offer) =
+            join(self.card_detail(&game.id), self.plus_offer_for(&game)).await;
         Game {
             date: detail.release_date.clone().unwrap_or(game.date),
             genres: if detail.genres.is_empty() {
@@ -467,22 +494,22 @@ impl Inner {
     async fn find_in_feature(
         &self,
         feature: SonyFeature,
-        id: &str,
+        id: &GameId,
     ) -> Result<Option<Game>, UpstreamError> {
         let concepts = self.feature_concepts(feature).await?;
         let matching: Vec<Concept> = concepts
             .iter()
-            .filter(|concept| concept_product_id(concept) == id)
+            .filter(|concept| concept_product_id(concept) == id.as_str())
             .cloned()
             .collect();
         Ok(map_concepts_to_games(&matching, self.now_ms())
             .into_iter()
-            .find(|game| game.id == id))
+            .find(|game| game.id == *id))
     }
 
     /// The price of a game found by product id only. A failed lookup leaves
     /// the game without a price instead of failing the page.
-    async fn price_or_none(&self, product_id: &str) -> ProductPrice {
+    async fn price_or_none(&self, product_id: &ProductId) -> ProductPrice {
         match self.price(product_id).await {
             Ok(price) => price,
             Err(error) => {
@@ -494,12 +521,12 @@ impl Inner {
 
     /// Runs only after every list missed. An upstream failure propagates;
     /// only a valid id that Sony proves is not a PS5 game is not found.
-    async fn by_product_id(&self, id: String) -> Result<Game, GameLookupError> {
-        if !is_valid_product_id(&id) {
+    async fn by_product_id(&self, id: GameId) -> Result<Game, GameLookupError> {
+        let Some(product_id) = id.product_id() else {
             return Err(GameLookupError::NotFound { id });
-        }
-        let (detail, price) = try_join(self.strict_detail(&id), async {
-            Ok(self.price_or_none(&id).await)
+        };
+        let (detail, price) = try_join(self.strict_detail(&product_id), async {
+            Ok(self.price_or_none(&product_id).await)
         })
         .await?;
         if detail.platforms.is_empty()
@@ -519,11 +546,11 @@ impl Inner {
         Ok(Game {
             description: detail.description.clone(),
             plus_offer: price.plus_offer,
-            ..product_detail_to_game(&id, &detail, price.standard.as_ref(), self.now_ms())
+            ..product_detail_to_game(&product_id, &detail, price.standard.as_ref(), self.now_ms())
         })
     }
 
-    async fn game_by_id(&self, id: String) -> Result<Game, GameLookupError> {
+    async fn game_by_id(&self, id: GameId) -> Result<Game, GameLookupError> {
         let released = self.concepts(SonyFeature::New).await?;
         let base = map_concepts_to_games(&released, self.now_ms())
             .into_iter()
@@ -703,7 +730,7 @@ impl GamesApi for GamesService {
         Box::pin(self.inner.browse_games(genre, order, page))
     }
 
-    fn game_by_id(&self, id: String) -> ServiceFuture<'_, Result<Game, GameLookupError>> {
+    fn game_by_id(&self, id: GameId) -> ServiceFuture<'_, Result<Game, GameLookupError>> {
         Box::pin(self.inner.game_by_id(id))
     }
 }

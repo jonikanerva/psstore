@@ -39,6 +39,7 @@ use crate::domain::catalog::{
 };
 use crate::domain::errors::UpstreamError;
 use crate::domain::game::Genre;
+use crate::domain::id::ProductId;
 use crate::domain::listing::narrow_search_entries;
 use crate::sources::sony::contract::SonyContract;
 use crate::sources::sony::graphql_errors::is_persisted_query_rotation;
@@ -210,24 +211,27 @@ impl SonyCatalogClient {
 
     async fn fetch_product_detail(
         &self,
-        product_id: String,
+        product_id: ProductId,
     ) -> Result<ProductDetail, UpstreamError> {
         let json = self
             .graphql_checked(
                 &self.contract.product_operation,
                 &self.contract.product_hash,
-                request::product_variables(&product_id)?,
+                request::product_variables(product_id.as_str())?,
             )
             .await?;
         Ok(extract_product_detail(&json))
     }
 
-    async fn fetch_product_price(&self, product_id: String) -> Result<ProductPrice, UpstreamError> {
+    async fn fetch_product_price(
+        &self,
+        product_id: ProductId,
+    ) -> Result<ProductPrice, UpstreamError> {
         let json = self
             .graphql_checked(
                 &self.contract.product_price_operation,
                 &self.contract.product_price_hash,
-                request::product_variables(&product_id)?,
+                request::product_variables(product_id.as_str())?,
             )
             .await?;
         Ok(parse_product_price(&json))
@@ -397,14 +401,14 @@ impl SonyCatalog for SonyCatalogClient {
 
     fn product_detail(
         &self,
-        product_id: String,
+        product_id: ProductId,
     ) -> ServiceFuture<'_, Result<ProductDetail, UpstreamError>> {
         Box::pin(self.fetch_product_detail(product_id))
     }
 
     fn product_price(
         &self,
-        product_id: String,
+        product_id: ProductId,
     ) -> ServiceFuture<'_, Result<ProductPrice, UpstreamError>> {
         Box::pin(self.fetch_product_price(product_id))
     }

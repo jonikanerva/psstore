@@ -9,8 +9,8 @@ use serde_json::Value;
 
 use super::json::{Invalid, object, opt_list, opt_nullable_strings, opt_string};
 use crate::domain::catalog::PlusMonthlyEntry;
+use crate::domain::id::ProductId;
 use crate::domain::listing::PS5_PLATFORM;
-use crate::domain::product_id::is_valid_product_id;
 
 /// The outcome of a feed response.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -93,10 +93,10 @@ pub fn parse_plus_monthly(json: &Value) -> PlusMonthlyOutcome {
             let ps5 = strings(entry.device)
                 .iter()
                 .any(|device| device == PS5_PLATFORM);
-            if !ps5 || !is_valid_product_id(&product_id) {
+            let Some(product_id) = ps5.then(|| ProductId::parse(&product_id)).flatten() else {
                 out_of_scope += 1;
                 continue;
-            }
+            };
             if !seen.insert(product_id.clone()) {
                 continue;
             }

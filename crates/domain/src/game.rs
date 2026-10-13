@@ -6,11 +6,13 @@
 
 use serde::{Deserialize, Serialize};
 
+use super::id::GameId;
+
 /// One PS5 game card. All prices are Sony's verbatim strings.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Game {
-    pub id: String,
+    pub id: GameId,
     pub name: String,
     /// A UTC instant as an ISO-8601 string, or the empty string when Sony
     /// gives no valid date.
@@ -112,7 +114,7 @@ mod tests {
 
     pub(crate) fn sample_game() -> Game {
         Game {
-            id: "EP0001-PPSA00001_00-SAMPLEGAME000001".into(),
+            id: "EP0001-PPSA00001_00-SAMPLEGAME000001".parse().unwrap(),
             name: "Sample".into(),
             date: "2026-10-14T21:00:00Z".into(),
             url: "https://image.example/cover.png".into(),

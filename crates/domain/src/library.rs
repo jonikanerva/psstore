@@ -8,24 +8,57 @@
 use std::collections::HashSet;
 
 use super::game::{Game, IdKind};
+use super::id::{ConceptId, GameId, ProductId};
 
 /// One game of the purchased library.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PurchasedEntry {
-    /// A valid product SKU id.
-    pub product_id: String,
+    pub product_id: ProductId,
     pub name: String,
     /// The cover image URL, or the empty string.
     pub image_url: String,
 }
 
+/// The id of a wishlist entry: the id that is valid for its Sony type.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum WishlistId {
+    /// A `Product` entry.
+    Product(ProductId),
+    /// A `Concept` entry.
+    Concept(ConceptId),
+}
+
+impl WishlistId {
+    #[must_use]
+    pub fn kind(&self) -> IdKind {
+        match self {
+            Self::Product(_) => IdKind::Product,
+            Self::Concept(_) => IdKind::Concept,
+        }
+    }
+
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::Product(id) => id.as_str(),
+            Self::Concept(id) => id.as_str(),
+        }
+    }
+
+    /// The id of the card.
+    #[must_use]
+    pub fn game_id(&self) -> GameId {
+        match self {
+            Self::Product(id) => id.clone().into(),
+            Self::Concept(id) => id.clone().into(),
+        }
+    }
+}
+
 /// One game of the Sony wishlist.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WishlistEntry {
-    /// A product SKU id for [`IdKind::Product`], a concept id (digits only)
-    /// for [`IdKind::Concept`].
-    pub id: String,
-    pub id_kind: IdKind,
+    pub id: WishlistId,
     pub name: String,
     /// The cover image URL, or the empty string.
     pub image_url: String,
@@ -43,9 +76,9 @@ pub fn dedupe_purchased(entries: Vec<PurchasedEntry>) -> Vec<PurchasedEntry> {
 
 /// A card with a name and an image only. The signed-in lists carry no release
 /// date and no price, so those fields stay empty.
-fn library_card(id: &str, name: &str, image_url: &str, id_kind: IdKind) -> Game {
+fn library_card(id: GameId, name: &str, image_url: &str, id_kind: IdKind) -> Game {
     Game {
-        id: id.to_owned(),
+        id,
         name: name.to_owned(),
         date: String::new(),
         url: image_url.to_owned(),
@@ -73,7 +106,7 @@ pub fn purchased_cards(entries: &[PurchasedEntry]) -> Vec<Game> {
         .iter()
         .map(|entry| {
             library_card(
-                &entry.product_id,
+                entry.product_id.clone().into(),
                 &entry.name,
                 &entry.image_url,
                 IdKind::Product,
@@ -86,7 +119,12 @@ pub fn purchased_cards(entries: &[PurchasedEntry]) -> Vec<Game> {
 /// the boundary has already checked the id against it.
 #[must_use]
 pub fn wishlist_card(entry: &WishlistEntry) -> Game {
-    library_card(&entry.id, &entry.name, &entry.image_url, entry.id_kind)
+    library_card(
+        entry.id.game_id(),
+        &entry.name,
+        &entry.image_url,
+        entry.id.kind(),
+    )
 }
 
 /// The minimal cards of a wishlist, in Sony's order.
@@ -102,7 +140,7 @@ pub fn merge_wishlist_entry(entry: &WishlistEntry, found: Option<Game>) -> Game 
     match found {
         None => wishlist_card(entry),
         Some(game) => Game {
-            id: entry.id.clone(),
+            id: entry.id.game_id(),
             name: if game.name.is_empty() {
                 entry.name.clone()
             } else {
@@ -124,19 +162,24 @@ mod tests {
     use crate::game::PlusOffer;
 
     const PRODUCT: &str = "EP0001-PPSA00001_00-SYNTHETICALPHA00";
+    const PRODUCT_A: &str = "EP0001-PPSA00011_00-SYNTHETICGAMEA0";
+    const PRODUCT_B: &str = "EP0001-PPSA00012_00-SYNTHETICGAMEB0";
 
     fn purchased(product_id: &str, name: &str) -> PurchasedEntry {
         PurchasedEntry {
-            product_id: product_id.into(),
+            product_id: product_id.parse().unwrap(),
             name: name.into(),
             image_url: "u".into(),
         }
     }
 
     fn wish(id: &str, id_kind: IdKind, name: &str, image_url: &str) -> WishlistEntry {
+        let id = match id_kind {
+            IdKind::Product => WishlistId::Product(id.parse().unwrap()),
+            IdKind::Concept => WishlistId::Concept(ConceptId::parse(id).unwrap()),
+        };
         WishlistEntry {
-            id: id.into(),
-            id_kind,
+            id,
             name: name.into(),
             image_url: image_url.into(),
         }
@@ -144,7 +187,7 @@ mod tests {
 
     fn store_game() -> Game {
         Game {
-            id: "store-id".into(),
+            id: "store-id".parse().unwrap(),
             name: "Store name".into(),
             date: "2025-01-02T00:00:00.000Z".into(),
             url: "https://img.test/store.png".into(),
@@ -169,9 +212,9 @@ mod tests {
     #[test]
     fn dedupe_keeps_the_first_entry_per_product_id_in_sony_order() {
         let unique = dedupe_purchased(vec![
-            purchased("A", "first"),
-            purchased("B", "second"),
-            purchased("A", "duplicate"),
+            purchased(PRODUCT_A, "first"),
+            purchased(PRODUCT_B, "second"),
+            purchased(PRODUCT_A, "duplicate"),
         ]);
         let names: Vec<_> = unique.iter().map(|e| e.name.as_str()).collect();
         assert_eq!(names, ["first", "second"]);
@@ -179,11 +222,12 @@ mod tests {
 
     #[test]
     fn purchased_cards_keep_sony_order_with_no_date_and_no_price() {
-        let cards = purchased_cards(&[purchased("B", "Bravo"), purchased("A", "Alpha")]);
+        let cards =
+            purchased_cards(&[purchased(PRODUCT_B, "Bravo"), purchased(PRODUCT_A, "Alpha")]);
         let names: Vec<_> = cards.iter().map(|g| g.name.as_str()).collect();
         assert_eq!(names, ["Bravo", "Alpha"]);
         let first = &cards[0];
-        assert_eq!(first.id, "B");
+        assert_eq!(first.id, PRODUCT_B);
         assert_eq!(first.id_kind, IdKind::Product);
         assert_eq!(first.url, "u");
         assert_eq!((first.date.as_str(), first.price.as_str()), ("", ""));
