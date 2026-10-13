@@ -52,36 +52,23 @@ run = [
 description = "Clippy, type-aware Oxlint, and the type check of every TypeScript package"
 run = [
   "cargo clippy --workspace --all-targets --locked -- -D warnings",
-  # The web package reads the types of @psstore/shared from its build output,
-  # and both the type-aware lint and the type check need them.
-  "pnpm --filter @psstore/shared run build",
-  "pnpm exec oxlint --type-aware --deny-warnings web/src shared/src tools/sony-contract-bot/src",
+  "pnpm exec oxlint --type-aware --deny-warnings web/src packages/api-client/src packages/api-client/scripts tools/sony-contract-bot/src",
+  # pnpm runs the packages in dependency order, so the API client comes
+  # before the web app.
   "pnpm --recursive --if-present run typecheck",
 ]
 
-# The contract steps need packages/api-client. Until that package exists,
-# each step prints that it skips and succeeds. Remove the guard when the
-# package is in the tree.
 [tasks."contract:export"]
 description = "Write contract/openapi.json from the Rust HTTP types"
-run = '''
-if [ ! -f packages/api-client/package.json ]; then echo "contract:export skipped: packages/api-client is missing"; exit 0; fi
-cargo run --locked -p psstore-server --bin openapi -- contract/openapi.json
-'''
+run = "cargo run --locked -p psstore-server --bin openapi -- contract/openapi.json"
 
 [tasks."contract:generate"]
 description = "Generate the TypeScript API client from contract/openapi.json"
-run = '''
-if [ ! -f packages/api-client/package.json ]; then echo "contract:generate skipped: packages/api-client is missing"; exit 0; fi
-pnpm --filter @psstore/api-client run generate
-'''
+run = "pnpm --filter @psstore/api-client run generate"
 
 [tasks."contract:check"]
 description = "Fail when the OpenAPI document or the generated client drifts; change no file"
-run = '''
-if [ ! -f packages/api-client/package.json ]; then echo "contract:check skipped: packages/api-client is missing"; exit 0; fi
-pnpm --filter @psstore/api-client run contract-check
-'''
+run = "pnpm --filter @psstore/api-client run contract-check"
 
 [tasks."scan:secrets"]
 description = "Gitleaks on the history that HEAD reaches"
@@ -98,10 +85,9 @@ run = [
 [tasks.build]
 description = "OpenAPI export, client generation, web build, and the release server"
 run = [
-  "rm -rf build web/build shared/dist tools/sony-contract-bot/dist",
+  "rm -rf build web/build packages/api-client/build tools/sony-contract-bot/dist",
   { task = "contract:export" },
   { task = "contract:generate" },
-  "pnpm --filter @psstore/shared run build",
   "pnpm --filter @psstore/web run build",
   "pnpm --filter @psstore/sony-contract-bot run build",
   "cargo build --release --locked -p psstore-server",
