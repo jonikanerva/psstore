@@ -18,5 +18,6 @@
   "SONY_AUTH_CLIENT_ID": "09515159-7237-4370-9b40-3806e67c0891",
   "SONY_AUTH_REDIRECT_URI": "com.scee.psxandroid.scecompcall://redirect",
   "SONY_AUTH_SCOPE": "psn:mobile.v2.core psn:clientapp",
-  "SONY_AUTH_BASIC_HEADER": "Basic MDk1MTUxNTktNzIzNy00MzcwLTliNDAtMzgwNmU2N2MwODkxOnVjUGprYTV0bnRCMktxc1A="
+  "SONY_AUTH_BASIC_HEADER": "Basic MDk1MTUxNTktNzIzNy00MzcwLTliNDAtMzgwNmU2N2MwODkxOnVjUGprYTV0bnRCMktxc1A=",
+  "SONY_LOCALE": "en-fi"
 }

@@ -61,6 +61,11 @@ pub struct SonyContract {
     /// The `Authorization` header value of the token call.
     #[serde(rename = "SONY_AUTH_BASIC_HEADER")]
     pub auth_basic_header: String,
+    /// The content language and the store region in one tag: English content
+    /// from the Finnish store (EUR). A fixed value, never derived from the
+    /// visitor (STACK.md §9).
+    #[serde(rename = "SONY_LOCALE")]
+    pub locale: String,
 }
 
 impl SonyContract {
@@ -79,6 +84,7 @@ mod tests {
     fn the_committed_contract_file_parses() {
         let contract = SonyContract::load().unwrap();
         assert!(contract.graphql_url.starts_with("https://"));
+        assert_eq!(contract.locale, "en-fi");
         for hash in [
             &contract.category_grid_hash,
             &contract.product_hash,
