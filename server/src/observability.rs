@@ -31,7 +31,7 @@ pub const ALLOWED_FIELDS: &[&str] = &[
     "feature",
     "stage",
     "bind",
-    "location",
+    "panic_location",
     "count",
     "entries",
     "priced",
@@ -163,7 +163,7 @@ fn log_panic(location: Option<&std::panic::Location<'_>>) {
         |l| format!("{}:{}", l.file(), l.line()),
     );
     tracing::error!(
-        location = location.as_str(),
+        panic_location = location.as_str(),
         "panic; the panic message is not logged"
     );
 }
@@ -297,9 +297,9 @@ mod tests {
             lines[0]["message"],
             "panic; the panic message is not logged"
         );
-        let location = lines[0]["location"].as_str().unwrap();
+        let location = lines[0]["panic_location"].as_str().unwrap();
         assert!(location.contains("observability.rs:"), "{location}");
-        assert_eq!(lines[1]["location"], "unknown");
+        assert_eq!(lines[1]["panic_location"], "unknown");
     }
 
     #[test]

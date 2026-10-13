@@ -73,25 +73,21 @@ where
                 let task_runs = Arc::clone(&self.inner);
                 let task_key = key.clone();
                 // The lock is held while the task starts, so the entry exists
-                // before the task can remove it.
+                // before the task can remove it. The guard removes the entry
+                // when the task ends, also when the computation panics after
+                // every caller has left: tokio then drops the task's future.
                 let task = tokio::spawn(async move {
-                    let result = computation.await;
-                    remove(&task_runs, &task_key, id);
-                    result
+                    let _entry = EntryGuard {
+                        runs: task_runs,
+                        key: task_key,
+                        id,
+                    };
+                    computation.await
                 });
-                let panic_runs = Arc::clone(&self.inner);
-                let panic_key = key.clone();
-                let shared = async move {
-                    match task.await {
-                        Ok(result) => result,
-                        Err(_) => {
-                            remove(&panic_runs, &panic_key, id);
-                            Err(E::from(LookupPanicked))
-                        }
-                    }
-                }
-                .boxed()
-                .shared();
+                let shared =
+                    async move { task.await.unwrap_or_else(|_| Err(E::from(LookupPanicked))) }
+                        .boxed()
+                        .shared();
                 runs.by_key.insert(key, (id, shared.clone()));
                 shared
             }
@@ -106,6 +102,19 @@ where
 
     pub fn is_empty(&self) -> bool {
         self.len() == 0
+    }
+}
+
+/// Removes the entry of run `id` when it drops.
+struct EntryGuard<K: Eq + Hash, T, E> {
+    runs: Arc<Mutex<Runs<K, T, E>>>,
+    key: K,
+    id: u64,
+}
+
+impl<K: Eq + Hash, T, E> Drop for EntryGuard<K, T, E> {
+    fn drop(&mut self) {
+        remove(&self.runs, &self.key, self.id);
     }
 }
 
@@ -146,6 +155,27 @@ mod tests {
         assert!(in_flight.is_empty(), "no result is kept after the run");
         assert_eq!(in_flight.run("k", start(3)).await, Ok(3));
         assert_eq!(calls.load(Ordering::SeqCst), 2);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn a_panic_after_every_caller_left_releases_the_entry() {
+        let in_flight: InFlight<&'static str, u32, UpstreamError> = InFlight::new();
+        let abandoned = in_flight.run("k", || async {
+            tokio::time::sleep(Duration::from_millis(10)).await;
+            #[allow(clippy::panic, reason = "the test checks panic containment")]
+            {
+                panic!("synthetic exchange panic");
+            }
+        });
+        assert!(
+            tokio::time::timeout(Duration::from_millis(1), abandoned)
+                .await
+                .is_err()
+        );
+        tokio::time::advance(Duration::from_millis(20)).await;
+        tokio::task::yield_now().await;
+        assert!(in_flight.is_empty(), "the key leaves memory with the task");
+        assert_eq!(in_flight.run("k", || async { Ok(2) }).await, Ok(2));
     }
 
     #[tokio::test(start_paused = true)]

@@ -157,24 +157,23 @@ where
         // The task records the outcome itself, so the entry gets its expiry
         // also when no caller waits any more. The lock is held while the task
         // starts, so the entry exists before the task can complete.
+        // The guard removes the pending entry when the lookup panics, also
+        // after every caller has left: tokio then drops the task's future.
         let task = tokio::spawn(async move {
+            let mut pending = PendingGuard {
+                inner: Arc::clone(&task_inner),
+                key: task_key.clone(),
+                id,
+                armed: true,
+            };
             let outcome = lookup.await;
             task_inner.complete(&task_key, id, &outcome);
+            pending.armed = false;
             outcome
         });
-        let panic_inner = Arc::clone(&self.inner);
-        let panic_key = key.clone();
-        let shared = async move {
-            match task.await {
-                Ok(outcome) => outcome,
-                Err(_) => {
-                    panic_inner.remove(&panic_key, id);
-                    Err(E::from(LookupPanicked))
-                }
-            }
-        }
-        .boxed()
-        .shared();
+        let shared = async move { task.await.unwrap_or_else(|_| Err(E::from(LookupPanicked))) }
+            .boxed()
+            .shared();
         state.insert(
             key,
             Entry {
@@ -186,6 +185,22 @@ where
         );
         state.evict_over(self.inner.capacity);
         shared
+    }
+}
+
+/// Removes the pending entry of lookup `id` when it drops while armed.
+struct PendingGuard<K: Eq + Hash + Clone, V, E> {
+    inner: Arc<Inner<K, V, E>>,
+    key: K,
+    id: u64,
+    armed: bool,
+}
+
+impl<K: Eq + Hash + Clone, V, E> Drop for PendingGuard<K, V, E> {
+    fn drop(&mut self) {
+        if self.armed {
+            self.inner.remove(&self.key, self.id);
+        }
     }
 }
 
@@ -411,6 +426,28 @@ mod tests {
         tokio::time::advance(Duration::from_secs(365 * 24 * 60 * 60)).await;
         assert_eq!(cache.get_with("k", counting(&calls, Ok(2))).await, Ok(1));
         assert_eq!(calls.load(Ordering::SeqCst), 1);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn a_panic_after_every_caller_left_is_not_cached() {
+        let cache = TestCache::with_fixed_ttl(10, Duration::from_secs(60));
+        let abandoned = cache.get_with("k", || async {
+            tokio::time::sleep(Duration::from_millis(10)).await;
+            #[allow(clippy::panic, reason = "the test checks panic containment")]
+            {
+                panic!("synthetic lookup panic");
+            }
+        });
+        assert!(
+            tokio::time::timeout(Duration::from_millis(1), abandoned)
+                .await
+                .is_err()
+        );
+        tokio::time::advance(Duration::from_millis(20)).await;
+        tokio::task::yield_now().await;
+        assert!(cache.is_empty());
+        let calls = Arc::new(AtomicUsize::new(0));
+        assert_eq!(cache.get_with("k", counting(&calls, Ok(3))).await, Ok(3));
     }
 
     #[tokio::test(start_paused = true)]
