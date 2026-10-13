@@ -1,8 +1,20 @@
-# cargo-deny policy. `pnpm scan:deps` runs `cargo deny check bans licenses sources`.
-# cargo-audit checks security advisories separately.
+# cargo-deny policy. `mise run scan:deps` runs `cargo deny --locked check`,
+# which runs the four checks: advisories, bans, licences, and sources.
 
 [graph]
 all-features = false
+
+[advisories]
+# The RustSec advisory database, fetched from GitHub on each run. A
+# vulnerability is always an error. The settings below make the other
+# advisory kinds errors too: an unmaintained or unsound crate anywhere in the
+# graph, and a yanked crate version. An entry in `ignore` needs a RUSTSEC id,
+# a reason, and a STACK.md §15 exception; an unused entry is an error.
+unmaintained = "all"
+unsound = "all"
+yanked = "deny"
+unused-ignored-advisory = "deny"
+ignore = []
 
 [licenses]
 # Permissive licences only. Add a licence only after a review of its terms.

@@ -1,0 +1,9 @@
+# cargo-nextest settings for `mise run test` (STACK.md → 4).
+
+# The version that mise.toml pins. An older nextest stops with exit code 92.
+nextest-version = { required = "0.9.146" }
+
+[profile.default]
+# A test that hangs fails after two minutes, so it cannot block
+# `mise run verify`. The slowest tests end in a few seconds.
+slow-timeout = { period = "60s", terminate-after = 2 }
