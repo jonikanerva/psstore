@@ -7,6 +7,7 @@ import {
   addPinnedOperations,
   type Probe,
 } from '../contract/pinnedOperations.js'
+import { readSonyConstants } from '../contract/sonyConstants.js'
 import { filterTrackedOperations } from '../contract/trackedOperations.js'
 import { filterOperationsByFinnishPs5EurScope } from '../contract/scopeFilter.js'
 import type {
@@ -19,7 +20,6 @@ import {
   ensureDir,
   fileExists,
   readJsonFile,
-  readTextFile,
   writeJsonFile,
 } from '../io/files.js'
 import { paths } from '../io/paths.js'
@@ -72,7 +72,7 @@ export const runNormalize = async (
   const withPinned = await addPinnedOperations(
     scopedOperations,
     canonical,
-    await readTextFile(paths.envFile),
+    await readSonyConstants(paths.sonyConstants),
     probe,
   )
 

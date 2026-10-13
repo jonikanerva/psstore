@@ -14,6 +14,7 @@ import {
   WISHLIST_PROBE,
   type ProbeConfig,
 } from '../commands/probeSignedIn.js'
+import { parseSonyConstants } from '../contract/sonyConstants.js'
 import { readJsonFile } from '../io/files.js'
 import type { SonyContractManifest } from '../contract/types.js'
 
@@ -36,19 +37,21 @@ const config: ProbeConfig = {
   locale: 'en-fi',
 }
 
-const envText = [
-  `export const SONY_GRAPHQL_URL =\n  '${config.graphqlUrl}'`,
-  `export const SONY_AUTH_BASE_URL =\n  '${config.authBaseUrl}'`,
-  `export const SONY_AUTH_CLIENT_ID = '${config.clientId}'`,
-  `export const SONY_AUTH_REDIRECT_URI =\n  '${REDIRECT}'`,
-  `export const SONY_AUTH_SCOPE = '${config.scope}'`,
-  `export const SONY_AUTH_BASIC_HEADER =\n  '${config.basicHeader}'`,
-  `export const SONY_PURCHASED_OPERATION_NAME = '${config.operationName}'`,
-  `export const SONY_PURCHASED_HASH =\n  '${HASH}'`,
-  "export const SONY_WISHLIST_OPERATION_NAME = 'storeRetrieveWishlist'",
-  `export const SONY_WISHLIST_HASH =\n  '${WISHLIST_HASH}'`,
-  "export const SONY_LOCALE = 'en-fi'",
-].join('\n')
+// The text of a synthetic docs/contracts/sony-constants.json.
+const constantsText = JSON.stringify({
+  SONY_GRAPHQL_URL: config.graphqlUrl,
+  SONY_AUTH_BASE_URL: config.authBaseUrl,
+  SONY_AUTH_CLIENT_ID: config.clientId,
+  SONY_AUTH_REDIRECT_URI: REDIRECT,
+  SONY_AUTH_SCOPE: config.scope,
+  SONY_AUTH_BASIC_HEADER: config.basicHeader,
+  SONY_PURCHASED_OPERATION_NAME: config.operationName,
+  SONY_PURCHASED_HASH: HASH,
+  SONY_WISHLIST_OPERATION_NAME: 'storeRetrieveWishlist',
+  SONY_WISHLIST_HASH: WISHLIST_HASH,
+  SONY_LOCALE: 'en-fi',
+})
+const sonyConstants = parseSonyConstants(constantsText)
 
 const redirect = (location: string | null): Response =>
   new Response(null, {
@@ -116,17 +119,25 @@ describe('parseNpsso', () => {
 })
 
 describe('readProbeConfig', () => {
-  it('reads every constant from the server env text', () => {
-    expect(readProbeConfig(envText)).toEqual(config)
+  it('reads every constant from the constants file', () => {
+    expect(readProbeConfig(sonyConstants)).toEqual(config)
   })
 
   it('reads the wishlist operation constants for the wishlist probe', () => {
-    expect(readProbeConfig(envText, WISHLIST_PROBE)).toEqual(wishlistConfig)
+    expect(readProbeConfig(sonyConstants, WISHLIST_PROBE)).toEqual(
+      wishlistConfig,
+    )
   })
 
   it('fails with a fixed tag when a constant is missing', () => {
-    expect(() => readProbeConfig('nothing here')).toThrow(
-      'probe failed: env-unreadable',
+    expect(() => readProbeConfig(new Map())).toThrow(
+      'probe failed: constants-unreadable',
+    )
+    const withoutLocale = new Map(
+      [...sonyConstants].filter(([name]) => name !== 'SONY_LOCALE'),
+    )
+    expect(() => readProbeConfig(withoutLocale)).toThrow(
+      'probe failed: constants-unreadable',
     )
   })
 })
@@ -404,14 +415,14 @@ describe('recordObservedStatus', () => {
 describe('runProbePurchased', () => {
   let dir = ''
   let manifestPath = ''
-  let envFilePath = ''
+  let constantsPath = ''
   const output: string[] = []
 
   beforeEach(async () => {
     dir = await fs.mkdtemp(path.join(os.tmpdir(), 'probe-'))
     manifestPath = path.join(dir, 'manifest.json')
-    envFilePath = path.join(dir, 'env.ts')
-    await fs.writeFile(envFilePath, envText)
+    constantsPath = path.join(dir, 'sony-constants.json')
+    await fs.writeFile(constantsPath, constantsText)
     await fs.writeFile(manifestPath, JSON.stringify(manifestWith([])))
     output.length = 0
     for (const method of ['log', 'info', 'warn', 'error', 'debug'] as const) {
@@ -433,7 +444,7 @@ describe('runProbePurchased', () => {
       env: { SONY_NPSSO: npsso },
       fetchFn,
       manifestPath,
-      envFilePath,
+      constantsPath,
     })
 
   const readManifest = async (): Promise<SonyContractManifest> =>
@@ -500,6 +511,20 @@ describe('runProbePurchased', () => {
     await secretsAbsent()
   })
 
+  it('makes no request and writes nothing when the constants file is invalid', async () => {
+    await fs.writeFile(constantsPath, JSON.stringify({ SONY_LOCALE: 1 }))
+    const fetchFn = fetchOf()
+    await run(fetchFn)
+    expect(fetchFn).not.toHaveBeenCalled()
+    expect(output).toEqual([
+      'getPurchasedGameList - FAIL (constants-unreadable)',
+    ])
+    expect(process.exitCode).toBe(1)
+    expect(await fs.readFile(manifestPath, 'utf8')).toBe(
+      JSON.stringify(manifestWith([])),
+    )
+  })
+
   it('fails before any request when the manifest has no purchased entry', async () => {
     const before = manifestWith([])
     await fs.writeFile(
@@ -518,14 +543,14 @@ describe('runProbePurchased', () => {
 describe('runProbeWishlist', () => {
   let dir = ''
   let manifestPath = ''
-  let envFilePath = ''
+  let constantsPath = ''
   const output: string[] = []
 
   beforeEach(async () => {
     dir = await fs.mkdtemp(path.join(os.tmpdir(), 'probe-wish-'))
     manifestPath = path.join(dir, 'manifest.json')
-    envFilePath = path.join(dir, 'env.ts')
-    await fs.writeFile(envFilePath, envText)
+    constantsPath = path.join(dir, 'sony-constants.json')
+    await fs.writeFile(constantsPath, constantsText)
     await fs.writeFile(manifestPath, JSON.stringify(manifestWith([])))
     output.length = 0
     for (const method of ['log', 'info', 'warn', 'error', 'debug'] as const) {
@@ -547,7 +572,7 @@ describe('runProbeWishlist', () => {
       env: { SONY_NPSSO: npsso },
       fetchFn,
       manifestPath,
-      envFilePath,
+      constantsPath,
     })
 
   it('records 200 on the wishlist entry and prints PASS', async () => {

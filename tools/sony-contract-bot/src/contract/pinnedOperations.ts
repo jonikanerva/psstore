@@ -1,9 +1,14 @@
-import { extractDefault } from '../compat/backend.js'
+import {
+  SONY_CONSTANTS_FILE,
+  sonyConstant,
+  type SonyConstants,
+} from './sonyConstants.js'
 import type { ContractOperation } from './types.js'
 
 // Operations the backend calls that the store page no longer fires. Capture
 // cannot observe them, so refresh verifies each one with a live request.
-// Each entry names the `env.ts` constants that hold its operation name and hash.
+// Each entry names the constants in `docs/contracts/sony-constants.json` that
+// hold its operation name and hash.
 export const PINNED_OPERATIONS = [
   {
     operationNameConstant: 'SONY_PRODUCT_OPERATION_NAME',
@@ -12,7 +17,7 @@ export const PINNED_OPERATIONS = [
 ] as const
 
 // Signed-in operations. Capture and the anonymous probe cannot reach them, so
-// the canonical entry carries over with the `env.ts` hash and is never verified
+// the canonical entry carries over with the constants-file hash and is never verified
 // live. It guards the repo-internal name and hash only, not Sony drift.
 export const SIGNED_IN_PINNED_OPERATIONS = [
   {
@@ -36,34 +41,34 @@ export interface ProbeRequest {
 export type Probe = (request: ProbeRequest) => Promise<void>
 
 const unreadable = (constant: string): Error =>
-  new Error(`Unable to read ${constant} from the server env defaults`)
+  new Error(`Unable to read ${constant} from ${SONY_CONSTANTS_FILE}`)
 
 /**
  * Add each pinned operation the capture lacks. The entry comes from the
- * canonical manifest and carries the `env.ts` hash. It is added only when the
+ * canonical manifest and carries the constants-file hash. It is added only when the
  * probe passes. An operation that the capture holds is never probed.
  */
 export const addPinnedOperations = async (
   captured: ContractOperation[],
   canonical: ContractOperation[],
-  serverEnvText: string,
+  sonyConstants: SonyConstants,
   probe: Probe,
   notice: (message: string) => void = (message) => {
     console.info(message)
   },
 ): Promise<ContractOperation[]> => {
-  const url = extractDefault(serverEnvText, 'SONY_GRAPHQL_URL')
+  const url = sonyConstant(sonyConstants, 'SONY_GRAPHQL_URL')
   if (!url) {
     throw unreadable('SONY_GRAPHQL_URL')
   }
 
   const result = [...captured]
   for (const pinned of PINNED_OPERATIONS) {
-    const operationName = extractDefault(
-      serverEnvText,
+    const operationName = sonyConstant(
+      sonyConstants,
       pinned.operationNameConstant,
     )
-    const hash = extractDefault(serverEnvText, pinned.hashConstant)
+    const hash = sonyConstant(sonyConstants, pinned.hashConstant)
     if (!operationName) {
       throw unreadable(pinned.operationNameConstant)
     }
@@ -102,11 +107,11 @@ export const addPinnedOperations = async (
   }
 
   for (const pinned of SIGNED_IN_PINNED_OPERATIONS) {
-    const operationName = extractDefault(
-      serverEnvText,
+    const operationName = sonyConstant(
+      sonyConstants,
       pinned.operationNameConstant,
     )
-    const hash = extractDefault(serverEnvText, pinned.hashConstant)
+    const hash = sonyConstant(sonyConstants, pinned.hashConstant)
     if (!operationName) {
       throw unreadable(pinned.operationNameConstant)
     }

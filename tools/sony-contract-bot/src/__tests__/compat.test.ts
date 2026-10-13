@@ -5,6 +5,7 @@ import type {
   SonyContractManifest,
 } from '../contract/types.js'
 import { validateBackendCompatibility } from '../compat/backend.js'
+import type { SonyConstants } from '../contract/sonyConstants.js'
 
 const GRID_FEATURES: ContractFeature[] = ['new', 'upcoming', 'discounted']
 const GRID_HASH = 'a'.repeat(64)
@@ -134,30 +135,44 @@ const manifest: SonyContractManifest = {
   ],
 }
 
-// serverEnvText declares all four anchored constants the backend exposes,
-// including the PDP operation name + hash (server/src/config/env.ts).
-const serverEnvText = [
-  'export const SONY_GRAPHQL_URL =',
-  "  'https://web.np.playstation.com/api/graphql/v1/op'",
-  "export const SONY_OPERATION_NAME = 'categoryGridRetrieve'",
-  "export const SONY_PRODUCT_OPERATION_NAME = 'metGetProductById'",
-  `export const SONY_PRODUCT_BY_ID_HASH =\n  '${PDP_HASH}'`,
-  "export const SONY_PRODUCT_PRICE_OPERATION_NAME = 'productRetrieveForCtasWithPrice'",
-  `export const SONY_PRODUCT_PRICE_HASH =\n  '${PRICE_HASH}'`,
-  "export const SONY_SEARCH_OPERATION_NAME = 'getSearchResults'",
-  `export const SONY_SEARCH_HASH =\n  '${SEARCH_HASH}'`,
-  "export const SONY_PURCHASED_OPERATION_NAME = 'getPurchasedGameList'",
-  `export const SONY_PURCHASED_HASH =\n  '${PURCHASED_HASH}'`,
-  "export const SONY_WISHLIST_OPERATION_NAME = 'storeRetrieveWishlist'",
-  `export const SONY_WISHLIST_HASH =\n  '${WISHLIST_HASH}'`,
+// The constants that the bot reads from docs/contracts/sony-constants.json.
+const constantValues: Record<string, string> = {
+  SONY_GRAPHQL_URL: 'https://web.np.playstation.com/api/graphql/v1/op',
+  SONY_OPERATION_NAME: 'categoryGridRetrieve',
+  SONY_PRODUCT_OPERATION_NAME: 'metGetProductById',
+  SONY_PRODUCT_BY_ID_HASH: PDP_HASH,
+  SONY_PRODUCT_PRICE_OPERATION_NAME: 'productRetrieveForCtasWithPrice',
+  SONY_PRODUCT_PRICE_HASH: PRICE_HASH,
+  SONY_SEARCH_OPERATION_NAME: 'getSearchResults',
+  SONY_SEARCH_HASH: SEARCH_HASH,
+  SONY_PURCHASED_OPERATION_NAME: 'getPurchasedGameList',
+  SONY_PURCHASED_HASH: PURCHASED_HASH,
+  SONY_WISHLIST_OPERATION_NAME: 'storeRetrieveWishlist',
+  SONY_WISHLIST_HASH: WISHLIST_HASH,
+}
+
+const sonyConstants: SonyConstants = new Map(Object.entries(constantValues))
+
+// The constants without the named keys.
+const constantsWithout = (...names: string[]): SonyConstants =>
+  new Map([...sonyConstants].filter(([name]) => !names.includes(name)))
+
+// Production lines of the Rust server that hold each source anchor.
+const sonyClientText = [
+  '.header("x-apollo-operation-name", operation)',
+  '.get("categoryGridRetrieve")',
+  '.get("productRetrieve")',
+  'Ok(data) => data.get("universalSearch"),',
+  '&contract.purchased_hash,',
+  '&contract.wishlist_hash,',
 ].join('\n')
 
 const context = {
-  serverEnvText,
-  sonyClientText:
-    "headers: { 'x-apollo-operation-name': strategy.operationName }\nreturn json.data?.categoryGridRetrieve?.concepts ?? []\nconst product = json.data?.productRetrieve\nconst search = json.data?.universalSearch\nsha256Hash: SONY_PURCHASED_HASH\nsha256Hash: SONY_WISHLIST_HASH",
-  mapperText: 'export const conceptToGame = (concept) => concept',
-  serviceText: "await fetchConceptsByFeature('new', 300)",
+  sonyConstants,
+  sonyClientText,
+  mapperText:
+    'pub fn concept_to_game(concept: &Concept, now_ms: i64) -> Game {',
+  serviceText: 'sony.concepts_by_feature(feature, size, 0)',
 }
 
 describe('validateBackendCompatibility', () => {
@@ -234,13 +249,12 @@ describe('validateBackendCompatibility', () => {
     }).toThrow(/Product operation .* variables_schema incompatible/)
   })
 
-  it('rejects when sonyClient no longer extracts productRetrieve (cut 3)', () => {
-    // Prove the source-side guard can actually fail: a sonyClient text that
+  it('rejects when the Sony client no longer extracts productRetrieve (cut 3)', () => {
+    // Prove the source-side guard can actually fail: a Sony client text that
     // still reads the grid path but no longer reads `productRetrieve`.
     const withoutProductRetrieve = {
       ...context,
-      sonyClientText:
-        "headers: { 'x-apollo-operation-name': strategy.operationName }\nreturn json.data?.categoryGridRetrieve?.concepts ?? []",
+      sonyClientText: sonyClientText.replace('.get("productRetrieve")', ''),
     }
 
     expect(() => {
@@ -248,19 +262,36 @@ describe('validateBackendCompatibility', () => {
     }).toThrow(/productRetrieve/)
   })
 
-  it('rejects when the server PDP env constants are unreadable', () => {
-    const withoutPdpEnv = {
+  it('rejects when the PDP constants are missing', () => {
+    const withoutPdpConstants = {
       ...context,
-      serverEnvText: [
-        'export const SONY_GRAPHQL_URL =',
-        "  'https://web.np.playstation.com/api/graphql/v1/op'",
-        "export const SONY_OPERATION_NAME = 'categoryGridRetrieve'",
-      ].join('\n'),
+      sonyConstants: constantsWithout(
+        'SONY_PRODUCT_OPERATION_NAME',
+        'SONY_PRODUCT_BY_ID_HASH',
+      ),
     }
 
     expect(() => {
-      validateBackendCompatibility(manifest, withoutPdpEnv)
-    }).toThrow(/SONY_PRODUCT_OPERATION_NAME/)
+      validateBackendCompatibility(manifest, withoutPdpConstants)
+    }).toThrow(/SONY_PRODUCT_OPERATION_NAME.*sony-constants\.json/)
+  })
+
+  it('rejects when the endpoint constants are missing', () => {
+    expect(() => {
+      validateBackendCompatibility(manifest, {
+        ...context,
+        sonyConstants: constantsWithout('SONY_GRAPHQL_URL'),
+      })
+    }).toThrow(/SONY_GRAPHQL_URL.*sony-constants\.json/)
+  })
+
+  it('treats an empty constant value as missing', () => {
+    expect(() => {
+      validateBackendCompatibility(manifest, {
+        ...context,
+        sonyConstants: new Map([...sonyConstants, ['SONY_OPERATION_NAME', '']]),
+      })
+    }).toThrow(/SONY_OPERATION_NAME/)
   })
 
   it('rejects a manifest without the price operation', () => {
@@ -289,18 +320,14 @@ describe('validateBackendCompatibility', () => {
     }).toThrow(/Manifest missing price operation/)
   })
 
-  it('rejects when the server price env constants are unreadable', () => {
-    const withoutPriceEnv = {
+  it('rejects when the price constants are missing', () => {
+    const withoutPriceConstants = {
       ...context,
-      serverEnvText: serverEnvText
-        .split('\n')
-        .filter((line) => !line.includes('SONY_PRODUCT_PRICE'))
-        .join('\n')
-        .replace(/\n\s*'d{64}'/, ''),
+      sonyConstants: constantsWithout('SONY_PRODUCT_PRICE_HASH'),
     }
 
     expect(() => {
-      validateBackendCompatibility(manifest, withoutPriceEnv)
+      validateBackendCompatibility(manifest, withoutPriceConstants)
     }).toThrow(/SONY_PRODUCT_PRICE_OPERATION_NAME/)
   })
 
@@ -357,10 +384,10 @@ describe('validateBackendCompatibility', () => {
     }).toThrow(/Search operation .* variables_schema incompatible/)
   })
 
-  it('rejects when sonyClient no longer extracts universalSearch', () => {
+  it('rejects when the Sony client no longer extracts universalSearch', () => {
     const withoutSearchPath = {
       ...context,
-      sonyClientText: context.sonyClientText.replace('universalSearch', ''),
+      sonyClientText: sonyClientText.replace('"universalSearch"', ''),
     }
 
     expect(() => {
@@ -368,18 +395,17 @@ describe('validateBackendCompatibility', () => {
     }).toThrow(/universalSearch/)
   })
 
-  it('rejects when the server search env constants are unreadable', () => {
-    const withoutSearchEnv = {
+  it('rejects when the search constants are missing', () => {
+    const withoutSearchConstants = {
       ...context,
-      serverEnvText: serverEnvText
-        .split('\n')
-        .filter((line) => !line.includes('SONY_SEARCH'))
-        .join('\n')
-        .replace(/\n\s*'f{64}'/, ''),
+      sonyConstants: constantsWithout(
+        'SONY_SEARCH_OPERATION_NAME',
+        'SONY_SEARCH_HASH',
+      ),
     }
 
     expect(() => {
-      validateBackendCompatibility(manifest, withoutSearchEnv)
+      validateBackendCompatibility(manifest, withoutSearchConstants)
     }).toThrow(/SONY_SEARCH_OPERATION_NAME/)
   })
   const withoutPurchased = () =>
@@ -451,26 +477,20 @@ describe('validateBackendCompatibility', () => {
     }).toThrow(/Library operation .* variables_schema incompatible/)
   })
 
-  it('rejects when sonyClient no longer sends the library hash constant', () => {
+  it('rejects when the Sony client no longer sends the library hash constant', () => {
     expect(() => {
       validateBackendCompatibility(manifest, {
         ...context,
-        sonyClientText: context.sonyClientText.replace(
-          'SONY_PURCHASED_HASH',
-          '',
-        ),
+        sonyClientText: sonyClientText.replace('contract.purchased_hash', ''),
       })
-    }).toThrow(/SONY_PURCHASED_HASH/)
+    }).toThrow(/SONY_PURCHASED_HASH, contract\.purchased_hash/)
   })
 
-  it('rejects when the server library env constants are unreadable', () => {
+  it('rejects when the library constants are missing', () => {
     expect(() => {
       validateBackendCompatibility(manifest, {
         ...context,
-        serverEnvText: serverEnvText
-          .split('\n')
-          .filter((line) => !line.includes('SONY_PURCHASED_OPERATION_NAME'))
-          .join('\n'),
+        sonyConstants: constantsWithout('SONY_PURCHASED_OPERATION_NAME'),
       })
     }).toThrow(/SONY_PURCHASED_OPERATION_NAME/)
   })
@@ -543,27 +563,72 @@ describe('wishlist operation compatibility', () => {
     }).toThrow(/Wishlist operation .* variables_schema incompatible/)
   })
 
-  it('rejects when sonyClient no longer sends the wishlist hash constant', () => {
+  it('rejects when the Sony client no longer sends the wishlist hash constant', () => {
     expect(() => {
       validateBackendCompatibility(manifest, {
         ...context,
-        sonyClientText: context.sonyClientText.replace(
-          'SONY_WISHLIST_HASH',
-          '',
-        ),
+        sonyClientText: sonyClientText.replace('contract.wishlist_hash', ''),
       })
-    }).toThrow(/SONY_WISHLIST_HASH/)
+    }).toThrow(/SONY_WISHLIST_HASH, contract\.wishlist_hash/)
   })
 
-  it('rejects when the server wishlist env constants are unreadable', () => {
+  it('rejects when the wishlist constants are missing', () => {
     expect(() => {
       validateBackendCompatibility(manifest, {
         ...context,
-        serverEnvText: serverEnvText
-          .split('\n')
-          .filter((line) => !line.includes('SONY_WISHLIST_OPERATION_NAME'))
-          .join('\n'),
+        sonyConstants: constantsWithout('SONY_WISHLIST_OPERATION_NAME'),
       })
     }).toThrow(/SONY_WISHLIST_OPERATION_NAME/)
+  })
+})
+
+describe('source anchors', () => {
+  it.each([
+    [
+      'the operation-name header',
+      '"x-apollo-operation-name"',
+      /x-apollo-operation-name/,
+    ],
+    ['the grid path', '"categoryGridRetrieve"', /categoryGridRetrieve/],
+  ])('rejects a Sony client without %s', (_name, anchor, message) => {
+    expect(() => {
+      validateBackendCompatibility(manifest, {
+        ...context,
+        sonyClientText: sonyClientText.replace(anchor, ''),
+      })
+    }).toThrow(message)
+  })
+
+  it('rejects a mapper without the concept mapping', () => {
+    expect(() => {
+      validateBackendCompatibility(manifest, {
+        ...context,
+        mapperText: 'pub fn product_detail_to_game() {}',
+      })
+    }).toThrow(/fn concept_to_game/)
+  })
+
+  it('rejects a games service that only declares the concept fetch', () => {
+    // The port trait declares the method. Only a call counts.
+    expect(() => {
+      validateBackendCompatibility(manifest, {
+        ...context,
+        serviceText: 'fn concepts_by_feature(&self, feature: SonyFeature)',
+      })
+    }).toThrow(/games service no longer fetches feature concepts/)
+  })
+
+  it('rejects an anchor in another quoting or as a bare word', () => {
+    // A comment that names the path does not count: the anchor is the quoted
+    // string literal that the code reads.
+    expect(() => {
+      validateBackendCompatibility(manifest, {
+        ...context,
+        sonyClientText: sonyClientText.replace(
+          '"productRetrieve"',
+          '// reads productRetrieve',
+        ),
+      })
+    }).toThrow(/productRetrieve/)
   })
 })
