@@ -197,6 +197,10 @@ impl IntoResponse for Problem {
     }
 }
 
+/// The largest `retryAfterSeconds`. The contract types the field as an
+/// OpenAPI `int32`, so the generated client accepts at most `i32::MAX`.
+const MAX_RETRY_AFTER_SECONDS: u32 = i32::MAX.unsigned_abs();
+
 impl From<&UpstreamError> for Problem {
     fn from(error: &UpstreamError) -> Self {
         match error {
@@ -206,10 +210,14 @@ impl From<&UpstreamError> for Problem {
                 retry_after_seconds,
                 ..
             } => Self {
-                // The source clamps the delay to its attempt deadline, so it
-                // fits in `u32`. A larger value saturates.
-                retry_after_seconds: retry_after_seconds
-                    .map(|seconds| u32::try_from(seconds).unwrap_or(u32::MAX)),
+                // The source clamps the delay to its attempt deadline, so a
+                // real value is small. A larger value saturates at the
+                // contract maximum.
+                retry_after_seconds: retry_after_seconds.map(|seconds| {
+                    u32::try_from(seconds).map_or(MAX_RETRY_AFTER_SECONDS, |seconds| {
+                        seconds.min(MAX_RETRY_AFTER_SECONDS)
+                    })
+                }),
                 ..Self::new(ProblemCode::UpstreamRateLimited)
             },
         }
@@ -342,7 +350,12 @@ mod tests {
             message: String::new(),
             retry_after_seconds: Some(u64::MAX),
         });
-        assert_eq!(huge.retry_after_seconds, Some(u32::MAX));
+        assert_eq!(huge.retry_after_seconds, Some(2_147_483_647));
+        let over_int32 = Problem::from(UpstreamError::RateLimited {
+            message: String::new(),
+            retry_after_seconds: Some(u64::from(u32::MAX)),
+        });
+        assert_eq!(over_int32.retry_after_seconds, Some(2_147_483_647));
     }
 
     #[test]
