@@ -5,6 +5,7 @@
 //! `domain_has_no_forbidden_dependencies` in `lib.rs` enforces this.
 
 pub mod browse;
+pub mod critic_match;
 pub mod errors;
 pub mod game;
 pub mod library;

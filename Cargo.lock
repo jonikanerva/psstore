@@ -870,6 +870,8 @@ dependencies = [
  "axum",
  "form_urlencoded",
  "futures-util",
+ "icu_normalizer",
+ "icu_properties",
  "jiff",
  "reqwest",
  "serde",
