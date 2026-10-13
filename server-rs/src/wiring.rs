@@ -46,8 +46,22 @@ fn critic_scores(_config: &Config) -> Arc<dyn CriticScores> {
 // The signed-in requests. The wishlist fills its cards from `games`.
 // ---------------------------------------------------------------------------
 
-fn account(_sony: &SonyContract, _games: Arc<dyn GamesApi>) -> Arc<dyn AccountApi> {
-    Arc::new(NotConnected)
+fn account(sony: &SonyContract, games: Arc<dyn GamesApi>) -> Arc<dyn AccountApi> {
+    use crate::application::account::AccountService;
+    use crate::sources::sony::account::{AccountTiming, SonyAccountClient};
+
+    match SonyAccountClient::new(sony.clone(), AccountTiming::default(), true) {
+        Ok(client) => Arc::new(AccountService::new(Arc::new(client), games)),
+        // Without an HTTP client every signed-in request is an outage. The
+        // sign-in cookie stays, because an outage is no rejection.
+        Err(_) => {
+            tracing::error!(
+                stage = "account_client",
+                "the Sony account client could not start"
+            );
+            Arc::new(NotConnected)
+        }
+    }
 }
 
 /// The critic score when the feature is off: never a score.
