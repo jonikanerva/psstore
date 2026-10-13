@@ -31,6 +31,7 @@ use reqwest::header::{ACCEPT, AUTHORIZATION, COOKIE, HeaderValue, LOCATION};
 use serde::Serialize;
 use serde_json::Value;
 
+use super::catalog::locale_override;
 use super::contract::SonyContract;
 use super::graphql_errors::is_persisted_query_rotation;
 use crate::application::ServiceFuture;
@@ -46,11 +47,6 @@ pub const PURCHASED_PAGE_SIZE: usize = 100;
 /// The most library pages per request. A library that needs more pages fails
 /// the request instead of showing a truncated list.
 pub const PURCHASED_MAX_PAGES: usize = 20;
-
-/// The `x-psn-store-locale-override` value: English content from the Finnish
-/// store (`SONY_LOCALE` `en-fi`, STACK.md §9). The anonymous store adapter
-/// sends the same value.
-const LOCALE_OVERRIDE: &str = "en-FI";
 
 const SIGN_IN_UNAVAILABLE: &str = "Sony sign-in unavailable";
 const SIGN_IN_REJECTED: &str = "Sony rejected the sign-in";
@@ -97,6 +93,9 @@ impl Default for AccountTiming {
 pub struct SonyAccountClient {
     client: reqwest::Client,
     contract: SonyContract,
+    /// The `x-psn-store-locale-override` value from `SONY_LOCALE`: English
+    /// content from the Finnish store (STACK.md §9), like the store adapter.
+    locale: String,
     timing: AccountTiming,
 }
 
@@ -128,6 +127,7 @@ impl SonyAccountClient {
     ) -> Result<Self, reqwest::Error> {
         Ok(Self {
             client: transport::build_client(Redirects::Manual, https_only)?,
+            locale: locale_override(&contract.locale),
             contract,
             timing,
         })
@@ -240,7 +240,7 @@ impl SonyAccountClient {
                     .header(ACCEPT, "application/json")
                     .bearer_auth(access_token.expose())
                     .header("x-apollo-operation-name", operation)
-                    .header("x-psn-store-locale-override", LOCALE_OVERRIDE)
+                    .header("x-psn-store-locale-override", &self.locale)
             },
             self.attempts(),
             Redirects::Manual,

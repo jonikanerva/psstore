@@ -7,7 +7,6 @@
 //! at the boundary, and logs drift with counts only. A log line never holds a
 //! URL, a search term, a product id, or a body.
 
-mod graphql_errors;
 mod grid;
 mod json;
 mod monthly;
@@ -22,7 +21,6 @@ use std::time::Duration;
 
 use serde_json::Value;
 
-pub use self::graphql_errors::detect_persisted_query_rotation;
 pub use self::grid::{
     BrowseOutcome, CategoryGridOutcome, GenresOutcome, extract_browse_page, extract_category_grid,
     extract_genres,
@@ -43,6 +41,7 @@ use crate::domain::errors::UpstreamError;
 use crate::domain::game::Genre;
 use crate::domain::listing::narrow_search_entries;
 use crate::sources::sony::contract::SonyContract;
+use crate::sources::sony::graphql_errors::is_persisted_query_rotation;
 use crate::sources::transport::{self, Attempts, Redirects, TransportError};
 
 /// The deadline of one Sony request attempt.
@@ -135,7 +134,7 @@ impl SonyCatalogClient {
         variables: String,
     ) -> Result<Value, UpstreamError> {
         let json = self.graphql(operation, hash, variables).await?;
-        if detect_persisted_query_rotation(&json) {
+        if is_persisted_query_rotation(&json) {
             return Err(rotated(operation));
         }
         Ok(json)

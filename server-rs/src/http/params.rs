@@ -13,6 +13,7 @@
 
 use crate::application::Page;
 use crate::domain::browse::{BrowseOrder, GenreKey};
+use crate::domain::js::js_trim;
 
 /// The page size of a list when the request has none.
 pub const DEFAULT_PAGE_SIZE: usize = 60;
@@ -217,12 +218,6 @@ fn is_decimal_literal(text: &str) -> bool {
         }
     }
     i == bytes.len()
-}
-
-/// JavaScript `String.prototype.trim`. JavaScript white space differs from
-/// Rust white space in two characters: U+FEFF is white space and U+0085 is not.
-pub fn js_trim(text: &str) -> &str {
-    text.trim_matches(|c: char| (c.is_whitespace() && c != '\u{85}') || c == '\u{FEFF}')
 }
 
 /// The JavaScript `length` of a string: its UTF-16 code units.
