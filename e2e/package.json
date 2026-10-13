@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "e2e": "playwright test",
+    "e2e:live": "playwright test --config playwright.live.config.ts",
     "typecheck": "tsc -p tsconfig.json"
   },
   "devDependencies": {

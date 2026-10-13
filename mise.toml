@@ -142,6 +142,14 @@ run = "./target/release/psstore-server"
 description = "The live checks against Sony and IGDB (STACK.md → 14 → Live checks)"
 run = "cargo test --locked -p psstore-server --test live --test live_score -- --ignored --nocapture"
 
+[tasks."test:e2e-live"]
+description = "The live CSP check: the release server against live Sony in the browser (STACK.md → 14 → Live checks)"
+run = [
+  "pnpm --filter @psstore/web run build",
+  "cargo build --release --locked -p psstore-server",
+  "pnpm --filter @psstore/e2e run e2e:live",
+]
+
 # The Sony contract tooling (docs/contracts/sony-graphql-runbook.md).
 
 [tasks."sony:build"]
