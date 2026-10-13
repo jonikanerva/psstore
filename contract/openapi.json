@@ -1,0 +1,1288 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "psstore API",
+    "description": "The Finnish PS5 store view of psstore. Every failure answers RFC 9457 Problem Details (`application/problem+json`) with a stable `code`.",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/games/browse": {
+      "get": {
+        "tags": [
+          "games"
+        ],
+        "summary": "BROWSE: the PS5 games of one Sony genre in one order.",
+        "operationId": "browseGames",
+        "parameters": [
+          {
+            "name": "genre",
+            "in": "query",
+            "description": "A Sony genre key from `GET /api/games/genres`. The server does not\ntrim it.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Z0-9_/-]{1,64}$"
+            }
+          },
+          {
+            "name": "order",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/BrowseOrder"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "The index of the first game. The default is 0.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 9007199254740991,
+              "minimum": 0
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "description": "The number of games on the page: 1 to 120. The default is 60.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 120,
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of the genre in the order.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem `invalid_request`: an invalid query parameter, path segment, or body.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem `internal_error`: the server failed to handle the request.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Problem `upstream_unavailable` or `upstream_query_rotated`: Sony failed, timed out, answered unexpectedly, or no longer knows a persisted query.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Problem `upstream_rate_limited`: Sony limited the request rate. `retryAfterSeconds` gives Sony's delay when Sony sent one.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/games/discounted": {
+      "get": {
+        "tags": [
+          "games"
+        ],
+        "summary": "DISCOUNTED: PS5 games with a discount.",
+        "operationId": "listDiscountedGames",
+        "parameters": [
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "The index of the first game. The default is 0.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 9007199254740991,
+              "minimum": 0
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "description": "The number of games on the page: 1 to 120. The default is 60.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 120,
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of DISCOUNTED games.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem `invalid_request`: an invalid query parameter, path segment, or body.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem `internal_error`: the server failed to handle the request.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Problem `upstream_unavailable` or `upstream_query_rotated`: Sony failed, timed out, answered unexpectedly, or no longer knows a persisted query.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Problem `upstream_rate_limited`: Sony limited the request rate. `retryAfterSeconds` gives Sony's delay when Sony sent one.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/games/genres": {
+      "get": {
+        "tags": [
+          "games"
+        ],
+        "summary": "The BROWSE genre menu.",
+        "operationId": "listGenres",
+        "responses": {
+          "200": {
+            "description": "The Sony genres with PS5 games.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenreList"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem `internal_error`: the server failed to handle the request.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Problem `upstream_unavailable` or `upstream_query_rotated`: Sony failed, timed out, answered unexpectedly, or no longer knows a persisted query.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Problem `upstream_rate_limited`: Sony limited the request rate. `retryAfterSeconds` gives Sony's delay when Sony sent one.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/games/monthly": {
+      "get": {
+        "tags": [
+          "games"
+        ],
+        "summary": "MONTHLY: this month's PS Plus games.",
+        "operationId": "listMonthlyGames",
+        "parameters": [
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "The index of the first game. The default is 0.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 9007199254740991,
+              "minimum": 0
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "description": "The number of games on the page: 1 to 120. The default is 60.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 120,
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of MONTHLY games.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem `invalid_request`: an invalid query parameter, path segment, or body.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem `internal_error`: the server failed to handle the request.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Problem `upstream_unavailable` or `upstream_query_rotated`: Sony failed, timed out, answered unexpectedly, or no longer knows a persisted query.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Problem `upstream_rate_limited`: Sony limited the request rate. `retryAfterSeconds` gives Sony's delay when Sony sent one.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/games/new": {
+      "get": {
+        "tags": [
+          "games"
+        ],
+        "summary": "NEW: PS5 games released up to the next local midnight of any viewer.",
+        "operationId": "listNewGames",
+        "parameters": [
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "The index of the first game. The default is 0.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 9007199254740991,
+              "minimum": 0
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "description": "The number of games on the page: 1 to 120. The default is 60.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 120,
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of NEW games.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem `invalid_request`: an invalid query parameter, path segment, or body.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem `internal_error`: the server failed to handle the request.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Problem `upstream_unavailable` or `upstream_query_rotated`: Sony failed, timed out, answered unexpectedly, or no longer knows a persisted query.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Problem `upstream_rate_limited`: Sony limited the request rate. `retryAfterSeconds` gives Sony's delay when Sony sent one.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/games/purchased": {
+      "get": {
+        "tags": [
+          "account"
+        ],
+        "summary": "PURCHASED: the PS5 games of the signed-in user's library.",
+        "operationId": "listPurchasedGames",
+        "responses": {
+          "200": {
+            "description": "Every PS5 game of the library, on one page.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem `session_rejected`: no sign-in cookie, or Sony rejected the NPSSO. A signed-in route also clears the cookie.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem `internal_error`: the server failed to handle the request.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Problem `upstream_unavailable` or `upstream_query_rotated`: Sony failed, timed out, answered unexpectedly, or no longer knows a persisted query.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Problem `upstream_rate_limited`: Sony limited the request rate. `retryAfterSeconds` gives Sony's delay when Sony sent one.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "npssoCookie": []
+          }
+        ]
+      }
+    },
+    "/api/games/search": {
+      "get": {
+        "tags": [
+          "games"
+        ],
+        "summary": "A search of all PS5 games in the Finnish store.",
+        "operationId": "searchGames",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "description": "The search term. The server trims it; the trimmed term has 1 to 100\nUTF-16 code units.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 100,
+              "minLength": 1
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "The index of the first game. The default is 0.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 9007199254740991,
+              "minimum": 0
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "description": "The number of games on the page: 1 to 50. The default is 50.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of search results.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem `invalid_request`: an invalid query parameter, path segment, or body.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem `internal_error`: the server failed to handle the request.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Problem `upstream_unavailable` or `upstream_query_rotated`: Sony failed, timed out, answered unexpectedly, or no longer knows a persisted query.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Problem `upstream_rate_limited`: Sony limited the request rate. `retryAfterSeconds` gives Sony's delay when Sony sent one.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/games/upcoming": {
+      "get": {
+        "tags": [
+          "games"
+        ],
+        "summary": "UPCOMING: announced PS5 games from the current local day of any viewer.",
+        "operationId": "listUpcomingGames",
+        "parameters": [
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "The index of the first game. The default is 0.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 9007199254740991,
+              "minimum": 0
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "description": "The number of games on the page: 1 to 120. The default is 60.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 120,
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of UPCOMING games.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem `invalid_request`: an invalid query parameter, path segment, or body.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem `internal_error`: the server failed to handle the request.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Problem `upstream_unavailable` or `upstream_query_rotated`: Sony failed, timed out, answered unexpectedly, or no longer knows a persisted query.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Problem `upstream_rate_limited`: Sony limited the request rate. `retryAfterSeconds` gives Sony's delay when Sony sent one.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/games/wishlist": {
+      "get": {
+        "tags": [
+          "account"
+        ],
+        "summary": "WISHLIST: the PS5 games of the signed-in user's Sony wishlist.",
+        "operationId": "listWishlistGames",
+        "responses": {
+          "200": {
+            "description": "Every PS5 game of the wishlist, on one page.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem `session_rejected`: no sign-in cookie, or Sony rejected the NPSSO. A signed-in route also clears the cookie.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem `internal_error`: the server failed to handle the request.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Problem `upstream_unavailable` or `upstream_query_rotated`: Sony failed, timed out, answered unexpectedly, or no longer knows a persisted query.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Problem `upstream_rate_limited`: Sony limited the request rate. `retryAfterSeconds` gives Sony's delay when Sony sent one.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "npssoCookie": []
+          }
+        ]
+      }
+    },
+    "/api/games/{id}": {
+      "get": {
+        "tags": [
+          "games"
+        ],
+        "summary": "The game page: the game and its critic score. The score lookup never\nfails; without a trusted score the key is absent.",
+        "operationId": "getGame",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "A game id from a card. The server trims it; the trimmed id is not\nempty.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The game page.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem `invalid_request`: an invalid query parameter, path segment, or body.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem `game_not_found`: no PS5 game in the Finnish store has this id.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem `internal_error`: the server failed to handle the request.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Problem `upstream_unavailable` or `upstream_query_rotated`: Sony failed, timed out, answered unexpectedly, or no longer knows a persisted query.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Problem `upstream_rate_limited`: Sony limited the request rate. `retryAfterSeconds` gives Sony's delay when Sony sent one.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/session": {
+      "post": {
+        "tags": [
+          "session"
+        ],
+        "summary": "`POST /api/session`: exchanges the NPSSO with Sony once and sets the cookie\nonly after Sony accepted it. The answer is an empty 204. A body that is not\nJSON answers 415, an invalid body 400, and a body over the body limit 413.",
+        "operationId": "signIn",
+        "requestBody": {
+          "description": "The NPSSO token. A request without a `Content-Type` header is read as JSON.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignInRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Sony accepted the NPSSO. The response sets the HttpOnly `npsso` cookie for 30 days.",
+            "headers": {
+              "Set-Cookie": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "`npsso=<NPSSO>; Max-Age=2592000; Path=/api; HttpOnly; Secure; SameSite=Strict`"
+              }
+            }
+          },
+          "400": {
+            "description": "Problem `invalid_request`: an invalid query parameter, path segment, or body.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem `session_rejected`: no sign-in cookie, or Sony rejected the NPSSO. A signed-in route also clears the cookie.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Problem `payload_too_large`: the body is larger than the body limit.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Problem `unsupported_media_type`: the body has another media type than JSON.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem `internal_error`: the server failed to handle the request.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Problem `upstream_unavailable` or `upstream_query_rotated`: Sony failed, timed out, answered unexpectedly, or no longer knows a persisted query.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Problem `upstream_rate_limited`: Sony limited the request rate. `retryAfterSeconds` gives Sony's delay when Sony sent one.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "session"
+        ],
+        "summary": "`DELETE /api/session`: clears the cookie. It makes no Sony call.",
+        "operationId": "signOut",
+        "responses": {
+          "204": {
+            "description": "The response clears the `npsso` cookie.",
+            "headers": {
+              "Set-Cookie": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "`npsso=; Max-Age=0; Path=/api; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; Secure; SameSite=Strict`"
+              }
+            }
+          },
+          "500": {
+            "description": "Problem `internal_error`: the server failed to handle the request.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "BrowseOrder": {
+        "type": "string",
+        "description": "One order of the BROWSE view. These keys are the API values. The Sony\nclient maps each key to Sony's sort; Sony's sort names never reach the API.",
+        "enum": [
+          "best-selling",
+          "most-downloaded",
+          "newest",
+          "oldest",
+          "name-asc",
+          "name-desc"
+        ]
+      },
+      "Game": {
+        "type": "object",
+        "description": "One PS5 game card. All prices are Sony's verbatim strings.",
+        "required": [
+          "id",
+          "name",
+          "date",
+          "url",
+          "price",
+          "originalPrice",
+          "discountText",
+          "discountDate",
+          "screenshots",
+          "videos",
+          "genres",
+          "description",
+          "studio",
+          "preOrder",
+          "plusUpsellText",
+          "plusOffer",
+          "idKind"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "A product SKU id or a concept id. Never empty.",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string",
+            "description": "A UTC instant as an ISO-8601 string, or the empty string when Sony\ngives no valid date."
+          },
+          "url": {
+            "type": "string",
+            "description": "The cover image URL."
+          },
+          "price": {
+            "type": "string"
+          },
+          "originalPrice": {
+            "type": "string"
+          },
+          "discountText": {
+            "type": "string"
+          },
+          "discountDate": {
+            "type": "string"
+          },
+          "screenshots": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "videos": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "genres": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "description": {
+            "type": "string"
+          },
+          "studio": {
+            "type": "string"
+          },
+          "preOrder": {
+            "type": "boolean"
+          },
+          "plusUpsellText": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Sony's PS Plus label of a list card, or `null`."
+          },
+          "plusOffer": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PlusOffer",
+                "description": "Set only by the game page lookup. List payloads carry `null`."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "idKind": {
+            "$ref": "#/components/schemas/IdKind"
+          }
+        }
+      },
+      "GameDetail": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Game"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "criticScore": {
+                "type": "integer",
+                "format": "int32",
+                "description": "The aggregated critic score, 0 to 100. The key is absent when no\ntrusted score exists. It is never `null`.",
+                "maximum": 100,
+                "minimum": 0
+              }
+            }
+          }
+        ],
+        "description": "The game page payload: a game and an optional critic score."
+      },
+      "Genre": {
+        "type": "object",
+        "description": "One Sony genre: its facet key and its display name.",
+        "required": [
+          "key",
+          "name"
+        ],
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "The Sony facet key. The server drops a genre whose key has another\nformat.",
+            "pattern": "^[A-Z0-9_/-]{1,64}$"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "GenreList": {
+        "type": "object",
+        "description": "The BROWSE genre menu.",
+        "required": [
+          "genres"
+        ],
+        "properties": {
+          "genres": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Genre"
+            }
+          }
+        }
+      },
+      "IdKind": {
+        "type": "string",
+        "description": "What the `id` of a game identifies.",
+        "enum": [
+          "product",
+          "concept"
+        ]
+      },
+      "PageResult": {
+        "type": "object",
+        "description": "One page of a game list.",
+        "required": [
+          "games",
+          "totalCount",
+          "nextOffset"
+        ],
+        "properties": {
+          "games": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Game"
+            }
+          },
+          "totalCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "nextOffset": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "The offset of the next page, or `null` on the last page.",
+            "minimum": 0
+          }
+        }
+      },
+      "PlusOffer": {
+        "oneOf": [
+          {
+            "type": "object",
+            "description": "A PS Plus price as Sony's verbatim string.",
+            "required": [
+              "price",
+              "kind"
+            ],
+            "properties": {
+              "price": {
+                "type": "string"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "price"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "The game is part of a PS Plus subscription tier.",
+            "required": [
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "included"
+                ]
+              }
+            }
+          }
+        ],
+        "description": "The PS Plus offer on the game page."
+      },
+      "Problem": {
+        "type": "object",
+        "description": "An RFC 9457 Problem Details body with the application `code` extension.",
+        "required": [
+          "type",
+          "title",
+          "status",
+          "detail",
+          "code"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "Always `about:blank`."
+          },
+          "title": {
+            "type": "string",
+            "description": "The HTTP status phrase."
+          },
+          "status": {
+            "type": "integer",
+            "format": "int32",
+            "description": "The HTTP status code of the response.",
+            "minimum": 0
+          },
+          "detail": {
+            "type": "string",
+            "description": "A fixed explanation of the code. It contains no request data."
+          },
+          "code": {
+            "$ref": "#/components/schemas/ProblemCode"
+          },
+          "retryAfterSeconds": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Only for `upstream_rate_limited`: the delay in seconds that Sony asked\nfor. The key is absent when Sony gave no delay. It is never `null`.",
+            "minimum": 0
+          }
+        }
+      },
+      "ProblemCode": {
+        "type": "string",
+        "description": "The stable application code of a public failure.",
+        "enum": [
+          "invalid_request",
+          "not_found",
+          "game_not_found",
+          "session_rejected",
+          "unsupported_media_type",
+          "payload_too_large",
+          "upstream_unavailable",
+          "upstream_query_rotated",
+          "upstream_rate_limited",
+          "internal_error"
+        ]
+      },
+      "SignInRequest": {
+        "type": "object",
+        "description": "The body of `POST /api/session`. Other keys are ignored.",
+        "required": [
+          "npsso"
+        ],
+        "properties": {
+          "npsso": {
+            "type": "string",
+            "description": "The NPSSO token of the user's Sony account: 16 to 512 characters from\n`A-Za-z0-9._~-`.",
+            "maxLength": 512,
+            "minLength": 16,
+            "pattern": "^[A-Za-z0-9._~-]+$"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "npssoCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "npsso",
+        "description": "The HttpOnly sign-in cookie that `POST /api/session` sets. The browser sends it; script never reads or writes it."
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "games",
+      "description": "Public PS5 store data"
+    },
+    {
+      "name": "account",
+      "description": "The signed-in user's own Sony data, read-only"
+    },
+    {
+      "name": "session",
+      "description": "The Sony sign-in cookie"
+    }
+  ]
+}

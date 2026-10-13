@@ -1,8 +1,12 @@
 //! The game card and the list payloads of the public API.
 //!
 //! The JSON field names, the field order, and the `null` values are part of
-//! the contract with the client (`shared/src/schemas/game.ts`). The committed
+//! the contract with the client (`contract/openapi.json`). The committed
 //! examples in `docs/contracts/api/` pin the exact JSON.
+//!
+//! With the `openapi` feature, each wire type derives its OpenAPI schema. An
+//! `Option` field that the server always writes, as `null` or a value, is
+//! marked `required`: utoipa treats an `Option` field as optional by default.
 
 use serde::{Deserialize, Serialize};
 
@@ -10,8 +14,11 @@ use super::id::GameId;
 
 /// One PS5 game card. All prices are Sony's verbatim strings.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 #[serde(rename_all = "camelCase")]
 pub struct Game {
+    /// A product SKU id or a concept id. Never empty.
+    #[cfg_attr(feature = "openapi", schema(value_type = String, min_length = 1))]
     pub id: GameId,
     pub name: String,
     /// A UTC instant as an ISO-8601 string, or the empty string when Sony
@@ -29,14 +36,18 @@ pub struct Game {
     pub description: String,
     pub studio: String,
     pub pre_order: bool,
+    /// Sony's PS Plus label of a list card, or `null`.
+    #[cfg_attr(feature = "openapi", schema(required = true))]
     pub plus_upsell_text: Option<String>,
     /// Set only by the game page lookup. List payloads carry `null`.
+    #[cfg_attr(feature = "openapi", schema(required = true))]
     pub plus_offer: Option<PlusOffer>,
     pub id_kind: IdKind,
 }
 
 /// The PS Plus offer on the game page.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum PlusOffer {
     /// A PS Plus price as Sony's verbatim string.
@@ -47,6 +58,7 @@ pub enum PlusOffer {
 
 /// What the `id` of a game identifies.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 #[serde(rename_all = "camelCase")]
 pub enum IdKind {
     /// A product SKU with a store page and usually a price.
@@ -57,13 +69,18 @@ pub enum IdKind {
 
 /// The game page payload: a game and an optional critic score.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 #[serde(rename_all = "camelCase")]
 pub struct GameDetail {
     #[serde(flatten)]
     pub game: Game,
     /// The aggregated critic score, 0 to 100. The key is absent when no
-    /// trusted score exists.
+    /// trusted score exists. It is never `null`.
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(
+        feature = "openapi",
+        schema(value_type = u8, minimum = 0, maximum = 100)
+    )]
     pub critic_score: Option<CriticScore>,
 }
 
@@ -87,23 +104,30 @@ impl CriticScore {
 
 /// One page of a game list.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 #[serde(rename_all = "camelCase")]
 pub struct PageResult {
     pub games: Vec<Game>,
     pub total_count: usize,
     /// The offset of the next page, or `null` on the last page.
+    #[cfg_attr(feature = "openapi", schema(required = true))]
     pub next_offset: Option<usize>,
 }
 
 /// One Sony genre: its facet key and its display name.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct Genre {
+    /// The Sony facet key. The server drops a genre whose key has another
+    /// format.
+    #[cfg_attr(feature = "openapi", schema(pattern = "^[A-Z0-9_/-]{1,64}$"))]
     pub key: String,
     pub name: String,
 }
 
 /// The BROWSE genre menu.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct GenreList {
     pub genres: Vec<Genre>,
 }

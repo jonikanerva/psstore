@@ -1,1 +1,7 @@
-{ "_tag": "UpstreamUnavailable", "message": "Sony upstream unavailable" }
+{
+  "type": "about:blank",
+  "title": "Bad Gateway",
+  "status": 502,
+  "detail": "The PlayStation Store is unavailable. Try again later.",
+  "code": "upstream_unavailable"
+}

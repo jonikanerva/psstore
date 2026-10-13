@@ -1,12 +1,15 @@
 //! The HTTP interface: routes, request validation, status mapping, the
 //! sign-in cookie, and the built single-page client.
 //!
-//! The JSON bodies, statuses, and headers match the TypeScript server
-//! (`docs/contracts/api/`). Handlers are thin: they validate the input, call
-//! one service, and map the typed outcome to a response.
+//! The success bodies, the statuses, and the headers match the TypeScript
+//! server (`docs/contracts/api/`). Every `/api` failure answers RFC 9457
+//! Problem Details (`errors.rs`). `contract/openapi.json` documents the
+//! `/api` routes (`openapi.rs`). Handlers are thin: they validate the input,
+//! call one service, and map the typed outcome to a response.
 
 pub mod errors;
 mod games;
+pub mod openapi;
 pub mod params;
 mod probes;
 mod session;
@@ -24,7 +27,7 @@ use axum::http::header::{REFERRER_POLICY, X_CONTENT_TYPE_OPTIONS, X_FRAME_OPTION
 use axum::http::{HeaderMap, HeaderName, HeaderValue, StatusCode, Uri};
 use axum::middleware::{self, Next};
 use axum::response::{IntoResponse, Response};
-use axum::routing::{get, post};
+use axum::routing::get;
 use futures_util::FutureExt;
 use tower::Layer;
 use tower::util::MapRequestLayer;
@@ -54,53 +57,23 @@ pub fn app(state: AppState) -> tower::util::MapRequest<Router, fn(Request) -> Re
     MapRequestLayer::new(trim).layer(router(state))
 }
 
-/// All routes. A known path with another method answers an empty 404, like
-/// the TypeScript server. Every other path goes to the client build.
+/// All routes.
+///
+/// - `/healthz` and the other operational routes are outside the API
+///   contract. Another method on them answers an empty 404.
+/// - The documented `/api` routes come from [`openapi::api_router`]. Another
+///   method on a documented path answers a Problem Details 404.
+/// - Every other `/api` path answers a Problem Details 404, and every other
+///   path goes to the client build ([`static_files::serve_fallback`]).
 pub fn router(state: AppState) -> Router {
+    let (api, _document) = openapi::api_router();
     Router::new()
+        // Operational routes.
         .route("/healthz", get(health).fallback(not_found))
         .route("/readyz", get(probes::readiness).fallback(not_found))
         .route("/version", get(probes::version).fallback(not_found))
-        .route("/api/games/new", get(games::new_games).fallback(not_found))
-        .route(
-            "/api/games/upcoming",
-            get(games::upcoming_games).fallback(not_found),
-        )
-        .route(
-            "/api/games/discounted",
-            get(games::discounted_games).fallback(not_found),
-        )
-        .route(
-            "/api/games/monthly",
-            get(games::monthly_games).fallback(not_found),
-        )
-        .route(
-            "/api/games/purchased",
-            get(games::purchased_games).fallback(not_found),
-        )
-        .route(
-            "/api/games/wishlist",
-            get(games::wishlist_games).fallback(not_found),
-        )
-        .route(
-            "/api/games/search",
-            get(games::search_games).fallback(not_found),
-        )
-        .route("/api/games/genres", get(games::genres).fallback(not_found))
-        .route(
-            "/api/games/browse",
-            get(games::browse_games).fallback(not_found),
-        )
-        .route(
-            "/api/games/{id}",
-            get(games::game_by_id).fallback(not_found),
-        )
-        .route(
-            "/api/session",
-            post(session::sign_in)
-                .delete(session::sign_out)
-                .fallback(not_found),
-        )
+        // The API contract.
+        .merge(api)
         .fallback(static_files::serve_fallback)
         .layer(middleware::from_fn(request_context))
         .with_state(state)
@@ -169,7 +142,7 @@ async fn request_context(request: Request, next: Next) -> Response {
             Ok(response) => response,
             Err(_payload) => {
                 tracing::error!("request handling panicked");
-                StatusCode::INTERNAL_SERVER_ERROR.into_response()
+                errors::problem(errors::ProblemCode::InternalError)
             }
         };
         add_security_headers(response.headers_mut());

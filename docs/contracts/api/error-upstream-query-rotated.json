@@ -1,5 +1,7 @@
 {
-  "_tag": "UpstreamQueryRotated",
-  "message": "Sony rejected the persisted query (hash rotated); re-run pnpm sony:refresh",
-  "operationName": "categoryGridRetrieve"
+  "type": "about:blank",
+  "title": "Bad Gateway",
+  "status": 502,
+  "detail": "The PlayStation Store no longer accepts a stored query of this server.",
+  "code": "upstream_query_rotated"
 }

@@ -6,12 +6,17 @@
 
 use axum::body::Bytes;
 use axum::extract::State;
+use axum::extract::rejection::BytesRejection;
 use axum::http::header::{CONTENT_TYPE, COOKIE, SET_COOKIE};
 use axum::http::{HeaderMap, HeaderValue, StatusCode};
 use axum::response::{IntoResponse, Response};
 
 use super::AppState;
-use super::errors::ErrorResponse;
+use super::errors::{Problem, ProblemCode, problem};
+use super::openapi::{
+    InternalError, InvalidRequest, PayloadTooLarge, SessionRejected, SignInRequest,
+    UnsupportedMediaType, UpstreamFailure,
+};
 use crate::domain::secret::Secret;
 
 /// The cookie name. The signed-in routes read it, and the sign-in route sets it.
@@ -80,24 +85,49 @@ fn npsso_from_body(body: &[u8]) -> Option<Secret> {
 
 /// `POST /api/session`: exchanges the NPSSO with Sony once and sets the cookie
 /// only after Sony accepted it. The answer is an empty 204. A body that is not
-/// JSON answers 415, an invalid body an empty 400.
+/// JSON answers 415, an invalid body 400, and a body over the body limit 413.
+#[utoipa::path(
+    post,
+    path = "/api/session",
+    operation_id = "signIn",
+    tag = "session",
+    request_body(
+        content = SignInRequest,
+        content_type = "application/json",
+        description = "The NPSSO token. A request without a `Content-Type` header is read as JSON."
+    ),
+    responses(
+        (
+            status = 204,
+            description = "Sony accepted the NPSSO. The response sets the HttpOnly `npsso` cookie for 30 days.",
+            headers(("Set-Cookie" = String, description = "`npsso=<NPSSO>; Max-Age=2592000; Path=/api; HttpOnly; Secure; SameSite=Strict`"))
+        ),
+        InvalidRequest,
+        SessionRejected,
+        PayloadTooLarge,
+        UnsupportedMediaType,
+        UpstreamFailure,
+        InternalError
+    )
+)]
 pub(super) async fn sign_in(
     State(state): State<AppState>,
     headers: HeaderMap,
-    body: Bytes,
+    body: Result<Bytes, BytesRejection>,
 ) -> Response {
+    // Axum reads the body before the handler runs, so a body over the limit
+    // is a 413 whatever its media type.
+    let body = match body {
+        Ok(body) => body,
+        Err(rejection) => return Problem::from(rejection).into_response(),
+    };
     if let Some(media) = media_type(&headers)
         && media != "application/json"
     {
-        return (
-            StatusCode::UNSUPPORTED_MEDIA_TYPE,
-            [(CONTENT_TYPE, "text/plain")],
-            format!("Unsupported content-type: {media}"),
-        )
-            .into_response();
+        return problem(ProblemCode::UnsupportedMediaType);
     }
     let Some(npsso) = npsso_from_body(&body) else {
-        return StatusCode::BAD_REQUEST.into_response();
+        return problem(ProblemCode::InvalidRequest);
     };
     match state.account.verify_npsso(npsso.clone()).await {
         Ok(()) => {
@@ -105,17 +135,32 @@ pub(super) async fn sign_in(
                 "{NPSSO_COOKIE_NAME}={}; Max-Age={NPSSO_COOKIE_MAX_AGE_SECONDS}; {COOKIE_PATH_ATTRIBUTE}; {COOKIE_FLAGS}",
                 npsso.expose()
             );
-            // The value has only cookie-safe characters, so the header is valid.
+            // The value has only cookie-safe characters, so the header is
+            // valid. A failure here is a defect, not a client error.
             match HeaderValue::from_str(&cookie) {
                 Ok(value) => (StatusCode::NO_CONTENT, [(SET_COOKIE, value)]).into_response(),
-                Err(_) => StatusCode::BAD_REQUEST.into_response(),
+                Err(_) => problem(ProblemCode::InternalError),
             }
         }
-        Err(error) => error.into_error_response(),
+        Err(error) => Problem::from(error).into_response(),
     }
 }
 
 /// `DELETE /api/session`: clears the cookie. It makes no Sony call.
+#[utoipa::path(
+    delete,
+    path = "/api/session",
+    operation_id = "signOut",
+    tag = "session",
+    responses(
+        (
+            status = 204,
+            description = "The response clears the `npsso` cookie.",
+            headers(("Set-Cookie" = String, description = "`npsso=; Max-Age=0; Path=/api; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; Secure; SameSite=Strict`"))
+        ),
+        InternalError
+    )
+)]
 pub(super) async fn sign_out() -> Response {
     (
         StatusCode::NO_CONTENT,

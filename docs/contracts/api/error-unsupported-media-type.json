@@ -1,0 +1,7 @@
+{
+  "type": "about:blank",
+  "title": "Unsupported Media Type",
+  "status": 415,
+  "detail": "The request body must be application/json.",
+  "code": "unsupported_media_type"
+}

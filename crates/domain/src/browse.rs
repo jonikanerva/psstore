@@ -2,7 +2,12 @@
 
 /// One order of the BROWSE view. These keys are the API values. The Sony
 /// client maps each key to Sony's sort; Sony's sort names never reach the API.
+// The OpenAPI schema lists the variants in kebab case, which are the keys of
+// `as_str`. The server test `the_document_lists_the_parameter_rules_of_the_server`
+// checks that the two agree.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "openapi", schema(rename_all = "kebab-case"))]
 pub enum BrowseOrder {
     BestSelling,
     MostDownloaded,

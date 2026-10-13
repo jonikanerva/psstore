@@ -14,6 +14,13 @@ icu_properties = { workspace = true }
 jiff = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
+# Only the `openapi` feature uses it.
+utoipa = { workspace = true, optional = true }
+
+# `openapi` derives the OpenAPI schemas of the wire types. The server enables
+# it. Without it, the crate has no OpenAPI code.
+[features]
+openapi = ["dep:utoipa"]
 
 [dev-dependencies]
 serde_json = { workspace = true }

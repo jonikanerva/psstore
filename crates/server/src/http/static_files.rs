@@ -11,6 +11,8 @@
 //!   whose `Accept` header includes `text/html`. Everything else is an empty
 //!   404.
 //! - Without a build directory every path is a 404.
+//! - An `/api` path never reaches the client build. A path that no API route
+//!   matches answers a Problem Details 404, whatever the `Accept` header.
 //!
 //! `ServeDir` rejects path traversal. It sends `Last-Modified` and answers
 //! `If-Modified-Since` and range requests; it sends no `ETag`.
@@ -26,9 +28,12 @@ use tower::ServiceExt;
 use tower_http::services::{ServeDir, ServeFile};
 
 use super::AppState;
+use super::errors::{ProblemCode, problem};
 
 /// The path prefix of the hashed bundles.
 const ASSETS_PREFIX: &str = "/assets";
+/// The path prefix of the API.
+const API_PREFIX: &str = "/api";
 
 /// The client build directory.
 #[derive(Debug, Clone)]
@@ -87,9 +92,19 @@ impl StaticSite {
     }
 }
 
-/// `GET` and `HEAD` for any path that no API route matches.
+/// Any path that no route matches: a Problem Details 404 for an `/api` path,
+/// the client build for every other path.
 pub(super) async fn serve_fallback(State(state): State<AppState>, request: Request) -> Response {
+    if is_api_path(request.uri().path()) {
+        return problem(ProblemCode::NotFound);
+    }
     state.site.respond(request).await
+}
+
+/// True for `/api` and every path under it, at a segment boundary.
+fn is_api_path(path: &str) -> bool {
+    path.strip_prefix(API_PREFIX)
+        .is_some_and(|rest| rest.is_empty() || rest.starts_with('/'))
 }
 
 /// The part of the path after `/assets`, or `None` for another path.
@@ -196,6 +211,17 @@ mod tests {
         assert!(!has_extension("/g/123"));
         assert!(!has_extension("/.bashrc"));
         assert!(!has_extension("/"));
+    }
+
+    #[test]
+    fn detects_the_api_prefix_at_a_segment_boundary() {
+        assert!(is_api_path("/api"));
+        assert!(is_api_path("/api/"));
+        assert!(is_api_path("/api/unknown"));
+        assert!(is_api_path("/api/games/a/b"));
+        assert!(!is_api_path("/apix"));
+        assert!(!is_api_path("/g/api"));
+        assert!(!is_api_path("/"));
     }
 
     #[test]

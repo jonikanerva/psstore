@@ -1,9 +1,10 @@
 //! The committed API examples in `docs/contracts/api/` against the Rust
-//! domain types and the HTTP error mapping.
+//! domain types and the HTTP error mapping, and the committed OpenAPI
+//! document (`contract/openapi.json`) against the routes.
 //!
 //! The test builds each example value with the public domain types and gets
 //! the body from an HTTP response, like the server does: `axum::Json` for a
-//! payload and `IntoResponse` of the domain error for an error.
+//! payload and the Problem Details mapping (`http::errors`) for a failure.
 //!
 //! How the comparison works: `serde_json` has no `preserve_order` feature in
 //! this crate, so a `serde_json::Value` sorts the keys of an object, and a
@@ -26,22 +27,28 @@ use psstore_server::domain::errors::{AccountError, GameLookupError, UpstreamErro
 use psstore_server::domain::game::{
     CriticScore, Game, GameDetail, Genre, GenreList, IdKind, PageResult, PlusOffer,
 };
-use psstore_server::http::errors::ErrorResponse;
+use psstore_server::http::errors::{Problem, ProblemCode, problem};
+use psstore_server::http::params::Invalid;
 use serde::Serialize;
 
 /// Every example file. Each one has a case in `render`.
-const EXAMPLES: [&str; 11] = [
+const EXAMPLES: [&str; 16] = [
     "page-first.json",
     "page-last.json",
     "game-detail-plus-price.json",
     "game-detail-plus-included.json",
     "genres.json",
+    "error-invalid-request.json",
+    "error-not-found.json",
     "error-game-not-found.json",
+    "error-session-rejected.json",
+    "error-unsupported-media-type.json",
+    "error-payload-too-large.json",
     "error-upstream-unavailable.json",
     "error-upstream-query-rotated.json",
     "error-upstream-rate-limited.json",
     "error-upstream-rate-limited-retry-after.json",
-    "error-session-rejected.json",
+    "error-internal-error.json",
 ];
 
 fn examples_dir() -> PathBuf {
@@ -285,7 +292,8 @@ fn genres() -> GenreList {
 const RATE_LIMITED: &str = "Sony upstream rate limited the request (HTTP 429)";
 
 /// The response that the server gives for an example, or `None` for an
-/// unknown file name.
+/// unknown file name. A failure goes through the same mapping as in the
+/// handlers: the domain error or the request rejection becomes a `Problem`.
 #[expect(
     clippy::unwrap_used,
     reason = "the not-found example id is a valid game id"
@@ -297,6 +305,13 @@ fn render(name: &str) -> Option<Response> {
     )]
     fn json(value: impl Serialize) -> Option<Response> {
         Some(axum::Json(value).into_response())
+    }
+    #[expect(
+        clippy::unnecessary_wraps,
+        reason = "each arm of the match below gives an optional response"
+    )]
+    fn failure(problem: impl Into<Problem>) -> Option<Response> {
+        Some(problem.into().into_response())
     }
     match name {
         "page-first.json" => json(PageResult {
@@ -312,59 +327,57 @@ fn render(name: &str) -> Option<Response> {
         "game-detail-plus-price.json" => json(bluey_detail()),
         "game-detail-plus-included.json" => json(f1_detail()),
         "genres.json" => json(genres()),
-        "error-game-not-found.json" => Some(
-            GameLookupError::NotFound {
-                id: "EP0000-PPSA00000_00-UNKNOWNGAME00000".parse().unwrap(),
-            }
-            .into_error_response(),
-        ),
+        "error-invalid-request.json" => failure(Invalid),
+        "error-not-found.json" => Some(problem(ProblemCode::NotFound)),
+        "error-game-not-found.json" => failure(GameLookupError::NotFound {
+            id: "EP0000-PPSA00000_00-UNKNOWNGAME00000".parse().unwrap(),
+        }),
+        "error-session-rejected.json" => failure(AccountError::session_rejected("Not signed in")),
+        "error-unsupported-media-type.json" => Some(problem(ProblemCode::UnsupportedMediaType)),
+        "error-payload-too-large.json" => Some(problem(ProblemCode::PayloadTooLarge)),
         "error-upstream-unavailable.json" => {
-            Some(UpstreamError::unavailable("Sony upstream unavailable").into_error_response())
+            failure(UpstreamError::unavailable("Sony upstream unavailable"))
         }
-        "error-upstream-query-rotated.json" => Some(
-            UpstreamError::QueryRotated {
-                message:
-                    "Sony rejected the persisted query (hash rotated); re-run pnpm sony:refresh"
-                        .into(),
-                operation_name: "categoryGridRetrieve".into(),
-            }
-            .into_error_response(),
-        ),
-        "error-upstream-rate-limited.json" => Some(
-            UpstreamError::RateLimited {
-                message: RATE_LIMITED.into(),
-                retry_after_seconds: None,
-            }
-            .into_error_response(),
-        ),
-        "error-upstream-rate-limited-retry-after.json" => Some(
-            UpstreamError::RateLimited {
-                message: RATE_LIMITED.into(),
-                retry_after_seconds: Some(30),
-            }
-            .into_error_response(),
-        ),
-        "error-session-rejected.json" => {
-            Some(AccountError::session_rejected("Not signed in").into_error_response())
-        }
+        "error-upstream-query-rotated.json" => failure(UpstreamError::QueryRotated {
+            message: "Sony rejected the persisted query (hash rotated); re-run pnpm sony:refresh"
+                .into(),
+            operation_name: "categoryGridRetrieve".into(),
+        }),
+        "error-upstream-rate-limited.json" => failure(UpstreamError::RateLimited {
+            message: RATE_LIMITED.into(),
+            retry_after_seconds: None,
+        }),
+        "error-upstream-rate-limited-retry-after.json" => failure(UpstreamError::RateLimited {
+            message: RATE_LIMITED.into(),
+            retry_after_seconds: Some(30),
+        }),
+        "error-internal-error.json" => Some(problem(ProblemCode::InternalError)),
         _ => None,
     }
 }
 
-/// The status of each example, from the README table and the TypeScript
-/// `HttpApi` definition (`server/src/api/gamesApi.ts`).
+/// The status of each example, from the README table. The test reads the
+/// table, so the table, the files, and the server agree.
+fn readme_rows() -> Vec<(String, StatusCode)> {
+    // A missing README gives no rows, so the file list check fails.
+    let readme = read_example("README.md").unwrap_or_default();
+    // A row: | `name.json` | route | status | content |
+    readme
+        .lines()
+        .filter_map(|line| line.strip_prefix("| `"))
+        .filter_map(|rest| {
+            let (name, rest) = rest.split_once('`')?;
+            let status = rest.split('|').nth(2)?.trim().parse::<u16>().ok()?;
+            Some((name.to_owned(), StatusCode::from_u16(status).ok()?))
+        })
+        .collect()
+}
+
 fn expected_status(name: &str) -> StatusCode {
-    match name {
-        "error-game-not-found.json" => StatusCode::NOT_FOUND,
-        "error-upstream-unavailable.json" | "error-upstream-query-rotated.json" => {
-            StatusCode::BAD_GATEWAY
-        }
-        "error-upstream-rate-limited.json" | "error-upstream-rate-limited-retry-after.json" => {
-            StatusCode::SERVICE_UNAVAILABLE
-        }
-        "error-session-rejected.json" => StatusCode::UNAUTHORIZED,
-        _ => StatusCode::OK,
-    }
+    readme_rows()
+        .into_iter()
+        .find_map(|(row, status)| (row == name).then_some(status))
+        .unwrap_or(StatusCode::IM_A_TEAPOT)
 }
 
 #[tokio::test]
@@ -382,8 +395,13 @@ async fn every_example_matches_the_rust_response() {
                 expected_status(name)
             ));
         }
+        let expected_type = if name.starts_with("error-") {
+            "application/problem+json"
+        } else {
+            "application/json"
+        };
         let content_type = response.headers().get(CONTENT_TYPE).cloned();
-        if content_type.as_ref().and_then(|v| v.to_str().ok()) != Some("application/json") {
+        if content_type.as_ref().and_then(|v| v.to_str().ok()) != Some(expected_type) {
             failures.push(format!("{name}: content-type {content_type:?}"));
         }
         let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
@@ -410,14 +428,34 @@ fn the_directory_and_the_readme_list_exactly_the_examples() {
     assert_eq!(in_directory, listed, "the directory and EXAMPLES differ");
 
     // The first cell of each table row names one example: | `name.json` | …
-    let readme = read_example("README.md").unwrap();
-    let in_readme: BTreeSet<String> = readme
-        .lines()
-        .filter_map(|line| line.strip_prefix("| `"))
-        .filter_map(|rest| rest.split_once('`'))
-        .map(|(name, _)| name.to_owned())
-        .collect();
+    let in_readme: BTreeSet<String> = readme_rows().into_iter().map(|(name, _)| name).collect();
     assert_eq!(in_readme, listed, "the README table and EXAMPLES differ");
+}
+
+/// Each problem code has at least one example, so the TypeScript test checks
+/// the client against every code that the server can send.
+#[test]
+fn every_problem_code_has_an_example() {
+    for code in ProblemCode::ALL {
+        let text = serde_json::to_value(code).unwrap();
+        let file = format!("error-{}.json", text.as_str().unwrap().replace('_', "-"));
+        assert!(EXAMPLES.contains(&file.as_str()), "{file}");
+    }
+}
+
+/// The committed document is the export of the registered routes. Run
+/// `cargo run --locked -p psstore-server --bin openapi -- contract/openapi.json`
+/// after a change to a route, and regenerate the client.
+#[test]
+fn the_committed_openapi_document_matches_the_routes() {
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../contract/openapi.json");
+    let committed = std::fs::read_to_string(&path).unwrap();
+    let current = psstore_server::http::openapi::document_json().unwrap();
+    assert!(
+        committed == current,
+        "contract/openapi.json differs from the routes: {}",
+        first_difference(&committed, &current).unwrap_or_default()
+    );
 }
 
 #[test]

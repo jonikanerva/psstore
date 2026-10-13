@@ -10,10 +10,13 @@ version = "0.1.0"
 edition = "2024"
 rust-version = "1.99"
 publish = false
+# `cargo run -p psstore-server` starts the server. The crate also has the
+# `openapi` export binary (src/bin/openapi.rs).
+default-run = "psstore-server"
 description = "The psstore HTTP server: the Finnish PS5 store view and its sign-in"
 
 [dependencies]
-psstore-domain = { workspace = true }
+psstore-domain = { workspace = true, features = ["openapi"] }
 axum = { workspace = true }
 form_urlencoded = { workspace = true }
 futures-util = { workspace = true }
@@ -29,6 +32,8 @@ tower-http = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 uuid = { workspace = true }
+utoipa = { workspace = true }
+utoipa-axum = { workspace = true }
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["test-util"] }

@@ -9,26 +9,17 @@ import { gameDetailSchema, pageResultSchema } from '../schemas/game.js'
 // schema field order, so a key in another position fails the test. The decode
 // rejects an unknown key and a missing required key.
 
-// The tagged error bodies of the server (server/src/errors/errors.ts). The
-// shared package does not import the server, so the test declares each body.
-// JSON cannot carry `undefined`, so an absent `retryAfterSeconds` is an
-// absent key.
-const gameNotFoundSchema = Schema.TaggedStruct('GameNotFound', {
-  id: Schema.String,
-})
-const upstreamUnavailableSchema = Schema.TaggedStruct('UpstreamUnavailable', {
-  message: Schema.String,
-})
-const upstreamQueryRotatedSchema = Schema.TaggedStruct('UpstreamQueryRotated', {
-  message: Schema.String,
-  operationName: Schema.String,
-})
-const upstreamRateLimitedSchema = Schema.TaggedStruct('UpstreamRateLimited', {
-  message: Schema.String,
+// The Problem Details body of every API failure (RFC 9457, with the `code`
+// extension). The shared package does not import the server, so the test
+// declares the body. JSON cannot carry `undefined`, so an absent
+// `retryAfterSeconds` is an absent key.
+const problemSchema = Schema.Struct({
+  type: Schema.Literal('about:blank'),
+  title: Schema.String,
+  status: Schema.Number,
+  detail: Schema.String,
+  code: Schema.String,
   retryAfterSeconds: Schema.optionalKey(Schema.Number),
-})
-const sessionRejectedSchema = Schema.TaggedStruct('SessionRejected', {
-  message: Schema.String,
 })
 
 const roundTrip =
@@ -44,15 +35,17 @@ const cases: ReadonlyArray<readonly [string, (input: unknown) => unknown]> = [
   ['game-detail-plus-price.json', roundTrip(gameDetailSchema)],
   ['game-detail-plus-included.json', roundTrip(gameDetailSchema)],
   ['genres.json', roundTrip(genreListSchema)],
-  ['error-game-not-found.json', roundTrip(gameNotFoundSchema)],
-  ['error-upstream-unavailable.json', roundTrip(upstreamUnavailableSchema)],
-  ['error-upstream-query-rotated.json', roundTrip(upstreamQueryRotatedSchema)],
-  ['error-upstream-rate-limited.json', roundTrip(upstreamRateLimitedSchema)],
-  [
-    'error-upstream-rate-limited-retry-after.json',
-    roundTrip(upstreamRateLimitedSchema),
-  ],
-  ['error-session-rejected.json', roundTrip(sessionRejectedSchema)],
+  ['error-invalid-request.json', roundTrip(problemSchema)],
+  ['error-not-found.json', roundTrip(problemSchema)],
+  ['error-game-not-found.json', roundTrip(problemSchema)],
+  ['error-session-rejected.json', roundTrip(problemSchema)],
+  ['error-unsupported-media-type.json', roundTrip(problemSchema)],
+  ['error-payload-too-large.json', roundTrip(problemSchema)],
+  ['error-upstream-unavailable.json', roundTrip(problemSchema)],
+  ['error-upstream-query-rotated.json', roundTrip(problemSchema)],
+  ['error-upstream-rate-limited.json', roundTrip(problemSchema)],
+  ['error-upstream-rate-limited-retry-after.json', roundTrip(problemSchema)],
+  ['error-internal-error.json', roundTrip(problemSchema)],
 ]
 
 const examplesDir = new URL('../../../docs/contracts/api/', import.meta.url)
@@ -95,9 +88,12 @@ describe('API contract examples', () => {
 
   it('rejects an example with an extra key', () => {
     expect(() =>
-      roundTrip(sessionRejectedSchema)({
-        _tag: 'SessionRejected',
-        message: 'Not signed in',
+      roundTrip(problemSchema)({
+        type: 'about:blank',
+        title: 'Unauthorized',
+        status: 401,
+        detail: 'The Sony sign-in is missing or no longer valid.',
+        code: 'session_rejected',
         extra: 1,
       }),
     ).toThrow()

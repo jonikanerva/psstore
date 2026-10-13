@@ -1,4 +1,7 @@
 {
-  "_tag": "UpstreamRateLimited",
-  "message": "Sony upstream rate limited the request (HTTP 429)"
+  "type": "about:blank",
+  "title": "Service Unavailable",
+  "status": 503,
+  "detail": "The PlayStation Store limited the request rate. Try again later.",
+  "code": "upstream_rate_limited"
 }

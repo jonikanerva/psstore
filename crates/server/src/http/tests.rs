@@ -1,7 +1,10 @@
-//! Route tests with fake services. They pin the statuses, bodies, and headers
-//! of the TypeScript server (`server/src/__tests__/app.test.ts` and
-//! `staticServer.test.ts`).
+//! Route tests with fake services. They pin the statuses, success bodies, and
+//! headers of the TypeScript server (`server/src/__tests__/app.test.ts` and
+//! `staticServer.test.ts`). Every `/api` failure is a Problem Details body
+//! (`errors.rs`), and every answer of a documented route is in the OpenAPI
+//! document (`openapi.rs`).
 
+use std::collections::BTreeSet;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
@@ -12,8 +15,9 @@ use axum::http::{Method, Request, StatusCode};
 use axum::response::Response;
 use tower::ServiceExt;
 
+use super::errors::{Problem, ProblemCode};
 use super::static_files::StaticSite;
-use super::{AppState, app};
+use super::{AppState, app, openapi};
 use crate::application::{AccountApi, CriticScores, GamesApi, Page, ServiceFuture};
 use crate::domain::browse::{BrowseOrder, GenreKey};
 use crate::domain::errors::{AccountError, GameLookupError, UpstreamError};
@@ -59,6 +63,7 @@ fn page_of(ids: &[&str]) -> PageResult {
 struct FakeGames {
     list: Result<PageResult, UpstreamError>,
     detail: Result<Game, GameLookupError>,
+    genres: Result<GenreList, UpstreamError>,
     pages: Mutex<Vec<(String, Page)>>,
 }
 
@@ -67,6 +72,12 @@ impl FakeGames {
         Self {
             list: Ok(page_of(&["EP0001-PPSA00001_00-SAMPLEGAME000001"])),
             detail: Ok(game("EP0001-PPSA00001_00-SAMPLEGAME000001")),
+            genres: Ok(GenreList {
+                genres: vec![Genre {
+                    key: "ACTION".into(),
+                    name: "Action".into(),
+                }],
+            }),
             pages: Mutex::default(),
         }
     }
@@ -103,14 +114,8 @@ impl GamesApi for FakeGames {
         self.list(&format!("search:{term}"), page)
     }
     fn genres(&self) -> ServiceFuture<'_, Result<GenreList, UpstreamError>> {
-        Box::pin(async {
-            Ok(GenreList {
-                genres: vec![Genre {
-                    key: "ACTION".into(),
-                    name: "Action".into(),
-                }],
-            })
-        })
+        let genres = self.genres.clone();
+        Box::pin(async move { genres })
     }
     fn browse_games(
         &self,
@@ -276,6 +281,22 @@ fn set_cookies(response: &Response) -> Vec<String> {
 
 const EXPIRED: &str = "npsso=; Max-Age=0; Path=/api; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; Secure; SameSite=Strict";
 
+/// The media type of RFC 9457, written out so that the test does not take it
+/// from the code under test.
+const PROBLEM_JSON: &str = "application/problem+json";
+
+/// Checks that the response is the Problem Details answer of `code`: its
+/// status, the problem media type, and the exact body.
+async fn assert_problem(response: Response, code: ProblemCode, context: &str) {
+    assert_eq!(response.status(), code.status(), "{context}");
+    assert_eq!(response.headers()[CONTENT_TYPE], PROBLEM_JSON, "{context}");
+    assert_eq!(
+        body(response).await,
+        serde_json::to_string(&Problem::new(code)).unwrap(),
+        "{context}"
+    );
+}
+
 // ---- Health and lists -------------------------------------------------------
 
 #[tokio::test]
@@ -319,7 +340,7 @@ async fn serves_each_list_as_json_with_the_requested_page() {
 }
 
 #[tokio::test]
-async fn rejects_invalid_list_parameters_with_an_empty_400() {
+async fn rejects_invalid_parameters_with_an_invalid_request_problem() {
     let h = harness();
     for uri in [
         "/api/games/new?size=0",
@@ -334,11 +355,12 @@ async fn rejects_invalid_list_parameters_with_an_empty_400() {
         "/api/games/browse?genre=action&order=newest",
         "/api/games/browse?genre=ACTION&order=bad",
         "/api/games/%20%20",
+        // A path segment that is not UTF-8 after percent decoding.
+        "/api/games/%FF",
     ] {
-        let response = h.get(uri).await;
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST, "{uri}");
-        assert_eq!(body(response).await, "", "{uri}");
+        assert_problem(h.get(uri).await, ProblemCode::InvalidRequest, uri).await;
     }
+    assert!(h.games.pages.lock().unwrap().is_empty());
 }
 
 #[tokio::test]
@@ -386,12 +408,16 @@ async fn serves_the_genre_list() {
 }
 
 #[tokio::test]
-async fn maps_upstream_failures_to_status_and_tagged_body() {
+async fn maps_upstream_failures_to_status_and_problem_body() {
+    let unavailable = r#"{"type":"about:blank","title":"Bad Gateway","status":502,"detail":"The PlayStation Store is unavailable. Try again later.","code":"upstream_unavailable"}"#;
+    let rotated = r#"{"type":"about:blank","title":"Bad Gateway","status":502,"detail":"The PlayStation Store no longer accepts a stored query of this server.","code":"upstream_query_rotated"}"#;
+    let limited = r#"{"type":"about:blank","title":"Service Unavailable","status":503,"detail":"The PlayStation Store limited the request rate. Try again later.","code":"upstream_rate_limited"}"#;
+    let limited_after = r#"{"type":"about:blank","title":"Service Unavailable","status":503,"detail":"The PlayStation Store limited the request rate. Try again later.","code":"upstream_rate_limited","retryAfterSeconds":3}"#;
     let cases = [
         (
             UpstreamError::unavailable("Upstream unavailable"),
             StatusCode::BAD_GATEWAY,
-            r#"{"_tag":"UpstreamUnavailable","message":"Upstream unavailable"}"#,
+            unavailable,
         ),
         (
             UpstreamError::QueryRotated {
@@ -399,7 +425,7 @@ async fn maps_upstream_failures_to_status_and_tagged_body() {
                 operation_name: "categoryGridRetrieve".into(),
             },
             StatusCode::BAD_GATEWAY,
-            r#"{"_tag":"UpstreamQueryRotated","message":"rotated","operationName":"categoryGridRetrieve"}"#,
+            rotated,
         ),
         (
             UpstreamError::RateLimited {
@@ -407,7 +433,7 @@ async fn maps_upstream_failures_to_status_and_tagged_body() {
                 retry_after_seconds: Some(3),
             },
             StatusCode::SERVICE_UNAVAILABLE,
-            r#"{"_tag":"UpstreamRateLimited","message":"limited","retryAfterSeconds":3}"#,
+            limited_after,
         ),
         (
             UpstreamError::RateLimited {
@@ -415,7 +441,7 @@ async fn maps_upstream_failures_to_status_and_tagged_body() {
                 retry_after_seconds: None,
             },
             StatusCode::SERVICE_UNAVAILABLE,
-            r#"{"_tag":"UpstreamRateLimited","message":"limited"}"#,
+            limited,
         ),
     ];
     for (error, status, expected) in cases {
@@ -431,7 +457,7 @@ async fn maps_upstream_failures_to_status_and_tagged_body() {
         );
         let response = h.get("/api/games/new").await;
         assert_eq!(response.status(), status);
-        assert_eq!(response.headers()[CONTENT_TYPE], "application/json");
+        assert_eq!(response.headers()[CONTENT_TYPE], PROBLEM_JSON);
         assert_eq!(body(response).await, expected);
     }
 }
@@ -467,7 +493,7 @@ async fn serves_the_game_page_with_and_without_a_critic_score() {
 }
 
 #[tokio::test]
-async fn maps_a_missing_game_to_404_with_its_id() {
+async fn maps_a_missing_game_to_a_game_not_found_problem_without_the_id() {
     let games = FakeGames {
         detail: Err(GameLookupError::NotFound {
             id: "EP0000-PPSA00000_00-XXXXXXXXXXXXXXXX".parse().unwrap(),
@@ -479,9 +505,10 @@ async fn maps_a_missing_game_to_404_with_its_id() {
         .get("/api/games/EP0000-PPSA00000_00-XXXXXXXXXXXXXXXX")
         .await;
     assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    assert_eq!(response.headers()[CONTENT_TYPE], PROBLEM_JSON);
     assert_eq!(
         body(response).await,
-        r#"{"_tag":"GameNotFound","id":"EP0000-PPSA00000_00-XXXXXXXXXXXXXXXX"}"#
+        r#"{"type":"about:blank","title":"Not Found","status":404,"detail":"No PS5 game in the Finnish store has this id.","code":"game_not_found"}"#
     );
 }
 
@@ -518,21 +545,23 @@ async fn ignores_a_trailing_slash_like_the_effect_router() {
         )
         .await;
     assert_eq!(response.status(), StatusCode::NO_CONTENT);
-    assert_eq!(h.get("/api/games/").await.status(), StatusCode::NOT_FOUND);
-    assert_eq!(
-        h.get("/api/games/a/b").await.status(),
-        StatusCode::NOT_FOUND
-    );
+    for uri in ["/api/games/", "/api/games/a/b", "/api/", "/api"] {
+        assert_problem(h.get(uri).await, ProblemCode::NotFound, uri).await;
+    }
 }
 
 #[tokio::test]
-async fn another_method_on_a_known_path_is_an_empty_404() {
+async fn another_method_on_a_known_api_path_is_a_not_found_problem() {
     let h = harness();
     for (method, uri) in [
         (Method::POST, "/api/games/new"),
         (Method::PUT, "/api/session"),
-        (Method::POST, "/healthz"),
+        (Method::GET, "/api/session"),
         (Method::DELETE, "/api/games/wishlist"),
+        (
+            Method::PATCH,
+            "/api/games/EP0001-PPSA00001_00-SAMPLEGAME000001",
+        ),
     ] {
         let response = h
             .send(
@@ -543,9 +572,21 @@ async fn another_method_on_a_known_path_is_an_empty_404() {
                     .unwrap(),
             )
             .await;
-        assert_eq!(response.status(), StatusCode::NOT_FOUND, "{method} {uri}");
-        assert_eq!(body(response).await, "");
+        assert_problem(response, ProblemCode::NotFound, &format!("{method} {uri}")).await;
     }
+    assert!(h.games.pages.lock().unwrap().is_empty());
+    assert_eq!(h.account_calls(), 0);
+}
+
+#[tokio::test]
+async fn another_method_on_the_health_route_stays_an_empty_404() {
+    let h = harness();
+    let response = h
+        .send(Request::post("/healthz").body(Body::empty()).unwrap())
+        .await;
+    assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    assert!(response.headers().get(CONTENT_TYPE).is_none());
+    assert_eq!(body(response).await, "");
 }
 
 #[tokio::test]
@@ -644,6 +685,7 @@ async fn sign_in_answers_401_or_upstream_status_without_a_cookie() {
         );
         let response = sign_in(&h, &npsso_payload(), Some("application/json")).await;
         assert_eq!(response.status(), status);
+        assert_eq!(response.headers()[CONTENT_TYPE], PROBLEM_JSON);
         let found = set_cookies(&response);
         assert!(found.is_empty(), "{found:?}");
     }
@@ -662,10 +704,28 @@ async fn sign_in_rejects_a_malformed_payload_before_any_sony_call() {
         String::new(),
     ] {
         let response = sign_in(&h, &payload, Some("application/json")).await;
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST, "{payload}");
         let found = set_cookies(&response);
         assert!(found.is_empty(), "{found:?}");
-        assert_eq!(body(response).await, "");
+        assert_problem(response, ProblemCode::InvalidRequest, &payload).await;
+    }
+    assert_eq!(h.account_calls(), 0);
+}
+
+#[tokio::test]
+async fn sign_in_rejects_a_body_over_the_limit_with_413() {
+    let h = harness();
+    // The default body limit of axum is 2 MiB.
+    let payload = format!(r#"{{"npsso":"{NPSSO}","pad":"{}"}}"#, "a".repeat(2 << 20));
+    for content_type in [Some("application/json"), Some("text/plain"), None] {
+        let response = sign_in(&h, &payload, content_type).await;
+        let found = set_cookies(&response);
+        assert!(found.is_empty(), "{found:?}");
+        assert_problem(
+            response,
+            ProblemCode::PayloadTooLarge,
+            &format!("{content_type:?}"),
+        )
+        .await;
     }
     assert_eq!(h.account_calls(), 0);
 }
@@ -673,24 +733,17 @@ async fn sign_in_rejects_a_malformed_payload_before_any_sony_call() {
 #[tokio::test]
 async fn sign_in_rejects_a_non_json_content_type_with_415() {
     let h = harness();
-    for (content_type, media) in [
-        ("text/plain", "text/plain"),
-        (
-            "application/x-www-form-urlencoded",
-            "application/x-www-form-urlencoded",
-        ),
-        ("multipart/form-data; boundary=x", "multipart/form-data"),
-        ("text/json", "text/json"),
+    for content_type in [
+        "text/plain",
+        "application/x-www-form-urlencoded",
+        "multipart/form-data; boundary=x",
+        "text/json",
     ] {
         let response = sign_in(&h, &npsso_payload(), Some(content_type)).await;
-        assert_eq!(response.status(), StatusCode::UNSUPPORTED_MEDIA_TYPE);
-        assert_eq!(response.headers()[CONTENT_TYPE], "text/plain");
         let found = set_cookies(&response);
         assert!(found.is_empty(), "{found:?}");
-        assert_eq!(
-            body(response).await,
-            format!("Unsupported content-type: {media}")
-        );
+        // The detail is fixed: the request media type never reaches it.
+        assert_problem(response, ProblemCode::UnsupportedMediaType, content_type).await;
     }
     assert_eq!(h.account_calls(), 0);
 }
@@ -724,12 +777,13 @@ async fn a_signed_in_list_needs_a_usable_cookie() {
             }
             None => h.get("/api/games/purchased").await,
         };
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED, "{cookie:?}");
         assert!(set_cookies(&response).is_empty(), "{cookie:?}");
-        assert_eq!(
-            body(response).await,
-            r#"{"_tag":"SessionRejected","message":"Not signed in"}"#
-        );
+        assert_problem(
+            response,
+            ProblemCode::SessionRejected,
+            &format!("{cookie:?}"),
+        )
+        .await;
     }
     assert_eq!(h.account_calls(), 0);
 }
@@ -759,12 +813,8 @@ async fn a_sony_rejection_answers_401_and_expires_the_cookie() {
     let cookie = format!("npsso={NPSSO}");
     for path in ["/api/games/purchased", "/api/games/wishlist"] {
         let response = h.get_with(path, COOKIE.as_str(), &cookie).await;
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
         assert_eq!(set_cookies(&response), vec![EXPIRED.to_owned()]);
-        assert_eq!(
-            body(response).await,
-            r#"{"_tag":"SessionRejected","message":"Sony rejected the sign-in"}"#
-        );
+        assert_problem(response, ProblemCode::SessionRejected, path).await;
     }
 }
 
@@ -801,6 +851,7 @@ async fn an_outage_keeps_the_cookie() {
             )
             .await;
         assert_eq!(response.status(), status);
+        assert_eq!(response.headers()[CONTENT_TYPE], PROBLEM_JSON);
         let found = set_cookies(&response);
         assert!(found.is_empty(), "{found:?}");
     }
@@ -961,14 +1012,18 @@ async fn a_deep_link_gets_index_html_only_when_accept_includes_text_html() {
             .status(),
         StatusCode::NOT_FOUND
     );
-    // An unknown API path falls back like any other deep link.
-    assert_eq!(
-        h.get_with("/api/unknown", ACCEPT.as_str(), BROWSER_ACCEPT)
-            .await
-            .status(),
-        StatusCode::OK
-    );
-    assert_eq!(h.get("/api/unknown").await.status(), StatusCode::NOT_FOUND);
+    // An unknown API path never gets the client build, whatever `Accept`.
+    for accept in [BROWSER_ACCEPT, "text/html", "*/*", "application/json"] {
+        let response = h.get_with("/api/unknown", ACCEPT.as_str(), accept).await;
+        assert!(response.headers().get(CACHE_CONTROL).is_none(), "{accept}");
+        assert_problem(response, ProblemCode::NotFound, accept).await;
+    }
+    assert_problem(
+        h.get("/api/unknown").await,
+        ProblemCode::NotFound,
+        "no Accept",
+    )
+    .await;
     // Only GET and HEAD reach the client build.
     let post = h
         .send(
@@ -1098,14 +1153,17 @@ async fn every_event_of_a_request_has_its_own_request_id() {
 }
 
 #[tokio::test]
-async fn a_handler_panic_is_an_empty_500_logged_with_its_request_id() {
+async fn a_handler_panic_is_an_internal_error_problem_logged_with_its_request_id() {
     let logs = CapturedLogs::default();
     let response = {
         let _guard = logs.install();
         send_to_context("/panic").await
     };
     assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
-    assert_eq!(body(response).await, "");
+    assert_eq!(response.headers()[CONTENT_TYPE], "application/problem+json");
+    let text = body(response).await;
+    assert!(text.contains(r#""code":"internal_error""#), "{text}");
+    assert!(!text.contains("synthetic handler panic"), "{text}");
     let text = logs.text();
     assert!(!text.contains("synthetic handler panic"), "{text}");
     let lines = logs.lines();
@@ -1245,4 +1303,304 @@ async fn every_response_has_the_security_headers() {
     let panicked = send_to_context("/panic").await;
     assert_eq!(panicked.status(), StatusCode::INTERNAL_SERVER_ERROR);
     assert_security_headers(&panicked, "a contained panic");
+}
+
+// ---- The OpenAPI document ---------------------------------------------------------
+
+/// The documented answers of one operation: each status with the media type
+/// of its body, or `None` for an answer without a body.
+fn documented(method: &str, template: &str) -> BTreeSet<(u16, Option<String>)> {
+    let (_, document) = openapi::api_router();
+    let value = serde_json::to_value(&document).unwrap();
+    let responses = value["paths"][template][method]["responses"]
+        .as_object()
+        .unwrap_or_else(|| panic!("{method} {template} is not documented"));
+    responses
+        .iter()
+        .map(|(status, response)| {
+            let media = response["content"].as_object().map(|content| {
+                assert_eq!(content.len(), 1, "{method} {template} {status}");
+                content.keys().next().unwrap().clone()
+            });
+            (status.parse().unwrap(), media)
+        })
+        .collect()
+}
+
+/// One request against a harness, and the operation that answers it.
+struct Probe {
+    harness: Harness,
+    request: Request<Body>,
+    method: &'static str,
+    template: &'static str,
+}
+
+fn probe(harness: Harness, request: Request<Body>, template: &'static str) -> Probe {
+    let method = match *request.method() {
+        Method::POST => "post",
+        Method::DELETE => "delete",
+        _ => "get",
+    };
+    Probe {
+        harness,
+        request,
+        method,
+        template,
+    }
+}
+
+fn get(uri: &str) -> Request<Body> {
+    Request::get(uri).body(Body::empty()).unwrap()
+}
+
+fn with_cookie(uri: &str) -> Request<Body> {
+    Request::get(uri)
+        .header(COOKIE, format!("npsso={NPSSO}"))
+        .body(Body::empty())
+        .unwrap()
+}
+
+fn session_post(payload: String, content_type: &str) -> Request<Body> {
+    Request::post("/api/session")
+        .header(CONTENT_TYPE, content_type)
+        .body(Body::from(payload))
+        .unwrap()
+}
+
+fn games_failing(error: UpstreamError) -> Harness {
+    harness_with(
+        FakeGames {
+            list: Err(error.clone()),
+            detail: Err(GameLookupError::Upstream(error.clone())),
+            genres: Err(error),
+            ..FakeGames::ok()
+        },
+        FakeAccount::ok(),
+        None,
+        StaticSite::new("/x"),
+    )
+}
+
+fn account_failing(error: AccountError) -> Harness {
+    harness_with(
+        FakeGames::ok(),
+        FakeAccount::failing(error),
+        None,
+        StaticSite::new("/x"),
+    )
+}
+
+/// The upstream failures that each Sony route can pass on.
+fn upstream_failures() -> [UpstreamError; 2] {
+    [
+        UpstreamError::unavailable("x"),
+        UpstreamError::RateLimited {
+            message: "x".into(),
+            retry_after_seconds: Some(1),
+        },
+    ]
+}
+
+/// The answers of the store routes: success, invalid input, and upstream
+/// failures.
+fn store_probes() -> Vec<Probe> {
+    const ID: &str = "EP0001-PPSA00001_00-SAMPLEGAME000001";
+    let game_uri = format!("/api/games/{ID}");
+    let mut probes = Vec::new();
+    for (uri, template, invalid) in [
+        (
+            "/api/games/new",
+            "/api/games/new",
+            Some("/api/games/new?size=0"),
+        ),
+        (
+            "/api/games/upcoming",
+            "/api/games/upcoming",
+            Some("/api/games/upcoming?size=0"),
+        ),
+        (
+            "/api/games/discounted",
+            "/api/games/discounted",
+            Some("/api/games/discounted?size=0"),
+        ),
+        (
+            "/api/games/monthly",
+            "/api/games/monthly",
+            Some("/api/games/monthly?size=0"),
+        ),
+        (
+            "/api/games/search?q=a",
+            "/api/games/search",
+            Some("/api/games/search"),
+        ),
+        ("/api/games/genres", "/api/games/genres", None),
+        (
+            "/api/games/browse?genre=ACTION&order=newest",
+            "/api/games/browse",
+            Some("/api/games/browse?genre=action&order=newest"),
+        ),
+        (game_uri.as_str(), "/api/games/{id}", Some("/api/games/%20")),
+    ] {
+        probes.push(probe(harness(), get(uri), template));
+        if let Some(invalid) = invalid {
+            probes.push(probe(harness(), get(invalid), template));
+        }
+        for error in upstream_failures() {
+            probes.push(probe(games_failing(error), get(uri), template));
+        }
+    }
+    let missing = harness_with(
+        FakeGames {
+            detail: Err(GameLookupError::NotFound {
+                id: ID.parse().unwrap(),
+            }),
+            ..FakeGames::ok()
+        },
+        FakeAccount::ok(),
+        None,
+        StaticSite::new("/x"),
+    );
+    probes.push(probe(missing, get(&game_uri), "/api/games/{id}"));
+    probes
+}
+
+/// The answers of the signed-in lists and the sign-in routes.
+fn account_probes() -> Vec<Probe> {
+    let mut probes = Vec::new();
+    for template in ["/api/games/purchased", "/api/games/wishlist"] {
+        probes.push(probe(harness(), with_cookie(template), template));
+        probes.push(probe(harness(), get(template), template));
+        for error in upstream_failures() {
+            probes.push(probe(
+                account_failing(AccountError::Upstream(error)),
+                with_cookie(template),
+                template,
+            ));
+        }
+    }
+    let json = "application/json";
+    for (harness, request) in [
+        (harness(), session_post(npsso_payload(), json)),
+        (harness(), session_post("{}".into(), json)),
+        (harness(), session_post(npsso_payload(), "text/plain")),
+        (harness(), session_post("a".repeat(3 << 20), json)),
+        (
+            account_failing(AccountError::session_rejected("x")),
+            session_post(npsso_payload(), json),
+        ),
+        (
+            harness(),
+            Request::delete("/api/session").body(Body::empty()).unwrap(),
+        ),
+    ] {
+        probes.push(probe(harness, request, "/api/session"));
+    }
+    for error in upstream_failures() {
+        probes.push(probe(
+            account_failing(AccountError::Upstream(error)),
+            session_post(npsso_payload(), json),
+            "/api/session",
+        ));
+    }
+    probes
+}
+
+/// Each answer of a documented route has a documented status and media type,
+/// and each documented answer except the 500 of a contained panic occurs.
+#[tokio::test]
+async fn every_answer_of_a_documented_route_is_in_the_document() {
+    let mut seen = BTreeSet::new();
+    for probe in store_probes().into_iter().chain(account_probes()) {
+        let response = probe.harness.send(probe.request).await;
+        let status = response.status().as_u16();
+        let media = response
+            .headers()
+            .get(CONTENT_TYPE)
+            .map(|value| value.to_str().unwrap().to_owned());
+        let documented = documented(probe.method, probe.template);
+        assert!(
+            documented.contains(&(status, media.clone())),
+            "{} {} answered {status} {media:?}; documented {documented:?}",
+            probe.method,
+            probe.template
+        );
+        seen.insert((probe.method, probe.template, status));
+    }
+    let (_, document) = openapi::api_router();
+    let value = serde_json::to_value(&document).unwrap();
+    for (template, item) in value["paths"].as_object().unwrap() {
+        for (method, operation) in item.as_object().unwrap() {
+            for status in operation["responses"].as_object().unwrap().keys() {
+                let status: u16 = status.parse().unwrap();
+                if status == 500 {
+                    continue;
+                }
+                assert!(
+                    seen.iter()
+                        .any(|seen| *seen == (method.as_str(), template.as_str(), status)),
+                    "{method} {template} documents {status}, and no probe gets it"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn the_document_lists_the_parameter_rules_of_the_server() {
+    use super::params::{
+        DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, SEARCH_MAX_PAGE_SIZE, SEARCH_MAX_TERM_LENGTH,
+    };
+    let (_, document) = openapi::api_router();
+    let value = serde_json::to_value(&document).unwrap();
+    let parameter = |template: &str, name: &str| {
+        value["paths"][template]["get"]["parameters"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|p| p["name"] == name)
+            .unwrap()
+            .clone()
+    };
+    let size = parameter("/api/games/new", "size");
+    assert_eq!(size["schema"]["maximum"], MAX_PAGE_SIZE);
+    assert!(
+        size["description"]
+            .as_str()
+            .unwrap()
+            .contains(&format!("default is {DEFAULT_PAGE_SIZE}"))
+    );
+    let search_size = parameter("/api/games/search", "size");
+    assert_eq!(search_size["schema"]["maximum"], SEARCH_MAX_PAGE_SIZE);
+    assert_eq!(
+        parameter("/api/games/search", "q")["schema"]["maxLength"],
+        SEARCH_MAX_TERM_LENGTH
+    );
+    let orders: Vec<&str> = value["components"]["schemas"]["BrowseOrder"]["enum"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|v| v.as_str().unwrap())
+        .collect();
+    assert_eq!(orders, BrowseOrder::ALL.map(BrowseOrder::as_str));
+    let codes: Vec<String> = value["components"]["schemas"]["ProblemCode"]["enum"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|v| v.as_str().unwrap().to_owned())
+        .collect();
+    let expected: Vec<String> = ProblemCode::ALL
+        .iter()
+        .map(|code| {
+            serde_json::to_value(code)
+                .unwrap()
+                .as_str()
+                .unwrap()
+                .to_owned()
+        })
+        .collect();
+    assert_eq!(codes, expected);
+    assert_eq!(
+        value["paths"]["/api/games/purchased"]["get"]["security"][0],
+        serde_json::json!({ openapi::NPSSO_COOKIE_SCHEME: [] })
+    );
 }

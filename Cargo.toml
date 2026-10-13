@@ -37,6 +37,13 @@ tracing-subscriber = { version = "=0.3.23", default-features = false, features =
 # The random request id of each request (`v4`). Its random source,
 # `getrandom` 0.4, is already in the graph through reqwest.
 uuid = { version = "=1.26.1", default-features = false, features = ["std", "v4"] }
+# The OpenAPI 3.1 document of the `/api` routes (contract/openapi.json).
+# `macros` derives the schemas and the operations. `preserve_order` keeps the
+# struct field order, so a schema lists its properties in the wire key order.
+utoipa = { version = "=6.0.0", default-features = false, features = ["macros", "preserve_order"] }
+# Registers each documented route through utoipa, so the document lists the
+# routes that the router serves.
+utoipa-axum = "=0.3.0"
 
 # The lints of the default Rust profile (STACK.md). Each crate inherits them
 # with `[lints] workspace = true`. `missing_debug_implementations` is an extra

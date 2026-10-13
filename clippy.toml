@@ -2,3 +2,7 @@ allow-unwrap-in-tests = true
 allow-expect-in-tests = true
 allow-panic-in-tests = true
 allow-print-in-tests = true
+
+# `doc_markdown` accepts these words without backticks. ".." keeps the
+# default list of Clippy.
+doc-valid-idents = ["OpenAPI", ".."]

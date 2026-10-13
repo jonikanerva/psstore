@@ -1,1 +1,7 @@
-{ "_tag": "GameNotFound", "id": "EP0000-PPSA00000_00-UNKNOWNGAME00000" }
+{
+  "type": "about:blank",
+  "title": "Not Found",
+  "status": 404,
+  "detail": "No PS5 game in the Finnish store has this id.",
+  "code": "game_not_found"
+}
