@@ -1,0 +1,4 @@
+{
+  "_tag": "UpstreamRateLimited",
+  "message": "Sony upstream rate limited the request (HTTP 429)"
+}

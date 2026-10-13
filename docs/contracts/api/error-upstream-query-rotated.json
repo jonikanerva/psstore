@@ -1,0 +1,5 @@
+{
+  "_tag": "UpstreamQueryRotated",
+  "message": "Sony rejected the persisted query (hash rotated); re-run pnpm sony:refresh",
+  "operationName": "categoryGridRetrieve"
+}
