@@ -13,6 +13,9 @@
 //
 // Never edit `./generated`: run `pnpm --filter @psstore/api-client run
 // generate` after a change to `contract/openapi.json`.
+//
+// The first import turns off Zod's `eval` use before any schema exists.
+import './zodConfig.js'
 import { createClient, createConfig } from './generated/client/index.js'
 import type { Client } from './generated/client/index.js'
 import * as sdk from './generated/sdk.gen.js'
