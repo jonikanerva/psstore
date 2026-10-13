@@ -45,6 +45,22 @@ pub struct SonyContract {
     pub wishlist_operation: String,
     #[serde(rename = "SONY_WISHLIST_HASH")]
     pub wishlist_hash: String,
+    /// The OAuth base URL of the NPSSO exchange. The sign-in values are the
+    /// public constants of Sony's mobile app: they identify the app, not the
+    /// user, and are not secrets.
+    #[serde(rename = "SONY_AUTH_BASE_URL")]
+    pub auth_base_url: String,
+    #[serde(rename = "SONY_AUTH_CLIENT_ID")]
+    pub auth_client_id: String,
+    /// The redirect target of the authorize call. Its `Location` carries the
+    /// one-time code.
+    #[serde(rename = "SONY_AUTH_REDIRECT_URI")]
+    pub auth_redirect_uri: String,
+    #[serde(rename = "SONY_AUTH_SCOPE")]
+    pub auth_scope: String,
+    /// The `Authorization` header value of the token call.
+    #[serde(rename = "SONY_AUTH_BASIC_HEADER")]
+    pub auth_basic_header: String,
 }
 
 impl SonyContract {
@@ -74,5 +90,16 @@ mod tests {
             assert_eq!(hash.len(), 64, "{hash}");
             assert!(hash.bytes().all(|b| b.is_ascii_hexdigit()), "{hash}");
         }
+    }
+
+    #[test]
+    fn the_contract_file_has_the_sign_in_values() {
+        let contract = SonyContract::load().unwrap();
+        assert!(contract.auth_base_url.starts_with("https://"));
+        assert!(!contract.auth_base_url.ends_with('/'));
+        assert!(contract.auth_redirect_uri.ends_with("://redirect"));
+        assert!(contract.auth_basic_header.starts_with("Basic "));
+        assert!(!contract.auth_client_id.is_empty());
+        assert!(!contract.auth_scope.is_empty());
     }
 }
