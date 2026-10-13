@@ -16,7 +16,7 @@ use crate::domain::mapper::{concept_to_game, product_detail_to_game};
 /// 2026-10-13T00:00:00Z.
 const NOW: i64 = 1_791_849_600_000;
 
-fn grid(node: Value) -> Value {
+fn grid(node: &Value) -> Value {
     json!({"data": {"categoryGridRetrieve": node}})
 }
 
@@ -113,7 +113,7 @@ fn a_malformed_node_degrades_to_empty_values() {
         "combinedLocalizedGenres": {"value": "wrong-shape"}
     }}}));
     assert_eq!(detail.release_date, None);
-    assert!(detail.genres.is_empty());
+    assert!(detail.genres.is_empty(), "{:?}", detail.genres);
     assert_eq!(detail.description, "");
     // Challenge: one wrong field fails the whole node, like Effect Schema.
     let one_wrong = extract_product_detail(&json!({"data": {"productRetrieve": {
@@ -146,18 +146,15 @@ fn reads_the_platform_list() {
         "platforms": ["PS4", "PS5"]
     }}}));
     assert_eq!(detail.platforms, ["PS4", "PS5"]);
-    assert!(
-        extract_product_detail(&json!({"data": {"productRetrieve": {}}}))
-            .platforms
-            .is_empty()
-    );
+    let found = extract_product_detail(&json!({"data": {"productRetrieve": {}}})).platforms;
+    assert!(found.is_empty(), "{found:?}");
 }
 
 // ---- Category grid (sonyClient.test.ts, scopeDrop.test.ts) ----------------
 
 #[test]
 fn concepts_win_over_products() {
-    let (concepts, _) = ok_grid(&grid(json!({
+    let (concepts, _) = ok_grid(&grid(&json!({
         "concepts": [{
             "id": "1",
             "name": "Alpha",
@@ -173,7 +170,7 @@ fn concepts_win_over_products() {
 
 #[test]
 fn maps_products_to_concepts_without_concepts() {
-    let (concepts, _) = ok_grid(&grid(json!({
+    let (concepts, _) = ok_grid(&grid(&json!({
         "products": [{
             "id": "EP0001-PPSA00002_00-BRAVO00000000000",
             "name": "Bravo",
@@ -193,10 +190,10 @@ fn maps_products_to_concepts_without_concepts() {
 #[test]
 fn an_empty_grid_is_a_legitimate_empty_list() {
     assert_eq!(
-        ok_grid(&grid(json!({"concepts": [], "products": []}))),
+        ok_grid(&grid(&json!({"concepts": [], "products": []}))),
         (vec![], 0)
     );
-    assert_eq!(ok_grid(&grid(json!({}))), (vec![], 0));
+    assert_eq!(ok_grid(&grid(&json!({}))), (vec![], 0));
 }
 
 #[test]
@@ -204,9 +201,9 @@ fn an_absent_or_malformed_node_is_drift() {
     for body in [
         json!({"data": {}}),
         json!({}),
-        grid(json!(null)),
-        grid(json!({"concepts": "not-an-array", "products": 42})),
-        grid(json!([])),
+        grid(&json!(null)),
+        grid(&json!({"concepts": "not-an-array", "products": 42})),
+        grid(&json!([])),
         json!("boom"),
         json!(null),
         json!({"data": []}),
@@ -221,21 +218,21 @@ fn an_absent_or_malformed_node_is_drift() {
 
 #[test]
 fn keeps_concepts_and_products_with_null_fields() {
-    let (concepts, dropped) = ok_grid(&grid(json!({"concepts": [
+    let (concepts, dropped) = ok_grid(&grid(&json!({"concepts": [
         {"id": "10018729", "name": "RunNGun", "price": null},
         {"id": "10019188", "name": "Rat Protocol", "price": null}
     ]})));
     assert_eq!(dropped, 0);
     assert_eq!(concepts.len(), 2);
 
-    let (concepts, dropped) = ok_grid(&grid(json!({"products": [{
+    let (concepts, dropped) = ok_grid(&grid(&json!({"products": [{
         "id": "EP0001-PPSA00003_00-DEAL000000000000",
         "name": "Deal",
         "price": {"basePrice": "€59,99", "discountedPrice": "€39,99", "serviceBranding": null}
     }]})));
     assert_eq!((concepts.len(), dropped), (1, 0));
 
-    let (concepts, dropped) = ok_grid(&grid(json!({"concepts": [
+    let (concepts, dropped) = ok_grid(&grid(&json!({"concepts": [
         {"id": "99", "name": null, "media": null, "price": null, "products": null}
     ]})));
     assert_eq!((concepts.len(), dropped), (1, 0));
@@ -243,7 +240,7 @@ fn keeps_concepts_and_products_with_null_fields() {
 
 #[test]
 fn drops_only_the_broken_element_and_counts_it() {
-    let (concepts, dropped) = ok_grid(&grid(json!({"concepts": [
+    let (concepts, dropped) = ok_grid(&grid(&json!({"concepts": [
         {"id": "1", "name": "Good", "price": null},
         {"id": {"nope": true}, "name": "Broken"},
         null,
@@ -267,7 +264,7 @@ fn drops_out_of_scope_items_and_keeps_the_in_scope_game() {
             "products": [{"id": id}]
         })
     };
-    let (concepts, dropped) = ok_grid(&grid(json!({"concepts": [
+    let (concepts, dropped) = ok_grid(&grid(&json!({"concepts": [
         concept(good, "Alpha"),
         concept("UP0001-PPSA00002_01-ADDON000000000", "Addon"),
         concept("", "Idless"),
@@ -281,7 +278,7 @@ fn drops_out_of_scope_items_and_keeps_the_in_scope_game() {
         .collect();
     assert_eq!(ids, [good]);
 
-    let (concepts, _) = ok_grid(&grid(json!({"concepts": [
+    let (concepts, _) = ok_grid(&grid(&json!({"concepts": [
         concept(good, "Alpha"),
         {"id": "c-1", "name": "Announced"}
     ]})));
@@ -350,8 +347,8 @@ fn golden_broken_element_drops_only_the_synthetic_one() {
 #[test]
 fn golden_product_detail_reads_long_description_and_genres() {
     let detail = extract_product_detail(&fixture("productDetail.golden.json"));
-    assert!(!detail.description.is_empty());
-    assert!(!detail.genres.is_empty());
+    assert!(!detail.description.is_empty(), "the value is empty");
+    assert!(!detail.genres.is_empty(), "the value is empty");
     assert!(!detail.description.contains("All rights reserved"));
 }
 
@@ -384,7 +381,8 @@ fn synthetic_cross_gen_detail_reads_name_media_and_platforms() {
         json!({"data": {"productRetrieve": {"name": "X"}}}),
         json!({"data": {"productRetrieve": {"name": "X", "media": null}}}),
     ] {
-        assert!(extract_product_detail(&body).media.is_empty());
+        let found = extract_product_detail(&body).media;
+        assert!(found.is_empty(), "{found:?}");
     }
 }
 
@@ -424,18 +422,18 @@ fn golden_browse_page_decodes_with_page_info() {
 fn a_short_page_without_page_info_is_the_last_page() {
     let concept = json!({"id": "1000", "name": "C", "products": [{"id": "EP0006-PPSA04874_00-APEXLEGENDRSPWN1"}]});
     let (_, is_last, _) = browse_ok(extract_browse_page(
-        &grid(json!({"concepts": [concept.clone()]})),
+        &grid(&json!({"concepts": [concept.clone()]})),
         60,
     ));
     assert!(is_last);
     let (_, is_last, _) = browse_ok(extract_browse_page(
-        &grid(json!({"concepts": [concept.clone()], "pageInfo": null})),
+        &grid(&json!({"concepts": [concept.clone()], "pageInfo": null})),
         1,
     ));
     assert!(!is_last);
     // Challenge: an unreadable `isLast` also falls back to the page length.
     let (_, is_last, _) = browse_ok(extract_browse_page(
-        &grid(json!({"concepts": [concept], "pageInfo": {"isLast": "no"}})),
+        &grid(&json!({"concepts": [concept], "pageInfo": {"isLast": "no"}})),
         60,
     ));
     assert!(is_last);
@@ -444,7 +442,7 @@ fn a_short_page_without_page_info_is_the_last_page() {
 #[test]
 fn a_browse_page_keeps_valid_concepts_when_one_is_broken() {
     let (concepts, is_last, dropped) = browse_ok(extract_browse_page(
-        &grid(json!({
+        &grid(&json!({
             "concepts": [{"id": "1000", "products": []}, {"id": 42}],
             "pageInfo": {"isLast": true}
         })),
@@ -457,8 +455,8 @@ fn a_browse_page_keeps_valid_concepts_when_one_is_broken() {
 fn a_missing_browse_node_is_drift() {
     for body in [
         json!({"data": {}}),
-        grid(json!(null)),
-        grid(json!({"concepts": "x"})),
+        grid(&json!(null)),
+        grid(&json!({"concepts": "x"})),
     ] {
         assert_eq!(
             extract_browse_page(&body, 60),
@@ -545,7 +543,7 @@ const GOLDEN_GENRE_ORDER: [&str; 35] = [
 
 #[test]
 fn drops_one_invalid_genre_value_and_counts_it() {
-    let outcome = extract_genres(&grid(json!({"facetOptions": [{
+    let outcome = extract_genres(&grid(&json!({"facetOptions": [{
         "name": "conceptGenres",
         "values": [
             {"key": "ACTION", "displayName": "Action"},
@@ -576,13 +574,13 @@ fn a_missing_or_empty_genre_facet_is_drift() {
         json!({"facetOptions": "x"}),
     ] {
         assert_eq!(
-            extract_genres(&grid(node.clone())),
+            extract_genres(&grid(&node.clone())),
             GenresOutcome::Drift,
             "{node}"
         );
     }
     // Challenge: a malformed facet before the genre facet is skipped.
-    let outcome = extract_genres(&grid(json!({"facetOptions": [
+    let outcome = extract_genres(&grid(&json!({"facetOptions": [
         {"name": 5},
         {"name": "conceptGenres", "values": [{"key": "ACTION", "displayName": "Action"}]}
     ]})));
@@ -634,13 +632,13 @@ fn golden_search_decodes_and_counts_unreadable_elements() {
     }
 }
 
-fn search_envelope(node: Value) -> Value {
+fn search_envelope(node: &Value) -> Value {
     json!({"data": {"universalSearch": node}})
 }
 
 #[test]
 fn search_tolerates_null_fields_and_drops_odd_elements() {
-    let (_, is_last, dropped) = search_ok(&search_envelope(json!({
+    let (_, is_last, dropped) = search_ok(&search_envelope(&json!({
         "pageInfo": {"isLast": false},
         "results": [{
             "__typename": "Product",
@@ -654,7 +652,7 @@ fn search_tolerates_null_fields_and_drops_odd_elements() {
     })));
     assert_eq!((is_last, dropped), (false, 0));
 
-    let (entries, _, dropped) = search_ok(&search_envelope(json!({
+    let (entries, _, dropped) = search_ok(&search_envelope(&json!({
         "pageInfo": {"isLast": true},
         "results": [
             {"__typename": "Product", "id": 5},
@@ -669,7 +667,7 @@ fn search_tolerates_null_fields_and_drops_odd_elements() {
 
     assert_eq!(
         parse_search_response(&search_envelope(
-            json!({"pageInfo": {"isLast": true, "totalCount": 0}, "results": []})
+            &json!({"pageInfo": {"isLast": true, "totalCount": 0}, "results": []})
         )),
         SearchOutcome::Ok {
             entries: vec![],
@@ -683,13 +681,13 @@ fn search_tolerates_null_fields_and_drops_odd_elements() {
 fn search_reports_drift_for_unpageable_responses() {
     for body in [
         json!({"data": {}}),
-        search_envelope(json!(null)),
+        search_envelope(&json!(null)),
         json!("oops"),
-        search_envelope(json!({"pageInfo": {"isLast": true}})),
-        search_envelope(json!({"results": []})),
-        search_envelope(json!({"pageInfo": {"isLast": "yes"}, "results": []})),
-        search_envelope(json!({"pageInfo": {"isLast": true}, "results": {}})),
-        search_envelope(json!({"pageInfo": null, "results": []})),
+        search_envelope(&json!({"pageInfo": {"isLast": true}})),
+        search_envelope(&json!({"results": []})),
+        search_envelope(&json!({"pageInfo": {"isLast": "yes"}, "results": []})),
+        search_envelope(&json!({"pageInfo": {"isLast": true}, "results": {}})),
+        search_envelope(&json!({"pageInfo": null, "results": []})),
         json!({"data": "x"}),
     ] {
         assert_eq!(parse_search_response(&body), SearchOutcome::Drift, "{body}");
@@ -732,14 +730,12 @@ fn narrows_search_entries_to_ps5_games() {
         product_entry(Some(other), Some(&["PS5"]), Some("GAME_BUNDLE")),
     ]);
     assert_eq!(candidate_ids(&kept), [valid, other]);
-    assert!(
-        narrow_search_entries(vec![product_entry(
-            Some(valid),
-            Some(&["PS4"]),
-            Some("FULL_GAME")
-        )])
-        .is_empty()
-    );
+    let found = narrow_search_entries(vec![product_entry(
+        Some(valid),
+        Some(&["PS4"]),
+        Some("FULL_GAME"),
+    )]);
+    assert!(found.is_empty(), "{found:?}");
     for class in [
         Some("LEVEL"),
         Some("OTHER"),
@@ -748,25 +744,21 @@ fn narrows_search_entries_to_ps5_games() {
         Some(""),
         None,
     ] {
-        assert!(
-            narrow_search_entries(vec![product_entry(Some(valid), Some(&["PS5"]), class)])
-                .is_empty()
-        );
+        let found = narrow_search_entries(vec![product_entry(Some(valid), Some(&["PS5"]), class)]);
+        assert!(found.is_empty(), "{found:?}");
     }
-    assert!(
-        narrow_search_entries(vec![
-            product_entry(Some(valid), None, Some("FULL_GAME")),
-            product_entry(None, Some(&["PS5"]), Some("FULL_GAME")),
-            product_entry(Some("10015248"), Some(&["PS5"]), Some("FULL_GAME")),
-            concept_entry("1", &[]),
-            SearchEntry::Concept(crate::domain::catalog::Concept {
-                id: Some("2".into()),
-                ..Default::default()
-            }),
-            concept_entry("3", &["not-a-product-id"]),
-        ])
-        .is_empty()
-    );
+    let found = narrow_search_entries(vec![
+        product_entry(Some(valid), None, Some("FULL_GAME")),
+        product_entry(None, Some(&["PS5"]), Some("FULL_GAME")),
+        product_entry(Some("10015248"), Some(&["PS5"]), Some("FULL_GAME")),
+        concept_entry("1", &[]),
+        SearchEntry::Concept(crate::domain::catalog::Concept {
+            id: Some("2".into()),
+            ..Default::default()
+        }),
+        concept_entry("3", &["not-a-product-id"]),
+    ]);
+    assert!(found.is_empty(), "{found:?}");
     let ordered = narrow_search_entries(vec![
         product_entry(Some(other), Some(&["PS5"]), Some("FULL_GAME")),
         concept_entry("1", &[valid]),
@@ -790,7 +782,7 @@ fn monthly_ok(json: &Value) -> (Vec<crate::domain::catalog::PlusMonthlyEntry>, u
     }
 }
 
-fn entry(overrides: Value) -> Value {
+fn entry(overrides: &Value) -> Value {
     let mut base = json!({
         "productId": "EP0001-PPSA00001_00-ALPHA00000000000",
         "name": "Alpha",
@@ -807,7 +799,7 @@ fn entry(overrides: Value) -> Value {
     base
 }
 
-fn bucket(games: Vec<Value>) -> Value {
+fn bucket(games: &[Value]) -> Value {
     json!({"catalogKey": "A", "count": games.len(), "games": games})
 }
 
@@ -845,28 +837,29 @@ fn golden_monthly_keeps_the_four_ps5_games() {
         assert_eq!(game.plus_upsell_text, None);
         assert!(!game.pre_order);
         assert_eq!(game.id_kind, IdKind::Product);
-        assert!(game.date.ends_with(".000Z"), "{}", game.date);
+        // The date has milliseconds, like `toISOString`.
+        assert!(game.date.strip_suffix(".000Z").is_some(), "{}", game.date);
     }
 }
 
 #[test]
 fn monthly_flattens_buckets_and_keeps_the_first_entry_of_an_id() {
     let (entries, ..) = monthly_ok(&json!([
-        bucket(vec![entry(
-            json!({"productId": "EP0001-PPSA00001_00-AAAAAAAAAAAAAAAA"})
+        bucket(&[entry(
+            &json!({"productId": "EP0001-PPSA00001_00-AAAAAAAAAAAAAAAA"})
         )]),
-        bucket(vec![entry(
-            json!({"productId": "EP0001-PPSA00002_00-BBBBBBBBBBBBBBBB"})
+        bucket(&[entry(
+            &json!({"productId": "EP0001-PPSA00002_00-BBBBBBBBBBBBBBBB"})
         )]),
     ]));
     assert_eq!(entries.len(), 2);
 
     let (entries, ..) = monthly_ok(&json!([
-        bucket(vec![
-            entry(json!({"name": "First", "conceptId": "1"})),
-            entry(json!({"name": "Second", "conceptId": "1"}))
+        bucket(&[
+            entry(&json!({"name": "First", "conceptId": "1"})),
+            entry(&json!({"name": "Second", "conceptId": "1"}))
         ]),
-        bucket(vec![entry(json!({
+        bucket(&[entry(&json!({
             "name": "Other",
             "conceptId": "1",
             "productId": "EP0001-PPSA00009_00-OTHER00000000000"
@@ -878,15 +871,15 @@ fn monthly_flattens_buckets_and_keeps_the_first_entry_of_an_id() {
 
 #[test]
 fn monthly_counts_out_of_scope_entries() {
-    let (entries, _, out_of_scope) = monthly_ok(&json!([bucket(vec![
-        entry(json!({"device": ["PS4"]})),
-        entry(json!({"device": []})),
-        entry(json!({"device": null})),
-        entry(json!({"productId": "EP0900-CUSA29547_00-4103461541053748", "device": ["PS4"]})),
+    let (entries, _, out_of_scope) = monthly_ok(&json!([bucket(&[
+        entry(&json!({"device": ["PS4"]})),
+        entry(&json!({"device": []})),
+        entry(&json!({"device": null})),
+        entry(&json!({"productId": "EP0900-CUSA29547_00-4103461541053748", "device": ["PS4"]})),
     ])]));
     assert_eq!((entries.len(), out_of_scope), (0, 4));
-    let (entries, _, out_of_scope) = monthly_ok(&json!([bucket(vec![entry(
-        json!({"productId": "10004896"})
+    let (entries, _, out_of_scope) = monthly_ok(&json!([bucket(&[entry(
+        &json!({"productId": "10004896"})
     )])]));
     assert_eq!((entries.len(), out_of_scope), (0, 1));
 }
@@ -894,14 +887,14 @@ fn monthly_counts_out_of_scope_entries() {
 #[test]
 fn monthly_drops_bad_elements_without_failing_the_rest() {
     let (entries, dropped, _) = monthly_ok(&json!([
-        bucket(vec![
+        bucket(&[
             json!(null),
             json!("text"),
-            entry(json!({"productId": 5})),
-            entry(json!({"name": null})),
-            entry(json!({"productId": null})),
-            entry(json!({"releaseDate": 3})),
-            entry(json!({"productId": "EP0001-PPSA00003_00-GOODGOODGOODGOOD"}))
+            entry(&json!({"productId": 5})),
+            entry(&json!({"name": null})),
+            entry(&json!({"productId": null})),
+            entry(&json!({"releaseDate": 3})),
+            entry(&json!({"productId": "EP0001-PPSA00003_00-GOODGOODGOODGOOD"}))
         ]),
         null
     ]));
@@ -912,16 +905,16 @@ fn monthly_drops_bad_elements_without_failing_the_rest() {
 
 #[test]
 fn monthly_keeps_an_entry_with_null_optional_fields() {
-    let (entries, ..) = monthly_ok(&json!([bucket(vec![entry(
-        json!({"imageUrl": null, "releaseDate": null, "genre": null})
+    let (entries, ..) = monthly_ok(&json!([bucket(&[entry(
+        &json!({"imageUrl": null, "releaseDate": null, "genre": null})
     )])]));
     assert_eq!(entries[0].image_url, "");
     assert_eq!(entries[0].release_date, "");
-    assert!(entries[0].genres.is_empty());
+    assert!(entries[0].genres.is_empty(), "{:?}", entries[0].genres);
     assert_eq!(map_monthly_to_games(&entries)[0].date, "");
     // Challenge: null and empty genres inside the list are skipped.
-    let (entries, ..) = monthly_ok(&json!([bucket(vec![entry(
-        json!({"genre": ["A", null, "", "B"], "device": [null, "PS5"]})
+    let (entries, ..) = monthly_ok(&json!([bucket(&[entry(
+        &json!({"genre": ["A", null, "", "B"], "device": [null, "PS5"]})
     )])]));
     assert_eq!(entries[0].genres, ["A", "B"]);
 }
@@ -930,7 +923,7 @@ fn monthly_keeps_an_entry_with_null_optional_fields() {
 fn monthly_empty_lists_are_successful_and_non_lists_are_drift() {
     assert_eq!(monthly_ok(&json!([])).0, vec![]);
     assert_eq!(
-        monthly_ok(&json!([bucket(vec![]), {"catalogKey": "B", "count": 0, "games": null}])).0,
+        monthly_ok(&json!([bucket(&[]), {"catalogKey": "B", "count": 0, "games": null}])).0,
         vec![]
     );
     for body in [
@@ -955,11 +948,11 @@ fn offer(json: &Value) -> Option<PlusOffer> {
     parse_product_price(json).plus_offer
 }
 
-fn wrap(webctas: Value) -> Value {
+fn wrap(webctas: &Value) -> Value {
     json!({"data": {"productRetrieve": {"webctas": webctas}}})
 }
 
-fn plus_cta(price: Value, kind: &str) -> Value {
+fn plus_cta(price: &Value, kind: &str) -> Value {
     let mut base = json!({
         "applicability": "UPSELL",
         "serviceBranding": ["PS_PLUS"],
@@ -974,10 +967,14 @@ fn plus_cta(price: Value, kind: &str) -> Value {
     json!({"type": kind, "price": base})
 }
 
-fn plus_discount(price: Value) -> Value {
+fn plus_discount(price: &Value) -> Value {
     plus_cta(price, "UPSELL_PS_PLUS_DISCOUNT")
 }
 
+#[expect(
+    clippy::unnecessary_wraps,
+    reason = "the helper builds the optional value that the assertion expects"
+)]
 fn price_offer(text: &str) -> Option<PlusOffer> {
     Some(PlusOffer::Price { price: text.into() })
 }
@@ -1019,8 +1016,8 @@ fn malformed_price_bodies_give_no_offer() {
         json!({}),
         json!({"data": null}),
         json!({"data": {"productRetrieve": null}}),
-        wrap(json!(null)),
-        wrap(json!([])),
+        wrap(&json!(null)),
+        wrap(&json!([])),
         json!({"data": []}),
     ] {
         assert_eq!(
@@ -1033,15 +1030,15 @@ fn malformed_price_bodies_give_no_offer() {
 
 #[test]
 fn skips_malformed_ctas_and_finds_a_later_offer() {
-    let body = wrap(json!([
+    let body = wrap(&json!([
         null,
         "text",
         {"type": 5, "price": "x"},
         {"type": "UPSELL_PS_PLUS_DISCOUNT", "price": null},
-        plus_discount(json!({}))
+        plus_discount(&json!({}))
     ]));
     assert_eq!(offer(&body), price_offer("€10,00"));
-    let body = wrap(json!([{
+    let body = wrap(&json!([{
         "type": "UPSELL_PS_PLUS_DISCOUNT",
         "price": {
             "applicability": "UPSELL",
@@ -1059,58 +1056,62 @@ fn skips_malformed_ctas_and_finds_a_later_offer() {
 #[test]
 fn the_plus_offer_needs_an_upsell_with_ps_plus_branding_and_a_price() {
     assert_eq!(
-        offer(&wrap(json!([plus_discount(
-            json!({"applicability": "APPLICABLE"})
+        offer(&wrap(&json!([plus_discount(
+            &json!({"applicability": "APPLICABLE"})
         )]))),
         None
     );
     assert_eq!(
-        offer(&wrap(json!([plus_discount(
-            json!({"serviceBranding": ["NONE"]})
+        offer(&wrap(&json!([plus_discount(
+            &json!({"serviceBranding": ["NONE"]})
         )]))),
         None
     );
     assert_eq!(
-        offer(&wrap(json!([plus_discount(
-            json!({"serviceBranding": null})
+        offer(&wrap(&json!([plus_discount(
+            &json!({"serviceBranding": null})
         )]))),
         None
     );
     for blank in [json!(""), json!(" "), json!(null), json!("\u{FEFF}\u{A0}")] {
         assert_eq!(
-            offer(&wrap(json!([plus_discount(
-                json!({"discountedPrice": blank})
+            offer(&wrap(&json!([plus_discount(
+                &json!({"discountedPrice": blank})
             )]))),
             None
         );
     }
     assert_eq!(
-        offer(&wrap(json!([plus_discount(
-            json!({"isTiedToSubscription": null})
+        offer(&wrap(&json!([plus_discount(
+            &json!({"isTiedToSubscription": null})
         )]))),
         None
     );
     let tied = json!({"isTiedToSubscription": true, "discountedPrice": "Included"});
     assert_eq!(
-        offer(&wrap(json!([plus_cta(
-            tied.clone(),
+        offer(&wrap(&json!([plus_cta(
+            &tied.clone(),
             "UPSELL_PS_PLUS_GAME_CATALOG"
         )]))),
         Some(PlusOffer::Included)
     );
     assert_eq!(
-        offer(&wrap(json!([plus_cta(tied, "UPSELL_PS_PLUS_NEW_TYPE")]))),
+        offer(&wrap(&json!([plus_cta(&tied, "UPSELL_PS_PLUS_NEW_TYPE")]))),
         None
     );
     // The price text stays verbatim, also with a non-breaking space.
     assert_eq!(
-        offer(&wrap(json!([plus_discount(
-            json!({"discountedPrice": "10,00\u{A0}€"})
+        offer(&wrap(&json!([plus_discount(
+            &json!({"discountedPrice": "10,00\u{A0}€"})
         )]))),
         price_offer("10,00\u{A0}€")
     );
 }
 
+#[expect(
+    clippy::unnecessary_wraps,
+    reason = "the helper builds the optional value that the assertion expects"
+)]
 fn standard(
     base: &str,
     discounted: &str,
@@ -1123,7 +1124,7 @@ fn standard(
     })
 }
 
-fn cta(price: Value, kind: &str) -> Value {
+fn cta(price: &Value, kind: &str) -> Value {
     let mut base = json!({
         "applicability": "APPLICABLE",
         "basePrice": "€39,99",
@@ -1172,37 +1173,37 @@ fn golden_price_captures_give_the_standard_price() {
 #[test]
 fn the_standard_price_is_the_first_plain_cta() {
     assert_eq!(
-        parse_product_price(&wrap(json!([plus_discount(json!({}))]))).standard,
+        parse_product_price(&wrap(&json!([plus_discount(&json!({}))]))).standard,
         None
     );
     assert_eq!(
-        parse_product_price(&wrap(json!([cta(json!({}), "ADD_TO_CART")]))).standard,
+        parse_product_price(&wrap(&json!([cta(&json!({}), "ADD_TO_CART")]))).standard,
         standard("€39,99", "€39,99", "")
     );
     assert_eq!(
-        parse_product_price(&wrap(json!([cta(
-            json!({"basePrice": "€39,99", "discountedPrice": "€19,99", "displayDiscountText": "-50%"}),
+        parse_product_price(&wrap(&json!([cta(
+            &json!({"basePrice": "€39,99", "discountedPrice": "€19,99", "displayDiscountText": "-50%"}),
             "ADD_TO_CART"
         )])))
         .standard,
         standard("€39,99", "€19,99", "-50%")
     );
     assert_eq!(
-        parse_product_price(&wrap(json!([cta(
-            json!({"basePrice": "Free", "discountedPrice": "Free"}),
+        parse_product_price(&wrap(&json!([cta(
+            &json!({"basePrice": "Free", "discountedPrice": "Free"}),
             "DOWNLOAD"
         )])))
         .standard,
         standard("Free", "Free", "")
     );
-    let body = wrap(json!([
-        cta(json!({"isTiedToSubscription": true}), "ADD_TO_CART"),
+    let body = wrap(&json!([
+        cta(&json!({"isTiedToSubscription": true}), "ADD_TO_CART"),
         cta(
-            json!({"basePrice": null, "discountedPrice": null}),
+            &json!({"basePrice": null, "discountedPrice": null}),
             "ADD_TO_CART"
         ),
         cta(
-            json!({"basePrice": "€5,00", "discountedPrice": "€5,00"}),
+            &json!({"basePrice": "€5,00", "discountedPrice": "€5,00"}),
             "ADD_TO_CART"
         ),
     ]));

@@ -38,6 +38,10 @@ fn unverified(n: usize) -> SearchCandidate {
     }
 }
 
+#[expect(
+    clippy::unnecessary_wraps,
+    reason = "the helper builds the successful answer of the fake Sony client"
+)]
 fn search_page(
     candidates: Vec<SearchCandidate>,
     is_last: bool,
@@ -199,13 +203,12 @@ async fn an_unverified_concept_needs_a_ps5_game_detail() {
         }),
         ..FakeSony::default()
     });
-    assert!(
-        svc.search_games("x".into(), page(0, 50))
-            .await
-            .unwrap()
-            .games
-            .is_empty()
-    );
+    let found = svc
+        .search_games("x".into(), page(0, 50))
+        .await
+        .unwrap()
+        .games;
+    assert!(found.is_empty(), "{found:?}");
 }
 
 #[tokio::test(start_paused = true)]

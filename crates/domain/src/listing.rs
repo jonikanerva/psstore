@@ -26,6 +26,7 @@ pub enum SortOrder {
 
 /// Sorts by release date. A missing or unparseable date sorts last in both
 /// directions. Equal dates keep Sony's order, because the sort is stable.
+#[must_use]
 pub fn sort_by_date(mut games: Vec<Game>, order: SortOrder) -> Vec<Game> {
     games.sort_by(|a, b| {
         let (a, b) = (parse_date_ms(&a.date), parse_date_ms(&b.date));
@@ -41,6 +42,7 @@ pub fn sort_by_date(mut games: Vec<Game>, order: SortOrder) -> Vec<Game> {
 }
 
 /// One page of `games`. `next_offset` is `None` on the last page.
+#[must_use]
 pub fn paginate(games: Vec<Game>, offset: usize, size: usize) -> PageResult {
     let total_count = games.len();
     let end = offset.saturating_add(size);
@@ -66,11 +68,13 @@ fn release_ms(game: &Game) -> Option<i64> {
 }
 
 /// True when the date of the game parses.
+#[must_use]
 pub fn has_release_date(game: &Game) -> bool {
     release_ms(game).is_some()
 }
 
 /// NEW: a dated game released before the latest possible local midnight.
+#[must_use]
 pub fn in_new_window(games: Vec<Game>, now_ms: i64) -> Vec<Game> {
     let end = now_ms + MAX_LOCAL_DAY_MS + CLIENT_CLOCK_MARGIN_MS;
     games
@@ -81,6 +85,7 @@ pub fn in_new_window(games: Vec<Game>, now_ms: i64) -> Vec<Game> {
 
 /// UPCOMING: a game released after the earliest possible local midnight, or
 /// a game without a parseable date.
+#[must_use]
 pub fn in_upcoming_window(games: Vec<Game>, now_ms: i64) -> Vec<Game> {
     let start = now_ms - CLIENT_CLOCK_MARGIN_MS;
     games
@@ -91,6 +96,7 @@ pub fn in_upcoming_window(games: Vec<Game>, now_ms: i64) -> Vec<Game> {
 
 /// The released grid, then the upcoming grid. The first occurrence of a
 /// repeated id wins.
+#[must_use]
 pub fn merge_release_grids(released: Vec<Game>, upcoming: Vec<Game>) -> Vec<Game> {
     let mut seen = HashSet::new();
     released
@@ -101,6 +107,7 @@ pub fn merge_release_grids(released: Vec<Game>, upcoming: Vec<Game>) -> Vec<Game
 }
 
 /// NEW and DISCOUNTED: the cards whose id is a product SKU.
+#[must_use]
 pub fn map_concepts_to_games(concepts: &[Concept], now_ms: i64) -> Vec<Game> {
     concepts
         .iter()
@@ -121,6 +128,7 @@ pub fn map_monthly_to_games(entries: &[PlusMonthlyEntry]) -> Vec<Game> {
 /// UPCOMING: also keeps concept-only announcements that Sony does not expose
 /// as a product SKU. Only id-less entries are dropped. A product SKU id is
 /// `product`; any other id is a `concept` id.
+#[must_use]
 pub fn map_upcoming_concepts_to_games(concepts: &[Concept], now_ms: i64) -> Vec<Game> {
     concepts
         .iter()
@@ -142,6 +150,7 @@ pub fn map_upcoming_concepts_to_games(concepts: &[Concept], now_ms: i64) -> Vec<
 pub const GAME_CLASSIFICATIONS: [&str; 2] = ["FULL_GAME", "GAME_BUNDLE"];
 
 /// True for a full game or a game bundle classification.
+#[must_use]
 pub fn is_game_classification(classification: Option<&str>) -> bool {
     classification.is_some_and(|value| GAME_CLASSIFICATIONS.contains(&value))
 }
@@ -150,6 +159,7 @@ pub fn is_game_classification(classification: Option<&str>) -> bool {
 pub const PS5_PLATFORM: &str = "PS5";
 
 /// True for a PS5 full game or game bundle.
+#[must_use]
 pub fn is_ps5_game(platforms: &[String], classification: Option<&str>) -> bool {
     platforms.iter().any(|platform| platform == PS5_PLATFORM)
         && is_game_classification(classification)
@@ -202,6 +212,7 @@ pub fn narrow_search_entries(entries: Vec<SearchEntry>) -> Vec<SearchCandidate> 
 /// The genre facet narrowed to keys that the API accepts, sorted by display
 /// name like `localeCompare(…, 'en')`. The first entry of a repeated key
 /// wins.
+#[must_use]
 pub fn narrow_genres(genres: Vec<RawGenre>) -> Vec<Genre> {
     let mut seen = HashSet::new();
     let mut kept: Vec<Genre> = genres
@@ -228,6 +239,7 @@ fn is_ps5_title_product_id(id: &str) -> bool {
 /// The product ids to try for one BROWSE concept, in order: PS5 title ids
 /// first, otherwise Sony's order. The prefix only orders the lookups; the
 /// product detail decides. A concept without a product id has none.
+#[must_use]
 pub fn browse_candidate_ids(concept: &Concept) -> Vec<String> {
     let mut seen = HashSet::new();
     let ids: Vec<String> = concept

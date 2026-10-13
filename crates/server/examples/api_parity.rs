@@ -33,7 +33,7 @@
 //! empty cookie. The sign-in requests send bodies that fail validation before
 //! the server calls Sony.
 
-#![allow(
+#![expect(
     clippy::print_stdout,
     clippy::print_stderr,
     reason = "a command-line tool prints its report"
@@ -182,10 +182,10 @@ impl Probe {
     fn label(&self) -> String {
         let mut label = format!("{} {}", self.method, self.target);
         for (name, value) in &self.headers {
-            label.push_str(&format!(" [{name}: {value}]"));
+            label = format!("{label} [{name}: {value}]");
         }
         if let Some(body) = self.body {
-            label.push_str(&format!(" [body: {body:?}]"));
+            label = format!("{label} [body: {body:?}]");
         }
         label
     }
@@ -495,13 +495,12 @@ impl Run {
         for line in report(probe, &outcome, self.repeat) {
             println!("{line}");
         }
-        match self.groups.iter_mut().find(|(name, _)| *name == group) {
-            Some((_, counts)) => counts.record(&outcome),
-            None => {
-                let mut counts = Counts::default();
-                counts.record(&outcome);
-                self.groups.push((group, counts));
-            }
+        if let Some((_, counts)) = self.groups.iter_mut().find(|(name, _)| *name == group) {
+            counts.record(&outcome);
+        } else {
+            let mut counts = Counts::default();
+            counts.record(&outcome);
+            self.groups.push((group, counts));
         }
         first_a
     }
@@ -787,6 +786,10 @@ mod tests {
         }
     }
 
+    #[expect(
+        clippy::unnecessary_wraps,
+        reason = "the helper builds the successful exchange of a fake server"
+    )]
     fn ok(body: &str) -> Exchange {
         Ok(answer(200, body))
     }
@@ -814,16 +817,18 @@ mod tests {
     }
 
     impl Servers for Script {
-        async fn send(&self, side: Side, _probe: &Probe) -> Exchange {
+        fn send(&self, side: Side, _probe: &Probe) -> impl Future<Output = Exchange> {
             self.calls.borrow_mut().push(side);
             let script = match side {
                 Side::A => &self.a,
                 Side::B => &self.b,
             };
-            script
-                .borrow_mut()
-                .pop_front()
-                .unwrap_or_else(|| Err("the script has no more answers".into()))
+            std::future::ready(
+                script
+                    .borrow_mut()
+                    .pop_front()
+                    .unwrap_or_else(|| Err("the script has no more answers".into())),
+            )
         }
     }
 
@@ -921,7 +926,8 @@ mod tests {
 
     #[test]
     fn reports_one_line_for_an_unstable_request() {
-        assert!(report(&probe(), &Outcome::Same, 3).is_empty());
+        let found = report(&probe(), &Outcome::Same, 3);
+        assert!(found.is_empty(), "{found:?}");
         assert_eq!(
             report(&probe(), &Outcome::Unstable { retry: 2 }, 3),
             vec!["UNSTABLE GET /api/games/search?q=lego: matched on retry 2 of 3"]
@@ -975,7 +981,8 @@ mod tests {
 
     #[test]
     fn equal_answers_have_no_difference() {
-        assert!(differences(&answer(200, "{}"), &answer(200, "{}")).is_empty());
+        let found = differences(&answer(200, "{}"), &answer(200, "{}"));
+        assert!(found.is_empty(), "{found:?}");
     }
 
     #[test]

@@ -42,6 +42,7 @@ pub struct AppState {
 /// The service that `main` serves: the router behind trailing-slash
 /// trimming. The Effect router of the TypeScript server ignored a trailing
 /// slash, so `/api/games/new/` is the NEW list.
+#[must_use]
 pub fn app(state: AppState) -> tower::util::MapRequest<Router, fn(Request) -> Request> {
     let trim: fn(Request) -> Request = trim_trailing_slash;
     MapRequestLayer::new(trim).layer(router(state))

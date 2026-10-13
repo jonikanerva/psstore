@@ -406,7 +406,7 @@ fn a_token_lives_until_its_expiry_minus_the_margin() {
             expires_in_seconds: seconds,
         })
     };
-    assert_eq!(token_ttl(&token(3600.0)), Duration::from_secs(3300));
+    assert_eq!(token_ttl(&token(3600.0)), Duration::from_mins(55));
     assert_eq!(
         token_ttl(&token(5_000_000.0)),
         Duration::from_secs(4_999_700)
@@ -633,15 +633,15 @@ fn rounds_the_rating_like_math_round() {
     let cases = [
         (json!(84.4), 84),
         (json!(84.5), 85),
-        (json!(84.49999999999999), 84),
-        (json!(0.49999999999999994), 0),
+        (json!(84.499_999_999_999_99), 84),
+        (json!(0.499_999_999_999_999_94), 0),
         (json!(0.5), 1),
         (json!(2.5), 3),
         (json!(99.5), 100),
         (json!(100), 100),
         (json!(0), 0),
         (json!(-0.0), 0),
-        (json!(50.5000001), 51),
+        (json!(50.500_000_1), 51),
     ];
     for (value, expected) in cases {
         assert_eq!(rating_of(&value), CriticScore::new(expected), "{value}");

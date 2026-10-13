@@ -111,12 +111,18 @@ where
     }
 
     /// A cache with one time to live for every outcome.
+    #[must_use]
     pub fn with_fixed_ttl(capacity: usize, ttl: Duration) -> Self {
         Self::new(capacity, move |_| ttl)
     }
 
     /// Returns the cached outcome for `key`, or runs `lookup` once for all
     /// concurrent callers and caches its outcome.
+    ///
+    /// # Errors
+    ///
+    /// The cached or new failure of `lookup`. A panicked lookup fails with
+    /// `E::from(LookupPanicked)` and is not cached.
     pub async fn get_with<F, Fut>(&self, key: K, lookup: F) -> Result<V, E>
     where
         F: FnOnce() -> Fut,
@@ -134,10 +140,12 @@ where
     }
 
     /// The number of entries, pending ones included.
+    #[must_use]
     pub fn len(&self) -> usize {
         self.inner.lock().entries.len()
     }
 
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
@@ -211,7 +219,9 @@ where
     fn lock(&self) -> std::sync::MutexGuard<'_, State<K, V, E>> {
         // The state stays consistent between statements, so a poisoned lock
         // can be used.
-        self.state.lock().unwrap_or_else(|e| e.into_inner())
+        self.state
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
     }
 
     /// Sets the expiry of the entry that lookup `id` filled, or drops the
@@ -423,7 +433,7 @@ mod tests {
         let cache = TestCache::with_fixed_ttl(10, Duration::MAX);
         let calls = Arc::new(AtomicUsize::new(0));
         assert_eq!(cache.get_with("k", counting(&calls, Ok(1))).await, Ok(1));
-        tokio::time::advance(Duration::from_secs(365 * 24 * 60 * 60)).await;
+        tokio::time::advance(Duration::from_hours(8760)).await;
         assert_eq!(cache.get_with("k", counting(&calls, Ok(2))).await, Ok(1));
         assert_eq!(calls.load(Ordering::SeqCst), 1);
     }
@@ -433,10 +443,7 @@ mod tests {
         let cache = TestCache::with_fixed_ttl(10, Duration::from_secs(60));
         let abandoned = cache.get_with("k", || async {
             tokio::time::sleep(Duration::from_millis(10)).await;
-            #[allow(clippy::panic, reason = "the test checks panic containment")]
-            {
-                panic!("synthetic lookup panic");
-            }
+            panic!("synthetic lookup panic");
         });
         assert!(
             tokio::time::timeout(Duration::from_millis(1), abandoned)
@@ -455,10 +462,7 @@ mod tests {
         let cache = TestCache::with_fixed_ttl(10, Duration::from_secs(60));
         let outcome = cache
             .get_with("k", || async {
-                #[allow(clippy::panic, reason = "the test checks panic containment")]
-                {
-                    panic!("synthetic lookup panic");
-                }
+                panic!("synthetic lookup panic");
             })
             .await;
         assert_eq!(

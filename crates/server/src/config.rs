@@ -45,6 +45,7 @@ impl std::fmt::Debug for IgdbCredentials {
 
 impl Config {
     /// Reads `PORT`, `IGDB_CLIENT_ID`, and `IGDB_CLIENT_SECRET`.
+    #[must_use]
     pub fn from_env() -> Self {
         Self::from_lookup(|name| std::env::var(name).ok())
     }

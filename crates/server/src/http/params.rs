@@ -36,6 +36,7 @@ pub struct Query(Vec<(String, String)>);
 impl Query {
     /// Decodes `application/x-www-form-urlencoded` pairs: `+` is a space and
     /// percent escapes decode.
+    #[must_use]
     pub fn parse(raw: Option<&str>) -> Self {
         Self(
             raw.map(|q| form_urlencoded::parse(q.as_bytes()).into_owned().collect())
@@ -76,12 +77,20 @@ impl Query {
 }
 
 /// `offset` (default 0) and `size` (1 to 120, default 60).
+///
+/// # Errors
+///
+/// [`Invalid`] for a repeated key or a value out of range.
 pub fn pagination(raw: Option<&str>) -> Result<Page, Invalid> {
     Query::parse(raw).page()
 }
 
 /// `q` (trimmed, 1 to 100 code units), `offset`, and `size` (1 to 50,
 /// default 50).
+///
+/// # Errors
+///
+/// [`Invalid`] for a missing or repeated key or a value out of range.
 pub fn search(raw: Option<&str>) -> Result<(String, Page), Invalid> {
     let query = Query::parse(raw);
     let term = js_trim(query.single("q")?.ok_or(Invalid)?);
@@ -98,6 +107,10 @@ pub fn search(raw: Option<&str>) -> Result<(String, Page), Invalid> {
 
 /// `genre` (a Sony genre key, not trimmed), `order` (an API order key),
 /// `offset`, and `size`.
+///
+/// # Errors
+///
+/// [`Invalid`] for a missing or repeated key or a value out of range.
 pub fn browse(raw: Option<&str>) -> Result<(GenreKey, BrowseOrder, Page), Invalid> {
     let query = Query::parse(raw);
     let genre = GenreKey::parse(query.single("genre")?.ok_or(Invalid)?).ok_or(Invalid)?;
@@ -106,6 +119,10 @@ pub fn browse(raw: Option<&str>) -> Result<(GenreKey, BrowseOrder, Page), Invali
 }
 
 /// The game id path segment: trimmed and not empty.
+///
+/// # Errors
+///
+/// [`Invalid`] when the trimmed segment is empty.
 pub fn game_id(raw: &str) -> Result<String, Invalid> {
     let id = js_trim(raw);
     if id.is_empty() {
@@ -140,8 +157,7 @@ fn integer_in(text: &str, min: usize, max: Option<usize>) -> Result<usize, Inval
 /// A non-negative safe integer as `usize`. The conversion is exact, because
 /// every integer up to 2^53 - 1 is exact in `f64` and fits in `u64`.
 fn safe_integer_to_usize(value: f64) -> Option<usize> {
-    #[allow(
-        clippy::as_conversions,
+    #[expect(
         clippy::cast_possible_truncation,
         clippy::cast_sign_loss,
         reason = "the caller checks that the value is a non-negative safe integer"
@@ -226,6 +242,7 @@ fn is_decimal_literal(text: &str) -> bool {
 }
 
 /// The JavaScript `length` of a string: its UTF-16 code units.
+#[must_use]
 pub fn utf16_len(text: &str) -> usize {
     text.encode_utf16().count()
 }

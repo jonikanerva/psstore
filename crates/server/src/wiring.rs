@@ -18,6 +18,7 @@ use crate::sources::sony::catalog::SonyCatalogClient;
 use crate::sources::sony::contract::SonyContract;
 
 /// The production services.
+#[must_use]
 pub fn state(config: &Config, sony: &SonyContract) -> AppState {
     let games = games(sony);
     AppState {
@@ -33,18 +34,16 @@ pub fn state(config: &Config, sony: &SonyContract) -> AppState {
 // ---------------------------------------------------------------------------
 
 fn games(sony: &SonyContract) -> Arc<dyn GamesApi> {
-    match SonyCatalogClient::new(sony) {
-        Ok(client) => Arc::new(GamesService::new(Arc::new(client), Arc::new(SystemClock))),
-        // The client fails to build only when its TLS set-up fails. The
-        // service then answers each store request as an outage.
-        Err(_) => {
-            tracing::error!(
-                stage = "sony_client",
-                "the Sony store client could not start"
-            );
-            Arc::new(NotConnected)
-        }
-    }
+    // The client fails to build only when its TLS set-up fails. The service
+    // then answers each store request as an outage.
+    let Ok(client) = SonyCatalogClient::new(sony) else {
+        tracing::error!(
+            stage = "sony_client",
+            "the Sony store client could not start"
+        );
+        return Arc::new(NotConnected);
+    };
+    Arc::new(GamesService::new(Arc::new(client), Arc::new(SystemClock)))
 }
 
 // ---------------------------------------------------------------------------
@@ -55,19 +54,17 @@ fn critic_scores(config: &Config) -> Arc<dyn CriticScores> {
     let Some(credentials) = &config.igdb else {
         return Arc::new(NoCriticScores);
     };
-    match crate::sources::igdb::IgdbClient::new(credentials.clone()) {
-        Ok(client) => Arc::new(crate::application::critic_scores::CriticScoreService::new(
-            Arc::new(client),
-        )),
-        Err(_) => {
-            // The feature is optional, so the server starts without it.
-            tracing::warn!(
-                stage = "igdb_client",
-                "critic score off: the HTTP client could not be built"
-            );
-            Arc::new(NoCriticScores)
-        }
-    }
+    let Ok(client) = crate::sources::igdb::IgdbClient::new(credentials.clone()) else {
+        // The feature is optional, so the server starts without it.
+        tracing::warn!(
+            stage = "igdb_client",
+            "critic score off: the HTTP client could not be built"
+        );
+        return Arc::new(NoCriticScores);
+    };
+    Arc::new(crate::application::critic_scores::CriticScoreService::new(
+        Arc::new(client),
+    ))
 }
 
 // ---------------------------------------------------------------------------
@@ -78,18 +75,16 @@ fn account(sony: &SonyContract, games: Arc<dyn GamesApi>) -> Arc<dyn AccountApi>
     use crate::application::account::AccountService;
     use crate::sources::sony::account::{AccountTiming, SonyAccountClient};
 
-    match SonyAccountClient::new(sony.clone(), AccountTiming::default(), true) {
-        Ok(client) => Arc::new(AccountService::new(Arc::new(client), games)),
-        // Without an HTTP client every signed-in request is an outage. The
-        // sign-in cookie stays, because an outage is no rejection.
-        Err(_) => {
-            tracing::error!(
-                stage = "account_client",
-                "the Sony account client could not start"
-            );
-            Arc::new(NotConnected)
-        }
-    }
+    // Without an HTTP client every signed-in request is an outage. The
+    // sign-in cookie stays, because an outage is no rejection.
+    let Ok(client) = SonyAccountClient::new(sony.clone(), AccountTiming::default(), true) else {
+        tracing::error!(
+            stage = "account_client",
+            "the Sony account client could not start"
+        );
+        return Arc::new(NotConnected);
+    };
+    Arc::new(AccountService::new(Arc::new(client), games))
 }
 
 /// The critic score when the feature is off: never a score.

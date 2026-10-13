@@ -32,6 +32,7 @@ pub struct WishlistEntry {
 }
 
 /// Keeps the first entry per product id, in Sony's order.
+#[must_use]
 pub fn dedupe_purchased(entries: Vec<PurchasedEntry>) -> Vec<PurchasedEntry> {
     let mut seen = HashSet::new();
     entries
@@ -66,6 +67,7 @@ fn library_card(id: &str, name: &str, image_url: &str, id_kind: IdKind) -> Game 
 
 /// The purchased cards in Sony's order. The id is always the product id,
 /// because the game page resolves product ids.
+#[must_use]
 pub fn purchased_cards(entries: &[PurchasedEntry]) -> Vec<Game> {
     entries
         .iter()
@@ -82,6 +84,7 @@ pub fn purchased_cards(entries: &[PurchasedEntry]) -> Vec<Game> {
 
 /// The minimal card of a wishlist entry. The id kind comes from the entry:
 /// the boundary has already checked the id against it.
+#[must_use]
 pub fn wishlist_card(entry: &WishlistEntry) -> Game {
     library_card(&entry.id, &entry.name, &entry.image_url, entry.id_kind)
 }
@@ -94,6 +97,7 @@ pub fn wishlist_cards(entries: &[WishlistEntry]) -> Vec<Game> {
 /// A wishlist card: the public store's game when the store returned one,
 /// else the minimal card. The card keeps the wishlist id and takes a missing
 /// name or cover from the entry.
+#[must_use]
 pub fn merge_wishlist_entry(entry: &WishlistEntry, found: Option<Game>) -> Game {
     match found {
         None => wishlist_card(entry),

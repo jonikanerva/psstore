@@ -85,8 +85,9 @@ fn non_empty(value: Option<String>) -> Option<String> {
 
 /// The product detail of a response. A missing or malformed node degrades to
 /// empty values, never to a failure. The game page shows the LONG
-/// description, else the SHORT tagline; COMPATIBILITY_NOTICE and LEGAL
+/// description, else the SHORT tagline; `COMPATIBILITY_NOTICE` and LEGAL
 /// entries are never shown.
+#[must_use]
 pub fn extract_product_detail(json: &Value) -> ProductDetail {
     let node = product_retrieve(json)
         .filter(|node| !node.is_null())

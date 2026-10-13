@@ -17,7 +17,7 @@ use crate::domain::game::{CriticScore, Game};
 pub const SCORE_CACHE_CAPACITY: usize = 5_000;
 
 /// How long a lookup outcome stays cached: a score and a miss alike.
-pub const SCORE_TTL: Duration = Duration::from_secs(24 * 60 * 60);
+pub const SCORE_TTL: Duration = Duration::from_hours(24);
 
 /// How long a failed lookup stays cached before the next attempt.
 pub const SCORE_FAILURE_TTL: Duration = Duration::from_secs(60);
@@ -40,6 +40,7 @@ pub enum CriticSourceError {
 
 impl CriticSourceError {
     /// The error tag of the TypeScript server, for the log field `reason`.
+    #[must_use]
     pub fn tag(self) -> &'static str {
         match self {
             Self::Rejected => "CriticSourceRejected",
@@ -92,7 +93,7 @@ impl CriticScoreService {
     pub fn new(source: Arc<dyn CriticSource>) -> Self {
         Self {
             source,
-            cache: TtlCache::new(SCORE_CACHE_CAPACITY, score_ttl),
+            cache: TtlCache::new(SCORE_CACHE_CAPACITY, |outcome| score_ttl(*outcome)),
         }
     }
 
@@ -131,7 +132,7 @@ impl CriticScoreService {
     }
 }
 
-fn score_ttl(outcome: &ScoreOutcome) -> Duration {
+fn score_ttl(outcome: ScoreOutcome) -> Duration {
     if outcome.is_ok() {
         SCORE_TTL
     } else {

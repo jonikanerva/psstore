@@ -222,12 +222,12 @@ fn refuses_a_candidate_without_a_rating_or_a_release_year() {
         match_critic_score("Synthetic Quest", 2023, &[unrated]),
         None
     );
-    let undated = CriticCandidate {
+    let without_year = CriticCandidate {
         release_year: None,
         ..candidate()
     };
     assert_eq!(
-        match_critic_score("Synthetic Quest", 2023, &[undated]),
+        match_critic_score("Synthetic Quest", 2023, &[without_year]),
         None
     );
 }

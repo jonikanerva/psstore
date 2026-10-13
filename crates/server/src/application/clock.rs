@@ -32,17 +32,24 @@ impl Clock for SystemClock {
 pub struct FixedClock(Mutex<Timestamp>);
 
 impl FixedClock {
+    #[must_use]
     pub fn new(now: Timestamp) -> Self {
         Self(Mutex::new(now))
     }
 
     pub fn set(&self, now: Timestamp) {
-        *self.0.lock().unwrap_or_else(|e| e.into_inner()) = now;
+        *self
+            .0
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner) = now;
     }
 }
 
 impl Clock for FixedClock {
     fn now(&self) -> Timestamp {
-        *self.0.lock().unwrap_or_else(|e| e.into_inner())
+        *self
+            .0
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
     }
 }

@@ -43,6 +43,10 @@ fn game_detail() -> ProductDetail {
     }
 }
 
+#[expect(
+    clippy::unnecessary_wraps,
+    reason = "the helper builds the successful answer of the fake Sony client"
+)]
 fn browse_page(concepts: Vec<Concept>, is_last: bool) -> Result<BrowsePage, UpstreamError> {
     Ok(BrowsePage { concepts, is_last })
 }
@@ -332,7 +336,7 @@ async fn the_genre_list_is_cached() {
     };
     assert_eq!((a, b), (Ok(expected.clone()), Ok(expected)));
     assert_eq!(fake.calls().genres, 1);
-    tokio::time::advance(Duration::from_secs(60 * 60)).await;
+    tokio::time::advance(Duration::from_hours(1)).await;
     svc.genres().await.unwrap();
     assert_eq!(fake.calls().genres, 2);
 }

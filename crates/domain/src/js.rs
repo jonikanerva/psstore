@@ -32,6 +32,7 @@ use jiff::tz::Offset;
 /// outside the `jiff` timestamp range (about -9999-01-02 to 9999-12-30). V8 reads a date with a time but without an offset
 /// as local time. This port reads it as UTC, which is the time zone of the
 /// production host. Sony sends `YYYY-MM-DDTHH:mm:ssZ`.
+#[must_use]
 pub fn parse_date_ms(text: &str) -> Option<i64> {
     let mut cursor = Cursor {
         bytes: text.as_bytes(),
@@ -95,6 +96,7 @@ pub fn parse_date_ms(text: &str) -> Option<i64> {
 
 /// `new Date(ms).toISOString()`: always with milliseconds and `Z`. A year
 /// outside 0 to 9999 has a sign and six digits, like in JavaScript.
+#[must_use]
 pub fn to_iso_string(ms: i64) -> Option<String> {
     let timestamp = Timestamp::from_millisecond(ms).ok()?;
     let dt = Offset::UTC.to_datetime(timestamp);
@@ -221,6 +223,7 @@ impl Cursor<'_> {
 
 /// `String.prototype.trim`. JavaScript white space differs from Rust white
 /// space in two characters: U+FEFF is white space and U+0085 is not.
+#[must_use]
 pub fn js_trim(text: &str) -> &str {
     text.trim_matches(|c: char| (c.is_whitespace() && c != '\u{85}') || c == '\u{FEFF}')
 }

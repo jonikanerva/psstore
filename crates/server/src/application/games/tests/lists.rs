@@ -41,20 +41,25 @@ async fn every_list_has_games() {
         detail: dates_by_marker(vec![("FUTURE", Some(FUTURE_DATE))], Some(PAST_DATE)),
         ..FakeSony::default()
     });
-    assert!(!svc.new_games(page(0, 60)).await.unwrap().games.is_empty());
+    assert!(
+        !svc.new_games(page(0, 60)).await.unwrap().games.is_empty(),
+        "the value is empty"
+    );
     assert!(
         !svc.upcoming_games(page(0, 60))
             .await
             .unwrap()
             .games
-            .is_empty()
+            .is_empty(),
+        "the value is empty"
     );
     assert!(
         !svc.discounted_games(page(0, 60))
             .await
             .unwrap()
             .games
-            .is_empty()
+            .is_empty(),
+        "the value is empty"
     );
 }
 
@@ -222,8 +227,7 @@ const SPLIT_NOW: &str = "2026-10-05T12:00:00Z";
 
 fn at(hours: f64) -> String {
     let now = parse_date_ms(SPLIT_NOW).unwrap();
-    #[allow(
-        clippy::as_conversions,
+    #[expect(
         clippy::cast_possible_truncation,
         reason = "test offsets are whole minutes"
     )]
@@ -321,14 +325,14 @@ async fn a_game_near_the_boundary_reaches_both_lists() {
 async fn undated_games_are_never_new_and_last_in_upcoming() {
     let dated = priced_concept(9, "dated");
     let undated = priced_concept(10, "undated-product");
-    let dates = vec![(product_id(&dated), at(3.0 * 24.0))];
+    let release_dates = vec![(product_id(&dated), at(3.0 * 24.0))];
     let svc = split(
         vec![],
         vec![announcement("10019999", "announcement"), undated, dated],
-        dates,
+        release_dates,
     );
     let (new, upcoming) = split_names(&svc).await;
-    assert!(new.is_empty());
+    assert!(new.is_empty(), "{new:?}");
     assert_eq!(upcoming, ["dated", "announcement", "undated-product"]);
 }
 
@@ -337,11 +341,11 @@ async fn an_undated_product_of_the_released_grid_is_in_no_list() {
     let dated = priced_concept(13, "dated-released");
     let undated = priced_concept(14, "released-detail-fails");
     let upcoming = priced_concept(15, "dated-upcoming");
-    let dates = vec![
+    let release_dates = vec![
         (product_id(&dated), at(-24.0)),
         (product_id(&upcoming), at(5.0 * 24.0)),
     ];
-    let svc = split(vec![dated, undated], vec![upcoming], dates);
+    let svc = split(vec![dated, undated], vec![upcoming], release_dates);
     assert_eq!(
         split_names(&svc).await,
         (vec!["dated-released".into()], vec!["dated-upcoming".into()])
@@ -516,20 +520,10 @@ async fn an_empty_grid_is_an_empty_list() {
         concepts: grids(vec![priced_concept(1, "base")], vec![], vec![]),
         ..FakeSony::default()
     });
-    assert!(
-        svc.upcoming_games(page(0, 60))
-            .await
-            .unwrap()
-            .games
-            .is_empty()
-    );
-    assert!(
-        svc.discounted_games(page(0, 60))
-            .await
-            .unwrap()
-            .games
-            .is_empty()
-    );
+    let found = svc.upcoming_games(page(0, 60)).await.unwrap().games;
+    assert!(found.is_empty(), "{found:?}");
+    let found = svc.discounted_games(page(0, 60)).await.unwrap().games;
+    assert!(found.is_empty(), "{found:?}");
 }
 
 #[tokio::test(start_paused = true)]
@@ -572,9 +566,9 @@ async fn list_games_carry_no_plus_offer_and_never_call_the_price_operation() {
     let new = svc.new_games(page(0, 60)).await.unwrap();
     svc.upcoming_games(page(0, 60)).await.unwrap();
     svc.discounted_games(page(0, 60)).await.unwrap();
-    assert!(!new.games.is_empty());
+    assert!(!new.games.is_empty(), "the value is empty");
     assert!(new.games.iter().all(|g| g.plus_offer.is_none()));
-    assert!(fake.calls().prices.is_empty());
+    assert!(fake.calls().prices.is_empty(), "{:?}", fake.calls().prices);
 }
 
 // ---- Cache lifetimes ---------------------------------------------------------
@@ -641,7 +635,7 @@ async fn a_product_detail_is_cached_for_6_hours() {
     tokio::time::advance(Duration::from_secs(30)).await;
     svc.new_games(page(0, 60)).await.unwrap();
     assert_eq!(fake.calls().details.len(), 1);
-    tokio::time::advance(Duration::from_secs(6 * 60 * 60)).await;
+    tokio::time::advance(Duration::from_hours(6)).await;
     svc.new_games(page(0, 60)).await.unwrap();
     assert_eq!(fake.calls().details.len(), 2);
 }

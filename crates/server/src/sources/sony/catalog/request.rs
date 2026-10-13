@@ -230,6 +230,7 @@ fn encode(value: &impl Serialize) -> Result<String, UpstreamError> {
 
 /// The `x-psn-store-locale-override` value: `language-REGION` for a
 /// `xx-yy` tag (`en-fi` gives `en-FI`); any other tag stays unchanged.
+#[must_use]
 pub fn locale_override(locale: &str) -> String {
     match locale.split_once('-') {
         Some((language, region))

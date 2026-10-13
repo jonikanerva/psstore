@@ -23,6 +23,7 @@ impl BrowseOrder {
     ];
 
     /// The API key of the order.
+    #[must_use]
     pub fn as_str(self) -> &'static str {
         match self {
             Self::BestSelling => "best-selling",
@@ -35,6 +36,7 @@ impl BrowseOrder {
     }
 
     /// Parses an API key. Returns `None` for any other value.
+    #[must_use]
     pub fn parse(value: &str) -> Option<Self> {
         Self::ALL.into_iter().find(|order| order.as_str() == value)
     }
@@ -47,16 +49,19 @@ pub struct GenreKey(String);
 
 impl GenreKey {
     /// Returns `None` when the value does not have the key format.
+    #[must_use]
     pub fn parse(value: &str) -> Option<Self> {
         is_genre_key(value).then(|| Self(value.to_owned()))
     }
 
+    #[must_use]
     pub fn as_str(&self) -> &str {
         &self.0
     }
 }
 
 /// True when the value has the Sony genre key format.
+#[must_use]
 pub fn is_genre_key(value: &str) -> bool {
     (1..=64).contains(&value.len())
         && value.bytes().all(|b| {

@@ -128,9 +128,13 @@ impl<S: Subscriber> Layer<S> for JsonLayer {
         }
         let mut text = Value::Object(line).to_string();
         text.push('\n');
-        let mut writer = self.writer.lock().unwrap_or_else(|e| e.into_inner());
-        // A failed log write must not fail the request.
-        let _ = writer.write_all(text.as_bytes());
+        let mut writer = self
+            .writer
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        // A failed log write must not fail the request, and no other channel
+        // can report it.
+        writer.write_all(text.as_bytes()).ok();
     }
 }
 
@@ -141,6 +145,10 @@ pub fn subscriber(writer: LogWriter, filter: Targets) -> impl Subscriber + Send 
 
 /// Installs the subscriber for the process at level `info`. Logs go to
 /// standard output.
+///
+/// # Errors
+///
+/// Another global subscriber is already installed.
 pub fn init() -> Result<(), tracing::subscriber::SetGlobalDefaultError> {
     let stdout: LogWriter = Arc::new(Mutex::new(std::io::stdout()));
     let filter = Targets::new().with_target(CRATE_TARGET, LevelFilter::INFO);

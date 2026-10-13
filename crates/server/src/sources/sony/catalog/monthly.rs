@@ -60,6 +60,7 @@ fn strings(values: Option<Vec<Option<String>>>) -> Vec<String> {
 
 /// Flattens the buckets and keeps the entries whose `device` includes PS5 and
 /// whose id is a product id. The first entry of a product id wins.
+#[must_use]
 pub fn parse_plus_monthly(json: &Value) -> PlusMonthlyOutcome {
     let Some(buckets) = json.as_array() else {
         return PlusMonthlyOutcome::Drift;

@@ -120,6 +120,10 @@ enum Call {
 impl SonyAccountClient {
     /// A client that follows no redirect. `https_only` is off only in tests
     /// with local servers.
+    ///
+    /// # Errors
+    ///
+    /// The HTTP client could not be built (the TLS set-up failed).
     pub fn new(
         contract: SonyContract,
         timing: AccountTiming,

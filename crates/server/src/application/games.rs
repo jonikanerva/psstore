@@ -81,17 +81,17 @@ const NEW_LIST_PAGE_SIZE: usize = 300;
 const LIST_PAGE_SIZE: usize = 120;
 /// The list cache lifetime, for a success and a failure alike.
 const LIST_TTL: Duration = Duration::from_secs(30);
-const DETAIL_TTL: Duration = Duration::from_secs(6 * 60 * 60);
-const PRICE_TTL: Duration = Duration::from_secs(10 * 60);
+const DETAIL_TTL: Duration = Duration::from_hours(6);
+const PRICE_TTL: Duration = Duration::from_mins(10);
 const PRICE_FAILURE_TTL: Duration = Duration::from_secs(30);
 /// The detail of the product-id fallback and of BROWSE. Sony answers an
 /// unknown id with 200 and no data; that miss lives shorter than a product.
-const STRICT_DETAIL_TTL: Duration = Duration::from_secs(6 * 60 * 60);
-const STRICT_DETAIL_MISS_TTL: Duration = Duration::from_secs(5 * 60);
+const STRICT_DETAIL_TTL: Duration = Duration::from_hours(6);
+const STRICT_DETAIL_MISS_TTL: Duration = Duration::from_mins(5);
 const STRICT_DETAIL_FAILURE_TTL: Duration = Duration::from_secs(30);
-const MONTHLY_TTL: Duration = Duration::from_secs(60 * 60);
+const MONTHLY_TTL: Duration = Duration::from_hours(1);
 const MONTHLY_FAILURE_TTL: Duration = Duration::from_secs(30);
-const GENRES_TTL: Duration = Duration::from_secs(60 * 60);
+const GENRES_TTL: Duration = Duration::from_hours(1);
 const GENRES_FAILURE_TTL: Duration = Duration::from_secs(30);
 
 const CONCEPTS_CAPACITY: usize = 16;

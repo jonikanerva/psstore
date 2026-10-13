@@ -50,7 +50,7 @@ pub const TOKEN_FAILURE_TTL: Duration = Duration::from_secs(30);
 /// The longest time that a token stays cached. The cache adds the time to
 /// live to the current time, so an unbounded `expires_in` must not reach it.
 /// Twitch app tokens live about 60 days.
-const TOKEN_TTL_MAX: Duration = Duration::from_secs(365 * 24 * 60 * 60);
+const TOKEN_TTL_MAX: Duration = Duration::from_hours(8760);
 
 /// One attempt per call, as in the TypeScript server. Without a retry, a 429
 /// answer fails at once and no `Retry-After` delay applies.
@@ -87,6 +87,10 @@ impl fmt::Debug for IgdbClient {
 impl IgdbClient {
     /// The production client: HTTPS only, no redirects, and the fixed
     /// endpoints.
+    ///
+    /// # Errors
+    ///
+    /// The HTTP client could not be built (the TLS set-up failed).
     pub fn new(credentials: IgdbCredentials) -> Result<Self, reqwest::Error> {
         let http = transport::build_client(Redirects::Manual, true)?;
         Ok(Self::with_endpoints(
@@ -128,13 +132,16 @@ impl IgdbClient {
                 // IGDB or Twitch rejected the token or the credentials. Drop
                 // the token and repeat the call once with a new one. Only the
                 // first caller that saw this generation moves it on, so
-                // concurrent callers share one new token request.
-                let _ = self.generation.compare_exchange(
-                    generation,
-                    generation.wrapping_add(1),
-                    Ordering::AcqRel,
-                    Ordering::Acquire,
-                );
+                // concurrent callers share one new token request. A failed
+                // exchange means that another caller moved it on first.
+                self.generation
+                    .compare_exchange(
+                        generation,
+                        generation.wrapping_add(1),
+                        Ordering::AcqRel,
+                        Ordering::Acquire,
+                    )
+                    .ok();
                 let next = self.generation.load(Ordering::Acquire);
                 self.attempt(next, &query).await
             }

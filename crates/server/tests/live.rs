@@ -17,7 +17,7 @@
 //! page). They never drive the NEW enrichment, which fans out to hundreds of
 //! product lookups.
 
-#![allow(
+#![expect(
     clippy::unwrap_used,
     clippy::panic,
     reason = "the helpers of this test binary fail a check by panicking"
@@ -68,7 +68,7 @@ fn assert_no_silent_drops(
 ) {
     assert_eq!(dropped, 0);
     if !concepts.is_empty() {
-        assert!(!map(concepts, 0).is_empty());
+        assert!(!map(concepts, 0).is_empty(), "the value is empty");
     }
 }
 
@@ -77,7 +77,7 @@ fn assert_no_silent_drops(
 async fn new_decodes_without_drops() {
     let (concepts, dropped) = grid(SonyFeature::New).await;
     assert_no_silent_drops(&concepts, dropped, map_concepts_to_games);
-    assert!(!concepts.is_empty());
+    assert!(!concepts.is_empty(), "the value is empty");
     println!("[test:live] NEW concepts={}", concepts.len());
 }
 
@@ -136,7 +136,7 @@ async fn browse_page_decodes_and_names_product_ids() {
         panic!("the browse grid drifted");
     };
     assert_eq!(dropped, 0);
-    assert!(!concepts.is_empty());
+    assert!(!concepts.is_empty(), "the value is empty");
     let with_ids = concepts
         .iter()
         .filter(|concept| !browse_candidate_ids(concept).is_empty())
@@ -152,7 +152,7 @@ async fn browse_page_decodes_and_names_product_ids() {
 #[ignore = "reaches live Sony"]
 async fn monthly_has_a_ps5_game() {
     let entries = client().plus_monthly().await.unwrap();
-    assert!(!entries.is_empty());
+    assert!(!entries.is_empty(), "the value is empty");
     println!("[test:live] MONTHLY entries={}", entries.len());
 }
 
@@ -180,7 +180,7 @@ async fn search_narrows_a_ps4_only_title_to_zero() {
         .await
         .unwrap();
     assert!(page.raw_count > 0);
-    assert!(page.candidates.is_empty());
+    assert!(page.candidates.is_empty(), "{:?}", page.candidates);
     println!(
         "[test:live] SEARCH term=bloodborne raw={} candidates=0",
         page.raw_count
@@ -227,8 +227,8 @@ async fn a_search_only_cross_gen_id_is_a_ps5_game() {
         detail.store_display_classification.as_deref()
     ));
     let game = product_detail_to_game(id, &detail, price.standard.as_ref(), 0);
-    assert!(!game.name.is_empty());
-    assert!(!game.url.is_empty());
+    assert!(!game.name.is_empty(), "the value is empty");
+    assert!(!game.url.is_empty(), "the value is empty");
     println!(
         "[test:live] PRODUCT-ID sku={id} name={} platforms={:?} price={}",
         game.name, detail.platforms, game.price
@@ -257,7 +257,7 @@ async fn a_ps4_only_id_is_not_a_ps5_game() {
 async fn the_service_serves_genres_monthly_and_a_game_page() {
     let service = GamesService::new(Arc::new(client()), Arc::new(SystemClock));
     let genres = service.genres().await.unwrap();
-    assert!(!genres.genres.is_empty());
+    assert!(!genres.genres.is_empty(), "the value is empty");
     let monthly = service
         .monthly_games(Page {
             offset: 0,
@@ -265,11 +265,11 @@ async fn the_service_serves_genres_monthly_and_a_game_page() {
         })
         .await
         .unwrap();
-    assert!(!monthly.games.is_empty());
+    assert!(!monthly.games.is_empty(), "the value is empty");
     let id = "EP0002-PPSA02410_00-DESTINYTHEGAME02";
     let game = service.game_by_id(id.into()).await.unwrap();
     assert_eq!(game.id, id);
-    assert!(!game.name.is_empty());
+    assert!(!game.name.is_empty(), "the value is empty");
     println!(
         "[test:live] SERVICE genres={} monthly={} gamePage={} name={}",
         genres.genres.len(),

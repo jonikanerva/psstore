@@ -642,7 +642,8 @@ async fn sign_in_answers_401_or_upstream_status_without_a_cookie() {
         );
         let response = sign_in(&h, &npsso_payload(), Some("application/json")).await;
         assert_eq!(response.status(), status);
-        assert!(set_cookies(&response).is_empty());
+        let found = set_cookies(&response);
+        assert!(found.is_empty(), "{found:?}");
     }
 }
 
@@ -660,7 +661,8 @@ async fn sign_in_rejects_a_malformed_payload_before_any_sony_call() {
     ] {
         let response = sign_in(&h, &payload, Some("application/json")).await;
         assert_eq!(response.status(), StatusCode::BAD_REQUEST, "{payload}");
-        assert!(set_cookies(&response).is_empty());
+        let found = set_cookies(&response);
+        assert!(found.is_empty(), "{found:?}");
         assert_eq!(body(response).await, "");
     }
     assert_eq!(h.account_calls(), 0);
@@ -681,7 +683,8 @@ async fn sign_in_rejects_a_non_json_content_type_with_415() {
         let response = sign_in(&h, &npsso_payload(), Some(content_type)).await;
         assert_eq!(response.status(), StatusCode::UNSUPPORTED_MEDIA_TYPE);
         assert_eq!(response.headers()[CONTENT_TYPE], "text/plain");
-        assert!(set_cookies(&response).is_empty());
+        let found = set_cookies(&response);
+        assert!(found.is_empty(), "{found:?}");
         assert_eq!(
             body(response).await,
             format!("Unsupported content-type: {media}")
@@ -736,7 +739,8 @@ async fn serves_both_signed_in_lists() {
     for path in ["/api/games/purchased", "/api/games/wishlist"] {
         let response = h.get_with(path, COOKIE.as_str(), &cookie).await;
         assert_eq!(response.status(), StatusCode::OK, "{path}");
-        assert!(set_cookies(&response).is_empty());
+        let found = set_cookies(&response);
+        assert!(found.is_empty(), "{found:?}");
     }
     assert_eq!(h.account_calls(), 2);
 }
@@ -795,7 +799,8 @@ async fn an_outage_keeps_the_cookie() {
             )
             .await;
         assert_eq!(response.status(), status);
-        assert!(set_cookies(&response).is_empty());
+        let found = set_cookies(&response);
+        assert!(found.is_empty(), "{found:?}");
     }
 }
 
@@ -864,7 +869,8 @@ impl BuildDir {
 
 impl Drop for BuildDir {
     fn drop(&mut self) {
-        let _ = std::fs::remove_dir_all(&self.base);
+        // A leftover temporary directory does not fail a test.
+        std::fs::remove_dir_all(&self.base).ok();
     }
 }
 

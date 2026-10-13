@@ -125,7 +125,8 @@ fn gate() -> (watch::Sender<bool>, Gate) {
 
 impl Gate {
     async fn pass(mut self) {
-        let _ = self.0.wait_for(|open| *open).await;
+        // A dropped sender also opens the gate.
+        self.0.wait_for(|open| *open).await.ok();
     }
 }
 
@@ -426,7 +427,7 @@ async fn returns_an_empty_page_for_an_empty_wishlist() {
         ..FakeSony::ok()
     });
     let page = h.service.wishlist_games(npsso()).await.unwrap();
-    assert!(page.games.is_empty());
+    assert!(page.games.is_empty(), "{:?}", page.games);
     assert_eq!(page.total_count, 0);
 }
 
@@ -644,15 +645,15 @@ async fn a_failure_logs_only_its_tag() {
         let _guard = logs.install();
         for failure in [rejected(), limited(), down()] {
             let h = harness(FakeSony::failing_exchange(failure));
-            let _ = h.service.verify_npsso(npsso()).await;
-            let _ = h.service.purchased_games(npsso()).await;
-            let _ = h.service.wishlist_games(npsso()).await;
+            assert!(h.service.verify_npsso(npsso()).await.is_err());
+            assert!(h.service.purchased_games(npsso()).await.is_err());
+            assert!(h.service.wishlist_games(npsso()).await.is_err());
         }
         let h = harness(FakeSony {
             wishlist: Err(rotated()),
             ..FakeSony::ok()
         });
-        let _ = h.service.wishlist_games(npsso()).await;
+        assert!(h.service.wishlist_games(npsso()).await.is_err());
     }
     let lines = logs.lines();
     let reasons: Vec<_> = lines
@@ -949,7 +950,8 @@ async fn serves_both_lists_through_the_routes_and_exchanges_on_every_request() {
     let h = harness(FakeSony::ok());
     let response = get_signed_in(&h, "/api/games/purchased").await;
     assert_eq!(response.status(), StatusCode::OK);
-    assert!(set_cookies(&response).is_empty());
+    let found = set_cookies(&response);
+    assert!(found.is_empty(), "{found:?}");
     let body: serde_json::Value = serde_json::from_str(&text(response).await).unwrap();
     assert_eq!(body["totalCount"], 1);
     assert_eq!(body["nextOffset"], serde_json::Value::Null);
@@ -1048,7 +1050,7 @@ async fn the_routes_never_log_the_npsso_the_token_or_a_location() {
         sign_in(&rejected).await;
     }
     let text = logs.text();
-    assert!(!logs.lines().is_empty());
+    assert!(!logs.lines().is_empty(), "the value is empty");
     assert!(!text.contains(NPSSO), "{text}");
     assert!(!text.contains(TOKEN), "{text}");
     assert!(!text.to_lowercase().contains("location"), "{text}");

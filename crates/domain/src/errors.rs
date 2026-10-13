@@ -33,6 +33,7 @@ impl UpstreamError {
     }
 
     /// The variant name, for a log field. It contains no data.
+    #[must_use]
     pub fn tag(&self) -> &'static str {
         match self {
             Self::Unavailable { .. } => "UpstreamUnavailable",
@@ -78,6 +79,7 @@ impl AccountError {
     }
 
     /// The variant name, for a log field. It contains no data.
+    #[must_use]
     pub fn tag(&self) -> &'static str {
         match self {
             Self::SessionRejected { .. } => "SessionRejected",

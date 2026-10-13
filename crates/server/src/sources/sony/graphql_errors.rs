@@ -19,14 +19,13 @@ const PERSISTED_QUERY_NOT_FOUND: &str = "PERSISTED_QUERY_NOT_FOUND";
 /// `persistedquerynotfound` in the code or the message in any case. No fixture
 /// holds Sony's exact wording, so the fallback stays broad: a false positive
 /// only changes one 502 into another.
+#[must_use]
 pub fn is_persisted_query_rotation(body: &Value) -> bool {
     let Some(root) = body.as_object() else {
         return false;
     };
-    let errors = match root.get("errors") {
-        None => return false,
-        Some(Value::Array(errors)) => errors,
-        Some(_) => return false,
+    let Some(Value::Array(errors)) = root.get("errors") else {
+        return false;
     };
     let mut decoded = Vec::with_capacity(errors.len());
     for error in errors {
@@ -48,22 +47,28 @@ pub fn is_persisted_query_rotation(body: &Value) -> bool {
 /// The message and the code of one error, or `None` for a wrong shape.
 fn decode_error(error: &Value) -> Option<(Option<&str>, Option<&str>)> {
     let error = error.as_object()?;
-    let message = optional_string(error, "message")?;
+    let message = optional_string(error, "message").ok()?;
     let code = match error.get("extensions") {
         None => None,
-        Some(Value::Object(extensions)) => optional_string(extensions, "code")?,
+        Some(Value::Object(extensions)) => optional_string(extensions, "code").ok()?,
         Some(_) => return None,
     };
     Some((message, code))
 }
 
-/// `Some(None)` for an absent key, `Some(Some(text))` for a string, and `None`
-/// for any other value, `null` included.
-fn optional_string<'a>(object: &'a Map<String, Value>, key: &str) -> Option<Option<&'a str>> {
+/// A field value of the wrong shape. It fails the envelope.
+struct WrongShape;
+
+/// `Ok(None)` for an absent key, `Ok(Some(text))` for a string, and
+/// [`WrongShape`] for any other value, `null` included.
+fn optional_string<'a>(
+    object: &'a Map<String, Value>,
+    key: &str,
+) -> Result<Option<&'a str>, WrongShape> {
     match object.get(key) {
-        None => Some(None),
-        Some(Value::String(text)) => Some(Some(text)),
-        Some(_) => None,
+        None => Ok(None),
+        Some(Value::String(text)) => Ok(Some(text)),
+        Some(_) => Err(WrongShape),
     }
 }
 

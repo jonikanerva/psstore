@@ -215,12 +215,14 @@ fn tag<T>(outcome: &Result<T, AccountError>) -> &'static str {
 
 fn message<T>(outcome: &Result<T, AccountError>) -> String {
     match outcome {
-        Err(AccountError::SessionRejected { message })
-        | Err(AccountError::Upstream(UpstreamError::Unavailable { message }))
-        | Err(AccountError::Upstream(UpstreamError::QueryRotated { message, .. }))
-        | Err(AccountError::Upstream(UpstreamError::RateLimited { message, .. })) => {
-            message.clone()
-        }
+        Err(
+            AccountError::SessionRejected { message }
+            | AccountError::Upstream(
+                UpstreamError::Unavailable { message }
+                | UpstreamError::QueryRotated { message, .. }
+                | UpstreamError::RateLimited { message, .. },
+            ),
+        ) => message.clone(),
         Ok(_) => "ok".into(),
     }
 }
@@ -465,9 +467,8 @@ async fn maps_each_status_of_each_call_without_a_retry() {
     for &(step, status, expected) in rows {
         let failing = reply(status);
         let (replies, calls) = match step {
-            Authorize => (vec![failing], 1),
             Token => (vec![code_redirect(), failing], 2),
-            Purchased | Wishlist => (vec![failing], 1),
+            Authorize | Purchased | Wishlist => (vec![failing], 1),
         };
         let (client, mock) = mock_client(replies).await;
         let actual = match step {

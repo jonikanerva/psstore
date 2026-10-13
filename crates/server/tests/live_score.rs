@@ -23,7 +23,7 @@ use psstore_server::application::critic_scores::CriticScoreService;
 use psstore_server::application::games::SonyCatalog;
 use psstore_server::config::Config;
 use psstore_server::domain::catalog::SonyFeature;
-use psstore_server::domain::game::{Game, IdKind};
+use psstore_server::domain::game::{CriticScore, Game, IdKind};
 use psstore_server::domain::listing::map_concepts_to_games;
 use psstore_server::sources::igdb::IgdbClient;
 use psstore_server::sources::sony::catalog::{
@@ -84,7 +84,7 @@ async fn score_control_titles_get_at_least_one_critic_score() {
     let mut scores = Vec::new();
     for (index, (name, date)) in TITLES.into_iter().enumerate() {
         let score = critics.score_for(&game(index, name, date)).await;
-        scores.push(score.map(|s| s.value()));
+        scores.push(score.map(CriticScore::value));
     }
     let hits = scores.iter().filter(|score| score.is_some()).count();
     println!(
@@ -126,7 +126,7 @@ async fn score_hit_rate_of_a_sample_of_new_games() {
     for mut game in sample {
         let detail = sony.product_detail(game.id.clone()).await.unwrap();
         game.date = detail.release_date.unwrap_or_default();
-        scores.push(critics.score_for(&game).await.map(|s| s.value()));
+        scores.push(critics.score_for(&game).await.map(CriticScore::value));
     }
     let hits = scores.iter().filter(|score| score.is_some()).count();
     println!(

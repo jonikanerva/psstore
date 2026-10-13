@@ -202,8 +202,10 @@ fn browse_candidates_are_capped_and_drop_invalid_and_repeated_ids() {
     input.extend(many.iter().map(String::as_str));
     let candidates = browse_candidate_ids(&concept(&input));
     assert_eq!(candidates, many[..BROWSE_MAX_CANDIDATES]);
-    assert!(browse_candidate_ids(&concept(&[])).is_empty());
-    assert!(browse_candidate_ids(&Concept::default()).is_empty());
+    let found = browse_candidate_ids(&concept(&[]));
+    assert!(found.is_empty(), "{found:?}");
+    let found = browse_candidate_ids(&Concept::default());
+    assert!(found.is_empty(), "{found:?}");
 }
 
 #[test]

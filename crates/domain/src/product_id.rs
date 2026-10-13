@@ -4,6 +4,7 @@
 /// `EP0006-PPSA04874_00-APEXLEGENDRSPWN1`. The id starts with two upper-case
 /// letters, four digits, `-`, four upper-case letters, five digits, and
 /// `_00-`. A concept id (digits only) never matches.
+#[must_use]
 pub fn is_valid_product_id(id: &str) -> bool {
     let bytes = id.as_bytes();
     let pattern: &[fn(u8) -> bool] = &[

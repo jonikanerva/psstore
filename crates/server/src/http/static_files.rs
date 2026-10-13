@@ -179,6 +179,7 @@ fn with_charset(mut response: Response) -> Response {
 }
 
 /// The index file of a build root, for startup diagnostics.
+#[must_use]
 pub fn index_exists(root: &Path) -> bool {
     root.join("index.html").is_file()
 }

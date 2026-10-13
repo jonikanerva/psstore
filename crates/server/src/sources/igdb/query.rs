@@ -16,6 +16,7 @@ pub const IGDB_CANDIDATE_LIMIT: u32 = 10;
 /// `None` when a range limit is outside the jiff timestamp range (about the
 /// years -9999 to 9999). No IGDB game has such a date, so the caller can
 /// answer with no candidates and skip the request.
+#[must_use]
 pub fn games_query(title: &str, year: i32) -> Option<String> {
     let from = start_of_year_seconds(year.checked_sub(1)?)?;
     let to = start_of_year_seconds(year.checked_add(2)?)?;
@@ -31,6 +32,7 @@ pub fn games_query(title: &str, year: i32) -> Option<String> {
 /// The title inside the quoted string of the IGDB query language. A quote, a
 /// backslash, or a control character would end the string early, so each one
 /// becomes a space. The ends are trimmed like JavaScript `String.trim`.
+#[must_use]
 pub fn quote_title(title: &str) -> String {
     let replaced: String = title
         .chars()

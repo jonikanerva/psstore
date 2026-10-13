@@ -71,6 +71,10 @@ pub struct SonyCatalogClient {
 
 impl SonyCatalogClient {
     /// The production client: Sony's hosts over HTTPS only.
+    ///
+    /// # Errors
+    ///
+    /// The HTTP client could not be built (the TLS set-up failed).
     pub fn new(contract: &SonyContract) -> Result<Self, reqwest::Error> {
         Self::with_endpoints(
             contract,
@@ -81,6 +85,10 @@ impl SonyCatalogClient {
     }
 
     /// A client with other endpoints, for tests with a local server.
+    ///
+    /// # Errors
+    ///
+    /// The HTTP client could not be built (the TLS set-up failed).
     pub fn with_endpoints(
         contract: &SonyContract,
         graphql_url: String,
@@ -142,6 +150,11 @@ impl SonyCatalogClient {
 
     /// The raw answer of one category grid request, checked for a rotation.
     /// The live check reads it to count the dropped elements.
+    ///
+    /// # Errors
+    ///
+    /// An outage, a rate limit, a rotated query hash, or a body that is not
+    /// JSON.
     pub async fn category_grid_json(&self, query: &GridQuery) -> Result<Value, UpstreamError> {
         let variables = query.variables(&self.contract)?;
         self.graphql_checked(

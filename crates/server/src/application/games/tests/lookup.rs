@@ -286,12 +286,12 @@ async fn the_fallback_retries_a_failed_detail_after_30_seconds() {
 async fn the_fallback_caches_a_miss_for_5_minutes_and_a_hit_for_6_hours() {
     let attempts = Arc::new(AtomicUsize::new(0));
     let (svc, _) = service(counting_detail(&attempts, |_| Ok(ProductDetail::default())));
-    let _ = svc.game_by_id(ID.into()).await;
+    assert!(svc.game_by_id(ID.into()).await.is_err());
     tokio::time::advance(Duration::from_millis(299_999)).await;
-    let _ = svc.game_by_id(ID.into()).await;
+    assert!(svc.game_by_id(ID.into()).await.is_err());
     assert_eq!(attempts.load(Ordering::SeqCst), 1);
     tokio::time::advance(Duration::from_millis(1)).await;
-    let _ = svc.game_by_id(ID.into()).await;
+    assert!(svc.game_by_id(ID.into()).await.is_err());
     assert_eq!(attempts.load(Ordering::SeqCst), 2);
 
     let attempts = Arc::new(AtomicUsize::new(0));
@@ -347,7 +347,11 @@ async fn a_bare_concept_id_is_not_found_and_never_enriched() {
             id: "10018729".into()
         })
     );
-    assert!(fake.calls().details.is_empty());
+    assert!(
+        fake.calls().details.is_empty(),
+        "{:?}",
+        fake.calls().details
+    );
 }
 
 #[tokio::test(start_paused = true)]
@@ -395,7 +399,7 @@ async fn a_failed_detail_degrades_the_listed_game_page_to_concept_values() {
     });
     let game = svc.game_by_id(sku(1, "degraded")).await.unwrap();
     assert_eq!(game.description, "");
-    assert!(game.genres.is_empty());
+    assert!(game.genres.is_empty(), "{:?}", game.genres);
     assert_eq!(game.date, "");
 }
 
@@ -440,6 +444,10 @@ fn plus_offer_fake(price: Respond<String, ProductPrice>) -> FakeSony {
     }
 }
 
+#[expect(
+    clippy::unnecessary_wraps,
+    reason = "the helper builds the successful answer of the fake Sony client"
+)]
 fn offer(plus_offer: PlusOffer) -> Result<ProductPrice, UpstreamError> {
     Ok(ProductPrice {
         plus_offer: Some(plus_offer),
@@ -568,5 +576,9 @@ async fn a_monthly_outage_fails_the_game_page_before_the_fallback() {
         svc.game_by_id(ID.into()).await,
         Err(GameLookupError::Upstream(unavailable()))
     );
-    assert!(fake.calls().details.is_empty());
+    assert!(
+        fake.calls().details.is_empty(),
+        "{:?}",
+        fake.calls().details
+    );
 }

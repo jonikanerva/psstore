@@ -17,16 +17,20 @@ pub(super) enum Field<T> {
     OutOfScope,
 }
 
-/// `Some(None)` for an absent or `null` field, `Some(Some(text))` for a
-/// string, and `None` for a value of another type.
+/// A field value of the wrong type. It fails the element.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) struct WrongType;
+
+/// `Ok(None)` for an absent or `null` field, `Ok(Some(text))` for a string,
+/// and [`WrongType`] for a value of another type.
 pub(super) fn nullable_string<'a>(
     object: &'a Map<String, Value>,
     key: &str,
-) -> Option<Option<&'a str>> {
+) -> Result<Option<&'a str>, WrongType> {
     match object.get(key) {
-        None | Some(Value::Null) => Some(None),
-        Some(Value::String(text)) => Some(Some(text)),
-        Some(_) => None,
+        None | Some(Value::Null) => Ok(None),
+        Some(Value::String(text)) => Ok(Some(text)),
+        Some(_) => Err(WrongType),
     }
 }
 
@@ -40,10 +44,10 @@ mod tests {
     fn a_field_is_absent_null_a_string_or_of_the_wrong_type() {
         let value = json!({"null": null, "text": "x", "number": 5, "list": []});
         let object = value.as_object().unwrap();
-        assert_eq!(nullable_string(object, "absent"), Some(None));
-        assert_eq!(nullable_string(object, "null"), Some(None));
-        assert_eq!(nullable_string(object, "text"), Some(Some("x")));
-        assert_eq!(nullable_string(object, "number"), None);
-        assert_eq!(nullable_string(object, "list"), None);
+        assert_eq!(nullable_string(object, "absent"), Ok(None));
+        assert_eq!(nullable_string(object, "null"), Ok(None));
+        assert_eq!(nullable_string(object, "text"), Ok(Some("x")));
+        assert_eq!(nullable_string(object, "number"), Err(WrongType));
+        assert_eq!(nullable_string(object, "list"), Err(WrongType));
     }
 }

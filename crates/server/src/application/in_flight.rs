@@ -52,11 +52,17 @@ where
     T: Clone + Send + Sync + 'static,
     E: Clone + Send + Sync + From<LookupPanicked> + 'static,
 {
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Joins the running computation for `key`, or starts `run`.
+    ///
+    /// # Errors
+    ///
+    /// The failure of the shared computation, or `E::from(LookupPanicked)`
+    /// when it panicked.
     pub async fn run<F, Fut>(&self, key: K, run: F) -> Result<T, E>
     where
         F: FnOnce() -> Fut,
@@ -96,10 +102,12 @@ where
     }
 
     /// The number of running computations.
+    #[must_use]
     pub fn len(&self) -> usize {
         lock(&self.inner).by_key.len()
     }
 
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
@@ -119,7 +127,8 @@ impl<K: Eq + Hash, T, E> Drop for EntryGuard<K, T, E> {
 }
 
 fn lock<K, T, E>(runs: &Mutex<Runs<K, T, E>>) -> std::sync::MutexGuard<'_, Runs<K, T, E>> {
-    runs.lock().unwrap_or_else(|e| e.into_inner())
+    runs.lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
 fn remove<K: Eq + Hash, T, E>(runs: &Mutex<Runs<K, T, E>>, key: &K, id: u64) {
@@ -162,10 +171,7 @@ mod tests {
         let in_flight: InFlight<&'static str, u32, UpstreamError> = InFlight::new();
         let abandoned = in_flight.run("k", || async {
             tokio::time::sleep(Duration::from_millis(10)).await;
-            #[allow(clippy::panic, reason = "the test checks panic containment")]
-            {
-                panic!("synthetic exchange panic");
-            }
+            panic!("synthetic exchange panic");
         });
         assert!(
             tokio::time::timeout(Duration::from_millis(1), abandoned)

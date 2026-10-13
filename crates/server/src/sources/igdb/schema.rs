@@ -22,12 +22,14 @@ pub struct IgdbToken {
 }
 
 /// The JSON value of an answer body, or `None` when the body is not JSON.
+#[must_use]
 pub fn decode_json(body: &[u8]) -> Option<Value> {
     serde_json::from_slice(body).ok()
 }
 
 /// The token of a token answer. `None` without a non-empty `access_token`
 /// string and an `expires_in` number above zero.
+#[must_use]
 pub fn parse_token_response(json: &Value) -> Option<IgdbToken> {
     let object = json.as_object()?;
     let access_token = object
@@ -77,8 +79,8 @@ pub(super) fn year_of_unix_seconds(value: &Value) -> Option<i32> {
     if millis.is_nan() || millis.abs() > MAX_TIME_VALUE_MS {
         return None;
     }
-    #[allow(
-        clippy::as_conversions,
+    #[expect(
+        clippy::cast_possible_truncation,
         reason = "the value is an integral float within ±8.64e15, so it fits in i64 exactly"
     )]
     let millis = millis as i64;
@@ -94,8 +96,9 @@ pub(super) fn rating_of(value: &Value) -> Option<CriticScore> {
     // `Math.round` rounds a half up. For a value that is not negative,
     // `f64::round` (a half away from zero) gives the same integer.
     let rounded = rating.round();
-    #[allow(
-        clippy::as_conversions,
+    #[expect(
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss,
         reason = "the value is an integer from 0 to 100, so the cast is exact"
     )]
     let whole = rounded as u8;
@@ -107,8 +110,9 @@ pub(super) fn rating_of(value: &Value) -> Option<CriticScore> {
 pub(super) fn count_of(value: &Value) -> u64 {
     match value.as_f64() {
         Some(count) if count.is_finite() && count >= 0.0 && count.fract() == 0.0 => {
-            #[allow(
-                clippy::as_conversions,
+            #[expect(
+                clippy::cast_possible_truncation,
+                clippy::cast_sign_loss,
                 reason = "the value is a non-negative integral float; `as` saturates above u64::MAX, and only `>= 3` matters"
             )]
             let count = count as u64;

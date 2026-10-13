@@ -157,6 +157,7 @@ pub enum SonyFeature {
 
 impl SonyFeature {
     /// The name of the feature, for a log field.
+    #[must_use]
     pub fn as_str(self) -> &'static str {
         match self {
             Self::New => "new",

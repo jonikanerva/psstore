@@ -17,10 +17,12 @@ impl Secret {
     }
 
     /// The raw value. Call it only at an outbound request or the cookie.
+    #[must_use]
     pub fn expose(&self) -> &str {
         &self.0
     }
 
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }

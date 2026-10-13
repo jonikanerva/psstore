@@ -17,7 +17,7 @@ const SHUTDOWN_GRACE: Duration = Duration::from_secs(35);
 
 fn main() -> ExitCode {
     if observability::init().is_err() {
-        #[allow(clippy::print_stderr, reason = "logging could not be set up")]
+        #[expect(clippy::print_stderr, reason = "logging could not be set up")]
         {
             eprintln!("psstore-server: logging could not be set up");
         }
@@ -30,15 +30,12 @@ fn main() -> ExitCode {
         tracing::error!(stage = "sony_contract", "the Sony contract file is invalid");
         return ExitCode::FAILURE;
     };
-    let runtime = match tokio::runtime::Builder::new_current_thread()
+    let Ok(runtime) = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
-    {
-        Ok(runtime) => runtime,
-        Err(_) => {
-            tracing::error!("the async runtime could not start");
-            return ExitCode::FAILURE;
-        }
+    else {
+        tracing::error!("the async runtime could not start");
+        return ExitCode::FAILURE;
     };
     match runtime.block_on(run(config, sony)) {
         Ok(()) => ExitCode::SUCCESS,
@@ -90,8 +87,11 @@ async fn run(config: Config, sony: SonyContract) -> Result<(), &'static str> {
 }
 
 async fn shutdown_signal() {
+    // A failed handler set-up also ends this future, so the service stops.
     let interrupt = async {
-        let _ = tokio::signal::ctrl_c().await;
+        if tokio::signal::ctrl_c().await.is_err() {
+            tracing::warn!("the interrupt handler could not be set up");
+        }
     };
     #[cfg(unix)]
     let terminate = async {

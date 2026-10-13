@@ -63,6 +63,7 @@ const EDITION_SUFFIXES: [&str; 20] = [
 /// its normalised name equals the normalised title, its release year is
 /// within one year of `year`, and its score comes from enough critic reviews.
 /// Exactly one such candidate must exist: two are ambiguous.
+#[must_use]
 pub fn match_critic_score(
     title: &str,
     year: i32,
@@ -91,6 +92,7 @@ pub fn match_critic_score(
 
 /// The title in lower case, without accents, punctuation, and edition
 /// suffixes.
+#[must_use]
 pub fn normalize_title(name: &str) -> String {
     // 1. Remove the symbols before NFKD, which would turn `™` into `TM`.
     let without_symbols: String = name
@@ -163,6 +165,7 @@ fn strip_edition_suffixes(mut current: String) -> String {
 /// legacy parser (for example `Nov 14 2023`), because the server has no time
 /// zone of its own (STACK.md §12). It also returns `None` outside the jiff
 /// timestamp range (about the years -9999 to 9999).
+#[must_use]
 pub fn release_year_of(date: &str) -> Option<i32> {
     let parts = parse_date_time(date)?;
     let first_of_month = Date::new(parts.year, parts.month, 1).ok()?;
@@ -224,9 +227,9 @@ fn parse_date_time(text: &str) -> Option<DateTimeParts> {
         }
     }
     let offset = match cursor.offset()? {
-        Some(offset) => offset,
-        None if has_time => return None,
-        None => Offset::UTC,
+        OffsetSuffix::Given(offset) => offset,
+        OffsetSuffix::Missing if has_time => return None,
+        OffsetSuffix::Missing => Offset::UTC,
     };
     if !cursor.0.is_empty() {
         return None;
@@ -245,6 +248,13 @@ fn parse_date_time(text: &str) -> Option<DateTimeParts> {
 
 /// The unread rest of an ASCII date string.
 struct Cursor<'a>(&'a [u8]);
+
+/// The offset at the end of a date-time text.
+enum OffsetSuffix {
+    /// No offset follows.
+    Missing,
+    Given(Offset),
+}
 
 impl Cursor<'_> {
     fn eat(&mut self, byte: u8) -> bool {
@@ -313,23 +323,25 @@ impl Cursor<'_> {
         Some(millis)
     }
 
-    /// `Z`, `z`, `±HH:mm`, or `±HHmm`. `Some(None)` when no offset follows.
-    fn offset(&mut self) -> Option<Option<Offset>> {
+    /// `Z`, `z`, `±HH:mm`, or `±HHmm`. `None` for a malformed offset.
+    fn offset(&mut self) -> Option<OffsetSuffix> {
         if self.eat_any(b"Zz") {
-            return Some(Some(Offset::UTC));
+            return Some(OffsetSuffix::Given(Offset::UTC));
         }
         let sign = if self.eat(b'+') {
             1
         } else if self.eat(b'-') {
             -1
         } else {
-            return Some(None);
+            return Some(OffsetSuffix::Missing);
         };
         let hours = self.number_in(2, 0, 23)?;
         self.eat(b':');
         let minutes = self.number_in(2, 0, 59)?;
         let seconds = i32::try_from(hours * 3600 + minutes * 60).ok()?;
-        Offset::from_seconds(sign * seconds).ok().map(Some)
+        Offset::from_seconds(sign * seconds)
+            .ok()
+            .map(OffsetSuffix::Given)
     }
 }
 

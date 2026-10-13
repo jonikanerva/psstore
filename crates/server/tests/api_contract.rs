@@ -17,7 +17,7 @@
 //! `JSON.stringify`.
 
 use std::collections::BTreeSet;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use axum::http::StatusCode;
 use axum::http::header::CONTENT_TYPE;
@@ -286,6 +286,10 @@ const RATE_LIMITED: &str = "Sony upstream rate limited the request (HTTP 429)";
 /// The response that the server gives for an example, or `None` for an
 /// unknown file name.
 fn render(name: &str) -> Option<Response> {
+    #[expect(
+        clippy::unnecessary_wraps,
+        reason = "each arm of the match below gives an optional response"
+    )]
     fn json(value: impl Serialize) -> Option<Response> {
         Some(axum::Json(value).into_response())
     }
@@ -343,7 +347,7 @@ fn render(name: &str) -> Option<Response> {
 }
 
 /// The status of each example, from the README table and the TypeScript
-/// HttpApi definition (`server/src/api/gamesApi.ts`).
+/// `HttpApi` definition (`server/src/api/gamesApi.ts`).
 fn expected_status(name: &str) -> StatusCode {
     match name {
         "error-game-not-found.json" => StatusCode::NOT_FOUND,
@@ -396,7 +400,7 @@ fn the_directory_and_the_readme_list_exactly_the_examples() {
     let in_directory: BTreeSet<String> = std::fs::read_dir(examples_dir())
         .unwrap()
         .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
-        .filter(|name| name.ends_with(".json"))
+        .filter(|name| Path::new(name).extension().is_some_and(|ext| ext == "json"))
         .collect();
     assert_eq!(in_directory, listed, "the directory and EXAMPLES differ");
 

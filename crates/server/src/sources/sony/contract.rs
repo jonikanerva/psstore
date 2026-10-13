@@ -71,6 +71,10 @@ pub struct SonyContract {
 impl SonyContract {
     /// Parses the compiled-in contract file. `main` calls it once at startup;
     /// the test below proves that the committed file parses.
+    ///
+    /// # Errors
+    ///
+    /// The committed file does not have the expected shape.
     pub fn load() -> Result<Self, serde_json::Error> {
         serde_json::from_str(CONTRACT_JSON)
     }
@@ -105,7 +109,7 @@ mod tests {
         assert!(!contract.auth_base_url.ends_with('/'));
         assert!(contract.auth_redirect_uri.ends_with("://redirect"));
         assert!(contract.auth_basic_header.starts_with("Basic "));
-        assert!(!contract.auth_client_id.is_empty());
-        assert!(!contract.auth_scope.is_empty());
+        assert!(!contract.auth_client_id.is_empty(), "the value is empty");
+        assert!(!contract.auth_scope.is_empty(), "the value is empty");
     }
 }

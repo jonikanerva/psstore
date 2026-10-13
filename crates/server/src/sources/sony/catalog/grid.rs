@@ -174,6 +174,7 @@ pub enum BrowseOutcome {
 
 /// A BROWSE page. Without readable page info, a page shorter than `size` is
 /// the last one. BROWSE reads the concepts only.
+#[must_use]
 pub fn extract_browse_page(json: &Value, size: usize) -> BrowseOutcome {
     let Some(node) = grid_node(json) else {
         return BrowseOutcome::Drift;

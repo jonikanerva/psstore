@@ -102,6 +102,7 @@ fn is_ps_plus(branding: &str) -> bool {
 
 /// True when Sony shows a discount text, or a base price and a different
 /// discounted price.
+#[must_use]
 pub fn is_concept_discounted(concept: &Concept) -> bool {
     let price = concept.price.as_ref();
     let base = price
@@ -115,6 +116,7 @@ pub fn is_concept_discounted(concept: &Concept) -> bool {
 }
 
 /// True when the price or the upsell names PS Plus.
+#[must_use]
 pub fn is_concept_plus(concept: &Concept) -> bool {
     let Some(price) = concept.price.as_ref() else {
         return false;
@@ -129,6 +131,7 @@ pub fn is_concept_plus(concept: &Concept) -> bool {
 
 /// The product id of a concept: its first product's id, else the concept id,
 /// else the empty string.
+#[must_use]
 pub fn concept_product_id(concept: &Concept) -> String {
     first_product(concept)
         .and_then(|product| product.id.clone())
@@ -138,6 +141,7 @@ pub fn concept_product_id(concept: &Concept) -> String {
 
 /// A grid or search product as a concept that names only that product.
 /// Platforms and classification are not carried over.
+#[must_use]
 pub fn product_to_concept(product: &CategoryGridProduct) -> Concept {
     Concept {
         id: product.id.clone(),
@@ -168,6 +172,7 @@ fn plus_upsell_text(concept: &Concept) -> Option<String> {
 
 /// The game card of a concept. `id_kind` is `product`; the UPCOMING mapping
 /// sets `concept` for a concept id.
+#[must_use]
 pub fn concept_to_game(concept: &Concept, now_ms: i64) -> Game {
     let product = first_product(concept);
     let release_date = to_iso_or_default(product.and_then(|p| p.release_date.as_deref()));
@@ -218,6 +223,7 @@ pub fn concept_to_game(concept: &Concept, now_ms: i64) -> Game {
 /// The game of a product id that no list contains, built from the product's
 /// own detail and standard price. `description` and `plus_offer` stay empty;
 /// the caller fills them.
+#[must_use]
 pub fn product_detail_to_game(
     id: &str,
     detail: &ProductDetail,
@@ -245,6 +251,7 @@ pub fn product_detail_to_game(
 }
 
 /// The card of a PS Plus monthly game: no price and no pre-order state.
+#[must_use]
 pub fn monthly_entry_to_game(entry: &PlusMonthlyEntry) -> Game {
     Game {
         id: entry.product_id.clone(),
@@ -394,7 +401,7 @@ mod tests {
         );
         assert_eq!(game.url, "https://img/first");
         assert_eq!(game.videos, ["https://vid"]);
-        assert!(game.screenshots.is_empty());
+        assert!(game.screenshots.is_empty(), "{:?}", game.screenshots);
     }
 
     #[test]

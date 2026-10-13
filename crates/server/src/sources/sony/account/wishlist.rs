@@ -11,7 +11,7 @@ use std::collections::HashSet;
 
 use serde_json::Value;
 
-use super::fields::{Field, nullable_string};
+use super::fields::{Field, WrongType, nullable_string};
 use crate::domain::game::IdKind;
 use crate::domain::library::WishlistEntry;
 use crate::domain::product_id::is_valid_product_id;
@@ -89,10 +89,11 @@ fn is_access_denied(body: &Value) -> bool {
     for error in errors {
         match error
             .as_object()
+            .ok_or(WrongType)
             .and_then(|e| nullable_string(e, "message"))
         {
-            Some(message) => messages.push(message.unwrap_or_default()),
-            None => return false,
+            Ok(message) => messages.push(message.unwrap_or_default()),
+            Err(WrongType) => return false,
         }
     }
     messages
@@ -109,7 +110,7 @@ fn decode_entry(raw: &Value) -> Field<WishlistEntry> {
         Some(Value::Array(platforms)) => platforms,
         Some(_) => return Field::Dropped,
     };
-    let (Some(typename), Some(id), Some(name)) = (
+    let (Ok(typename), Ok(id), Ok(name)) = (
         nullable_string(entry, "__typename"),
         nullable_string(entry, "id"),
         nullable_string(entry, "name"),
@@ -149,7 +150,10 @@ fn id_kind(typename: Option<&str>, id: &str) -> Option<IdKind> {
 /// fails the entry.
 fn box_art_url(box_art: Option<&Value>) -> &str {
     match box_art.and_then(Value::as_object) {
-        Some(art) => nullable_string(art, "url").flatten().unwrap_or_default(),
+        Some(art) => nullable_string(art, "url")
+            .ok()
+            .flatten()
+            .unwrap_or_default(),
         None => "",
     }
 }
@@ -165,7 +169,7 @@ mod tests {
     const PRODUCT_TWO: &str = "EP0001-PPSA00002_00-SYNTHETICBETA000";
     const IMAGE: &str = "https://img.test/x.png";
 
-    fn entry(overrides: Value) -> Value {
+    fn entry(overrides: &Value) -> Value {
         let mut entry = json!({
             "__typename": "Product",
             "id": PRODUCT,
@@ -181,12 +185,12 @@ mod tests {
     }
 
     fn without(key: &str) -> Value {
-        let mut entry = entry(json!({}));
+        let mut entry = entry(&json!({}));
         entry.as_object_mut().unwrap().remove(key);
         entry
     }
 
-    fn envelope(list: Value) -> Value {
+    fn envelope(list: &Value) -> Value {
         json!({"data": {"storeWishlistSecure": list}})
     }
 
@@ -199,7 +203,7 @@ mod tests {
 
     #[test]
     fn keeps_a_ps5_product_and_maps_the_image() {
-        let page = listed(&envelope(json!([entry(json!({}))])));
+        let page = listed(&envelope(&json!([entry(&json!({}))])));
         assert_eq!(
             page.entries,
             [WishlistEntry {
@@ -214,9 +218,9 @@ mod tests {
 
     #[test]
     fn keeps_a_ps4_and_ps5_product_and_a_ps5_concept() {
-        let page = listed(&envelope(json!([
-            entry(json!({"platforms": ["PS4", "PS5"]})),
-            entry(json!({"__typename": "Concept", "id": "10000001", "name": "Concept"})),
+        let page = listed(&envelope(&json!([
+            entry(&json!({"platforms": ["PS4", "PS5"]})),
+            entry(&json!({"__typename": "Concept", "id": "10000001", "name": "Concept"})),
         ])));
         let kinds: Vec<_> = page.entries.iter().map(|e| e.id_kind).collect();
         assert_eq!(kinds, [IdKind::Product, IdKind::Concept]);
@@ -224,17 +228,17 @@ mod tests {
 
     #[test]
     fn drops_out_of_scope_entries_by_default_and_counts_them() {
-        let page = listed(&envelope(json!([
-            entry(json!({"platforms": ["PS4"]})),
-            entry(json!({"platforms": []})),
-            entry(json!({"platforms": null})),
+        let page = listed(&envelope(&json!([
+            entry(&json!({"platforms": ["PS4"]})),
+            entry(&json!({"platforms": []})),
+            entry(&json!({"platforms": null})),
             without("platforms"),
-            entry(json!({"__typename": "Concept", "id": "10000001", "platforms": []})),
-            entry(json!({"__typename": "Other"})),
-            entry(json!({"__typename": null})),
-            entry(json!({"__typename": "Product", "id": "10000001"})),
-            entry(json!({"__typename": "Concept", "id": PRODUCT})),
-            entry(json!({"id": PRODUCT_TWO, "platforms": ["PS5"]})),
+            entry(&json!({"__typename": "Concept", "id": "10000001", "platforms": []})),
+            entry(&json!({"__typename": "Other"})),
+            entry(&json!({"__typename": null})),
+            entry(&json!({"__typename": "Product", "id": "10000001"})),
+            entry(&json!({"__typename": "Concept", "id": PRODUCT})),
+            entry(&json!({"id": PRODUCT_TWO, "platforms": ["PS5"]})),
         ])));
         let ids: Vec<_> = page.entries.iter().map(|e| e.id.as_str()).collect();
         assert_eq!(ids, [PRODUCT_TWO]);
@@ -243,15 +247,15 @@ mod tests {
 
     #[test]
     fn drops_entries_without_a_usable_name_or_id_and_counts_them() {
-        let page = listed(&envelope(json!([
-            entry(json!({"name": ""})),
-            entry(json!({"name": null})),
-            entry(json!({"id": ""})),
-            entry(json!({"id": null})),
+        let page = listed(&envelope(&json!([
+            entry(&json!({"name": ""})),
+            entry(&json!({"name": null})),
+            entry(&json!({"id": ""})),
+            entry(&json!({"id": null})),
             "not an object",
             null,
-            entry(json!({"platforms": "PS5"})),
-            entry(json!({"id": PRODUCT_TWO})),
+            entry(&json!({"platforms": "PS5"})),
+            entry(&json!({"id": PRODUCT_TWO})),
         ])));
         let ids: Vec<_> = page.entries.iter().map(|e| e.id.as_str()).collect();
         assert_eq!(ids, [PRODUCT_TWO]);
@@ -263,34 +267,34 @@ mod tests {
     #[test]
     fn a_field_of_the_wrong_type_drops_the_entry() {
         for broken in [
-            entry(json!({"__typename": 5})),
-            entry(json!({"id": 10000001})),
-            entry(json!({"name": ["Synthetic Alpha"]})),
-            entry(json!({"platforms": {"PS5": true}})),
+            entry(&json!({"__typename": 5})),
+            entry(&json!({"id": 10_000_001})),
+            entry(&json!({"name": ["Synthetic Alpha"]})),
+            entry(&json!({"platforms": {"PS5": true}})),
             without("id"),
             without("name"),
             json!([]),
         ] {
-            let page = listed(&envelope(json!([broken.clone()])));
+            let page = listed(&envelope(&json!([broken.clone()])));
             assert_eq!(page.dropped, 1, "{broken}");
             assert!(page.entries.is_empty(), "{broken}");
         }
         // A concept id has digits only; a typename in another case is out
         // of scope.
-        let page = listed(&envelope(json!([
-            entry(json!({"__typename": "Concept", "id": "1000a"})),
-            entry(json!({"__typename": "product"})),
-            entry(json!({"platforms": ["ps5", " PS5", 5]})),
+        let page = listed(&envelope(&json!([
+            entry(&json!({"__typename": "Concept", "id": "1000a"})),
+            entry(&json!({"__typename": "product"})),
+            entry(&json!({"platforms": ["ps5", " PS5", 5]})),
         ])));
         assert_eq!(page.out_of_scope, 3);
     }
 
     #[test]
     fn keeps_the_first_of_duplicate_ids_in_sony_order() {
-        let page = listed(&envelope(json!([
-            entry(json!({"name": "First"})),
-            entry(json!({"id": PRODUCT_TWO})),
-            entry(json!({"name": "Second"})),
+        let page = listed(&envelope(&json!([
+            entry(&json!({"name": "First"})),
+            entry(&json!({"id": PRODUCT_TWO})),
+            entry(&json!({"name": "Second"})),
         ])));
         let names: Vec<_> = page.entries.iter().map(|e| e.name.as_str()).collect();
         assert_eq!(names, ["First", "Synthetic Alpha"]);
@@ -306,16 +310,17 @@ mod tests {
             json!({}),
             json!({"url": 5}),
         ] {
-            let page = listed(&envelope(json!([entry(json!({ "boxArt": art }))])));
+            let page = listed(&envelope(&json!([entry(&json!({ "boxArt": art }))])));
             assert_eq!(page.entries[0].image_url, "", "{art}");
         }
-        let page = listed(&envelope(json!([without("boxArt")])));
+        let page = listed(&envelope(&json!([without("boxArt")])));
         assert_eq!(page.entries[0].image_url, "");
     }
 
     #[test]
     fn treats_an_empty_list_as_an_empty_wishlist_not_as_drift() {
-        assert!(listed(&envelope(json!([]))).entries.is_empty());
+        let found = listed(&envelope(&json!([]))).entries;
+        assert!(found.is_empty(), "{found:?}");
     }
 
     #[test]
@@ -370,9 +375,9 @@ mod tests {
 
     #[test]
     fn the_minimal_cards_keep_the_wishlist_order() {
-        let page = listed(&envelope(json!([
-            entry(json!({"__typename": "Concept", "id": "10000001", "name": "B"})),
-            entry(json!({"name": "A"})),
+        let page = listed(&envelope(&json!([
+            entry(&json!({"__typename": "Concept", "id": "10000001", "name": "B"})),
+            entry(&json!({"name": "A"})),
         ])));
         let cards = wishlist_cards(&page.entries);
         let names: Vec<_> = cards.iter().map(|g| g.name.as_str()).collect();

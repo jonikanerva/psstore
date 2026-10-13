@@ -32,6 +32,10 @@ pub enum Redirects {
 
 /// Builds an outbound client with Rustls, gzip decoding, and the service
 /// `User-Agent`. `https_only` is off only in tests with local servers.
+///
+/// # Errors
+///
+/// The TLS set-up failed.
 pub fn build_client(
     redirects: Redirects,
     https_only: bool,
@@ -89,6 +93,10 @@ pub struct Answer {
 ///   attempt it fails with [`TransportError::RateLimited`].
 /// - A 4xx answer fails at once. Repeating the request cannot change it.
 /// - A 5xx answer, a timeout, or a connection failure retries.
+///
+/// # Errors
+///
+/// The [`TransportError`] of the last attempt.
 pub async fn send(
     build: impl Fn() -> reqwest::RequestBuilder,
     attempts: Attempts,
@@ -98,13 +106,10 @@ pub async fn send(
     let mut last = TransportError::Failed;
     while attempt <= attempts.retries {
         let outcome = tokio::time::timeout(attempts.timeout, read(build())).await;
-        let answer = match outcome {
-            Ok(Ok(answer)) => answer,
-            Ok(Err(())) | Err(_) => {
-                last = TransportError::Failed;
-                attempt += 1;
-                continue;
-            }
+        let Ok(Ok(answer)) = outcome else {
+            last = TransportError::Failed;
+            attempt += 1;
+            continue;
         };
         if answer.status == 429 {
             let retry_after = parse_retry_after(&answer.headers, attempts.retry_after_max);

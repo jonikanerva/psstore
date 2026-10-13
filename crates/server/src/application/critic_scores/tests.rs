@@ -159,7 +159,7 @@ async fn looks_a_game_up_once_per_day_for_a_hit_and_for_a_miss() {
         let critics = service(&source);
         critics.score_for(&game()).await;
         critics.score_for(&game()).await;
-        tokio::time::advance(Duration::from_secs(24 * 60 * 60) - Duration::from_millis(1)).await;
+        tokio::time::advance(Duration::from_hours(24) - Duration::from_millis(1)).await;
         critics.score_for(&game()).await;
         assert_eq!(source.calls(), 1);
         tokio::time::advance(Duration::from_millis(1)).await;
@@ -276,10 +276,7 @@ async fn sends_only_the_title_and_the_utc_release_year() {
 async fn a_panicking_provider_degrades_to_none() {
     let source = FakeSource::new(|_| {
         async {
-            #[allow(clippy::panic, reason = "the test checks panic containment")]
-            {
-                panic!("synthetic provider panic");
-            }
+            panic!("synthetic provider panic");
         }
         .boxed()
     });
@@ -296,12 +293,12 @@ async fn a_panicking_provider_degrades_to_none() {
 #[test]
 fn the_cache_settings_match_the_typescript_server() {
     assert_eq!(SCORE_CACHE_CAPACITY, 5_000);
-    assert_eq!(SCORE_TTL, Duration::from_secs(86_400));
+    assert_eq!(SCORE_TTL, Duration::from_hours(24));
     assert_eq!(SCORE_FAILURE_TTL, Duration::from_secs(60));
-    assert_eq!(score_ttl(&Ok(None)), SCORE_TTL);
-    assert_eq!(score_ttl(&Ok(CriticScore::new(1))), SCORE_TTL);
+    assert_eq!(score_ttl(Ok(None)), SCORE_TTL);
+    assert_eq!(score_ttl(Ok(CriticScore::new(1))), SCORE_TTL);
     assert_eq!(
-        score_ttl(&Err(CriticSourceError::Rejected)),
+        score_ttl(Err(CriticSourceError::Rejected)),
         SCORE_FAILURE_TTL
     );
 }

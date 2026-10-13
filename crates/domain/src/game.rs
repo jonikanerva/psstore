@@ -72,10 +72,12 @@ pub struct CriticScore(u8);
 
 impl CriticScore {
     /// Returns `None` for a value above 100.
+    #[must_use]
     pub fn new(value: u8) -> Option<Self> {
         (value <= 100).then_some(Self(value))
     }
 
+    #[must_use]
     pub fn value(self) -> u8 {
         self.0
     }

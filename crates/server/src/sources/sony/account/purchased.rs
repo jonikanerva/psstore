@@ -8,7 +8,7 @@
 
 use serde_json::Value;
 
-use super::fields::{Field, nullable_string};
+use super::fields::{Field, WrongType, nullable_string};
 use crate::domain::library::PurchasedEntry;
 use crate::domain::product_id::is_valid_product_id;
 
@@ -58,11 +58,11 @@ fn decode_entry(raw: &Value) -> Field<PurchasedEntry> {
     // `image` is absent, `null`, or an object whose `url` is absent, `null`,
     // or a string. Any other shape fails the element.
     let image_url = match game.get("image") {
-        None | Some(Value::Null) => Some(None),
+        None | Some(Value::Null) => Ok(None),
         Some(Value::Object(image)) => nullable_string(image, "url"),
-        Some(_) => None,
+        Some(_) => Err(WrongType),
     };
-    let (Some(product_id), Some(name), Some(platform), Some(image_url)) = (
+    let (Ok(product_id), Ok(name), Ok(platform), Ok(image_url)) = (
         nullable_string(game, "productId"),
         nullable_string(game, "name"),
         nullable_string(game, "platform"),
@@ -102,11 +102,11 @@ mod tests {
         serde_json::from_str(FIXTURE).unwrap()
     }
 
-    fn page(games: Vec<Value>) -> Value {
+    fn page(games: &[Value]) -> Value {
         json!({"data": {"purchasedTitlesRetrieve": {"games": games}}})
     }
 
-    fn game(overrides: Value) -> Value {
+    fn game(overrides: &Value) -> Value {
         let mut game = json!({
             "conceptId": "10000001",
             "name": "Synthetic Game",
@@ -121,7 +121,7 @@ mod tests {
     }
 
     fn without(key: &str) -> Value {
-        let mut game = game(json!({}));
+        let mut game = game(&json!({}));
         game.as_object_mut().unwrap().remove(key);
         game
     }
@@ -147,19 +147,19 @@ mod tests {
             json!(""),
             json!(null),
         ] {
-            let outcome = parse_page(&page(vec![game(json!({ "platform": platform }))])).unwrap();
+            let outcome = parse_page(&page(&[game(&json!({ "platform": platform }))])).unwrap();
             assert!(outcome.entries.is_empty(), "{platform}");
             assert_eq!(outcome.out_of_scope, 1, "{platform}");
         }
-        let missing = parse_page(&page(vec![without("platform")])).unwrap();
-        assert!(missing.entries.is_empty());
+        let missing = parse_page(&page(&[without("platform")])).unwrap();
+        assert!(missing.entries.is_empty(), "{:?}", missing.entries);
         assert_eq!(missing.out_of_scope, 1);
     }
 
     #[test]
     fn drops_an_invalid_product_id_as_out_of_scope() {
         for id in ["bogus", "", "10000001"] {
-            let outcome = parse_page(&page(vec![game(json!({ "productId": id }))])).unwrap();
+            let outcome = parse_page(&page(&[game(&json!({ "productId": id }))])).unwrap();
             assert!(outcome.entries.is_empty(), "{id}");
             assert_eq!(outcome.out_of_scope, 1, "{id}");
         }
@@ -167,12 +167,12 @@ mod tests {
 
     #[test]
     fn counts_a_malformed_element_as_dropped_and_keeps_its_neighbours() {
-        let outcome = parse_page(&page(vec![
+        let outcome = parse_page(&page(&[
             json!(42),
             json!(null),
-            game(json!({"name": ""})),
-            game(json!({"productId": 7})),
-            game(json!({})),
+            game(&json!({"name": ""})),
+            game(&json!({"productId": 7})),
+            game(&json!({})),
         ]))
         .unwrap();
         assert_eq!(outcome.dropped, 4);
@@ -185,19 +185,19 @@ mod tests {
     #[test]
     fn a_field_of_the_wrong_type_drops_the_element() {
         for broken in [
-            game(json!({"name": 5})),
-            game(json!({"name": null})),
-            game(json!({"productId": null})),
-            game(json!({"platform": ["PS5"]})),
-            game(json!({"image": "https://img.test/x.png"})),
-            game(json!({"image": {"url": 5}})),
-            game(json!({"image": []})),
+            game(&json!({"name": 5})),
+            game(&json!({"name": null})),
+            game(&json!({"productId": null})),
+            game(&json!({"platform": ["PS5"]})),
+            game(&json!({"image": "https://img.test/x.png"})),
+            game(&json!({"image": {"url": 5}})),
+            game(&json!({"image": []})),
             without("name"),
             without("productId"),
             json!([]),
             json!("Synthetic Game"),
         ] {
-            let outcome = parse_page(&page(vec![broken.clone()])).unwrap();
+            let outcome = parse_page(&page(std::slice::from_ref(&broken))).unwrap();
             assert_eq!(outcome.dropped, 1, "{broken}");
             assert!(outcome.entries.is_empty(), "{broken}");
         }
@@ -223,20 +223,20 @@ mod tests {
 
     #[test]
     fn treats_an_empty_list_as_a_successful_empty_page() {
-        let outcome = parse_page(&page(vec![])).unwrap();
+        let outcome = parse_page(&page(&[])).unwrap();
         assert_eq!(outcome.raw_count, 0);
-        assert!(outcome.entries.is_empty());
+        assert!(outcome.entries.is_empty(), "{:?}", outcome.entries);
     }
 
     #[test]
     fn uses_an_empty_image_url_when_the_image_is_absent() {
         for game in [
-            game(json!({"image": null})),
+            game(&json!({"image": null})),
             without("image"),
-            game(json!({"image": {}})),
-            game(json!({"image": {"url": null}})),
+            game(&json!({"image": {}})),
+            game(&json!({"image": {"url": null}})),
         ] {
-            let outcome = parse_page(&page(vec![game.clone()])).unwrap();
+            let outcome = parse_page(&page(std::slice::from_ref(&game))).unwrap();
             assert_eq!(outcome.entries[0].image_url, "", "{game}");
         }
     }
