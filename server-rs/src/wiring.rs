@@ -5,7 +5,8 @@
 
 use std::sync::Arc;
 
-use crate::application::{AccountApi, CriticScores, GamesApi, Page, ServiceFuture};
+use crate::application::games::GamesService;
+use crate::application::{AccountApi, CriticScores, GamesApi, Page, ServiceFuture, SystemClock};
 use crate::config::Config;
 use crate::domain::browse::{BrowseOrder, GenreKey};
 use crate::domain::errors::{AccountError, GameLookupError, UpstreamError};
@@ -13,6 +14,7 @@ use crate::domain::game::{CriticScore, Game, GenreList, PageResult};
 use crate::domain::secret::Secret;
 use crate::http::AppState;
 use crate::http::static_files::StaticSite;
+use crate::sources::sony::catalog::SonyCatalogClient;
 use crate::sources::sony::contract::SonyContract;
 
 /// The production services.
@@ -30,8 +32,19 @@ pub fn state(config: &Config, sony: &SonyContract) -> AppState {
 // The anonymous store lookups.
 // ---------------------------------------------------------------------------
 
-fn games(_sony: &SonyContract) -> Arc<dyn GamesApi> {
-    Arc::new(NotConnected)
+fn games(sony: &SonyContract) -> Arc<dyn GamesApi> {
+    match SonyCatalogClient::new(sony) {
+        Ok(client) => Arc::new(GamesService::new(Arc::new(client), Arc::new(SystemClock))),
+        // The client fails to build only when its TLS set-up fails. The
+        // service then answers each store request as an outage.
+        Err(_) => {
+            tracing::error!(
+                stage = "sony_client",
+                "the Sony store client could not start"
+            );
+            Arc::new(NotConnected)
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------

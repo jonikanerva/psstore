@@ -1,0 +1,342 @@
+{
+  "data": {
+    "categoryGridRetrieve": {
+      "products": [
+        {
+          "id": "UB1029-PPSA34991_00-0305564308280273",
+          "localizedStoreDisplayClassification": "Kokonainen peli",
+          "name": "PS5: Kingblade: Medieval TCG Card Shop",
+          "npTitleId": "PPSA34991_00",
+          "platforms": ["PS5"],
+          "price": {
+            "__typename": "SkuPrice",
+            "basePrice": "€9,95",
+            "discountText": "–40 %",
+            "discountedPrice": "€5,97",
+            "includesBundleOffer": false,
+            "isExclusive": false,
+            "isFree": false,
+            "isTiedToSubscription": false,
+            "serviceBranding": ["NONE"],
+            "upsellServiceBranding": ["PS_PLUS"],
+            "upsellText": "Säästä 10 % enemmän"
+          },
+          "skus": [
+            {
+              "__typename": "Sku",
+              "type": "STANDARD"
+            }
+          ],
+          "storeDisplayClassification": "FULL_GAME",
+          "media": [
+            {
+              "__typename": "Media",
+              "role": "GAMEHUB_COVER_ART",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202511/2822/faab8b5744bcd2bac06b5a4b787cd620e2281a692a44548a.jpg"
+            },
+            {
+              "__typename": "Media",
+              "role": "PORTRAIT_BANNER",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202511/2822/f2e6826368a458b0c96e7503960cf9d1f750ea1e42bcabb7.jpg"
+            },
+            {
+              "__typename": "Media",
+              "role": "SCREENSHOT",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202602/2014/c43217f38fc24bd35d1dac22ffac9d2e8e9f28e1a4aaa8a9.jpg"
+            },
+            {
+              "__typename": "Media",
+              "role": "SCREENSHOT",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202602/2014/5aeb4773f492f93b1442048853ced641ee11f6d42f616d5a.jpg"
+            }
+          ]
+        },
+        {
+          "id": "UB1029-PPSA28837_00-0564886028601563",
+          "localizedStoreDisplayClassification": "Kokonainen peli",
+          "name": "Anime Girls: Stellar Invasion",
+          "npTitleId": "PPSA28837_00",
+          "platforms": ["PS5"],
+          "price": {
+            "__typename": "SkuPrice",
+            "basePrice": "€11,95",
+            "discountText": "–30 %",
+            "discountedPrice": "€8,36",
+            "includesBundleOffer": false,
+            "isExclusive": false,
+            "isFree": false,
+            "isTiedToSubscription": false,
+            "serviceBranding": ["NONE"],
+            "upsellServiceBranding": ["PS_PLUS"],
+            "upsellText": "Säästä 10 % enemmän"
+          },
+          "skus": [
+            {
+              "__typename": "Sku",
+              "type": "STANDARD"
+            }
+          ],
+          "storeDisplayClassification": "FULL_GAME",
+          "media": [
+            {
+              "__typename": "Media",
+              "role": "GAMEHUB_COVER_ART",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202502/1800/f12f5198c0767bbc4f7358dbd492abf45884e91fa256bf95.jpg"
+            },
+            {
+              "__typename": "Media",
+              "role": "PORTRAIT_BANNER",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202502/1800/96e2fbbba6eb0bc439720ee1340817c45c6aa6bb176f4137.jpg"
+            },
+            {
+              "__typename": "Media",
+              "role": "SCREENSHOT",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202603/1118/f715c0dd7da1e5807ff9a01717b912a31ed3d31825fe4d59.jpg"
+            },
+            {
+              "__typename": "Media",
+              "role": "SCREENSHOT",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202603/1118/b3ae563d47f6da204f2a9651c4866562373ca49391c3201a.jpg"
+            }
+          ]
+        },
+        {
+          "id": "UB0837-PPSA35915_00-0018176653096083",
+          "localizedStoreDisplayClassification": "Kokonainen peli",
+          "name": "DOLLMAKER",
+          "npTitleId": "PPSA35915_00",
+          "platforms": ["PS5"],
+          "price": {
+            "__typename": "SkuPrice",
+            "basePrice": "€5,95",
+            "discountText": "–50 %",
+            "discountedPrice": "€2,97",
+            "includesBundleOffer": false,
+            "isExclusive": false,
+            "isFree": false,
+            "isTiedToSubscription": false,
+            "serviceBranding": ["NONE"],
+            "upsellServiceBranding": ["PS_PLUS"],
+            "upsellText": "Säästä 5 % enemmän"
+          },
+          "skus": [
+            {
+              "__typename": "Sku",
+              "type": "STANDARD"
+            }
+          ],
+          "storeDisplayClassification": "FULL_GAME",
+          "media": [
+            {
+              "__typename": "Media",
+              "role": "GAMEHUB_COVER_ART",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202602/0417/a77dbbcc6657787de4bab541b147e875029dae73b03a671e.jpg"
+            },
+            {
+              "__typename": "Media",
+              "role": "PORTRAIT_BANNER",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202601/3000/996206a5155c1dadf9b450c87558c9ba93680a4cece95900.jpg"
+            },
+            {
+              "__typename": "Media",
+              "role": "SCREENSHOT",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202602/0113/dbbdcfbae56c823b5f48fcacd90ad721ae53a8a8bf179056.jpg"
+            },
+            {
+              "__typename": "Media",
+              "role": "SCREENSHOT",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202602/0113/555bad426ab2bf9f29b207ba81e8f1cba42654a1d484233c.jpg"
+            }
+          ]
+        },
+        {
+          "id": "UP6718-PPSA36356_00-0921989720540026",
+          "localizedStoreDisplayClassification": "Kokonainen peli",
+          "name": "Floor 9",
+          "npTitleId": "PPSA36356_00",
+          "platforms": ["PS5"],
+          "price": {
+            "__typename": "SkuPrice",
+            "basePrice": "€5,95",
+            "discountText": "–20 %",
+            "discountedPrice": "€4,76",
+            "includesBundleOffer": false,
+            "isExclusive": false,
+            "isFree": false,
+            "isTiedToSubscription": false,
+            "serviceBranding": ["NONE"],
+            "upsellServiceBranding": ["PS_PLUS"],
+            "upsellText": "Säästä 10 % enemmän"
+          },
+          "skus": [
+            {
+              "__typename": "Sku",
+              "type": "STANDARD"
+            }
+          ],
+          "storeDisplayClassification": "FULL_GAME",
+          "media": [
+            {
+              "__typename": "Media",
+              "role": "GAMEHUB_COVER_ART",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202603/3115/9b8633636b851de9f2f45e479335c84a3e27ee4d67b6eae6.jpg"
+            },
+            {
+              "__typename": "Media",
+              "role": "PORTRAIT_BANNER",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202603/3115/f420d4bb17c9c737add0e5527f7d5ee7e9d2669462dd40b1.jpg"
+            },
+            {
+              "__typename": "Media",
+              "role": "SCREENSHOT",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202603/3115/982a0ce77f9ff2c090987fce0e0ab42357f4074adac09605.jpg"
+            },
+            {
+              "__typename": "Media",
+              "role": "SCREENSHOT",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202603/3115/035fea6a7a6b1daa0c27c777d61c0b8adb03ab083087ab7e.jpg"
+            }
+          ]
+        },
+        {
+          "id": "HB1334-PPSA36443_00-0491751392715718",
+          "localizedStoreDisplayClassification": "Kokonainen peli",
+          "name": "COWBOY SIMULATOR",
+          "npTitleId": "PPSA36443_00",
+          "platforms": ["PS5"],
+          "price": {
+            "__typename": "SkuPrice",
+            "basePrice": "€14,95",
+            "discountText": "–30 %",
+            "discountedPrice": "€10,46",
+            "includesBundleOffer": false,
+            "isExclusive": false,
+            "isFree": false,
+            "isTiedToSubscription": false,
+            "serviceBranding": ["NONE"],
+            "upsellServiceBranding": ["PS_PLUS"],
+            "upsellText": "Säästä 5 % enemmän"
+          },
+          "skus": [
+            {
+              "__typename": "Sku",
+              "type": "STANDARD"
+            }
+          ],
+          "storeDisplayClassification": "FULL_GAME",
+          "media": [
+            {
+              "__typename": "Media",
+              "role": "GAMEHUB_COVER_ART",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202504/0712/0acc523f6c453362ca6d3bb8a743635438aae2cd7c4fa696.jpg"
+            },
+            {
+              "__typename": "Media",
+              "role": "PORTRAIT_BANNER",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202504/0712/b2c2739dc27e6cafe0371b74c9248e680c68eaddd2273145.jpg"
+            },
+            {
+              "__typename": "Media",
+              "role": "SCREENSHOT",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202604/1512/c1d28e658890ee99bd65273abc29393dcee8a32ea099f4c8.jpg"
+            },
+            {
+              "__typename": "Media",
+              "role": "SCREENSHOT",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202604/1512/f2e070de00f22c01237fbb6d308ef752b25d80a443c63e26.jpg"
+            }
+          ]
+        },
+        {
+          "id": "EP8424-PPSA34421_00-CTS26EXPERTUPG01",
+          "localizedStoreDisplayClassification": "Lisäosapakkaus",
+          "name": "CTS 2026 - Expert Upgrade",
+          "npTitleId": "PPSA34421_00",
+          "platforms": ["PS5"],
+          "price": {
+            "__typename": "SkuPrice",
+            "basePrice": "Ei saatavilla",
+            "discountText": null,
+            "discountedPrice": "Ei saatavilla",
+            "includesBundleOffer": null,
+            "isExclusive": false,
+            "isFree": false,
+            "isTiedToSubscription": null,
+            "serviceBranding": null,
+            "upsellServiceBranding": [],
+            "upsellText": null
+          },
+          "skus": [
+            {
+              "__typename": "Sku",
+              "type": "STANDARD"
+            },
+            {
+              "__typename": "Sku",
+              "type": "STANDARD"
+            },
+            {
+              "__typename": "Sku",
+              "type": "STANDARD"
+            },
+            {
+              "__typename": "Sku",
+              "type": "STANDARD"
+            },
+            {
+              "__typename": "Sku",
+              "type": "STANDARD"
+            }
+          ],
+          "storeDisplayClassification": "ADD_ON_PACK",
+          "media": [
+            {
+              "__typename": "Media",
+              "role": "GAMEHUB_COVER_ART",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202604/0109/b978070e9ebcff97bf6f182e64a2d281f0c52e402378d8fd.jpg"
+            },
+            {
+              "__typename": "Media",
+              "role": "SCREENSHOT",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202602/1716/62e7105a96275629d61891b36f412368c213e67381a133b0.jpg"
+            },
+            {
+              "__typename": "Media",
+              "role": "SCREENSHOT",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202602/1716/c78a87eec4edb8f33d7b83db63aebd5128dfd72c4ff0bf36.jpg"
+            },
+            {
+              "__typename": "Media",
+              "role": "SCREENSHOT",
+              "type": "IMAGE",
+              "url": "https://image.api.playstation.com/vulcan/ap/rnd/202602/1716/ce3a116b487e0cfb6951b7b00fe33de7ea6680969f41e97f.jpg"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

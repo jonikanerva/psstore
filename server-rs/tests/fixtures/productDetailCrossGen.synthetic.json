@@ -1,0 +1,52 @@
+{
+  "data": {
+    "productRetrieve": {
+      "__typename": "Product",
+      "id": "EP0000-PPSA00000_00-SYNTHETICGAME000",
+      "name": "Synthetic Game PS4 & PS5",
+      "platforms": ["PS4", "PS5"],
+      "storeDisplayClassification": "FULL_GAME",
+      "releaseDate": "2020-01-15T00:00:00Z",
+      "publisherName": "Synthetic Publisher",
+      "backwardsCompatibilityCategory": null,
+      "descriptions": [
+        { "type": "LONG", "subType": null, "value": "Synthetic long text." },
+        { "type": "LEGAL", "subType": null, "value": "Synthetic legal text." }
+      ],
+      "combinedLocalizedGenres": [
+        { "value": "Action" },
+        { "value": "Shooter" }
+      ],
+      "media": [
+        {
+          "__typename": "Media",
+          "role": "PREVIEW",
+          "type": "VIDEO",
+          "url": "https://example.invalid/preview.mp4",
+          "media": [
+            {
+              "__typename": "Media",
+              "role": null,
+              "type": "IMAGE",
+              "url": "https://example.invalid/preview-thumb.jpg"
+            }
+          ]
+        },
+        {
+          "__typename": "Media",
+          "role": "GAMEHUB_COVER_ART",
+          "type": "IMAGE",
+          "url": "https://example.invalid/cover.jpg",
+          "media": null
+        },
+        {
+          "__typename": "Media",
+          "role": "SCREENSHOT",
+          "type": "IMAGE",
+          "url": "https://example.invalid/shot.jpg",
+          "media": null
+        }
+      ]
+    }
+  }
+}

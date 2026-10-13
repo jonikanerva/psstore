@@ -1,0 +1,60 @@
+{
+  "data": {
+    "productRetrieve": {
+      "id": "UP4363-PPSA17232_00-SNIPERELITERES00",
+      "name": "Sniper Elite: Resistance PS4™ & PS5™",
+      "webctas": [
+        {
+          "type": "UPSELL_PS_PLUS_FREE",
+          "meta": {
+            "upSellService": "PS_PLUS"
+          },
+          "price": {
+            "applicability": "UPSELL",
+            "basePrice": "€59,95",
+            "basePriceValue": 5995,
+            "currencyCode": "EUR",
+            "discountedPrice": "Included",
+            "discountedValue": 0,
+            "displayDiscountText": "Included",
+            "displayUpsellText": "Included with PlayStation Plus",
+            "endTime": "1791273600000",
+            "history": null,
+            "isExclusive": false,
+            "isFree": true,
+            "isTiedToSubscription": true,
+            "membershipType": "PS_PLUS",
+            "savingTag": "",
+            "serviceBranding": ["PS_PLUS"],
+            "tierLabel": "TIER_10"
+          }
+        },
+        {
+          "type": "ADD_TO_CART",
+          "meta": {
+            "upSellService": "NONE"
+          },
+          "price": {
+            "applicability": "APPLICABLE",
+            "basePrice": "€59,95",
+            "basePriceValue": 5995,
+            "currencyCode": "EUR",
+            "discountedPrice": "€59,95",
+            "discountedValue": 5995,
+            "displayDiscountText": null,
+            "displayUpsellText": null,
+            "endTime": null,
+            "history": null,
+            "isExclusive": false,
+            "isFree": false,
+            "isTiedToSubscription": false,
+            "membershipType": null,
+            "savingTag": "",
+            "serviceBranding": ["NONE"],
+            "tierLabel": null
+          }
+        }
+      ]
+    }
+  }
+}
