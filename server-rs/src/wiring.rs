@@ -38,8 +38,23 @@ fn games(_sony: &SonyContract) -> Arc<dyn GamesApi> {
 // The critic score. Without IGDB credentials the feature is off.
 // ---------------------------------------------------------------------------
 
-fn critic_scores(_config: &Config) -> Arc<dyn CriticScores> {
-    Arc::new(NoCriticScores)
+fn critic_scores(config: &Config) -> Arc<dyn CriticScores> {
+    let Some(credentials) = &config.igdb else {
+        return Arc::new(NoCriticScores);
+    };
+    match crate::sources::igdb::IgdbClient::new(credentials.clone()) {
+        Ok(client) => Arc::new(crate::application::critic_scores::CriticScoreService::new(
+            Arc::new(client),
+        )),
+        Err(_) => {
+            // The feature is optional, so the server starts without it.
+            tracing::warn!(
+                stage = "igdb_client",
+                "critic score off: the HTTP client could not be built"
+            );
+            Arc::new(NoCriticScores)
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
