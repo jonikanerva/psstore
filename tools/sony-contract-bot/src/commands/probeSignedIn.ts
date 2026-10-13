@@ -1,4 +1,4 @@
-import { Schema } from 'effect'
+import { z } from 'zod'
 import {
   readSonyConstants,
   sonyConstant,
@@ -192,19 +192,24 @@ export const exchangeNpsso = async (
   return body.access_token
 }
 
-const libraryEnvelopeSchema = Schema.Struct({
-  data: Schema.Struct({
-    purchasedTitlesRetrieve: Schema.Struct({
-      games: Schema.Array(Schema.Unknown),
+const libraryEnvelopeSchema = z.object({
+  data: z.object({
+    purchasedTitlesRetrieve: z.object({
+      games: z.array(z.unknown()),
     }),
   }),
 })
 
-const wishlistEnvelopeSchema = Schema.Struct({
-  data: Schema.Struct({
-    storeWishlistSecure: Schema.Array(Schema.Unknown),
+const wishlistEnvelopeSchema = z.object({
+  data: z.object({
+    storeWishlistSecure: z.array(z.unknown()),
   }),
 })
+
+const isValid =
+  (schema: z.ZodType) =>
+  (body: unknown): boolean =>
+    schema.safeParse(body).success
 
 export const PURCHASED_PROBE: SignedInProbe = {
   feature: 'purchased',
@@ -219,7 +224,7 @@ export const PURCHASED_PROBE: SignedInProbe = {
     sortBy: 'ACTIVE_DATE',
     sortDirection: 'desc',
   },
-  isValidBody: Schema.is(libraryEnvelopeSchema),
+  isValidBody: isValid(libraryEnvelopeSchema),
 }
 
 export const WISHLIST_PROBE: SignedInProbe = {
@@ -228,7 +233,7 @@ export const WISHLIST_PROBE: SignedInProbe = {
   operationNameConstant: 'SONY_WISHLIST_OPERATION_NAME',
   hashConstant: 'SONY_WISHLIST_HASH',
   variables: {},
-  isValidBody: Schema.is(wishlistEnvelopeSchema),
+  isValidBody: isValid(wishlistEnvelopeSchema),
 }
 
 // Requests the operation once, read-only. Resolves with the HTTP status (always

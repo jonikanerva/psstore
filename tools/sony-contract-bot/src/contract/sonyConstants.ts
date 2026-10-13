@@ -1,4 +1,4 @@
-import { Schema } from 'effect'
+import { z } from 'zod'
 import { readTextFile } from '../io/files.js'
 
 // `docs/contracts/sony-constants.json` holds the fixed Sony contract values:
@@ -9,15 +9,13 @@ export type SonyConstants = ReadonlyMap<string, string>
 
 export const SONY_CONSTANTS_FILE = 'docs/contracts/sony-constants.json'
 
-const sonyConstantsSchema = Schema.Record(Schema.String, Schema.String)
+const sonyConstantsSchema = z.record(z.string(), z.string())
 
 // Fails for text that is not a JSON object with string values only. A missing
 // key is not an error here: each reader reports its own missing key.
 export const parseSonyConstants = (text: string): SonyConstants => {
   try {
-    const decoded = Schema.decodeUnknownSync(sonyConstantsSchema)(
-      JSON.parse(text),
-    )
+    const decoded = sonyConstantsSchema.parse(JSON.parse(text))
     return new Map(Object.entries(decoded))
   } catch {
     throw new Error(

@@ -10,8 +10,8 @@
     "sony": "tsx src/cli.ts"
   },
   "dependencies": {
-    "effect": "catalog:",
-    "playwright": "^1.63.0"
+    "playwright": "^1.63.0",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@types/node": "catalog:",

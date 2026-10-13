@@ -1,6 +1,6 @@
-import { Schema } from 'effect'
+import { z } from 'zod'
 
-export const contractFeatureSchema = Schema.Literals([
+export const contractFeatureSchema = z.enum([
   'new',
   'upcoming',
   'discounted',
@@ -10,34 +10,35 @@ export const contractFeatureSchema = Schema.Literals([
   'wishlist',
 ])
 
-export const contractOperationSchema = Schema.Struct({
+export const contractOperationSchema = z.object({
   feature: contractFeatureSchema,
-  operation_name: Schema.String.check(Schema.isMinLength(1)),
-  persisted_query_hash: Schema.NullOr(
-    Schema.String.check(Schema.isPattern(/^[a-f0-9]{64}$/i)),
-  ),
-  required_headers: Schema.Array(Schema.String.check(Schema.isMinLength(1))),
-  variables_schema: Schema.Record(Schema.String, Schema.Unknown),
-  sample_variables: Schema.Record(Schema.String, Schema.Unknown),
-  response_path: Schema.String.check(Schema.isMinLength(1)),
-  observed_status_codes: Schema.Array(Schema.Number.check(Schema.isInt())),
+  operation_name: z.string().min(1),
+  persisted_query_hash: z
+    .string()
+    .regex(/^[a-f0-9]{64}$/i)
+    .nullable(),
+  required_headers: z.array(z.string().min(1)),
+  variables_schema: z.record(z.string(), z.unknown()),
+  sample_variables: z.record(z.string(), z.unknown()),
+  response_path: z.string().min(1),
+  observed_status_codes: z.array(z.int()),
 })
 
-export const sonyContractManifestSchema = Schema.Struct({
-  version: Schema.Number.check(Schema.isInt(), Schema.isGreaterThan(0)),
-  metadata: Schema.Struct({
-    captured_at: Schema.String.check(Schema.isMinLength(1)),
-    captured_by: Schema.String.check(Schema.isMinLength(1)),
-    region: Schema.Literal('fi'),
-    locale: Schema.Literal('fi-fi'),
-    currency: Schema.Literal('EUR'),
-    target_platform: Schema.Literal('PS5'),
-    playwright_profile: Schema.String.check(Schema.isMinLength(1)),
+export const sonyContractManifestSchema = z.object({
+  version: z.int().gt(0),
+  metadata: z.object({
+    captured_at: z.string().min(1),
+    captured_by: z.string().min(1),
+    region: z.literal('fi'),
+    locale: z.literal('fi-fi'),
+    currency: z.literal('EUR'),
+    target_platform: z.literal('PS5'),
+    playwright_profile: z.string().min(1),
   }),
-  endpoint: Schema.Struct({
+  endpoint: z.object({
     // A syntactically valid http(s) URL.
-    url: Schema.String.check(Schema.isPattern(/^https?:\/\/[^\s]+$/)),
-    method: Schema.String.check(Schema.isMinLength(1)),
+    url: z.string().regex(/^https?:\/\/[^\s]+$/),
+    method: z.string().min(1),
   }),
-  operations: Schema.Array(contractOperationSchema),
+  operations: z.array(contractOperationSchema),
 })

@@ -222,30 +222,6 @@
       "plugins": ["react"]
     },
     {
-      "files": ["web/src/**/*.{ts,tsx}", "tools/*/src/**/*.ts"],
-      "rules": {
-        "no-restricted-imports": [
-          "error",
-          {
-            "patterns": [
-              {
-                "group": [
-                  "effect/http",
-                  "effect/http/*",
-                  "effect/http-api",
-                  "effect/http-api/*",
-                  "@effect/platform-node",
-                  "@effect/platform-node/*"
-                ],
-                "message": "effect/http, effect/http-api, and @effect/platform-node are @stability unstable or server-only; STACK.md §8 bans them in the client and the tooling."
-              }
-            ]
-          }
-        ]
-      },
-      "plugins": ["typescript"]
-    },
-    {
       "files": ["web/src/**/*.{ts,tsx}"],
       "rules": {
         "no-restricted-globals": [
