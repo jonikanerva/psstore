@@ -42,3 +42,8 @@ print_stdout = "warn"
 todo = "warn"
 unimplemented = "warn"
 unwrap_used = "warn"
+
+# The API parity tool. `test = true` makes `cargo test` run its unit tests.
+[[example]]
+name = "api_parity"
+test = true
