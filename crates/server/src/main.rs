@@ -2,18 +2,12 @@
 
 use std::net::{Ipv4Addr, SocketAddr};
 use std::process::ExitCode;
-use std::sync::Arc;
-use std::time::Duration;
 
-use axum::ServiceExt as _;
 use psstore_server::config::Config;
 use psstore_server::http::static_files::index_exists;
+use psstore_server::lifecycle::{self, SHUTDOWN_GRACE};
 use psstore_server::sources::sony::contract::SonyContract;
 use psstore_server::{http, observability, wiring};
-
-/// The time that active requests get after a stop signal. The longest
-/// request is the purchased-games crawl with its 30 s deadline.
-const SHUTDOWN_GRACE: Duration = Duration::from_secs(35);
 
 fn main() -> ExitCode {
     // The settings come first, because they select the log format. Reading
@@ -47,7 +41,12 @@ fn main() -> ExitCode {
         tracing::error!("the async runtime could not start");
         return ExitCode::FAILURE;
     };
-    match runtime.block_on(run(config, sony)) {
+    let outcome = runtime.block_on(run(config, sony));
+    // Dropping a runtime waits for its blocking tasks without a limit. After
+    // the grace period nothing may keep the process alive, so the runtime
+    // ends without that wait.
+    runtime.shutdown_background();
+    match outcome {
         Ok(()) => ExitCode::SUCCESS,
         Err(stage) => {
             tracing::error!(stage, "service stopped with an error");
@@ -74,48 +73,8 @@ async fn run(config: Config, sony: SonyContract) -> Result<(), &'static str> {
     let bound = listener.local_addr().map_err(|_| "bind")?;
     tracing::info!(bind = %bound, "service started");
 
-    // Stop accepting connections on a signal. Give active requests a grace
-    // period, then stop.
-    let stop = Arc::new(tokio::sync::Notify::new());
-    let notify = Arc::clone(&stop);
-    let server =
-        axum::serve(listener, app.into_make_service()).with_graceful_shutdown(async move {
-            shutdown_signal().await;
-            tracing::info!("shutdown started");
-            notify.notify_one();
-        });
-    tokio::select! {
-        result = server => result.map_err(|_| "serve"),
-        () = async {
-            stop.notified().await;
-            tokio::time::sleep(SHUTDOWN_GRACE).await;
-        } => {
-            tracing::warn!("shutdown grace period ended with active requests");
-            Ok(())
-        }
-    }
-}
-
-async fn shutdown_signal() {
-    // A failed handler set-up also ends this future, so the service stops.
-    let interrupt = async {
-        if tokio::signal::ctrl_c().await.is_err() {
-            tracing::warn!("the interrupt handler could not be set up");
-        }
-    };
-    #[cfg(unix)]
-    let terminate = async {
-        match tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate()) {
-            Ok(mut signal) => {
-                signal.recv().await;
-            }
-            Err(_) => std::future::pending::<()>().await,
-        }
-    };
-    #[cfg(not(unix))]
-    let terminate = std::future::pending::<()>();
-    tokio::select! {
-        () = interrupt => {},
-        () = terminate => {},
-    }
+    lifecycle::serve(listener, app, lifecycle::shutdown_signal(), SHUTDOWN_GRACE)
+        .await
+        .map(|_stopped| ())
+        .map_err(|_| "serve")
 }

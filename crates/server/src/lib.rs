@@ -3,7 +3,8 @@
 //!
 //! Dependency direction: `http` → `application` → `domain`. `sources`
 //! implements the ports of `application` and uses `domain` types. `config`
-//! reads the environment. `wiring` connects the concrete services. `domain`
+//! reads the environment. `wiring` connects the concrete services.
+//! `lifecycle` runs the server with its shutdown deadline. `domain`
 //! is the separate crate `psstore-domain` (`crates/domain`), which depends on
 //! no crate of this workspace.
 //!
@@ -16,6 +17,7 @@ pub use psstore_domain as domain;
 pub mod application;
 pub mod config;
 pub mod http;
+pub mod lifecycle;
 pub mod observability;
 pub mod sources;
 pub mod wiring;
