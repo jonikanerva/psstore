@@ -21,8 +21,9 @@ pub struct Game {
     #[cfg_attr(feature = "openapi", schema(value_type = String, min_length = 1))]
     pub id: GameId,
     pub name: String,
-    /// A UTC instant as an ISO-8601 string, or the empty string when Sony
-    /// gives no valid date.
+    /// The release date: a UTC instant as an RFC 3339 string with `Z`, the
+    /// empty string when Sony gives no valid date, or Sony's own text. Some
+    /// sources copy Sony's text without a check.
     pub date: String,
     /// The cover image URL.
     pub url: String,

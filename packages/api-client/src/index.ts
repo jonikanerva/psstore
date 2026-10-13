@@ -10,8 +10,9 @@
 // - A failure with an HTTP response becomes an `ApiError` with the status
 //   and a code. A failure without a response (network, abort) keeps its
 //   original error, so an abort before the response headers stays an
-//   `AbortError`. An abort while the body is read becomes an `ApiError`
-//   with the code `invalid_response`.
+//   `AbortError`. An abort while the body is read becomes an `ApiError`:
+//   `invalid_response` for a success status, `unrecognized_error` for an
+//   error status.
 //
 // Never edit `./generated`: run `pnpm --filter @psstore/api-client run
 // generate` after a change to `contract/openapi.json`.

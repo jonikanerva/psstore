@@ -992,7 +992,7 @@
           },
           "date": {
             "type": "string",
-            "description": "A UTC instant as an ISO-8601 string, or the empty string when Sony\ngives no valid date."
+            "description": "The release date: a UTC instant as an RFC 3339 string with `Z`, the\nempty string when Sony gives no valid date, or Sony's own text. Some\nsources copy Sony's text without a check."
           },
           "url": {
             "type": "string",

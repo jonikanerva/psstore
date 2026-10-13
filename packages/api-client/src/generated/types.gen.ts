@@ -20,8 +20,9 @@ export type Game = {
     id: string;
     name: string;
     /**
-     * A UTC instant as an ISO-8601 string, or the empty string when Sony
-     * gives no valid date.
+     * The release date: a UTC instant as an RFC 3339 string with `Z`, the
+     * empty string when Sony gives no valid date, or Sony's own text. Some
+     * sources copy Sony's text without a check.
      */
     date: string;
     /**
