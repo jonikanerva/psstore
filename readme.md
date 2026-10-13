@@ -14,23 +14,27 @@ The WISHLIST view shows your own Sony wishlist. It uses the same sign-in. It is 
 shows the same cards as the other views, with the date and the Finnish store prices. The server
 reads the prices from the public store, never from your wishlist. The view never changes your wishlist.
 
-The backend proxies and normalises Sony's public GraphQL API into a clean REST surface scoped
-to PS5 / Finland / EUR; the frontend renders what the backend returns.
+The server proxies and normalises Sony's public GraphQL API into a clean REST surface scoped
+to PS5 / Finland / EUR; the frontend renders what the server returns.
 
 ## Architecture
 
+- `server/` — Rust HTTP server (Axum on Tokio): the typed REST API, an in-memory cache, and the
+  built client
 - `client/` — Vite + React SPA (TanStack Router, TanStack Query, Tailwind CSS)
-- `server/` — `effect/http-api` HttpApi backend on Effect (typed REST + in-memory Effect `Cache`)
-- `shared/` — Effect Schema types, schemas, and utilities shared across server and client
+- `shared/` — the TypeScript view of the API contract (Effect Schema) and pure client utilities
 - `tools/sony-contract-bot/` — captures and validates Sony's GraphQL contract
+- `docs/contracts/` — the Sony contract (manifest and `sony-constants.json`) and the API examples
+  that the Rust server and the TypeScript client both test against
 
 The browser talks only to `/api/*`. The server handles Sony GraphQL requests, decodes and
-narrows the data at the Schema boundary, and serves the normalised result.
+narrows the data at its boundary, and serves the normalised result.
 
 ## Development
 
-Prerequisite: [mise](https://mise.jdx.dev/). The `mise.toml` file pins the Node, pnpm, and
-Gitleaks versions.
+Prerequisites: [mise](https://mise.jdx.dev/) and, on macOS, the Xcode Command Line Tools
+(`xcode-select --install`; they supply the linker for Rust). `mise.toml` pins Node, pnpm,
+Gitleaks, cargo-deny, and cargo-audit. `rust-toolchain.toml` pins Rust.
 
 ```bash
 mise install
@@ -43,7 +47,7 @@ Do not use Corepack or a global pnpm. `mise install` provides the pinned pnpm, a
 versions and the files that mirror them.
 
 - Client runs on `http://localhost:5173`
-- Server runs on `http://localhost:3000`
+- Server runs on `http://localhost:3000` (`cargo run`; restart `pnpm run dev` after a server change)
 - Vite proxies `/api` to the server in development.
 
 ## Quality Gates
@@ -55,9 +59,10 @@ before committing and before opening a PR:
 pnpm test-all
 ```
 
-This runs the format check, type-check, lint, the secret scan (Gitleaks), the dependency scan
-(`pnpm audit`), build, tests, and the Sony contract validate + diff steps in order. The
-dependency scan needs network access to the npm registry. `STACK.md → 4. Build & verify
+This runs the format check (Prettier and rustfmt), type-check, lint (Oxlint and Clippy), the
+secret scan (Gitleaks), the dependency scans (`pnpm audit`, `cargo deny`, `cargo audit`), build,
+tests (Vitest and `cargo test`), and the Sony contract validate + diff steps in order. The
+dependency scans need network access to the npm registry, GitHub, and crates.io. `STACK.md → 4. Build & verify
 commands → Security scans` gives the thresholds and the triage rules.
 
 Individual stages can also be run while iterating:
@@ -93,9 +98,13 @@ matching browser once before the next `sony:refresh`:
 pnpm --filter @psstore/sony-contract-bot exec playwright install chromium
 ```
 
-## Production build
+## Production
 
-The project has no production deployment. To run a production build locally:
+Railway deploys each merge to `main` to `https://psstore.calmdonut.com`. `railpack.json` sets
+the build: the client build and `cargo build --release --locked`. The image contains only the
+server binary and `client/build`. `STACK.md → 17` describes the release and the rollback.
+
+To run the production shape locally:
 
 ```bash
 pnpm install
@@ -103,7 +112,7 @@ pnpm run build
 pnpm run start
 ```
 
-The server serves `client/build` and handles SPA fallback routing.
+The server serves `client/build` from the working directory and handles SPA fallback routing.
 
 ## Environment Variables
 
@@ -115,9 +124,9 @@ The server serves `client/build` and handles SPA fallback routing.
   score on. When one is missing, the game page shows no score. Never commit the
   values.
 
-The Sony contract values are code constants in `server/src/config/env.ts`. They are not
-environment variables. `pnpm run sony:refresh` rotates the persisted-query hashes in that
-file.
+The Sony contract values are in `docs/contracts/sony-constants.json`. The server compiles the
+file in; they are not environment variables. After `pnpm run sony:refresh` finds a rotated
+persisted-query hash, update the hash in that file.
 
 ## Sony GraphQL Contract Update Workflow
 
