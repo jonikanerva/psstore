@@ -63,7 +63,8 @@ impl StaticSite {
             .headers()
             .get(ACCEPT)
             .and_then(|value| value.to_str().ok())
-            .is_some_and(|value| value.contains("text/html"));
+            // Media types are case-insensitive (RFC 9110, section 8.3.1).
+            .is_some_and(|value| value.to_ascii_lowercase().contains("text/html"));
         let index = self.root.join("index.html");
         let (head, deep_link) = split_for_fallback(request);
         let response = if path == "/" {

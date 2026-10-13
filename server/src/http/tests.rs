@@ -939,6 +939,13 @@ async fn a_deep_link_gets_index_html_only_when_accept_includes_text_html() {
         StatusCode::NOT_FOUND
     );
     assert_eq!(h.get("/g/123").await.status(), StatusCode::NOT_FOUND);
+    // Media types are case-insensitive.
+    assert_eq!(
+        h.get_with("/g/123", ACCEPT.as_str(), "TEXT/HTML")
+            .await
+            .status(),
+        StatusCode::OK
+    );
     // A path with an extension never falls back.
     assert_eq!(
         h.get_with("/foo.js", ACCEPT.as_str(), BROWSER_ACCEPT)
