@@ -114,35 +114,40 @@ pub fn game_id(raw: &str) -> Result<String, Invalid> {
     Ok(id.to_owned())
 }
 
+/// The largest integer that a JavaScript number holds exactly
+/// (`Number.MAX_SAFE_INTEGER`, 2^53 - 1).
+const MAX_SAFE_INTEGER: f64 = 9_007_199_254_740_991.0;
+
 /// Decodes `text` like JavaScript `Number(text)` and accepts an integer from
-/// `min` to `max`.
+/// `min` to `max`. The integer check is Effect's `Schema.isInt`, which is
+/// `Number.isSafeInteger`: a value above 2^53 - 1 is invalid.
 fn integer_in(text: &str, min: usize, max: Option<usize>) -> Result<usize, Invalid> {
     let value = js_number(text).ok_or(Invalid)?;
-    if !value.is_finite() || value.fract() != 0.0 {
+    if !value.is_finite() || value.fract() != 0.0 || value.abs() > MAX_SAFE_INTEGER {
         return Err(Invalid);
     }
     // -0 is not below 0, like in JavaScript, and converts to 0.
     if value < 0.0 {
         return Err(Invalid);
     }
-    let value = saturating_usize(value);
+    let value = safe_integer_to_usize(value).ok_or(Invalid)?;
     if value < min || max.is_some_and(|max| value > max) {
         return Err(Invalid);
     }
     Ok(value)
 }
 
-/// A non-negative integral `f64` as `usize`. A value that does not fit is
-/// `usize::MAX`: an offset that large is past the end of every list.
-fn saturating_usize(value: f64) -> usize {
+/// A non-negative safe integer as `usize`. The conversion is exact, because
+/// every integer up to 2^53 - 1 is exact in `f64` and fits in `u64`.
+fn safe_integer_to_usize(value: f64) -> Option<usize> {
     #[allow(
         clippy::as_conversions,
         clippy::cast_possible_truncation,
         clippy::cast_sign_loss,
-        reason = "the value is a non-negative integer, and a float-to-integer `as` saturates"
+        reason = "the caller checks that the value is a non-negative safe integer"
     )]
-    let converted = value as usize;
-    converted
+    let exact = value as u64;
+    usize::try_from(exact).ok()
 }
 
 /// JavaScript `Number(text)` for a string: `None` where JavaScript gives NaN.
@@ -279,9 +284,23 @@ mod tests {
         }
     }
 
+    /// Effect's `Schema.isInt` is `Number.isSafeInteger`, so the TypeScript
+    /// server answered 400 above 2^53 - 1, before any Sony call.
     #[test]
-    fn a_huge_offset_is_past_every_list() {
-        assert_eq!(pagination(Some("offset=1e300")), Ok(page(usize::MAX, 60)));
+    fn an_offset_above_the_safe_integer_range_is_invalid() {
+        assert_eq!(
+            pagination(Some("offset=9007199254740991")),
+            Ok(page(9_007_199_254_740_991, 60))
+        );
+        for invalid in [
+            "offset=9007199254740992",
+            "offset=18446744073709551615",
+            "offset=1e21",
+            "offset=1e300",
+            "offset=0x20000000000000",
+        ] {
+            assert_eq!(pagination(Some(invalid)), Err(Invalid), "{invalid}");
+        }
     }
 
     #[test]
