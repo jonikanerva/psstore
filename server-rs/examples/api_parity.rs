@@ -2,7 +2,7 @@
 //! and compares the answers.
 //!
 //! ```text
-//! cargo run --locked --example api_parity -- <base A> <base B> [--games N]
+//! cargo run --locked --example api_parity -- <base A> <base B> [--games N] [--repeat N]
 //! cargo run --locked --example api_parity -- http://127.0.0.1:3456 http://127.0.0.1:3000
 //! ```
 //!
@@ -11,19 +11,27 @@
 //! headers, and the exact body bytes. For a difference it prints the request
 //! and the first difference, for example the first differing JSON path with
 //! two short values. It never prints a whole body. At the end it prints a
-//! summary. The exit code is 0 when all answers are the same, 1 on a
-//! difference or an incomplete run, and 2 on a usage error.
+//! summary per group of requests.
+//!
+//! Upstream data can change between the two calls of a pair, for example when
+//! a cache entry expires or when Sony search answers in another order. When a
+//! pair differs, the tool sends the pair again, up to `--repeat` times
+//! (default 3). When a retry pair matches byte for byte, the request counts as
+//! unstable, not as a difference. When no retry matches, the tool sends the
+//! request to server A alone once more. The report says whether server A then
+//! changed its own answer. A changed answer marks upstream noise, not a port
+//! difference.
+//!
+//! The exit code is 0 when no difference remains, 1 on a remaining difference
+//! or an incomplete run, and 2 on a usage error. An unstable request does not
+//! fail the run.
 //!
 //! Server A is the reference. The browse genres and the game ids come from
-//! the answers of server A.
+//! the first answers of server A.
 //!
 //! The tool never sends an NPSSO. The signed-in requests send no cookie or an
 //! empty cookie. The sign-in requests send bodies that fail validation before
 //! the server calls Sony.
-//!
-//! Upstream data can change between the two calls of a request, for example
-//! when a cache entry expires. Run the tool against one server twice to see
-//! this noise floor.
 
 #![allow(
     clippy::print_stdout,
@@ -40,6 +48,8 @@ use serde_json::Value;
 
 /// The default number of game pages to compare.
 const DEFAULT_GAMES: usize = 30;
+/// The default number of retry pairs for a pair that differs.
+const DEFAULT_REPEAT: usize = 3;
 /// A store request can wait for several Sony calls.
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(60);
 /// The longest value or excerpt in a difference report, in characters.
@@ -63,7 +73,7 @@ const UNKNOWN_GAME_ID: &str = "EP0000-PPSA00000_00-PARITYUNKNOWN000";
 async fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let Some(options) = Options::parse(&args) else {
-        eprintln!("usage: api_parity <base A> <base B> [--games N]");
+        eprintln!("usage: api_parity <base A> <base B> [--games N] [--repeat N]");
         return ExitCode::from(2);
     };
     let client = match Client::builder()
@@ -81,10 +91,18 @@ async fn main() -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
-    println!("api_parity: A = {}, B = {}", options.base_a, options.base_b);
+    println!(
+        "api_parity: A = {}, B = {}, games = {}, repeat = {}",
+        options.base_a, options.base_b, options.games, options.repeat
+    );
     let mut run = Run {
-        client,
-        options,
+        servers: HttpServers {
+            client,
+            base_a: options.base_a,
+            base_b: options.base_b,
+        },
+        games: options.games,
+        repeat: options.repeat,
         groups: Vec::new(),
         incomplete: Vec::new(),
     };
@@ -97,16 +115,20 @@ struct Options {
     base_a: String,
     base_b: String,
     games: usize,
+    repeat: usize,
 }
 
 impl Options {
     fn parse(args: &[String]) -> Option<Self> {
         let mut bases = Vec::new();
         let mut games = DEFAULT_GAMES;
+        let mut repeat = DEFAULT_REPEAT;
         let mut rest = args.iter();
         while let Some(arg) = rest.next() {
             if arg == "--games" {
                 games = rest.next()?.parse().ok()?;
+            } else if arg == "--repeat" {
+                repeat = rest.next()?.parse().ok()?;
             } else if arg.starts_with("--") {
                 return None;
             } else {
@@ -118,6 +140,7 @@ impl Options {
             base_a,
             base_b,
             games,
+            repeat,
         })
     }
 }
@@ -169,7 +192,7 @@ impl Probe {
 }
 
 /// The parts of an answer that the tool compares.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct Answer {
     status: u16,
     content_type: Option<String>,
@@ -185,17 +208,208 @@ impl Answer {
     }
 }
 
-/// The result counts of one group of requests.
-struct Group {
-    name: &'static str,
+/// The answer of one server, or the text of a transport error.
+type Exchange = Result<Answer, String>;
+
+/// One of the two servers.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Side {
+    A,
+    B,
+}
+
+/// Sends one request to one of the two servers. The unit tests use a fake.
+trait Servers {
+    async fn send(&self, side: Side, probe: &Probe) -> Exchange;
+}
+
+/// The two servers over HTTP.
+struct HttpServers {
+    client: Client,
+    base_a: String,
+    base_b: String,
+}
+
+impl Servers for HttpServers {
+    async fn send(&self, side: Side, probe: &Probe) -> Exchange {
+        let base = match side {
+            Side::A => &self.base_a,
+            Side::B => &self.base_b,
+        };
+        let mut request = self
+            .client
+            .request(probe.method.clone(), format!("{base}{}", probe.target));
+        for (name, value) in &probe.headers {
+            request = request.header(*name, *value);
+        }
+        if let Some(body) = probe.body {
+            request = request.body(body);
+        }
+        let response = request.send().await.map_err(|e| e.to_string())?;
+        let status = response.status().as_u16();
+        let headers = response.headers().clone();
+        let body = response.bytes().await.map_err(|e| e.to_string())?;
+        Ok(Answer {
+            status,
+            content_type: header(&headers, CONTENT_TYPE),
+            set_cookie: headers
+                .get_all(SET_COOKIE)
+                .iter()
+                .map(|v| String::from_utf8_lossy(v.as_bytes()).into_owned())
+                .collect(),
+            cache_control: header(&headers, CACHE_CONTROL),
+            body: body.to_vec(),
+        })
+    }
+}
+
+/// The result of one request after its retries.
+#[derive(Debug, PartialEq, Eq)]
+enum Outcome {
+    /// The first pair matched.
+    Same,
+    /// The first pair differed, and retry pair `retry` (from 1) matched.
+    Unstable { retry: usize },
+    /// No pair matched. `differences` describes the first pair.
+    Different {
+        differences: Vec<String>,
+        a_alone: AloneCheck,
+    },
+}
+
+/// The answer of server A to the request that the tool sends to it alone
+/// after a remaining difference, against its first answer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum AloneCheck {
+    /// The same answer: server A was stable.
+    Unchanged,
+    /// Another answer: server A itself changed, so the upstream data moved.
+    Changed,
+    /// One of the two requests to server A got no answer.
+    NoAnswer,
+}
+
+/// Sends one request pair. When the pair differs, it sends up to `repeat`
+/// retry pairs and stops at the first pair that matches. When no pair
+/// matches, it sends the request to server A alone once more. Returns the
+/// first answer of server A and the outcome.
+async fn check(servers: &impl Servers, probe: &Probe, repeat: usize) -> (Option<Answer>, Outcome) {
+    let first_a = servers.send(Side::A, probe).await;
+    let first_b = servers.send(Side::B, probe).await;
+    let differences = pair_differences(&first_a, &first_b);
+    if differences.is_empty() {
+        return (first_a.ok(), Outcome::Same);
+    }
+    for retry in 1..=repeat {
+        let a = servers.send(Side::A, probe).await;
+        let b = servers.send(Side::B, probe).await;
+        if pair_differences(&a, &b).is_empty() {
+            return (first_a.ok(), Outcome::Unstable { retry });
+        }
+    }
+    let again = servers.send(Side::A, probe).await;
+    let a_alone = alone_check(&first_a, &again);
+    (
+        first_a.ok(),
+        Outcome::Different {
+            differences,
+            a_alone,
+        },
+    )
+}
+
+/// The differences of one pair. An empty list means that the pair matched
+/// byte for byte. A transport error is always a difference.
+fn pair_differences(a: &Exchange, b: &Exchange) -> Vec<String> {
+    match (a, b) {
+        (Ok(a), Ok(b)) => differences(a, b),
+        _ => vec![format!("transport: {} vs {}", transport(a), transport(b))],
+    }
+}
+
+fn transport(exchange: &Exchange) -> &str {
+    match exchange {
+        Ok(_) => "answer",
+        Err(error) => error,
+    }
+}
+
+fn alone_check(first: &Exchange, again: &Exchange) -> AloneCheck {
+    match (first, again) {
+        (Ok(first), Ok(again)) if first == again => AloneCheck::Unchanged,
+        (Ok(_), Ok(_)) => AloneCheck::Changed,
+        _ => AloneCheck::NoAnswer,
+    }
+}
+
+/// The report lines of one request. A request that matched at once has none.
+fn report(probe: &Probe, outcome: &Outcome, repeat: usize) -> Vec<String> {
+    match outcome {
+        Outcome::Same => Vec::new(),
+        Outcome::Unstable { retry } => vec![format!(
+            "UNSTABLE {}: matched on retry {retry} of {repeat}",
+            probe.label()
+        )],
+        Outcome::Different {
+            differences,
+            a_alone,
+        } => {
+            let mut lines = vec![format!("DIFF {}", probe.label())];
+            lines.extend(differences.iter().map(|d| format!("     {d}")));
+            let a_alone = match a_alone {
+                AloneCheck::Unchanged => "same answer as its first answer",
+                AloneCheck::Changed => "another answer than its first answer (upstream noise)",
+                AloneCheck::NoAnswer => "no answer",
+            };
+            lines.push(format!(
+                "     no retry of {repeat} matched; server A alone: {a_alone}"
+            ));
+            lines
+        }
+    }
+}
+
+/// The outcome counts of one group of requests.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+struct Counts {
     same: usize,
+    unstable: usize,
     different: usize,
 }
 
+impl Counts {
+    fn record(&mut self, outcome: &Outcome) {
+        match outcome {
+            Outcome::Same => self.same += 1,
+            Outcome::Unstable { .. } => self.unstable += 1,
+            Outcome::Different { .. } => self.different += 1,
+        }
+    }
+
+    fn total(self) -> usize {
+        self.same + self.unstable + self.different
+    }
+
+    fn add(self, other: Self) -> Self {
+        Self {
+            same: self.same + other.same,
+            unstable: self.unstable + other.unstable,
+            different: self.different + other.different,
+        }
+    }
+}
+
+/// True when no difference remains and the request set is complete.
+fn passed(groups: &[(&str, Counts)], incomplete: &[String]) -> bool {
+    incomplete.is_empty() && groups.iter().all(|(_, counts)| counts.different == 0)
+}
+
 struct Run {
-    client: Client,
-    options: Options,
-    groups: Vec<Group>,
+    servers: HttpServers,
+    games: usize,
+    repeat: usize,
+    /// The counts per group, in the order of the first request of each group.
+    groups: Vec<(&'static str, Counts)>,
     /// The parts of the request set that the tool could not build.
     incomplete: Vec<String>,
 }
@@ -255,8 +469,8 @@ impl Run {
         )
         .await;
 
-        let ids = sample_ids(&list_pages, self.options.games);
-        if ids.is_empty() && self.options.games > 0 {
+        let ids = sample_ids(&list_pages, self.games);
+        if ids.is_empty() && self.games > 0 {
             self.incomplete
                 .push("game pages: server A gave no game ids".to_owned());
         }
@@ -274,98 +488,45 @@ impl Run {
         }
     }
 
-    /// Sends one request to both servers, records the result, and reports a
-    /// difference. Returns the answer of server A.
+    /// Checks one request, prints its report lines, and counts its outcome.
+    /// Returns the first answer of server A.
     async fn compare(&mut self, group: &'static str, probe: &Probe) -> Option<Answer> {
-        let a = self.send(&self.options.base_a, probe).await;
-        let b = self.send(&self.options.base_b, probe).await;
-        let differences = match (&a, &b) {
-            (Ok(a), Ok(b)) => differences(a, b),
-            (a, b) => vec![format!(
-                "transport: {} vs {}",
-                a.as_ref()
-                    .map_or_else(Clone::clone, |_| "answer".to_owned()),
-                b.as_ref()
-                    .map_or_else(Clone::clone, |_| "answer".to_owned()),
-            )],
-        };
-        let index = match self.groups.iter().position(|g| g.name == group) {
-            Some(index) => index,
+        let (first_a, outcome) = check(&self.servers, probe, self.repeat).await;
+        for line in report(probe, &outcome, self.repeat) {
+            println!("{line}");
+        }
+        match self.groups.iter_mut().find(|(name, _)| *name == group) {
+            Some((_, counts)) => counts.record(&outcome),
             None => {
-                self.groups.push(Group {
-                    name: group,
-                    same: 0,
-                    different: 0,
-                });
-                self.groups.len() - 1
-            }
-        };
-        if let Some(counts) = self.groups.get_mut(index) {
-            if differences.is_empty() {
-                counts.same += 1;
-            } else {
-                counts.different += 1;
+                let mut counts = Counts::default();
+                counts.record(&outcome);
+                self.groups.push((group, counts));
             }
         }
-        if !differences.is_empty() {
-            println!("DIFF {}", probe.label());
-            for difference in differences {
-                println!("     {difference}");
-            }
-        }
-        a.ok()
-    }
-
-    async fn send(&self, base: &str, probe: &Probe) -> Result<Answer, String> {
-        let mut request = self
-            .client
-            .request(probe.method.clone(), format!("{base}{}", probe.target));
-        for (name, value) in &probe.headers {
-            request = request.header(*name, *value);
-        }
-        if let Some(body) = probe.body {
-            request = request.body(body);
-        }
-        let response = request.send().await.map_err(|e| e.to_string())?;
-        let status = response.status().as_u16();
-        let headers = response.headers().clone();
-        let body = response.bytes().await.map_err(|e| e.to_string())?;
-        Ok(Answer {
-            status,
-            content_type: header(&headers, CONTENT_TYPE),
-            set_cookie: headers
-                .get_all(SET_COOKIE)
-                .iter()
-                .map(|v| String::from_utf8_lossy(v.as_bytes()).into_owned())
-                .collect(),
-            cache_control: header(&headers, CACHE_CONTROL),
-            body: body.to_vec(),
-        })
+        first_a
     }
 
     fn summary(&self) -> ExitCode {
-        let (mut same, mut different) = (0, 0);
-        println!("summary:");
-        for group in &self.groups {
+        let line = |name: &str, counts: Counts| {
             println!(
-                "  {:<11} {:>4} requests, {:>4} same, {:>4} different",
-                group.name,
-                group.same + group.different,
-                group.same,
-                group.different
+                "  {name:<11} {:>4} requests, {:>4} same, {:>4} unstable, {:>4} different",
+                counts.total(),
+                counts.same,
+                counts.unstable,
+                counts.different
             );
-            same += group.same;
-            different += group.different;
+        };
+        println!("summary:");
+        let mut total = Counts::default();
+        for (name, counts) in &self.groups {
+            line(name, *counts);
+            total = total.add(*counts);
         }
-        println!(
-            "  {:<11} {:>4} requests, {same:>4} same, {different:>4} different",
-            "total",
-            same + different
-        );
+        line("total", total);
         for gap in &self.incomplete {
             println!("  incomplete: {gap}");
         }
-        if different == 0 && self.incomplete.is_empty() {
+        if passed(&self.groups, &self.incomplete) {
             ExitCode::SUCCESS
         } else {
             ExitCode::FAILURE
@@ -610,7 +771,11 @@ fn byte_difference(a: &[u8], b: &[u8]) -> String {
 
 #[cfg(test)]
 mod tests {
+    use std::cell::RefCell;
+    use std::collections::VecDeque;
+
     use super::*;
+    use Side::{A, B};
 
     fn answer(status: u16, body: &str) -> Answer {
         Answer {
@@ -620,6 +785,192 @@ mod tests {
             cache_control: None,
             body: body.as_bytes().to_vec(),
         }
+    }
+
+    fn ok(body: &str) -> Exchange {
+        Ok(answer(200, body))
+    }
+
+    /// Fake servers: each side answers from its own script, in order, and
+    /// the fake records the side of every call.
+    struct Script {
+        a: RefCell<VecDeque<Exchange>>,
+        b: RefCell<VecDeque<Exchange>>,
+        calls: RefCell<Vec<Side>>,
+    }
+
+    impl Script {
+        fn new(a: Vec<Exchange>, b: Vec<Exchange>) -> Self {
+            Self {
+                a: RefCell::new(a.into()),
+                b: RefCell::new(b.into()),
+                calls: RefCell::default(),
+            }
+        }
+
+        fn calls(&self) -> Vec<Side> {
+            self.calls.borrow().clone()
+        }
+    }
+
+    impl Servers for Script {
+        async fn send(&self, side: Side, _probe: &Probe) -> Exchange {
+            self.calls.borrow_mut().push(side);
+            let script = match side {
+                Side::A => &self.a,
+                Side::B => &self.b,
+            };
+            script
+                .borrow_mut()
+                .pop_front()
+                .unwrap_or_else(|| Err("the script has no more answers".into()))
+        }
+    }
+
+    fn probe() -> Probe {
+        Probe::get("/api/games/search?q=lego")
+    }
+
+    #[tokio::test]
+    async fn a_matching_pair_is_same_without_a_retry() {
+        let servers = Script::new(vec![ok("1")], vec![ok("1")]);
+        let (first_a, outcome) = check(&servers, &probe(), 3).await;
+        assert_eq!(outcome, Outcome::Same);
+        assert_eq!(first_a, Some(answer(200, "1")));
+        assert_eq!(servers.calls(), vec![A, B]);
+    }
+
+    #[tokio::test]
+    async fn a_pair_that_matches_on_a_retry_is_unstable_and_stops_there() {
+        let servers = Script::new(
+            vec![ok("1"), ok("2"), ok("3"), ok("4")],
+            vec![ok("x"), ok("y"), ok("3"), ok("4")],
+        );
+        let (first_a, outcome) = check(&servers, &probe(), 3).await;
+        assert_eq!(outcome, Outcome::Unstable { retry: 2 });
+        // The first answer of server A feeds the genre and id samples.
+        assert_eq!(first_a, Some(answer(200, "1")));
+        assert_eq!(servers.calls(), vec![A, B, A, B, A, B]);
+    }
+
+    #[tokio::test]
+    async fn a_pair_that_never_matches_is_a_difference_with_a_stable_server_a() {
+        let servers = Script::new(vec![ok("1"); 5], vec![ok("2"); 4]);
+        let (_, outcome) = check(&servers, &probe(), 3).await;
+        assert_eq!(
+            outcome,
+            Outcome::Different {
+                differences: vec!["body: $: 1 vs 2".into()],
+                a_alone: AloneCheck::Unchanged,
+            }
+        );
+        assert_eq!(servers.calls(), vec![A, B, A, B, A, B, A, B, A]);
+    }
+
+    #[tokio::test]
+    async fn the_a_alone_check_reports_a_changed_answer_of_server_a() {
+        let servers = Script::new(vec![ok("1"), ok("1"), ok("9")], vec![ok("2"), ok("2")]);
+        let (_, outcome) = check(&servers, &probe(), 1).await;
+        assert!(
+            matches!(
+                outcome,
+                Outcome::Different {
+                    a_alone: AloneCheck::Changed,
+                    ..
+                }
+            ),
+            "{outcome:?}"
+        );
+        assert_eq!(servers.calls(), vec![A, B, A, B, A]);
+    }
+
+    #[tokio::test]
+    async fn repeat_zero_checks_server_a_alone_without_a_retry() {
+        let servers = Script::new(vec![ok("1"), ok("1")], vec![ok("2")]);
+        let (_, outcome) = check(&servers, &probe(), 0).await;
+        assert!(
+            matches!(
+                outcome,
+                Outcome::Different {
+                    a_alone: AloneCheck::Unchanged,
+                    ..
+                }
+            ),
+            "{outcome:?}"
+        );
+        assert_eq!(servers.calls(), vec![A, B, A]);
+    }
+
+    #[tokio::test]
+    async fn a_transport_error_is_never_a_match() {
+        let refused = || -> Exchange { Err("connection refused".into()) };
+        let servers = Script::new(
+            vec![refused(), refused(), refused()],
+            vec![refused(), refused()],
+        );
+        let (first_a, outcome) = check(&servers, &probe(), 1).await;
+        assert_eq!(first_a, None);
+        assert_eq!(
+            outcome,
+            Outcome::Different {
+                differences: vec!["transport: connection refused vs connection refused".into()],
+                a_alone: AloneCheck::NoAnswer,
+            }
+        );
+    }
+
+    #[test]
+    fn reports_one_line_for_an_unstable_request() {
+        assert!(report(&probe(), &Outcome::Same, 3).is_empty());
+        assert_eq!(
+            report(&probe(), &Outcome::Unstable { retry: 2 }, 3),
+            vec!["UNSTABLE GET /api/games/search?q=lego: matched on retry 2 of 3"]
+        );
+    }
+
+    #[test]
+    fn reports_a_difference_with_the_server_a_check() {
+        let outcome = Outcome::Different {
+            differences: vec!["status: 200 vs 502".into()],
+            a_alone: AloneCheck::Changed,
+        };
+        assert_eq!(
+            report(&probe(), &outcome, 3),
+            vec![
+                "DIFF GET /api/games/search?q=lego",
+                "     status: 200 vs 502",
+                "     no retry of 3 matched; server A alone: another answer than its first answer (upstream noise)",
+            ]
+        );
+    }
+
+    #[test]
+    fn only_a_remaining_difference_or_a_gap_fails_the_run() {
+        let mut counts = Counts::default();
+        counts.record(&Outcome::Same);
+        counts.record(&Outcome::Unstable { retry: 1 });
+        assert_eq!(
+            counts,
+            Counts {
+                same: 1,
+                unstable: 1,
+                different: 0
+            }
+        );
+        assert!(passed(&[("search", counts)], &[]));
+        assert!(!passed(
+            &[("search", counts)],
+            &["browse: no genres".into()]
+        ));
+        counts.record(&Outcome::Different {
+            differences: Vec::new(),
+            a_alone: AloneCheck::Unchanged,
+        });
+        assert_eq!(counts.total(), 3);
+        assert!(!passed(
+            &[("lists", Counts::default()), ("search", counts)],
+            &[]
+        ));
     }
 
     #[test]
@@ -698,25 +1049,34 @@ mod tests {
     }
 
     #[test]
-    fn parses_two_bases_and_the_game_count() {
+    fn parses_two_bases_the_game_count_and_the_repeat_count() {
         let args = |list: &[&str]| list.iter().map(|s| (*s).to_owned()).collect::<Vec<_>>();
-        let options = Options::parse(&args(&["http://a/", "http://b", "--games", "5"])).unwrap();
+        let options = Options::parse(&args(&[
+            "http://a/",
+            "http://b",
+            "--games",
+            "5",
+            "--repeat",
+            "0",
+        ]))
+        .unwrap();
         assert_eq!(
             (
                 options.base_a.as_str(),
                 options.base_b.as_str(),
-                options.games
+                options.games,
+                options.repeat
             ),
-            ("http://a", "http://b", 5)
+            ("http://a", "http://b", 5, 0)
         );
+        let defaults = Options::parse(&args(&["http://a", "http://b"])).unwrap();
         assert_eq!(
-            Options::parse(&args(&["http://a", "http://b"]))
-                .unwrap()
-                .games,
-            DEFAULT_GAMES
+            (defaults.games, defaults.repeat),
+            (DEFAULT_GAMES, DEFAULT_REPEAT)
         );
         assert!(Options::parse(&args(&["http://a"])).is_none());
         assert!(Options::parse(&args(&["http://a", "http://b", "--games"])).is_none());
+        assert!(Options::parse(&args(&["http://a", "http://b", "--repeat", "-1"])).is_none());
         assert!(Options::parse(&args(&["http://a", "http://b", "--other"])).is_none());
     }
 
