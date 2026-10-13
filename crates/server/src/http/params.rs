@@ -9,7 +9,7 @@
 //!   numbers. The number must then be an integer in range.
 //! - Text lengths count UTF-16 code units, like JavaScript.
 //!
-//! Every invalid request answers an empty 400.
+//! Every invalid request answers the `invalid_request` problem (400).
 
 use crate::application::Page;
 use crate::domain::browse::{BrowseOrder, GenreKey};
@@ -26,7 +26,7 @@ pub const SEARCH_MAX_PAGE_SIZE: usize = 50;
 /// The longest search term, in UTF-16 code units, after trimming.
 pub const SEARCH_MAX_TERM_LENGTH: usize = 100;
 
-/// An invalid request: the route answers an empty 400.
+/// An invalid request: the route answers the `invalid_request` problem (400).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Invalid;
 

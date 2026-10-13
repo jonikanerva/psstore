@@ -9,7 +9,9 @@
 //   the generated Problem schema.
 // - A failure with an HTTP response becomes an `ApiError` with the status
 //   and a code. A failure without a response (network, abort) keeps its
-//   original error, so an abort stays an `AbortError`.
+//   original error, so an abort before the response headers stays an
+//   `AbortError`. An abort while the body is read becomes an `ApiError`
+//   with the code `invalid_response`.
 //
 // Never edit `./generated`: run `pnpm --filter @psstore/api-client run
 // generate` after a change to `contract/openapi.json`.
