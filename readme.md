@@ -21,7 +21,7 @@ to PS5 / Finland / EUR; the frontend renders what the server returns.
 
 - `crates/server/` — Rust HTTP server (Axum on Tokio): the typed REST API, an in-memory cache, and the
   built client
-- `client/` — Vite + React SPA (TanStack Router, TanStack Query, Tailwind CSS)
+- `web/` — Vite + React SPA (TanStack Router, TanStack Query, Tailwind CSS)
 - `shared/` — the TypeScript view of the API contract (Effect Schema) and pure client utilities
 - `tools/sony-contract-bot/` — captures and validates Sony's GraphQL contract
 - `docs/contracts/` — the Sony contract (manifest and `sony-constants.json`) and the API examples
@@ -102,7 +102,7 @@ pnpm --filter @psstore/sony-contract-bot exec playwright install chromium
 
 Railway deploys each merge to `main` to `https://psstore.calmdonut.com`. `railpack.json` sets
 the build: the client build and `cargo build --release --locked`. The image contains only the
-server binary and `client/build`. `STACK.md → 17` describes the release and the rollback.
+server binary and `web/build`. `STACK.md → 17` describes the release and the rollback.
 
 To run the production shape locally:
 
@@ -112,11 +112,11 @@ pnpm run build
 pnpm run start
 ```
 
-The server serves `client/build` from the working directory and handles SPA fallback routing.
+The server serves `web/build` from the working directory and handles SPA fallback routing.
 
 ## Environment Variables
 
-- `PORT` (default: `3000`). The Vite dev proxy in `client/vite.config.ts` targets port
+- `PORT` (default: `3000`). The Vite dev proxy in `web/vite.config.ts` targets port
   `3000`. If you change `PORT` in development, change the proxy target too.
 
 - `IGDB_CLIENT_ID` and `IGDB_CLIENT_SECRET` (optional). They are the Twitch app

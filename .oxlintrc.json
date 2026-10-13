@@ -13,7 +13,7 @@
   "ignorePatterns": [
     "node_modules/**",
     "build/**",
-    "client/build/**",
+    "web/build/**",
     "shared/dist/**",
     "tools/sony-contract-bot/dist/**",
     "coverage/**",
@@ -197,7 +197,7 @@
       "plugins": ["typescript"]
     },
     {
-      "files": ["client/src/**/*.tsx"],
+      "files": ["web/src/**/*.tsx"],
       "rules": {
         "react/display-name": "error",
         "react/jsx-key": "error",
@@ -222,7 +222,7 @@
     },
     {
       "files": [
-        "client/src/**/*.{ts,tsx}",
+        "web/src/**/*.{ts,tsx}",
         "shared/src/**/*.ts",
         "tools/*/src/**/*.ts"
       ],

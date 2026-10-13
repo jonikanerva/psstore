@@ -14,9 +14,9 @@
     "build": {
       "secrets": [],
       "commands": [
-        "pnpm install --frozen-lockfile --filter @psstore/client...",
+        "pnpm install --frozen-lockfile --filter @psstore/web...",
         "pnpm --filter @psstore/shared run build",
-        "pnpm --filter @psstore/client run build",
+        "pnpm --filter @psstore/web run build",
         "mkdir -p bin",
         "cargo build --release --locked --package psstore-server",
         "cp target/release/psstore-server bin"
@@ -28,7 +28,7 @@
     "inputs": [
       {
         "step": "build",
-        "include": ["bin", "client/build"]
+        "include": ["bin", "web/build"]
       }
     ]
   }

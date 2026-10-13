@@ -10,8 +10,9 @@ use crate::domain::secret::Secret;
 /// The port when `PORT` is missing or not a usable port.
 pub const DEFAULT_PORT: u16 = 3000;
 
-/// The client build directory, relative to the working directory.
-pub const CLIENT_BUILD_DIR: &str = "client/build";
+/// The client build: the build output of the `web` package, relative to the
+/// working directory.
+pub const WEB_BUILD_DIR: &str = "web/build";
 
 /// The validated settings.
 #[derive(Debug, Clone)]
@@ -20,7 +21,7 @@ pub struct Config {
     pub port: u16,
     /// The IGDB credentials. Without both values the critic score is off.
     pub igdb: Option<IgdbCredentials>,
-    pub client_build: PathBuf,
+    pub web_build: PathBuf,
 }
 
 /// The Twitch app credentials of the IGDB critic score.
@@ -61,7 +62,7 @@ impl Config {
         Self {
             port: parse_port(lookup("PORT").as_deref()),
             igdb,
-            client_build: PathBuf::from(CLIENT_BUILD_DIR),
+            web_build: PathBuf::from(WEB_BUILD_DIR),
         }
     }
 }

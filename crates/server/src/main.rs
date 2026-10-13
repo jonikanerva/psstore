@@ -50,7 +50,7 @@ fn main() -> ExitCode {
 }
 
 async fn run(config: Config, sony: SonyContract) -> Result<(), &'static str> {
-    if index_exists(&config.client_build) {
+    if index_exists(&config.web_build) {
         tracing::info!("client build found");
     } else {
         tracing::warn!("client build missing; every page path answers 404");

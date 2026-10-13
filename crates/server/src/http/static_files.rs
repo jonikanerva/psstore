@@ -1,4 +1,4 @@
-//! The built single-page client (`client/build`).
+//! The built single-page client (`web/build`).
 //!
 //! The rules match the static server of the TypeScript server:
 //!
