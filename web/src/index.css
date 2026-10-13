@@ -697,6 +697,8 @@ body {
 
 .sign-in--steps a {
   color: #0b5cad;
+  /* WCAG 1.4.1: a link inside a sentence needs a cue other than colour. */
+  text-decoration: underline;
 }
 
 .sign-in--label {
