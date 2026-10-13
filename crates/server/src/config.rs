@@ -6,6 +6,7 @@
 use std::path::PathBuf;
 
 use crate::domain::secret::Secret;
+use crate::observability::LogFormat;
 
 /// The port when `PORT` is missing or not a usable port.
 pub const DEFAULT_PORT: u16 = 3000;
@@ -22,6 +23,28 @@ pub struct Config {
     /// The IGDB credentials. Without both values the critic score is off.
     pub igdb: Option<IgdbCredentials>,
     pub web_build: PathBuf,
+    /// The log line format (`PSSTORE_LOG_FORMAT`): `json`, the default, or
+    /// `text`.
+    pub log_format: LogFormat,
+    /// The settings that had an invalid value. Each one uses its default.
+    pub invalid: Vec<InvalidSetting>,
+}
+
+/// A setting whose value was invalid, so the server uses its default.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum InvalidSetting {
+    /// `PSSTORE_LOG_FORMAT` was not `json` or `text`.
+    LogFormat,
+}
+
+impl InvalidSetting {
+    /// A fixed tag for the log. The log never shows the invalid value.
+    #[must_use]
+    pub fn tag(self) -> &'static str {
+        match self {
+            Self::LogFormat => "invalid_log_format",
+        }
+    }
 }
 
 /// The Twitch app credentials of the IGDB critic score.
@@ -44,7 +67,8 @@ impl std::fmt::Debug for IgdbCredentials {
 }
 
 impl Config {
-    /// Reads `PORT`, `IGDB_CLIENT_ID`, and `IGDB_CLIENT_SECRET`.
+    /// Reads `PORT`, `IGDB_CLIENT_ID`, `IGDB_CLIENT_SECRET`, and
+    /// `PSSTORE_LOG_FORMAT`.
     #[must_use]
     pub fn from_env() -> Self {
         Self::from_lookup(|name| std::env::var(name).ok())
@@ -60,10 +84,20 @@ impl Config {
             }),
             _ => None,
         };
+        let mut invalid = Vec::new();
+        let log_format = match non_empty("PSSTORE_LOG_FORMAT") {
+            None => LogFormat::default(),
+            Some(value) => LogFormat::parse(&value).unwrap_or_else(|| {
+                invalid.push(InvalidSetting::LogFormat);
+                LogFormat::default()
+            }),
+        };
         Self {
             port: parse_port(lookup("PORT").as_deref()),
             igdb,
             web_build: PathBuf::from(WEB_BUILD_DIR),
+            log_format,
+            invalid,
         }
     }
 }
@@ -101,6 +135,27 @@ mod tests {
         assert_eq!(config(&[("PORT", "0")]).port, 3000);
         assert_eq!(config(&[("PORT", "abc")]).port, 3000);
         assert_eq!(config(&[("PORT", "70000")]).port, 3000);
+    }
+
+    #[test]
+    fn reads_the_log_format_with_json_as_the_default() {
+        assert_eq!(config(&[]).log_format, LogFormat::Json);
+        assert_eq!(config(&[]).invalid, Vec::<InvalidSetting>::new());
+        assert_eq!(
+            config(&[("PSSTORE_LOG_FORMAT", "")]).log_format,
+            LogFormat::Json
+        );
+        assert_eq!(
+            config(&[("PSSTORE_LOG_FORMAT", "text")]).log_format,
+            LogFormat::Text
+        );
+        assert_eq!(
+            config(&[("PSSTORE_LOG_FORMAT", "json")]).log_format,
+            LogFormat::Json
+        );
+        let typo = config(&[("PSSTORE_LOG_FORMAT", "txt")]);
+        assert_eq!(typo.log_format, LogFormat::Json);
+        assert_eq!(typo.invalid, vec![InvalidSetting::LogFormat]);
     }
 
     #[test]

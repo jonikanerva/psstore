@@ -130,7 +130,8 @@ run = [
 ]
 
 [tasks.dev]
-description = "The server and the Vite dev server"
+description = "The server and the Vite dev server; the server log is readable text"
+env = { PSSTORE_LOG_FORMAT = "text" }
 raw = true
 run = 'pnpm exec concurrently "cargo run --locked -p psstore-server" "pnpm --filter @psstore/web run dev"'
 

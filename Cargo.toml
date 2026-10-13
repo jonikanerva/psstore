@@ -34,6 +34,9 @@ tower = { version = "=0.5.3", default-features = false, features = ["util"] }
 tower-http = { version = "=0.6.11", default-features = false, features = ["fs"] }
 tracing = { version = "=0.1.44", default-features = false, features = ["std"] }
 tracing-subscriber = { version = "=0.3.23", default-features = false, features = ["registry", "std"] }
+# The random request id of each request (`v4`). Its random source,
+# `getrandom` 0.4, is already in the graph through reqwest.
+uuid = { version = "=1.26.1", default-features = false, features = ["std", "v4"] }
 
 # The lints of the default Rust profile (STACK.md). Each crate inherits them
 # with `[lints] workspace = true`. `missing_debug_implementations` is an extra

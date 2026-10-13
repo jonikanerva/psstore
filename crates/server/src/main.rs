@@ -16,7 +16,11 @@ use psstore_server::{http, observability, wiring};
 const SHUTDOWN_GRACE: Duration = Duration::from_secs(35);
 
 fn main() -> ExitCode {
-    if observability::init().is_err() {
+    // The settings come first, because they select the log format. Reading
+    // them cannot fail; an invalid value falls back to its default and is
+    // logged below.
+    let config = Config::from_env();
+    if observability::init(config.log_format).is_err() {
         #[expect(clippy::print_stderr, reason = "logging could not be set up")]
         {
             eprintln!("psstore-server: logging could not be set up");
@@ -24,8 +28,14 @@ fn main() -> ExitCode {
         return ExitCode::FAILURE;
     }
     observability::install_panic_hook();
+    for setting in &config.invalid {
+        tracing::warn!(
+            stage = "config",
+            reason = setting.tag(),
+            "invalid setting ignored; the default applies"
+        );
+    }
 
-    let config = Config::from_env();
     let Ok(sony) = SonyContract::load() else {
         tracing::error!(stage = "sony_contract", "the Sony contract file is invalid");
         return ExitCode::FAILURE;

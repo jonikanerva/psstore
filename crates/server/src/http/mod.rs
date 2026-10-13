@@ -26,6 +26,7 @@ use axum::routing::{get, post};
 use futures_util::FutureExt;
 use tower::Layer;
 use tower::util::MapRequestLayer;
+use tracing::Instrument;
 
 use crate::application::{AccountApi, CriticScores, GamesApi};
 use static_files::StaticSite;
@@ -120,9 +121,14 @@ fn trim_trailing_slash(mut request: Request) -> Request {
     request
 }
 
-/// Writes one log line per request and contains a panic in request handling
-/// as an empty 500. The line has the route pattern, never the path, the query,
-/// a header, or a body: a search term or a game id is user input.
+/// Runs each request in a `request` span, writes one log line per request,
+/// and contains a panic in request handling as an empty 500.
+///
+/// The span carries a random request id (UUID v4), the route pattern, and the
+/// method, so every event inside the request has them. A lookup that a cache
+/// task shares between requests runs outside the span. The log never has the
+/// path, the query, a header, or a body: a search term or a game id is user
+/// input.
 async fn request_context(request: Request, next: Next) -> Response {
     let started = tokio::time::Instant::now();
     let route = request
@@ -130,25 +136,43 @@ async fn request_context(request: Request, next: Next) -> Response {
         .get::<MatchedPath>()
         .map_or_else(|| "static".to_owned(), |p| p.as_str().to_owned());
     let method = request.method().as_str().to_owned();
-
-    // The panic payload is dropped unread, because it can contain private
-    // data. `AssertUnwindSafe` is acceptable: the handler future is dropped,
-    // and the shared state recovers from poisoned locks.
-    let response = match AssertUnwindSafe(next.run(request)).catch_unwind().await {
-        Ok(response) => response,
-        Err(_payload) => {
-            tracing::error!(route = route.as_str(), "request handling panicked");
-            StatusCode::INTERNAL_SERVER_ERROR.into_response()
-        }
-    };
-    tracing::info!(
+    let span = tracing::info_span!(
+        "request",
+        request_id = tracing::field::Empty,
         route = route.as_str(),
         method = method.as_str(),
-        status = u64::from(response.status().as_u16()),
-        elapsed_ms = u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX),
-        "request completed"
     );
-    response
+
+    // `Uuid::new_v4` panics when the operating system gives no random bytes,
+    // so the id is made inside the panic containment. The panic payload is
+    // dropped unread, because it can contain private data.
+    // `AssertUnwindSafe` is acceptable: the handler future is dropped, and
+    // the shared state recovers from poisoned locks.
+    let id_span = span.clone();
+    let handled = async move {
+        id_span.record(
+            "request_id",
+            tracing::field::display(uuid::Uuid::new_v4().hyphenated()),
+        );
+        next.run(request).await
+    };
+    async move {
+        let response = match AssertUnwindSafe(handled).catch_unwind().await {
+            Ok(response) => response,
+            Err(_payload) => {
+                tracing::error!("request handling panicked");
+                StatusCode::INTERNAL_SERVER_ERROR.into_response()
+            }
+        };
+        tracing::info!(
+            status = u64::from(response.status().as_u16()),
+            elapsed_ms = u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX),
+            "request completed"
+        );
+        response
+    }
+    .instrument(span)
+    .await
 }
 
 /// `GET /healthz`. It calls no upstream service.

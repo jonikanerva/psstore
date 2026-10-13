@@ -1030,3 +1030,101 @@ async fn health_and_api_routes_come_before_the_client_build() {
         .await;
     assert!(body(genres).await.starts_with(r#"{"genres""#));
 }
+
+// ---- Request context ---------------------------------------------------------
+
+/// A router with test handlers behind the request context middleware.
+fn context_router() -> axum::Router {
+    async fn logs_inside() -> &'static str {
+        tracing::info!(count = 1_u64, "inside the handler");
+        "ok"
+    }
+    async fn panics() -> &'static str {
+        panic!("synthetic handler panic")
+    }
+    axum::Router::new()
+        .route("/log", axum::routing::get(logs_inside))
+        .route("/panic", axum::routing::get(panics))
+        .layer(axum::middleware::from_fn(super::request_context))
+}
+
+async fn send_to_context(uri: &str) -> Response {
+    context_router()
+        .oneshot(Request::get(uri).body(Body::empty()).unwrap())
+        .await
+        .unwrap()
+}
+
+/// True for the text form of a random (version 4) UUID.
+fn is_uuid_v4(text: &str) -> bool {
+    let groups: Vec<&str> = text.split('-').collect();
+    let lengths: Vec<usize> = groups.iter().map(|g| g.len()).collect();
+    lengths == [8, 4, 4, 4, 12]
+        && text
+            .chars()
+            .all(|c| c == '-' || c.is_ascii_digit() || ('a'..='f').contains(&c))
+        && groups[2].starts_with('4')
+}
+
+#[tokio::test]
+async fn every_event_of_a_request_has_its_own_request_id() {
+    let logs = CapturedLogs::default();
+    {
+        let _guard = logs.install();
+        assert_eq!(send_to_context("/log").await.status(), StatusCode::OK);
+        assert_eq!(send_to_context("/log").await.status(), StatusCode::OK);
+    }
+    let lines = logs.lines();
+    assert_eq!(lines.len(), 4, "{}", logs.text());
+    let ids: Vec<&str> = lines
+        .iter()
+        .map(|line| line["request_id"].as_str().unwrap())
+        .collect();
+    // Each request writes the handler event and then the completion line,
+    // both with the id of that request.
+    assert_eq!(ids[0], ids[1]);
+    assert_eq!(ids[2], ids[3]);
+    assert_ne!(ids[0], ids[2]);
+    assert!(ids.iter().all(|id| is_uuid_v4(id)), "{ids:?}");
+    for line in &lines {
+        assert_eq!(line["route"], "/log");
+        assert_eq!(line["method"], "GET");
+        assert!(line.get("dropped_fields").is_none(), "{line}");
+    }
+    assert_eq!(lines[0]["message"], "inside the handler");
+    assert_eq!(lines[1]["message"], "request completed");
+    assert_eq!(lines[1]["status"], 200);
+}
+
+#[tokio::test]
+async fn a_handler_panic_is_an_empty_500_logged_with_its_request_id() {
+    let logs = CapturedLogs::default();
+    let response = {
+        let _guard = logs.install();
+        send_to_context("/panic").await
+    };
+    assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
+    assert_eq!(body(response).await, "");
+    let text = logs.text();
+    assert!(!text.contains("synthetic handler panic"), "{text}");
+    let lines = logs.lines();
+    assert_eq!(lines.len(), 2, "{text}");
+    assert_eq!(lines[0]["message"], "request handling panicked");
+    assert_eq!(lines[1]["status"], 500);
+    let id = lines[0]["request_id"].as_str().unwrap();
+    assert!(is_uuid_v4(id), "{id}");
+    assert_eq!(lines[1]["request_id"], id);
+}
+
+#[tokio::test]
+async fn the_app_logs_each_request_with_a_request_id() {
+    let logs = CapturedLogs::default();
+    {
+        let _guard = logs.install();
+        harness().get("/api/games/new").await;
+    }
+    let lines = logs.lines();
+    assert_eq!(lines.len(), 1, "{}", logs.text());
+    assert_eq!(lines[0]["route"], "/api/games/new");
+    assert!(is_uuid_v4(lines[0]["request_id"].as_str().unwrap()));
+}

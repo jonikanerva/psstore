@@ -1,27 +1,36 @@
-//! Structured JSON logs with allowlisted fields only (STACK.md §9).
+//! Structured logs with allowlisted fields only (STACK.md §9).
 //!
-//! The log layer writes one JSON object per event. It keeps only fields from
-//! [`ALLOWED_FIELDS`] and drops every other field value. It writes only events
-//! from this crate, because dependency events can contain URLs. Never put a
-//! cookie, a header, a token, a URL, a body, a search term, a game id, or an
-//! account value into an event message: a message is a fixed text.
+//! The log layer writes one line per event in one of two formats. JSON (one
+//! object per line) is the default and the production format. Text is a
+//! readable line for development; `mise run dev` selects it with
+//! `PSSTORE_LOG_FORMAT=text`. Both formats show the same fields.
+//!
+//! The layer keeps only fields from [`ALLOWED_FIELDS`] and drops every other
+//! field value. The rule applies to the fields of the event and to the fields
+//! of each span around it, so a request span adds its `request_id` to every
+//! event inside the request. The layer writes only events and spans from this
+//! crate, because dependency events can contain URLs. Never put a cookie, a
+//! header, a token, a URL, a body, a search term, a game id, or an account
+//! value into an event message: a message is a fixed text.
 
 use std::io::Write;
 use std::sync::{Arc, Mutex};
 
 use serde_json::{Map, Value};
 use tracing::field::{Field, Visit};
+use tracing::span::{Attributes, Id, Record};
 use tracing::{Event, Subscriber};
 use tracing_subscriber::Layer;
 use tracing_subscriber::filter::{LevelFilter, Targets};
 use tracing_subscriber::layer::{Context, SubscriberExt};
-use tracing_subscriber::registry::Registry;
+use tracing_subscriber::registry::{LookupSpan, Registry};
 
 /// Field names that a log line may contain. Every value of these fields is
-/// free of personal data by construction: route patterns, codes, counts,
-/// error tags, and Sony operation names.
+/// free of personal data by construction: random request ids, route
+/// patterns, codes, counts, error tags, and Sony operation names.
 pub const ALLOWED_FIELDS: &[&str] = &[
     "message",
+    "request_id",
     "route",
     "method",
     "status",
@@ -48,23 +57,50 @@ const CRATE_TARGET: &str = "psstore_server";
 /// A shared output for log lines.
 pub type LogWriter = Arc<Mutex<dyn Write + Send>>;
 
-/// The allowlisting JSON layer.
-pub struct JsonLayer {
+/// The format of a log line.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum LogFormat {
+    /// One JSON object per line: the default and the production format.
+    #[default]
+    Json,
+    /// One readable text line per event, for development.
+    Text,
+}
+
+impl LogFormat {
+    /// The format of a `PSSTORE_LOG_FORMAT` value: `json` or `text`.
+    #[must_use]
+    pub fn parse(value: &str) -> Option<Self> {
+        match value {
+            "json" => Some(Self::Json),
+            "text" => Some(Self::Text),
+            _ => None,
+        }
+    }
+}
+
+/// The allowlisting log layer.
+pub struct LogLayer {
     writer: LogWriter,
+    format: LogFormat,
 }
 
-impl std::fmt::Debug for JsonLayer {
+impl std::fmt::Debug for LogLayer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("JsonLayer")
+        f.debug_struct("LogLayer")
+            .field("format", &self.format)
+            .finish_non_exhaustive()
     }
 }
 
-impl JsonLayer {
-    pub fn new(writer: LogWriter) -> Self {
-        Self { writer }
+impl LogLayer {
+    pub fn new(writer: LogWriter, format: LogFormat) -> Self {
+        Self { writer, format }
     }
 }
 
+/// The allowlisted field values of an event or a span, and the names of the
+/// dropped fields.
 #[derive(Default)]
 struct Fields {
     kept: Map<String, Value>,
@@ -76,7 +112,23 @@ impl Fields {
         if ALLOWED_FIELDS.contains(&field.name()) {
             self.kept.insert(field.name().to_owned(), value);
         } else {
-            self.dropped.push(field.name());
+            self.drop_name(field.name());
+        }
+    }
+
+    fn drop_name(&mut self, name: &'static str) {
+        if !self.dropped.contains(&name) {
+            self.dropped.push(name);
+        }
+    }
+
+    /// Adds the fields of an enclosing span. A later span or the event itself
+    /// replaces a value with the same name.
+    fn merge(&mut self, other: &Self) {
+        self.kept
+            .extend(other.kept.iter().map(|(k, v)| (k.clone(), v.clone())));
+        for name in &other.dropped {
+            self.drop_name(name);
         }
     }
 }
@@ -103,30 +155,57 @@ impl Visit for Fields {
     }
 }
 
-impl<S: Subscriber> Layer<S> for JsonLayer {
-    fn on_event(&self, event: &Event<'_>, _ctx: Context<'_, S>) {
+/// The allowlisted fields of a span, kept in the span's extensions until the
+/// span closes.
+struct SpanFields(Fields);
+
+impl<S> Layer<S> for LogLayer
+where
+    S: Subscriber + for<'a> LookupSpan<'a>,
+{
+    fn on_new_span(&self, attrs: &Attributes<'_>, id: &Id, ctx: Context<'_, S>) {
+        let Some(span) = ctx.span(id) else {
+            return;
+        };
+        let mut fields = Fields::default();
+        attrs.record(&mut fields);
+        span.extensions_mut().insert(SpanFields(fields));
+    }
+
+    fn on_record(&self, id: &Id, values: &Record<'_>, ctx: Context<'_, S>) {
+        let Some(span) = ctx.span(id) else {
+            return;
+        };
+        if let Some(SpanFields(fields)) = span.extensions_mut().get_mut::<SpanFields>() {
+            values.record(fields);
+        }
+    }
+
+    fn on_event(&self, event: &Event<'_>, ctx: Context<'_, S>) {
         let metadata = event.metadata();
         let target = metadata.target();
         let own = target == CRATE_TARGET || target.starts_with("psstore_server::");
         if !own {
             return;
         }
+        // The spans from the root to the innermost one, then the event: an
+        // inner value replaces an outer value with the same name.
         let mut fields = Fields::default();
+        if let Some(scope) = ctx.event_scope(event) {
+            for span in scope.from_root() {
+                if let Some(SpanFields(span_fields)) = span.extensions().get::<SpanFields>() {
+                    fields.merge(span_fields);
+                }
+            }
+        }
         event.record(&mut fields);
 
-        let mut line = Map::new();
-        line.insert(
-            "timestamp".into(),
-            Value::from(jiff::Timestamp::now().to_string()),
-        );
-        line.insert("level".into(), Value::from(metadata.level().as_str()));
-        line.insert("target".into(), Value::from(target));
-        line.extend(fields.kept);
-        if !fields.dropped.is_empty() {
-            // Field names are code identifiers, not data, so they are safe to log.
-            line.insert("dropped_fields".into(), Value::from(fields.dropped));
-        }
-        let mut text = Value::Object(line).to_string();
+        let timestamp = jiff::Timestamp::now().to_string();
+        let level = metadata.level().as_str();
+        let mut text = match self.format {
+            LogFormat::Json => json_line(&timestamp, level, target, fields),
+            LogFormat::Text => text_line(&timestamp, level, target, fields),
+        };
         text.push('\n');
         let mut writer = self
             .writer
@@ -138,21 +217,86 @@ impl<S: Subscriber> Layer<S> for JsonLayer {
     }
 }
 
+/// One JSON object.
+fn json_line(timestamp: &str, level: &str, target: &str, fields: Fields) -> String {
+    let mut line = Map::new();
+    line.insert("timestamp".into(), Value::from(timestamp));
+    line.insert("level".into(), Value::from(level));
+    line.insert("target".into(), Value::from(target));
+    line.extend(fields.kept);
+    if !fields.dropped.is_empty() {
+        // Field names are code identifiers, not data, so they are safe to log.
+        line.insert("dropped_fields".into(), Value::from(fields.dropped));
+    }
+    Value::Object(line).to_string()
+}
+
+/// One text line: the time, the level, the target, the message, and then
+/// `name=value` for each kept field in name order.
+fn text_line(timestamp: &str, level: &str, target: &str, fields: Fields) -> String {
+    let Fields { mut kept, dropped } = fields;
+    let mut line = format!("{timestamp} {level:>5} {target}:");
+    if let Some(message) = kept.remove("message") {
+        line.push(' ');
+        line.push_str(&text_message(&message));
+    }
+    for (name, value) in &kept {
+        line.push(' ');
+        line.push_str(name);
+        line.push('=');
+        line.push_str(&text_value(value));
+    }
+    if !dropped.is_empty() {
+        line.push_str(" dropped_fields=");
+        line.push_str(&dropped.join(","));
+    }
+    line
+}
+
+/// A message as is. A message with a control character, such as a line
+/// break, is written as a JSON string, so one event stays on one line.
+fn text_message(message: &Value) -> String {
+    match message {
+        Value::String(text) if !text.chars().any(char::is_control) => text.clone(),
+        other => other.to_string(),
+    }
+}
+
+/// A string value as is when it has no white space, quote, `=`, or control
+/// character; otherwise a JSON string. Numbers and booleans as is.
+fn text_value(value: &Value) -> String {
+    match value {
+        Value::String(text)
+            if !text.is_empty()
+                && !text
+                    .chars()
+                    .any(|c| c.is_whitespace() || c.is_control() || c == '"' || c == '=') =>
+        {
+            text.clone()
+        }
+        other => other.to_string(),
+    }
+}
+
 /// The subscriber: the allowlisting layer behind the filter.
-pub fn subscriber(writer: LogWriter, filter: Targets) -> impl Subscriber + Send + Sync {
-    Registry::default().with(JsonLayer::new(writer).with_filter(filter))
+pub fn subscriber(
+    writer: LogWriter,
+    filter: Targets,
+    format: LogFormat,
+) -> impl Subscriber + Send + Sync {
+    Registry::default().with(LogLayer::new(writer, format).with_filter(filter))
 }
 
 /// Installs the subscriber for the process at level `info`. Logs go to
-/// standard output.
+/// standard output in `format`.
 ///
 /// # Errors
 ///
 /// Another global subscriber is already installed.
-pub fn init() -> Result<(), tracing::subscriber::SetGlobalDefaultError> {
+pub fn init(format: LogFormat) -> Result<(), tracing::subscriber::SetGlobalDefaultError> {
     let stdout: LogWriter = Arc::new(Mutex::new(std::io::stdout()));
     let filter = Targets::new().with_target(CRATE_TARGET, LevelFilter::INFO);
-    tracing::subscriber::set_global_default(subscriber(stdout, filter))
+    tracing::subscriber::set_global_default(subscriber(stdout, filter, format))
 }
 
 /// Replaces the default panic hook. The default hook writes the panic
@@ -246,8 +390,12 @@ pub(crate) mod testing {
             INIT.call_once(|| {
                 let filter: Targets = "trace".parse().unwrap();
                 let writer: LogWriter = Arc::new(Mutex::new(ThreadWriter));
-                tracing::subscriber::set_global_default(subscriber(writer, filter))
-                    .expect("no other global subscriber in tests");
+                tracing::subscriber::set_global_default(subscriber(
+                    writer,
+                    filter,
+                    LogFormat::Json,
+                ))
+                .expect("no other global subscriber in tests");
             });
             // Heal a callsite whose interest another thread cached before the
             // global subscriber existed.
@@ -318,5 +466,174 @@ mod tests {
             tracing::info!(target: "reqwest::connect", "GET https://example.invalid/?key=x");
         }
         assert_eq!(logs.text(), "");
+    }
+
+    #[test]
+    fn events_carry_the_allowlisted_fields_of_their_spans() {
+        let logs = CapturedLogs::default();
+        {
+            let _guard = logs.install();
+            let outer = tracing::info_span!(
+                "request",
+                request_id = "synthetic-request-id",
+                route = "/api/games/{id}",
+                cookie = "npsso=synthetic-npsso-value",
+            );
+            outer.in_scope(|| {
+                // A span takes the current span as its parent.
+                let inner =
+                    tracing::info_span!("lookup", route = "/inner", operation = "categoryGrid");
+                inner.in_scope(|| tracing::warn!(status = 502_u64, "inside both spans"));
+                tracing::info!("inside the outer span");
+            });
+            tracing::info!("outside every span");
+        }
+        let text = logs.text();
+        assert!(!text.contains("synthetic-npsso-value"), "{text}");
+        let lines = logs.lines();
+        assert_eq!(lines.len(), 3, "{text}");
+        for line in &lines {
+            for name in line.as_object().unwrap().keys() {
+                let known = ["timestamp", "level", "target", "dropped_fields"];
+                assert!(
+                    super::ALLOWED_FIELDS.contains(&name.as_str())
+                        || known.contains(&name.as_str()),
+                    "{name} in {line}"
+                );
+            }
+        }
+
+        let inside_both = &lines[0];
+        assert_eq!(inside_both["request_id"], "synthetic-request-id");
+        // The inner span replaces the value of the outer span.
+        assert_eq!(inside_both["route"], "/inner");
+        assert_eq!(inside_both["operation"], "categoryGrid");
+        assert_eq!(inside_both["status"], 502);
+        assert_eq!(inside_both["dropped_fields"], serde_json::json!(["cookie"]));
+
+        let inside_outer = &lines[1];
+        assert_eq!(inside_outer["request_id"], "synthetic-request-id");
+        assert_eq!(inside_outer["route"], "/api/games/{id}");
+        assert!(inside_outer.get("operation").is_none(), "{inside_outer}");
+
+        let outside = &lines[2];
+        assert!(outside.get("request_id").is_none(), "{outside}");
+        assert!(outside.get("dropped_fields").is_none(), "{outside}");
+    }
+
+    #[test]
+    fn a_span_field_recorded_later_is_allowlisted_too() {
+        let logs = CapturedLogs::default();
+        {
+            let _guard = logs.install();
+            let span = tracing::info_span!(
+                "request",
+                request_id = tracing::field::Empty,
+                url = tracing::field::Empty,
+            );
+            span.record("request_id", "synthetic-late-id");
+            span.record("url", "https://example.invalid/?q=synthetic-term");
+            span.in_scope(|| tracing::info!("after the record"));
+        }
+        let text = logs.text();
+        assert!(!text.contains("synthetic-term"), "{text}");
+        let lines = logs.lines();
+        assert_eq!(lines.len(), 1, "{text}");
+        assert_eq!(lines[0]["request_id"], "synthetic-late-id");
+        assert_eq!(lines[0]["dropped_fields"], serde_json::json!(["url"]));
+    }
+
+    /// Writes the events of `emit` in `format` through a subscriber of this
+    /// thread only. The callsites of these tests are their own, so no other
+    /// test thread can cache their interest first.
+    fn lines_in(format: super::LogFormat, emit: impl FnOnce()) -> Vec<String> {
+        use std::sync::{Arc, Mutex};
+
+        let buffer = Arc::new(Mutex::new(Vec::<u8>::new()));
+        let writer: super::LogWriter = buffer.clone();
+        let filter: tracing_subscriber::filter::Targets = "trace".parse().unwrap();
+        tracing::subscriber::with_default(super::subscriber(writer, filter, format), emit);
+        let text = String::from_utf8(buffer.lock().unwrap().clone()).unwrap();
+        text.lines().map(str::to_owned).collect()
+    }
+
+    fn emit_request_events() {
+        let span = tracing::info_span!(
+            "request",
+            request_id = "synthetic-request-id",
+            route = "/api/games/search",
+            method = "GET",
+            query = "synthetic-search-term",
+        );
+        span.in_scope(|| {
+            tracing::info!(
+                status = 200_u64,
+                elapsed_ms = 7_u64,
+                reason = "two words",
+                "request completed"
+            );
+            tracing::warn!(reason = "line\nbreak", "upstream\nfailed");
+        });
+    }
+
+    #[test]
+    fn the_text_format_is_readable_and_allowlisted() {
+        let lines = lines_in(super::LogFormat::Text, emit_request_events);
+        let text = lines.join("\n");
+        assert_eq!(lines.len(), 2, "{text}");
+        assert!(!text.contains("synthetic-search-term"), "{text}");
+
+        let (timestamp, rest) = lines[0].split_once(' ').unwrap();
+        assert!(timestamp.parse::<jiff::Timestamp>().is_ok(), "{timestamp}");
+        assert_eq!(
+            rest,
+            " INFO psstore_server::observability::tests: request completed \
+             elapsed_ms=7 method=GET reason=\"two words\" \
+             request_id=synthetic-request-id route=/api/games/search status=200 \
+             dropped_fields=query"
+        );
+        // A line break in a message or a value stays escaped on one line.
+        let (_, rest) = lines[1].split_once(' ').unwrap();
+        assert_eq!(
+            rest,
+            " WARN psstore_server::observability::tests: \"upstream\\nfailed\" \
+             method=GET reason=\"line\\nbreak\" request_id=synthetic-request-id \
+             route=/api/games/search dropped_fields=query"
+        );
+    }
+
+    #[test]
+    fn both_formats_show_the_same_fields() {
+        let json: Vec<serde_json::Value> = lines_in(super::LogFormat::Json, emit_request_events)
+            .iter()
+            .map(|line| serde_json::from_str(line).unwrap())
+            .collect();
+        let text = lines_in(super::LogFormat::Text, emit_request_events);
+        assert_eq!(json.len(), text.len());
+        for (object, line) in json.iter().zip(&text) {
+            let names: Vec<&String> = object
+                .as_object()
+                .unwrap()
+                .keys()
+                .filter(|name| {
+                    !["timestamp", "level", "target", "message"].contains(&name.as_str())
+                })
+                .collect();
+            for name in &names {
+                assert!(line.contains(&format!(" {name}=")), "{name} in {line}");
+            }
+            let in_text = line.matches('=').count();
+            assert_eq!(in_text, names.len(), "{line}");
+        }
+    }
+
+    #[test]
+    fn parses_the_log_format_setting() {
+        use super::LogFormat;
+        assert_eq!(LogFormat::parse("json"), Some(LogFormat::Json));
+        assert_eq!(LogFormat::parse("text"), Some(LogFormat::Text));
+        assert_eq!(LogFormat::parse("TEXT"), None);
+        assert_eq!(LogFormat::parse(""), None);
+        assert_eq!(LogFormat::default(), LogFormat::Json);
     }
 }
