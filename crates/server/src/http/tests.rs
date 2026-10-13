@@ -1183,3 +1183,66 @@ async fn the_operational_routes_answer_get_only_and_come_before_the_client_build
         assert_eq!(body(post).await, "", "{path}");
     }
 }
+
+// ---- Security headers --------------------------------------------------------
+
+/// Fails unless the response has the four security headers.
+fn assert_security_headers(response: &Response, what: &str) {
+    let headers = response.headers();
+    for (name, value) in [
+        ("x-content-type-options", "nosniff"),
+        ("referrer-policy", "strict-origin-when-cross-origin"),
+        ("x-frame-options", "DENY"),
+        ("cross-origin-opener-policy", "same-origin"),
+    ] {
+        assert_eq!(
+            headers.get(name).and_then(|v| v.to_str().ok()),
+            Some(value),
+            "{name} on {what}"
+        );
+    }
+    assert!(
+        headers.get("content-security-policy").is_none(),
+        "no CSP yet on {what}"
+    );
+}
+
+#[tokio::test]
+async fn every_response_has_the_security_headers() {
+    let dir = BuildDir::new();
+    let h = dir.harness();
+    let cases = [
+        ("/healthz", None, StatusCode::OK),
+        ("/version", None, StatusCode::OK),
+        ("/api/games/new", None, StatusCode::OK),
+        ("/api/games/new?offset=x", None, StatusCode::BAD_REQUEST),
+        ("/api/games/wishlist", None, StatusCode::UNAUTHORIZED),
+        ("/api/unknown", None, StatusCode::NOT_FOUND),
+        ("/", Some(BROWSER_ACCEPT), StatusCode::OK),
+        ("/g/123", Some(BROWSER_ACCEPT), StatusCode::OK),
+        ("/assets/a-1.js", None, StatusCode::OK),
+        ("/assets/missing.js", None, StatusCode::NOT_FOUND),
+        ("/favicon.png", None, StatusCode::OK),
+    ];
+    for (uri, accept, status) in cases {
+        let response = match accept {
+            Some(accept) => h.get_with(uri, ACCEPT.as_str(), accept).await,
+            None => h.get(uri).await,
+        };
+        assert_eq!(response.status(), status, "{uri}");
+        assert_security_headers(&response, uri);
+    }
+    let other_method = h
+        .send(Request::post("/healthz").body(Body::empty()).unwrap())
+        .await;
+    assert_eq!(other_method.status(), StatusCode::NOT_FOUND);
+    assert_security_headers(&other_method, "POST /healthz");
+    let sign_out = h
+        .send(Request::delete("/api/session").body(Body::empty()).unwrap())
+        .await;
+    assert_security_headers(&sign_out, "DELETE /api/session");
+
+    let panicked = send_to_context("/panic").await;
+    assert_eq!(panicked.status(), StatusCode::INTERNAL_SERVER_ERROR);
+    assert_security_headers(&panicked, "a contained panic");
+}

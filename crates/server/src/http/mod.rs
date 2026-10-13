@@ -20,7 +20,8 @@ use std::sync::Arc;
 
 use axum::Router;
 use axum::extract::{MatchedPath, Request};
-use axum::http::{StatusCode, Uri};
+use axum::http::header::{REFERRER_POLICY, X_CONTENT_TYPE_OPTIONS, X_FRAME_OPTIONS};
+use axum::http::{HeaderMap, HeaderName, HeaderValue, StatusCode, Uri};
 use axum::middleware::{self, Next};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
@@ -128,7 +129,8 @@ fn trim_trailing_slash(mut request: Request) -> Request {
 }
 
 /// Runs each request in a `request` span, writes one log line per request,
-/// and contains a panic in request handling as an empty 500.
+/// contains a panic in request handling as an empty 500, and adds the
+/// security headers to every response.
 ///
 /// The span carries a random request id (UUID v4), the route pattern, and the
 /// method, so every event inside the request has them. A lookup that a cache
@@ -163,13 +165,14 @@ async fn request_context(request: Request, next: Next) -> Response {
         next.run(request).await
     };
     async move {
-        let response = match AssertUnwindSafe(handled).catch_unwind().await {
+        let mut response = match AssertUnwindSafe(handled).catch_unwind().await {
             Ok(response) => response,
             Err(_payload) => {
                 tracing::error!("request handling panicked");
                 StatusCode::INTERNAL_SERVER_ERROR.into_response()
             }
         };
+        add_security_headers(response.headers_mut());
         tracing::info!(
             status = u64::from(response.status().as_u16()),
             elapsed_ms = u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX),
@@ -179,6 +182,24 @@ async fn request_context(request: Request, next: Next) -> Response {
     }
     .instrument(span)
     .await
+}
+
+/// Sets the security headers of every response: API answers, client files,
+/// 404s, and the 500 of a contained panic.
+///
+/// There is no `Content-Security-Policy` yet. Images and videos come from
+/// Sony CDNs, so a policy first needs browser evidence of zero violations.
+fn add_security_headers(headers: &mut HeaderMap) {
+    headers.insert(X_CONTENT_TYPE_OPTIONS, HeaderValue::from_static("nosniff"));
+    headers.insert(
+        REFERRER_POLICY,
+        HeaderValue::from_static("strict-origin-when-cross-origin"),
+    );
+    headers.insert(X_FRAME_OPTIONS, HeaderValue::from_static("DENY"));
+    headers.insert(
+        HeaderName::from_static("cross-origin-opener-policy"),
+        HeaderValue::from_static("same-origin"),
+    );
 }
 
 /// `GET /healthz`. It calls no upstream service.
