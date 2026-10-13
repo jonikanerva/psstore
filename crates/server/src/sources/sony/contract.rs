@@ -9,7 +9,7 @@
 use serde::Deserialize;
 
 /// The contract file, compiled into the binary.
-const CONTRACT_JSON: &str = include_str!("../../../../docs/contracts/sony-constants.json");
+const CONTRACT_JSON: &str = include_str!("../../../../../docs/contracts/sony-constants.json");
 
 /// The Sony contract values.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]

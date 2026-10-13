@@ -864,15 +864,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "psstore-domain"
+version = "0.1.0"
+dependencies = [
+ "icu_normalizer",
+ "icu_properties",
+ "jiff",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "psstore-server"
 version = "0.1.0"
 dependencies = [
  "axum",
  "form_urlencoded",
  "futures-util",
- "icu_normalizer",
  "icu_properties",
  "jiff",
+ "psstore-domain",
  "reqwest",
  "serde",
  "serde_json",

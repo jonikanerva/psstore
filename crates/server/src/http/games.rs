@@ -8,6 +8,7 @@ use axum::response::{IntoResponse, Response};
 use serde::Serialize;
 
 use super::AppState;
+use super::errors::ErrorResponse;
 use super::params;
 use super::session::{expire_cookie_on_rejection, npsso_from_cookie};
 use crate::domain::errors::AccountError;
@@ -17,10 +18,10 @@ fn bad_request() -> Response {
     StatusCode::BAD_REQUEST.into_response()
 }
 
-fn json<T: Serialize, E: IntoResponse>(outcome: Result<T, E>) -> Response {
+fn json<T: Serialize, E: ErrorResponse>(outcome: Result<T, E>) -> Response {
     match outcome {
         Ok(value) => Json(value).into_response(),
-        Err(error) => error.into_response(),
+        Err(error) => error.into_error_response(),
     }
 }
 
@@ -102,7 +103,7 @@ pub(super) async fn game_by_id(
     };
     let game = match state.games.game_by_id(id).await {
         Ok(game) => game,
-        Err(error) => return error.into_response(),
+        Err(error) => return error.into_error_response(),
     };
     let critic_score = state.critics.score_for(&game).await;
     Json(GameDetail { game, critic_score }).into_response()
@@ -120,7 +121,7 @@ enum SignedInList {
 /// cookie; any other failure keeps it.
 async fn signed_in(state: &AppState, headers: &HeaderMap, list: SignedInList) -> Response {
     let Some(npsso) = npsso_from_cookie(headers) else {
-        return AccountError::session_rejected("Not signed in").into_response();
+        return AccountError::session_rejected("Not signed in").into_error_response();
     };
     let outcome = match list {
         SignedInList::Purchased => state.account.purchased_games(npsso).await,

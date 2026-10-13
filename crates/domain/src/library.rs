@@ -117,7 +117,7 @@ pub fn merge_wishlist_entry(entry: &WishlistEntry, found: Option<Game>) -> Game 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::game::PlusOffer;
+    use crate::game::PlusOffer;
 
     const PRODUCT: &str = "EP0001-PPSA00001_00-SYNTHETICALPHA00";
 

@@ -19,7 +19,7 @@ to PS5 / Finland / EUR; the frontend renders what the server returns.
 
 ## Architecture
 
-- `server/` — Rust HTTP server (Axum on Tokio): the typed REST API, an in-memory cache, and the
+- `crates/server/` — Rust HTTP server (Axum on Tokio): the typed REST API, an in-memory cache, and the
   built client
 - `client/` — Vite + React SPA (TanStack Router, TanStack Query, Tailwind CSS)
 - `shared/` — the TypeScript view of the API contract (Effect Schema) and pure client utilities

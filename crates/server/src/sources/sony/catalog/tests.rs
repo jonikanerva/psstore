@@ -2,7 +2,7 @@
 //! `sonyClient.test.ts`, `goldenDecode.test.ts`, `scopeDrop.test.ts`,
 //! `browse.test.ts`, `searchResults.test.ts`, `plusMonthly.test.ts`,
 //! `productPrice.test.ts`, and `sonyClientLive.test.ts`, with the same
-//! fixtures (`server/tests/fixtures/`).
+//! fixtures (`crates/server/tests/fixtures/`).
 
 mod client;
 mod decode;

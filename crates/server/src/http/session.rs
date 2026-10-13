@@ -11,6 +11,7 @@ use axum::http::{HeaderMap, HeaderValue, StatusCode};
 use axum::response::{IntoResponse, Response};
 
 use super::AppState;
+use super::errors::ErrorResponse;
 use crate::domain::secret::Secret;
 
 /// The cookie name. The signed-in routes read it, and the sign-in route sets it.
@@ -110,7 +111,7 @@ pub(super) async fn sign_in(
                 Err(_) => StatusCode::BAD_REQUEST.into_response(),
             }
         }
-        Err(error) => error.into_response(),
+        Err(error) => error.into_error_response(),
     }
 }
 

@@ -2,8 +2,8 @@
 //! with challenge cases for the sort, the pagination, and the windows.
 
 use super::*;
-use crate::domain::catalog::{ConceptPrice, ConceptProductRef};
-use crate::domain::js::parse_date_ms;
+use crate::catalog::{ConceptPrice, ConceptProductRef};
+use crate::js::parse_date_ms;
 
 const HOUR: i64 = 60 * 60 * 1000;
 

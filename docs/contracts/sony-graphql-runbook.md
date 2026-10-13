@@ -33,8 +33,8 @@ The Sony contract values (the endpoint, the operation names, the hashes, the sig
 and the locale) are in `docs/contracts/sony-constants.json`. The bot and the server read this file.
 The server compiles it in, so a changed value needs a new server build.
 The backend compatibility check compares the manifest with this file. It also checks that the
-production code in `server/src/sources/sony/`, `server/src/domain/mapper.rs`, and
-`server/src/application/games.rs` still uses each operation. Test files and test modules do not count.
+production code in `crates/server/src/sources/sony/`, `crates/domain/src/mapper.rs`, and
+`crates/server/src/application/games.rs` still uses each operation. Test files and test modules do not count.
 
 ## Tracked operations
 
@@ -68,7 +68,7 @@ locale, or currency token, because the scope filter matches those tokens inside 
 If Sony rotates the hash, `UpstreamQueryRotated` (HTTP 502) names `getSearchResults`.
 Update `SONY_SEARCH_HASH` in `docs/contracts/sony-constants.json` and run `pnpm sony:refresh`.
 
-The golden fixture is `server/tests/fixtures/searchResults.golden.json`.
+The golden fixture is `crates/server/tests/fixtures/searchResults.golden.json`.
 
 ## Product page operation
 
@@ -97,7 +97,7 @@ Refresh carries the entry over from the canonical manifest. It sets the hash fro
 Refresh prints `carried over, NOT verified live`.
 
 The compatibility check compares the operation name, the hash, the response path, and the variables
-with `docs/contracts/sony-constants.json` and the Sony client in `server/src/sources/sony/`. It guards repository-internal consistency only.
+with `docs/contracts/sony-constants.json` and the Sony client in `crates/server/src/sources/sony/`. It guards repository-internal consistency only.
 It does NOT detect Sony drift for this operation. Only a live check by the owner can do that.
 The owner runs the live check with their own NPSSO. See the probe below.
 
@@ -162,7 +162,7 @@ The MONTHLY view reads `https://www.playstation.com/bin/imagic/gameslist`, not t
 endpoint. The contract tooling does not capture it. A shape change shows as a
 drift warning in the server log and as a failing MONTHLY step in `pnpm test:live`.
 To refresh the golden fixture, download the feed anonymously and replace
-`server/tests/fixtures/plusMonthly.golden.json`. Do not store the response headers.
+`crates/server/tests/fixtures/plusMonthly.golden.json`. Do not store the response headers.
 
 ## Apply candidate as canonical manifest
 
@@ -200,8 +200,8 @@ out of scope (STACK.md §10). The cadence is a deliberate human step.
 
 Any change that touches the Sony decode/mapping boundary — specifically:
 
-- `server/src/sources/sony/**` (the client, the boundary decoders, rotation/429 handling), or
-- `server/src/domain/listing.rs` and `server/src/domain/mapper.rs` (the mappers that turn
+- `crates/server/src/sources/sony/**` (the client, the boundary decoders, rotation/429 handling), or
+- `crates/domain/src/listing.rs` and `crates/domain/src/mapper.rs` (the mappers that turn
   decoded concepts into the renderable game list — #62's symptom was a mapping/filter outcome)
 
 **MUST** run the live smoke suite against live Sony (`en-fi` requests) and record the counts in
@@ -217,7 +217,7 @@ concept counts, and the SEARCH counts for two terms plus the PS4-only title `blo
 make the build flaky).
 
 **Why this is mandatory:** `pnpm test-all` **cannot** catch live Sony drift — it
-decodes committed fixtures (`server/tests/fixtures/*.golden.json`) and
+decodes committed fixtures (`crates/server/tests/fixtures/*.golden.json`) and
 compares the manifest against itself. Only `test:live` decodes a _fresh_ live
 response through the production boundary, so it is the standing guard for the
 #62-class regression (the null-tolerance bug that emptied UPCOMING/DISCOUNTED,

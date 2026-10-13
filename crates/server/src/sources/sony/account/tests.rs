@@ -20,6 +20,7 @@ use serde_json::{Value, json};
 
 use super::*;
 use crate::domain::game::IdKind;
+use crate::http::errors::ErrorResponse;
 
 const NPSSO: &str = "synthetic-npsso-0123456789abcdef";
 const CODE: &str = "v3.synthetic-code";
@@ -520,7 +521,7 @@ async fn errors_carry_no_code_npsso_token_location_or_list_data() {
     for outcome in outcomes {
         let error = outcome.unwrap_err();
         let debug = format!("{error:?}");
-        let body = response_body(error.into_response()).await;
+        let body = response_body(error.into_error_response()).await;
         for text in [debug, body] {
             for secret in [CODE, NPSSO, TOKEN, "login.example.test", "Synthetic 77"] {
                 assert!(!text.contains(secret), "{text} contains {secret}");

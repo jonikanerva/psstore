@@ -1,0 +1,40 @@
+# Railpack 0.40.1 reads this manifest to find the binary of the workspace
+# (core/providers/rust/rust.go, `PackageInfo`). It decodes `edition`,
+# `rust-version`, and `publish` as plain values, and an inherited value
+# (`edition.workspace = true`) fails that decode. Railpack then adds an install
+# step that builds a dummy crate, and the Railway build fails. So this crate
+# repeats the values of `[workspace.package]`. Keep them equal.
+[package]
+name = "psstore-server"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.99"
+publish = false
+description = "The psstore HTTP server: the Finnish PS5 store view and its sign-in"
+
+[dependencies]
+psstore-domain = { workspace = true }
+axum = { workspace = true }
+form_urlencoded = { workspace = true }
+futures-util = { workspace = true }
+icu_properties = { workspace = true }
+jiff = { workspace = true }
+reqwest = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }
+
+[lints]
+workspace = true
+
+# The API parity tool. `test = true` makes `cargo test` run its unit tests.
+[[example]]
+name = "api_parity"
+test = true

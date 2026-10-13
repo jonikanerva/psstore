@@ -5,7 +5,7 @@
 //! (`docs/contracts/api/`). Handlers are thin: they validate the input, call
 //! one service, and map the typed outcome to a response.
 
-mod errors;
+pub mod errors;
 mod games;
 pub mod params;
 mod session;

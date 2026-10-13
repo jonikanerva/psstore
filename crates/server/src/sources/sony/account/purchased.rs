@@ -95,7 +95,7 @@ mod tests {
     use crate::domain::library::purchased_cards;
 
     /// The synthetic fixture of the TypeScript tests. It holds no real account
-    /// data (`server/tests/fixtures/README.md`).
+    /// data (`crates/server/tests/fixtures/README.md`).
     const FIXTURE: &str = include_str!("../../../../tests/fixtures/purchasedPage.synthetic.json");
 
     fn fixture() -> Value {

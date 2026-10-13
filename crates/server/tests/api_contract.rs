@@ -26,6 +26,7 @@ use psstore_server::domain::errors::{AccountError, GameLookupError, UpstreamErro
 use psstore_server::domain::game::{
     CriticScore, Game, GameDetail, Genre, GenreList, IdKind, PageResult, PlusOffer,
 };
+use psstore_server::http::errors::ErrorResponse;
 use serde::Serialize;
 
 /// Every example file. Each one has a case in `render`.
@@ -44,7 +45,7 @@ const EXAMPLES: [&str; 11] = [
 ];
 
 fn examples_dir() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../docs/contracts/api")
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../docs/contracts/api")
 }
 
 fn read_example(name: &str) -> Result<String, String> {
@@ -306,10 +307,10 @@ fn render(name: &str) -> Option<Response> {
             GameLookupError::NotFound {
                 id: "EP0000-PPSA00000_00-UNKNOWNGAME00000".into(),
             }
-            .into_response(),
+            .into_error_response(),
         ),
         "error-upstream-unavailable.json" => {
-            Some(UpstreamError::unavailable("Sony upstream unavailable").into_response())
+            Some(UpstreamError::unavailable("Sony upstream unavailable").into_error_response())
         }
         "error-upstream-query-rotated.json" => Some(
             UpstreamError::QueryRotated {
@@ -318,24 +319,24 @@ fn render(name: &str) -> Option<Response> {
                         .into(),
                 operation_name: "categoryGridRetrieve".into(),
             }
-            .into_response(),
+            .into_error_response(),
         ),
         "error-upstream-rate-limited.json" => Some(
             UpstreamError::RateLimited {
                 message: RATE_LIMITED.into(),
                 retry_after_seconds: None,
             }
-            .into_response(),
+            .into_error_response(),
         ),
         "error-upstream-rate-limited-retry-after.json" => Some(
             UpstreamError::RateLimited {
                 message: RATE_LIMITED.into(),
                 retry_after_seconds: Some(30),
             }
-            .into_response(),
+            .into_error_response(),
         ),
         "error-session-rejected.json" => {
-            Some(AccountError::session_rejected("Not signed in").into_response())
+            Some(AccountError::session_rejected("Not signed in").into_error_response())
         }
         _ => None,
     }

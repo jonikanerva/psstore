@@ -28,9 +28,9 @@ The game cards come from the public Finnish store, as the TypeScript server retu
 
 Two tests read every file:
 
-- `server/tests/api_contract.rs` builds the same value with the Rust domain types. The test gets each body from an HTTP response, like the server does. It compares the body with the example: the values, the escapes, the key order of each object, and the status. The test also checks that the directory and the table above name the same files.
+- `crates/server/tests/api_contract.rs` builds the same value with the Rust domain types. The test gets each body from an HTTP response, like the server does. It compares the body with the example: the values, the escapes, the key order of each object, and the status. The test also checks that the directory and the table above name the same files.
 - `shared/src/__tests__/apiContract.test.ts` decodes each example with the shared Effect Schema and encodes the result again. The test expects the same JSON with the same key order. The decode rejects an unknown key. The test also checks that the table above names the same files as its cases.
 
 To add an example, add the file, add a row to the table above, and add a case to both tests.
 
-The parity tool `server/examples/api_parity.rs` compares two running servers. It does not read these files.
+The parity tool `crates/server/examples/api_parity.rs` compares two running servers. It does not read these files.
