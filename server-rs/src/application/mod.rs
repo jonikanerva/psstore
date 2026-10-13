@@ -9,6 +9,7 @@
 //! stored as `Arc<dyn …>`. One allocation per request is negligible next to
 //! the network calls.
 
+pub mod account;
 pub mod cache;
 pub mod clock;
 pub mod in_flight;

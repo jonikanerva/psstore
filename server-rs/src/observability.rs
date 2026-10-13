@@ -33,6 +33,8 @@ pub const ALLOWED_FIELDS: &[&str] = &[
     "bind",
     "location",
     "count",
+    "entries",
+    "priced",
 ];
 
 /// The crate prefix of events that the layer writes.

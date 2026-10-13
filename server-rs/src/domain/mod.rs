@@ -7,6 +7,7 @@
 pub mod browse;
 pub mod errors;
 pub mod game;
+pub mod library;
 pub mod product_id;
 pub mod secret;
 
