@@ -1,0 +1,24 @@
+{
+  "name": "@psstore/api-client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "generate": "node scripts/generate.mjs",
+    "typecheck": "pnpm --workspace-root exec tsc -b packages/api-client/tsconfig.json",
+    "test": "vitest run",
+    "contract-check": "node scripts/contract-check.mjs"
+  },
+  "dependencies": {
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@hey-api/openapi-ts": "0.99.0",
+    "@types/node": "catalog:",
+    "typescript": "6.0.3",
+    "vitest": "catalog:"
+  }
+}

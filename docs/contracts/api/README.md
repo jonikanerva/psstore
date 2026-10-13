@@ -1,6 +1,6 @@
 # API contract examples
 
-These files are examples of the JSON bodies of the `/api` routes. Together they show each payload shape and each failure of the API contract between the server and the client. `contract/openapi.json` defines the contract. The server exports it from the registered routes (`crates/server/src/http/openapi.rs`). The examples pin the exact JSON: the keys, the key order, the `null` values, and the absent keys.
+These files are examples of the JSON bodies of the `/api` routes. Together they show each payload shape and each failure of the API contract between the server and the client. `contract/openapi.json` defines the contract. The server exports it from the registered routes (`crates/server/src/http/openapi.rs`), and `packages/api-client` generates the TypeScript client and its Zod validators from it. The examples pin the exact JSON: the keys, the key order, the `null` values, and the absent keys.
 
 ## Examples
 
@@ -34,7 +34,7 @@ The game cards come from the public Finnish store, as the TypeScript server retu
 Two tests read every file:
 
 - `crates/server/tests/api_contract.rs` builds the same value with the Rust domain types and the Problem Details mapping. The test gets each body from an HTTP response, like the server does. It compares the body with the example: the values, the escapes, the key order of each object, the media type, and the status of the table above. The test also checks that the directory and the table above name the same files, that each problem code has an example, and that `contract/openapi.json` is the export of the current routes.
-- `shared/src/__tests__/apiContract.test.ts` decodes each example with the shared Effect Schema and encodes the result again. The test expects the same JSON with the same key order. The decode rejects an unknown key. The test also checks that the table above names the same files as its cases.
+- `packages/api-client/src/__tests__/contract.test.ts` validates each example with the generated Zod schema of its route. For a failure, it also checks that the client maps the example to its code and its status. The test also checks that the table above names the same files as its cases.
 
 To add an example, add the file, add a row to the table above, and add a case to both tests.
 

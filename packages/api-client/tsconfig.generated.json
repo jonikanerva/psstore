@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "composite": true,
+    "emitDeclarationOnly": true,
+    "declaration": true,
+    "outDir": "build/generated",
+    "rootDir": "src/generated",
+    "exactOptionalPropertyTypes": false,
+    "tsBuildInfoFile": "build/tsconfig.generated.tsbuildinfo"
+  },
+  "include": ["src/generated"]
+}
