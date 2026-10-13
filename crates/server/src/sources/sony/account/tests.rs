@@ -1,6 +1,6 @@
 //! Tests of the Sony account client against a local mock server. They port
 //! `server/src/__tests__/sonyAccountClient.test.ts` and add challenge cases.
-//! All credential values are synthetic (STACK.md §14 → Fixtures).
+//! All credential values are synthetic (STACK.md §2.5 → Fixtures).
 //!
 //! The tests run in real time with short deadlines: a paused clock can fire a
 //! timer before a local socket answer arrives.

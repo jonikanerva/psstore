@@ -22,7 +22,7 @@ export interface CompatibilityContext {
 const PDP_VARIABLES_SCHEMA: Record<string, unknown> = { productId: 'string' }
 
 // Order-insensitive structural equality of two contract variable schemas via a
-// canonically-keyed JSON string. Avoids an `as` cast (STACK.md §8) — both sides
+// canonically-keyed JSON string. Avoids an `as` cast (STACK.md §7) — both sides
 // are already `Record<string, unknown>`, and the schemas are flat key→type maps,
 // so a key-sorted JSON comparison is sound and deterministic.
 const canonicalJson = (value: Record<string, unknown>): string =>
@@ -284,7 +284,7 @@ export const validateBackendCompatibility = (
 
       // The PDP op is addressed by a single `{ productId }` variable. Assert the
       // request-variable shape so a renamed/added variable fails the gate. Typed
-      // deep-equal via canonical JSON (no `as` cast; STACK.md §8).
+      // deep-equal via canonical JSON (no `as` cast; STACK.md §7).
       if (
         !variablesSchemaEquals(operation.variables_schema, PDP_VARIABLES_SCHEMA)
       ) {

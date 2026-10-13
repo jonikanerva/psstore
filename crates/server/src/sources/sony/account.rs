@@ -1,5 +1,5 @@
 //! The Sony account adapter: the NPSSO exchange and the signed-in lists
-//! (STACK.md §14). Port of the signed-in account client of
+//! (STACK.md §2.5). Port of the signed-in account client of
 //! `server/src/sony/sonyClient.ts`.
 //!
 //! Credential rules:
@@ -94,7 +94,7 @@ pub struct SonyAccountClient {
     client: reqwest::Client,
     contract: SonyContract,
     /// The `x-psn-store-locale-override` value from `SONY_LOCALE`: English
-    /// content from the Finnish store (STACK.md §9), like the store adapter.
+    /// content from the Finnish store (STACK.md §8), like the store adapter.
     locale: String,
     timing: AccountTiming,
 }

@@ -78,7 +78,7 @@ impl std::fmt::Debug for dyn CriticScores {
     }
 }
 
-/// The signed-in requests (STACK.md §14). The NPSSO comes from the request and
+/// The signed-in requests (STACK.md §2.5). The NPSSO comes from the request and
 /// is never stored.
 pub trait AccountApi: Send + Sync {
     /// Exchanges the NPSSO with Sony once. `Ok` means that Sony accepted it.

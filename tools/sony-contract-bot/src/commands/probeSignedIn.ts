@@ -9,7 +9,7 @@ import { readJsonFile, writeJsonFile } from '../io/files.js'
 import { paths } from '../io/paths.js'
 
 const REQUEST_TIMEOUT_MS = 10_000
-// Same cookie-safe set and length bounds as the server sign-in (STACK.md §14).
+// Same cookie-safe set and length bounds as the server sign-in (STACK.md §2.5).
 const NPSSO_PATTERN = /^[A-Za-z0-9._~-]{16,512}$/
 
 export type ProbeTag =

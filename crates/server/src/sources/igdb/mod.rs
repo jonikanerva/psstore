@@ -1,5 +1,4 @@
-//! The IGDB critic score adapter (STACK.md → External sources outside the
-//! GraphQL contract (critic score)).
+//! The IGDB critic score adapter (STACK.md → 2.3 Outbound sources).
 //!
 //! The adapter follows `server/src/igdb/igdbClient.ts`. IGDB receives only the
 //! public Sony title and a release-year range. The client gets a Twitch app
@@ -75,7 +74,7 @@ pub struct IgdbClient {
 }
 
 impl fmt::Debug for IgdbClient {
-    /// The output names no credential, not even the client id (STACK.md §9).
+    /// The output names no credential, not even the client id (STACK.md §8).
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("IgdbClient")
             .field("token_url", &self.token_url)

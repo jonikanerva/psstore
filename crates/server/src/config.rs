@@ -74,7 +74,7 @@ impl Default for BuildInfo {
 
 /// The Twitch app credentials of the IGDB critic score.
 ///
-/// STACK.md §9 forbids logging the `Client-ID`, so the `Debug` output hides
+/// STACK.md §8 forbids logging the `Client-ID`, so the `Debug` output hides
 /// both values.
 #[derive(Clone)]
 pub struct IgdbCredentials {

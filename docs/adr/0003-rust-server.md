@@ -1,6 +1,6 @@
 # ADR 0003: The server is a Rust program
 
-- Status: accepted
+- Status: accepted; ADR 0004 supersedes decisions 3 and 5 and amends decisions 1, 2, and 6
 - Date: 2026-10-13
 - Issue: #157
 
@@ -22,12 +22,12 @@ Finnish source text from the chat, with the lead's English translation:
 
 ## Decision
 
-1. The server is one Rust crate in `server/`: Axum on a current-thread Tokio runtime, Reqwest with Rustls, Serde, Jiff, and tracing. STACK.md §2 and §7 list the crates and their reasons.
-2. The `/api` contract does not change. The routes, the statuses, the JSON bodies, and the relevant headers stay the same as on the TypeScript server. The client does not change.
-3. The client stays React, Vite, and TypeScript. `shared/` stays as the TypeScript view of the API contract. The committed examples in `docs/contracts/api/` are the contract between the two languages: a Rust test serializes the same values and a TypeScript test decodes the same files.
+1. The server is one Rust crate in `server/`: Axum on a current-thread Tokio runtime, Reqwest with Rustls, Serde, Jiff, and tracing. STACK.md §2 and §6 list the crates and their reasons. _Amended by ADR 0004: the server is two crates, `crates/domain` and `crates/server`._
+2. The `/api` contract does not change. The routes, the statuses, the JSON bodies, and the relevant headers stay the same as on the TypeScript server. The client does not change. _Amended by ADR 0004: the success bodies stay the same; every `/api` error is now an RFC 9457 Problem Details body._
+3. The client stays React, Vite, and TypeScript. `shared/` stays as the TypeScript view of the API contract. The committed examples in `docs/contracts/api/` are the contract between the two languages: a Rust test serializes the same values and a TypeScript test decodes the same files. _Superseded by ADR 0004: the OpenAPI document of the Rust routes is the contract, and the TypeScript client is generated from it. `shared/` is removed. The examples stay as a Rust test and a test of the generated validators._
 4. The Sony contract values (the endpoint, the operation names, the persisted-query hashes, and the category ids) are in `docs/contracts/sony-constants.json`. The server compiles the file in, and the contract tooling reads the same file.
-5. `pnpm` stays the command surface. The scripts in the root `package.json` call `cargo`. `pnpm test-all` stays `$VERIFY_CMD`.
-6. Railway builds the service with Railpack from `railpack.json`: the Rust provider, Node and pnpm from mise for the client build, and a final image that contains only the server binary and `client/build`.
+5. `pnpm` stays the command surface. The scripts in the root `package.json` call `cargo`. `pnpm test-all` stays `$VERIFY_CMD`. _Superseded by ADR 0004: mise tasks are the command surface, and `mise run verify` is `$VERIFY_CMD`. The root `package.json` keeps thin aliases, so `pnpm dev` and `pnpm test-all` still work._
+6. Railway builds the service with Railpack from `railpack.json`: the Rust provider, Node and pnpm from mise for the client build, and a final image that contains only the server binary and `client/build`. _Amended by ADR 0004: the web package is `web/`, so the image contains `web/build`._
 
 ## Alternatives
 
@@ -41,7 +41,7 @@ Finnish source text from the chat, with the lead's English translation:
 ## Consequences
 
 - The repository has two toolchains: Rust for the server and Node for the client and the contract tooling. Node is a build-time tool only; the production image contains no Node.
-- `pnpm test-all` also runs rustfmt, Clippy, cargo-deny, cargo-audit, the Rust release build, and `cargo test`.
+- `pnpm test-all` also runs rustfmt, Clippy, cargo-deny, cargo-audit, the Rust release build, and `cargo test`. (ADR 0004 replaces cargo-audit with the advisories check of cargo-deny and `cargo test` with nextest.)
 - The memory use of the Rust server is not measured before the release, and no budget is set. Railway's memory metric shows it after the release.
 - Railway gives the service variables (the IGDB credentials) to every build command, as it did for the Node build. A Rust build script of a dependency can read them. The NPSSO is never a service variable.
 - The Railway service does not pin the Railpack version. The local plan evidence comes from Railpack 0.40.1. Railpack prints the warning that its config file format is not final.
@@ -53,4 +53,4 @@ Medium. A revert of the merge commit restores the TypeScript server and its Rail
 
 ## Reassessment
 
-Reassess when the Rust server fails to build or to start on Railway, when a dependency in STACK.md §7 loses maintenance, or when the two toolchains cost more than the server work they support.
+Reassess when the Rust server fails to build or to start on Railway, when a dependency in STACK.md §6 loses maintenance, or when the two toolchains cost more than the server work they support.

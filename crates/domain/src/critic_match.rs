@@ -163,7 +163,7 @@ fn strip_edition_suffixes(mut current: String) -> String {
 /// a colon, day 29 to 31 of any month, and `24:00`). It returns `None` where
 /// V8 reads a local time (a date and time without an offset) or uses its
 /// legacy parser (for example `Nov 14 2023`), because the server has no time
-/// zone of its own (STACK.md §12). It also returns `None` outside the jiff
+/// zone of its own (STACK.md §10). It also returns `None` outside the jiff
 /// timestamp range (about the years -9999 to 9999).
 #[must_use]
 pub fn release_year_of(date: &str) -> Option<i32> {

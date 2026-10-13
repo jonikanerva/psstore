@@ -1,4 +1,4 @@
-# cargo-nextest settings for `mise run test` (STACK.md → 4).
+# cargo-nextest settings for `mise run test` (STACK.md → 3).
 
 # The version that mise.toml pins. An older nextest stops with exit code 92.
 nextest-version = { required = "0.9.146" }

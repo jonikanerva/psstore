@@ -1,4 +1,4 @@
-//! The signed-in requests (STACK.md §14). Port of
+//! The signed-in requests (STACK.md §2.5). Port of
 //! `server/src/services/accountService.ts`.
 //!
 //! Each request exchanges the NPSSO for a new access token. Concurrent

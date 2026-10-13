@@ -1,4 +1,4 @@
-//! Structured logs with allowlisted fields only (STACK.md §9).
+//! Structured logs with allowlisted fields only (STACK.md §8).
 //!
 //! The log layer writes one line per event in one of two formats. JSON (one
 //! object per line) is the default and the production format. Text is a

@@ -1,5 +1,5 @@
 # Source of truth for the toolchain and the command surface (STACK.md → 1 and
-# 4). Update the mirrors in the same commit. The Rust version comes only from
+# 3). Update the mirrors in the same commit. The Rust version comes only from
 # rust-toolchain.toml. The root package.json keeps only thin aliases that call
 # these tasks.
 #
@@ -127,7 +127,7 @@ raw = true
 run = "./target/release/psstore-server"
 
 [tasks.test-live]
-description = "The live checks against Sony and IGDB (STACK.md → 4 → Other checks)"
+description = "The live checks against Sony and IGDB (STACK.md → 14 → Live checks)"
 run = "cargo test --locked -p psstore-server --test live --test live_score -- --ignored --nocapture"
 
 # The Sony contract tooling (docs/contracts/sony-graphql-runbook.md).

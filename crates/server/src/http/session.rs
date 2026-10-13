@@ -1,4 +1,4 @@
-//! The sign-in cookie and the `/api/session` routes (STACK.md §14).
+//! The sign-in cookie and the `/api/session` routes (STACK.md §2.5).
 //!
 //! The cookie value is the NPSSO. The cookie is `HttpOnly`, so script cannot
 //! read it, and `SameSite=Strict`, so a cross-site request does not carry it.

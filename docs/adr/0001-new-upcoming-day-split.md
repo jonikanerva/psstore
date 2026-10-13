@@ -25,7 +25,7 @@ The owner set the product rule: NEW shows every game released today, also later 
 
 ## Alternatives
 
-- **The client sends its day boundary as a query parameter, and the server filters exactly.** Rejected. The server contract would carry a value derived from the viewer's time zone, and the server would validate a new client input. STACK.md §12 keeps the server in UTC.
+- **The client sends its day boundary as a query parameter, and the server filters exactly.** Rejected. The server contract would carry a value derived from the viewer's time zone, and the server would validate a new client input. STACK.md §10 keeps the server in UTC.
 - **The server returns one merged list, and the client splits it.** Rejected. The client cannot split a sorted list correctly from its first page, so the server must send the whole list at once. This removes the pages and the infinite scroll from NEW and UPCOMING.
 - **The server splits at the UTC day or the Helsinki day.** Rejected. The owner chose the viewer's local day.
 

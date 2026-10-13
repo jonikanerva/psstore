@@ -22,7 +22,7 @@ const INLINE_TEST_MODULE =
   /#\[cfg\(test\)\]\s*(?:#\[[^\]]*\]\s*)*(?:pub(?:\([^)]*\))?\s+)?mod\s+\w+\s*\{/
 
 // The source without its inline test module. The Clippy lint
-// `items_after_test_module` (in `clippy::all`, which `pnpm rust:lint` denies)
+// `items_after_test_module` (in `clippy::all`, which `mise run lint` denies)
 // keeps that module last in its file, so the text from the module to the end
 // is test code. A `#[cfg(test)]` item outside a test module stays in.
 export const withoutInlineTestModule = (source: string): string => {

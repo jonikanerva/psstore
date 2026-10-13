@@ -21,10 +21,10 @@ const queryClient = new QueryClient({
   },
 })
 
-// Synchronous localStorage persister, as mandated by STACK.md §2 (the official
+// Synchronous localStorage persister, as mandated by STACK.md §2.4 (the official
 // persister for the TanStack Query client cache). The async variant the lint
 // rule suggests is unnecessary for synchronous localStorage.
-// eslint-disable-next-line @typescript-eslint/no-deprecated -- STACK.md §2 specifies createSyncStoragePersister for localStorage
+// eslint-disable-next-line @typescript-eslint/no-deprecated -- STACK.md §2.4 specifies createSyncStoragePersister for localStorage
 const persister = createSyncStoragePersister({ storage: window.localStorage })
 
 syncOnlineState()

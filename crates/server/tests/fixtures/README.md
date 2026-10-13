@@ -106,7 +106,7 @@ re-trim, preserving nulls.
 holds only synthetic names, ids and URLs. No real account data, no real
 purchase and no token appears in it. The shape follows the `psn-api` 2.18.1
 type `PurchasedGamesResponse`. The owner-run live check with a real NPSSO
-confirms that shape (`STACK.md` section 4).
+confirms that shape (`STACK.md` section 14).
 
 | File                           | Shape                                                                                                                      |
 | ------------------------------ | -------------------------------------------------------------------------------------------------------------------------- |

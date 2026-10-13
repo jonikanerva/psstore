@@ -1,4 +1,4 @@
-//! The serve loop with its shutdown policy (STACK.md §10).
+//! The serve loop with its shutdown policy (STACK.md §9).
 //!
 //! On a stop signal the server stops accepting connections and lets active
 //! requests finish. A grace period bounds that wait: at its end [`serve`]

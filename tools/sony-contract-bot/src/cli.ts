@@ -9,7 +9,7 @@ import { runRefresh } from './commands/refresh.js'
 import { runValidate } from './commands/validate.js'
 
 export const usageText = [
-  'Usage: pnpm run sony -- <command> [flags]',
+  'Usage: mise run sony:<command> [flags]',
   'Commands:',
   '  capture',
   '  normalize [--write-manifest]',
@@ -61,7 +61,7 @@ const main = async (): Promise<void> => {
       const checkedAgainstCandidate = await runDiff(args.has('--ci'))
       if (!checkedAgainstCandidate) {
         console.info(
-          'Diff complete. No candidate capture — compared canonical against itself (NOT live Sony). Run `pnpm sony:refresh` for a live check.',
+          'Diff complete. No candidate capture — compared canonical against itself (NOT live Sony). Run `mise run sony:refresh` for a live check.',
         )
       } else {
         console.info('Diff complete.')

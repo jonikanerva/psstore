@@ -1,7 +1,7 @@
 //! One shared computation per key while it runs.
 //!
 //! The NPSSO exchange uses this: concurrent requests with the same NPSSO share
-//! one exchange (STACK.md §14). The entry exists only while the computation
+//! one exchange (STACK.md §2.5). The entry exists only while the computation
 //! runs. The result is never kept: each caller receives a copy, and the entry
 //! is removed when the computation ends. The computation runs as its own task,
 //! so it ends and releases its entry also when every caller leaves.

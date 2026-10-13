@@ -36,7 +36,7 @@ Project shape` state that the change renders, or write not applicable.>
 - Reproduction: <procedure/script, safe inputs or reconstruction, expected
   outcomes and sources, retained result links; agent trial inputs/settings if used>
 - Independent review: <required or not, reason, and review link when complete>
-- Required owner-only checks: <none triggered, or each `STACK.md → 4. Build & verify commands → Other checks`
+- Required owner-only checks: <none triggered, or each `STACK.md → 14 → Live checks`
   entry as `ran on <SHA>: PASS` or `triggered, pending owner run`>
 
 ## Unverified work and exceptions

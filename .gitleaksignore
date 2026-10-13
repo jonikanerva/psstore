@@ -1,4 +1,4 @@
-# Gitleaks findings triaged as false positives (STACK.md → 4. Build & verify commands → Security scans).
+# Gitleaks findings triaged as false positives (STACK.md → 14 → Check configuration).
 # Each fingerprint is bound to one commit, file, rule, and line. A new commit that changes the line gives a new finding.
 
 # Synthetic NPSSO test value ('synthetic-npsso-...'), not a credential.

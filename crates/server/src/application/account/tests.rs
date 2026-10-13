@@ -1,7 +1,7 @@
 //! Tests of the account service with a fake Sony account client and a fake
 //! store. They port `server/src/__tests__/accountService.test.ts`,
 //! `wishlistEnrichment.test.ts`, and the account parts of `app.test.ts`.
-//! All credential values are synthetic (STACK.md §14 → Fixtures).
+//! All credential values are synthetic (STACK.md §2.5 → Fixtures).
 //!
 //! No test does I/O, so the clock is paused: a never-ending lookup meets its
 //! deadline at once.

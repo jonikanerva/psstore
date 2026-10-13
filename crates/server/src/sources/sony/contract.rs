@@ -63,7 +63,7 @@ pub struct SonyContract {
     pub auth_basic_header: String,
     /// The content language and the store region in one tag: English content
     /// from the Finnish store (EUR). A fixed value, never derived from the
-    /// visitor (STACK.md §9).
+    /// visitor (STACK.md §8).
     #[serde(rename = "SONY_LOCALE")]
     pub locale: String,
 }

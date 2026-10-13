@@ -9,7 +9,7 @@ edition = "2024"
 rust-version = "1.99"
 publish = false
 
-# STACK.md §7 records the reason of each dependency. Enable only the features
+# STACK.md §6 records the reason of each dependency. Enable only the features
 # that the code uses. Each crate inherits its entries with `workspace = true`.
 [workspace.dependencies]
 # The path dependency has a version, so cargo-deny does not see a wildcard.

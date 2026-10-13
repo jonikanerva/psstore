@@ -9,7 +9,7 @@ all-features = false
 # vulnerability is always an error. The settings below make the other
 # advisory kinds errors too: an unmaintained or unsound crate anywhere in the
 # graph, and a yanked crate version. An entry in `ignore` needs a RUSTSEC id,
-# a reason, and a STACK.md §15 exception; an unused entry is an error.
+# a reason, and a STACK.md §13 exception; an unused entry is an error.
 unmaintained = "all"
 unsound = "all"
 yanked = "deny"

@@ -6,8 +6,8 @@
 //! - `Cargo.toml` declares the dependencies. The server crate depends on this
 //!   crate, so this crate cannot use the server code.
 //! - `clippy.toml` of this crate disallows the ambient clock, the environment,
-//!   the filesystem, process and network I/O, and random seeds. `pnpm
-//!   rust:lint` denies the lints. The list names the common entry points
+//!   the filesystem, process and network I/O, and random seeds. `mise
+//!   run lint` denies the lints. The list names the common entry points
 //!   only; review covers the rest, for example another `std::fs` function.
 //!
 //! The current time, the settings, and every external value arrive as
