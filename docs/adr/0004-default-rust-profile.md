@@ -46,7 +46,7 @@ Finnish source text from the chat, with the lead's English translation:
 - A browser tab that loaded the TypeScript client before the release receives Problem Details errors. The statuses do not change, so the sign-in form still appears on a 401. A reload loads the new client.
 - The generated client brings three scoped exceptions in `STACK.md` §13: `exactOptionalPropertyTypes` is off for the generated directory, TypeScript 6.0.3 is the generator's peer, and a pnpm override pins a fixed js-yaml in the generator's dependency.
 - A change to an `/api` route or response type needs `mise run contract:export` and `mise run contract:generate`. `contract:check` in `verify` fails on drift.
-- The owner committed the agent-setup changes on 2026-10-14 (`d2174a5`) and then revised the profile (`5ad114f`): TypeScript 7 with Oxlint is the only frontend path, deterministic browser journeys are part of the profile, and the port-only sections are removed. `STACK.md` follows `5ad114f`.
+- On 2026-10-14 the agent-setup repository received two commits under the owner's name, outside this pull request's session: `d2174a5` adds the lessons, and `5ad114f` revises the profile: TypeScript 7 with Oxlint is the only frontend path, deterministic browser journeys are part of the profile, and the port-only sections are removed. `STACK.md` follows `5ad114f`.
 
 ## Cost of reversal
 
