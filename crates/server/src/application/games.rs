@@ -735,5 +735,6 @@ impl GamesApi for GamesService {
     }
 }
 
+// The account tests reuse the fake Sony store to run the real service.
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;
