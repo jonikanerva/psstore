@@ -241,11 +241,13 @@ fn slug(name: &str) -> String {
 }
 
 /// The game page data of a game: description, genres, studio, and media.
-/// The description uses the tags of Sony's descriptions.
+/// The description uses the tags of Sony's descriptions. Its first line is
+/// the orange notice of `docs/contracts/api/game-detail-plus-price.json`,
+/// so axe checks the contrast of a Sony colour on the game page (#161).
 fn with_details(game: Game, genres: &[&str], media: bool) -> Game {
     let slug = slug(&game.name);
     let description = format!(
-        "<p>{} is a synthetic game of the browser journeys.</p><br><b>Features:</b><br>- One <i>local</i> mode<br>- A <a href=\"https://www.playstation.com/\">PlayStation</a> link",
+        "<b><font color=\"orange\">PRE-ORDER – IMMEDIATE PAYMENT REQUIRED</font></b><br><br/><br/><p>{} is a synthetic game of the browser journeys.</p><br><b>Features:</b><br>- One <i>local</i> mode<br>- A <a href=\"https://www.playstation.com/\">PlayStation</a> link",
         game.name
     );
     let (screenshots, videos) = if media {
