@@ -11,11 +11,9 @@
 use icu_normalizer::DecomposingNormalizerBorrowed;
 use icu_properties::CodePointMapData;
 use icu_properties::props::{GeneralCategory, GeneralCategoryGroup};
-use jiff::civil::{Date, Time};
-use jiff::tz::Offset;
-use jiff::{SignedDuration, Timestamp};
 
 use super::game::CriticScore;
+use super::js::{parse_date_ms, utc_full_year};
 
 /// A candidate needs at least this many critic reviews behind its score.
 pub const MIN_CRITIC_COUNT: u64 = 3;
@@ -153,196 +151,18 @@ fn strip_edition_suffixes(mut current: String) -> String {
     }
 }
 
-/// The UTC year of a date string, with the result of JavaScript `Date.parse`.
-/// `None` for an empty or unparseable value.
+/// The UTC year of a date string: JavaScript
+/// `new Date(Date.parse(date)).getUTCFullYear()`. `None` for an empty or
+/// unparseable value.
 ///
-/// `Game.date` is the output of the Sony mapper: a UTC ISO-8601 string with
-/// `Z`, or the empty string. This function reads the ECMAScript date time
-/// string format and the variants of it that V8 also accepts (lower-case `t`
-/// and `z`, a space for `T`, any number of fraction digits, an offset without
-/// a colon, day 29 to 31 of any month, and `24:00`). It returns `None` where
-/// V8 reads a local time (a date and time without an offset) or uses its
-/// legacy parser (for example `Nov 14 2023`), because the server has no time
-/// zone of its own (STACK.md §10). It also returns `None` outside the jiff
-/// timestamp range (about the years -9999 to 9999).
+/// `Game.date` holds the date text of the Sony mapper (STACK.md §10). Sony
+/// sends `YYYY-MM-DDTHH:mm:ssZ`. A normalised date has milliseconds, and a
+/// missing date is the empty string. The year is the calendar year of the
+/// instant in UTC, so `2024-01-01T00:30:00+01:00` is 2023. The parse is
+/// `js::parse_date_ms`, so its documented differences from V8 apply here too.
 #[must_use]
 pub fn release_year_of(date: &str) -> Option<i32> {
-    let parts = parse_date_time(date)?;
-    let first_of_month = Date::new(parts.year, parts.month, 1).ok()?;
-    let start = parts
-        .offset
-        .to_timestamp(first_of_month.to_datetime(Time::midnight()))
-        .ok()?;
-    // V8 lets day 29 to 31 and hour 24 roll over into the next month or day.
-    let elapsed = SignedDuration::from_hours(24 * (i64::from(parts.day) - 1))
-        .checked_add(SignedDuration::from_hours(i64::from(parts.hour)))?
-        .checked_add(SignedDuration::from_mins(i64::from(parts.minute)))?
-        .checked_add(SignedDuration::from_secs(i64::from(parts.second)))?
-        .checked_add(SignedDuration::from_millis(i64::from(parts.millisecond)))?;
-    let instant: Timestamp = start.checked_add(elapsed).ok()?;
-    Some(i32::from(Offset::UTC.to_datetime(instant).year()))
-}
-
-/// The fields of a date time string.
-struct DateTimeParts {
-    year: i16,
-    month: i8,
-    day: i8,
-    hour: u8,
-    minute: u8,
-    second: u8,
-    millisecond: u16,
-    offset: Offset,
-}
-
-/// Parses `YYYY[-MM[-DD]][THH:mm[:ss[.s…]]][Z|±HH:mm|±HHmm]` and the
-/// `±YYYYYY` year form. A time needs an offset; a date alone is UTC.
-fn parse_date_time(text: &str) -> Option<DateTimeParts> {
-    let mut cursor = Cursor(text.as_bytes());
-    let year = cursor.year()?;
-    let mut month = 1;
-    let mut day = 1;
-    if cursor.eat(b'-') {
-        month = cursor.number_in(2, 1, 12)?;
-        if cursor.eat(b'-') {
-            day = cursor.number_in(2, 1, 31)?;
-        }
-    }
-    let (mut hour, mut minute, mut second, mut millisecond) = (0, 0, 0, 0);
-    let has_time = cursor.eat_any(b"Tt ");
-    if has_time {
-        hour = cursor.number_in(2, 0, 24)?;
-        if !cursor.eat(b':') {
-            return None;
-        }
-        minute = cursor.number_in(2, 0, 59)?;
-        if cursor.eat(b':') {
-            second = cursor.number_in(2, 0, 59)?;
-            if cursor.eat(b'.') {
-                millisecond = cursor.fraction_millis()?;
-            }
-        }
-        if hour == 24 && (minute, second, millisecond) != (0, 0, 0) {
-            return None;
-        }
-    }
-    let offset = match cursor.offset()? {
-        OffsetSuffix::Given(offset) => offset,
-        OffsetSuffix::Missing if has_time => return None,
-        OffsetSuffix::Missing => Offset::UTC,
-    };
-    if !cursor.0.is_empty() {
-        return None;
-    }
-    Some(DateTimeParts {
-        year,
-        month: i8::try_from(month).ok()?,
-        day: i8::try_from(day).ok()?,
-        hour: u8::try_from(hour).ok()?,
-        minute: u8::try_from(minute).ok()?,
-        second: u8::try_from(second).ok()?,
-        millisecond,
-        offset,
-    })
-}
-
-/// The unread rest of an ASCII date string.
-struct Cursor<'a>(&'a [u8]);
-
-/// The offset at the end of a date-time text.
-enum OffsetSuffix {
-    /// No offset follows.
-    Missing,
-    Given(Offset),
-}
-
-impl Cursor<'_> {
-    fn eat(&mut self, byte: u8) -> bool {
-        self.eat_any(&[byte])
-    }
-
-    fn eat_any(&mut self, bytes: &[u8]) -> bool {
-        match self.0.split_first() {
-            Some((first, rest)) if bytes.contains(first) => {
-                self.0 = rest;
-                true
-            }
-            _ => false,
-        }
-    }
-
-    /// Exactly `count` ASCII digits.
-    fn digits(&mut self, count: usize) -> Option<u32> {
-        let (head, rest) = self.0.split_at_checked(count)?;
-        let mut value = 0_u32;
-        for byte in head {
-            if !byte.is_ascii_digit() {
-                return None;
-            }
-            value = value * 10 + u32::from(byte - b'0');
-        }
-        self.0 = rest;
-        Some(value)
-    }
-
-    fn number_in(&mut self, count: usize, min: u32, max: u32) -> Option<u32> {
-        self.digits(count)
-            .filter(|value| (min..=max).contains(value))
-    }
-
-    /// Four digits, or a sign and six digits. `-000000` is not a year.
-    fn year(&mut self) -> Option<i16> {
-        let value = if self.eat(b'+') {
-            i64::from(self.digits(6)?)
-        } else if self.eat(b'-') {
-            let magnitude = self.digits(6)?;
-            if magnitude == 0 {
-                return None;
-            }
-            -i64::from(magnitude)
-        } else {
-            i64::from(self.digits(4)?)
-        };
-        i16::try_from(value).ok()
-    }
-
-    /// One or more fraction digits. V8 keeps the first three and drops the
-    /// rest without rounding.
-    fn fraction_millis(&mut self) -> Option<u16> {
-        let count = self.0.iter().take_while(|b| b.is_ascii_digit()).count();
-        if count == 0 {
-            return None;
-        }
-        let (digits, rest) = self.0.split_at(count);
-        let mut millis = 0_u16;
-        for place in 0..3 {
-            let digit = digits.get(place).map_or(0, |b| b - b'0');
-            millis = millis * 10 + u16::from(digit);
-        }
-        self.0 = rest;
-        Some(millis)
-    }
-
-    /// `Z`, `z`, `±HH:mm`, or `±HHmm`. `None` for a malformed offset.
-    fn offset(&mut self) -> Option<OffsetSuffix> {
-        if self.eat_any(b"Zz") {
-            return Some(OffsetSuffix::Given(Offset::UTC));
-        }
-        let sign = if self.eat(b'+') {
-            1
-        } else if self.eat(b'-') {
-            -1
-        } else {
-            return Some(OffsetSuffix::Missing);
-        };
-        let hours = self.number_in(2, 0, 23)?;
-        self.eat(b':');
-        let minutes = self.number_in(2, 0, 59)?;
-        let seconds = i32::try_from(hours * 3600 + minutes * 60).ok()?;
-        Offset::from_seconds(sign * seconds)
-            .ok()
-            .map(OffsetSuffix::Given)
-    }
+    parse_date_ms(date).and_then(utc_full_year)
 }
 
 #[cfg(test)]

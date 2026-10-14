@@ -32,6 +32,17 @@ use jiff::tz::Offset;
 /// outside the `jiff` timestamp range (about -9999-01-02 to 9999-12-30). V8 reads a date with a time but without an offset
 /// as local time. This port reads it as UTC, which is the time zone of the
 /// production host. Sony sends `YYYY-MM-DDTHH:mm:ssZ`.
+///
+/// Two more forms differ from V8 on purpose (owner decision on issue #159).
+/// This port reads both literally:
+///
+/// - A date with an offset but without a time: `2024-01-08+02:00` is
+///   2024-01-07T22:00:00.000Z here. V8 gives `NaN`.
+/// - A year from `0000` to `0099` in a form that V8 sends to its legacy
+///   parser (a date with `Z` but without a time, or a space instead of `T`):
+///   `0000-12-06Z` is 0000-12-06 here. V8 reads 2000-12-06, because its
+///   legacy parser reads the years 0 to 49 as 2000 to 2049 and 50 to 99 as
+///   1950 to 1999.
 #[must_use]
 pub fn parse_date_ms(text: &str) -> Option<i64> {
     let mut cursor = Cursor {
@@ -117,6 +128,15 @@ pub fn to_iso_string(ms: i64) -> Option<String> {
         dt.second(),
         dt.millisecond()
     ))
+}
+
+/// `new Date(ms).getUTCFullYear()`: the calendar year of the instant in UTC.
+/// `None` outside the `jiff` timestamp range, where JavaScript still gives a
+/// year.
+#[must_use]
+pub fn utc_full_year(ms: i64) -> Option<i32> {
+    let timestamp = Timestamp::from_millisecond(ms).ok()?;
+    Some(i32::from(Offset::UTC.to_datetime(timestamp).year()))
 }
 
 /// A cursor over the ASCII bytes of a date string.
@@ -472,6 +492,51 @@ mod tests {
             "9999-12-31T23:59:59.999Z",
         ] {
             assert_eq!(parse_date_ms(input), None, "{input}");
+        }
+    }
+
+    /// Deliberate differences from V8 (owner decision on issue #159). Node
+    /// 24.21.0 (`TZ=UTC`) gives the value in the comment.
+    #[test]
+    fn reads_two_v8_forms_literally() {
+        let cases = [
+            // V8: NaN.
+            ("2024-01-08+02:00", "2024-01-07T22:00:00.000Z"),
+            // V8: 2000-12-06T00:00:00.000Z.
+            ("0000-12-06Z", "0000-12-06T00:00:00.000Z"),
+            // V8: 1999-12-06T00:00:00.000Z.
+            ("0099-12-06Z", "0099-12-06T00:00:00.000Z"),
+            // V8: 2000-01-01T12:00:00.000Z.
+            ("0000-01-01 12:00:00Z", "0000-01-01T12:00:00.000Z"),
+        ];
+        for (input, expected) in cases {
+            assert_eq!(iso(input), expected, "{input}");
+        }
+        // The same forms where V8 agrees, for contrast.
+        assert_eq!(iso("2024-01-08T00:00+02:00"), "2024-01-07T22:00:00.000Z");
+        assert_eq!(iso("0000-12-06"), "0000-12-06T00:00:00.000Z");
+        assert_eq!(iso("0100-12-06Z"), "0100-12-06T00:00:00.000Z");
+    }
+
+    /// Expected values from Node 24.21.0: `new Date(ms).getUTCFullYear()`.
+    /// The `None` rows are outside the `jiff` range, which ends at
+    /// 9999-12-30T22:00:00.999Z. Node gives 9999, 275760, and `NaN` there.
+    #[test]
+    fn reads_the_utc_year_like_javascript() {
+        let cases = [
+            (0, Some(1970)),
+            (-1, Some(1969)),
+            (1_704_067_199_999, Some(2023)),
+            (1_704_067_200_000, Some(2024)),
+            (-62_167_219_200_000, Some(0)),
+            (-62_167_219_200_001, Some(-1)),
+            (253_402_207_200_000, Some(9999)),
+            (253_402_207_201_000, None),
+            (8_640_000_000_000_000, None),
+            (i64::MIN, None),
+        ];
+        for (ms, expected) in cases {
+            assert_eq!(utc_full_year(ms), expected, "{ms}");
         }
     }
 

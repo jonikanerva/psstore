@@ -240,7 +240,7 @@ async fn bounds_the_concurrent_detail_lookups_of_one_page() {
     let (svc, fake) = service(FakeSony {
         search: Box::new(|_| search_page((0..40).map(unverified).collect(), true)),
         detail: Box::new(|_| Ok(ps5_detail())),
-        detail_delay: Duration::from_millis(2),
+        detail_delay: Box::new(|_| Duration::from_millis(2)),
         ..FakeSony::default()
     });
     let result = svc.search_games("x".into(), page(0, 50)).await.unwrap();

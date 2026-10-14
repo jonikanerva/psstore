@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
+import { check } from 'prettier'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   exchangeNpsso,
@@ -473,6 +474,43 @@ describe('runProbePurchased', () => {
     expect(output).toEqual(['getPurchasedGameList 200 PASS'])
     expect(process.exitCode).toBeUndefined()
     await secretsAbsent()
+  })
+
+  it('writes the changed manifest in the Prettier format', async () => {
+    await run(
+      fetchOf(
+        redirect(`${REDIRECT}?code=${CODE}`),
+        json({ access_token: TOKEN }),
+        json(okLibrary),
+      ),
+    )
+    const text = await fs.readFile(manifestPath, 'utf8')
+    // JSON.stringify(value, null, 2) puts each array item on its own line.
+    expect(text).toContain('\n      "observed_status_codes": [200]\n')
+    expect(text).toContain(
+      '\n      "required_headers": ["x-apollo-operation-name"],\n',
+    )
+    expect(text.endsWith('}\n')).toBe(true)
+    // The check of `mise run format-check`.
+    expect(await check(text, { filepath: manifestPath })).toBe(true)
+  })
+
+  it('leaves the manifest text untouched when the content does not change', async () => {
+    // Compact text: any rewrite changes the bytes.
+    const seeded = JSON.stringify(
+      recordObservedStatus(manifestWith([]), HASH, 200),
+    )
+    await fs.writeFile(manifestPath, seeded)
+    await run(
+      fetchOf(
+        redirect(`${REDIRECT}?code=${CODE}`),
+        json({ access_token: TOKEN }),
+        json(okLibrary),
+      ),
+    )
+    expect(output).toEqual(['getPurchasedGameList 200 PASS'])
+    expect(process.exitCode).toBeUndefined()
+    expect(await fs.readFile(manifestPath, 'utf8')).toBe(seeded)
   })
 
   it('makes no request and writes nothing for an invalid NPSSO', async () => {
