@@ -163,12 +163,12 @@ async fn request_context(request: Request, next: Next) -> Response {
 /// The Content-Security-Policy of every response.
 ///
 /// Scripts, styles, fonts, and API calls come only from this origin; the
-/// built client has no inline script or style. Images and videos come from
-/// Sony's CDNs. `img-src` and `media-src` allow every `https:` host instead
-/// of named Sony hosts, because only the owner's signed-in run can show the
-/// image host of the purchased list (STACK.md §15). The browser journeys
-/// (`e2e/`) fail on any violation.
-const CONTENT_SECURITY_POLICY: &str = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https:; media-src 'self' https:; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'";
+/// built client has no inline script or style. Images come only from Sony's
+/// image host and videos only from Sony's video host. The live CSP check and
+/// the owner's signed-in probes of #162 found no other media host
+/// (STACK.md §15). The browser journeys (`e2e/`) fail on any violation, and
+/// `e2e/tests/csp.spec.ts` checks that other hosts are blocked.
+const CONTENT_SECURITY_POLICY: &str = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https://image.api.playstation.com; media-src 'self' https://vulcan.dl.playstation.net; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'";
 
 /// Sets the security headers of every response: API answers, client files,
 /// 404s, and the 500 of a contained panic.

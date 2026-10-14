@@ -70,6 +70,16 @@ test('live pages cause no CSP violation', async ({ page, externalOrigins }) => {
   counts['newCards'] = await cards.count()
   counts['newImagesLoaded'] = await loadedImages(page)
 
+  // The other anonymous lists. MONTHLY reads the PS Plus feed, a source of
+  // its own, so its images can come from another host (#162).
+  for (const view of ['upcoming', 'discounted', 'monthly'] as const) {
+    await page.goto(`/${view}`)
+    await expect(cards.first()).toBeVisible()
+    await scrollThroughGrid(page)
+    counts[`${view}Cards`] = await cards.count()
+    counts[`${view}ImagesLoaded`] = await loadedImages(page)
+  }
+
   // A game page with screenshots and a video. The NEW list carries the
   // media of each game.
   const answer = await page.request.get('/api/games/new?offset=0&size=60')

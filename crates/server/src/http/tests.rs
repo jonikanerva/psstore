@@ -1246,7 +1246,7 @@ async fn the_operational_routes_answer_get_only_and_come_before_the_client_build
 
 /// The policy, written out so that the test does not take it from the code
 /// under test.
-const CSP: &str = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https:; media-src 'self' https:; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'";
+const CSP: &str = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https://image.api.playstation.com; media-src 'self' https://vulcan.dl.playstation.net; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'";
 
 /// Fails unless the response has the five security headers.
 fn assert_security_headers(response: &Response, what: &str) {
