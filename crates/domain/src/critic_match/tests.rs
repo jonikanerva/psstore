@@ -1,4 +1,5 @@
 use super::*;
+use crate::js::{parse_date_ms, utc_full_year};
 
 fn score(value: u8) -> Option<CriticScore> {
     CriticScore::new(value)
@@ -70,10 +71,16 @@ fn normalize_keeps_a_title_that_is_only_a_suffix() {
     assert_eq!(normalize_title("Standard Edition"), "standard edition");
 }
 
+/// The year is the calendar year of the instant in UTC, not the year in
+/// the offset of the text.
 #[test]
 fn release_year_reads_the_utc_year() {
     assert_eq!(release_year_of("2023-12-31T23:30:00Z"), Some(2023));
     assert_eq!(release_year_of("2024-01-01T00:30:00Z"), Some(2024));
+    assert_eq!(release_year_of("2024-01-01T00:30:00+01:00"), Some(2023));
+    assert_eq!(release_year_of("2023-12-31T23:30:00-01:00"), Some(2024));
+    assert_eq!(release_year_of("2023-12-31T21:00:00-03:00"), Some(2024));
+    assert_eq!(release_year_of("2024-01-01T02:00:00+02:00"), Some(2024));
 }
 
 #[test]
@@ -378,94 +385,150 @@ fn normalize_matches_the_typescript_output() {
     }
 }
 
-/// Expected years from Node 24.21.0: `new Date(Date.parse(s)).getUTCFullYear()`,
-/// `None` for `NaN`.
-#[test]
-fn release_year_matches_date_parse() {
-    let cases: [(&str, Option<i32>); 59] = [
-        ("2023-11-14T00:00:00Z", Some(2023)),
-        ("2023-11-14T00:00:00.000Z", Some(2023)),
-        ("2024-01-01T00:30:00+01:00", Some(2023)),
-        ("2023-12-31T23:30:00-01:00", Some(2024)),
-        ("2023", Some(2023)),
-        ("2023-11", Some(2023)),
-        ("2023-11-14", Some(2023)),
-        ("2023Z", Some(2023)),
-        ("2023-11Z", Some(2023)),
-        ("2023-11-14Z", Some(2023)),
-        ("2023-13-01", None),
-        ("2023-00-14T00:00:00Z", None),
-        ("2023-11-00T00:00:00Z", None),
-        ("2023-11-32T00:00:00Z", None),
-        // V8 lets day 29 to 31 roll over into the next month.
-        ("2023-02-30", Some(2023)),
-        ("2024-02-30T00:00:00Z", Some(2024)),
-        ("2023-04-31T00:00:00Z", Some(2023)),
-        ("2023-11-14T24:00:00Z", Some(2023)),
-        ("2023-12-31T24:00:00Z", Some(2024)),
-        ("2023-12-31T24:00Z", Some(2024)),
-        ("2023-11-14T24:00:00.000Z", Some(2023)),
-        ("2023-11-14T24:00:00.001Z", None),
-        ("2023-11-14T24:00:01Z", None),
-        ("2023-11-14T25:00:00Z", None),
-        ("2023-11-14T23:60:00Z", None),
-        ("2023-11-14T23:59:60Z", None),
-        ("+002023-11-14T00:00:00Z", Some(2023)),
-        ("-000001-01-01T00:00:00Z", Some(-1)),
-        ("-002023-11-14T00:00:00Z", Some(-2023)),
-        ("-000000-01-01T00:00:00Z", None),
-        ("+2023-11-14T00:00:00Z", None),
-        ("0000-01-01T00:00:00Z", Some(0)),
-        ("0099-06-01T00:00:00Z", Some(99)),
-        ("2023-11-14T00:00Z", Some(2023)),
-        ("2023-11-14T12:30+01:00", Some(2023)),
-        ("2023-11-14T00:00:00.1Z", Some(2023)),
-        ("2023-12-31T23:59:59.9999Z", Some(2023)),
-        ("2023-11-14t00:00:00z", Some(2023)),
-        ("2023-11-14 00:00:00Z", Some(2023)),
-        ("2023-11-14T00:00:00+0100", Some(2023)),
-        ("2023-12-31T23:00:00-23:59", Some(2024)),
-        ("2023-11-14T00:00:00-00:00", Some(2023)),
-        ("2023-11-14T00:00:00+01", None),
-        ("2023-11-14T00:00:00+24:00", None),
-        ("2023-11-14T00:00:00+23:60", None),
-        ("2023-11-14T00:00:00+01:00:00", None),
-        ("2023-11-14T00:00:00+1:00", None),
-        ("2023-11-14T00:00:00 Z", None),
-        ("2023-11-14T00:00:00GMT", None),
-        ("2023-11-14T00:00:00,000Z", None),
-        ("2023-11-14T00:00:00.Z", None),
-        ("2023-11-14T00Z", None),
-        ("2023-11-14TZ", None),
-        ("2023-1-14T00:00:00Z", None),
-        ("02023-11-14T00:00:00Z", None),
-        (" 2023-11-14T00:00:00Z", None),
-        ("2023-11-14T00:00:00Z ", None),
-        ("１９９９-01-01T00:00:00Z", None),
-        ("10000-01-01T00:00:00Z", None),
-    ];
-    for (input, expected) in cases {
-        assert_eq!(release_year_of(input), expected, "input {input:?}");
-    }
-}
+/// One input table for both callers of the date parser: the year that
+/// `js::parse_date_ms` gives to the Sony mapper and the listings, and the
+/// year of `release_year_of` (issue #159).
+///
+/// Each row has the input, the year of Node 24.21.0 with `TZ=UTC`
+/// (`new Date(Date.parse(s)).getUTCFullYear()`, `None` for `NaN`), and the
+/// year of this server. The two years differ only in the rows that the
+/// comments mark as deliberate differences (`js::parse_date_ms` documents
+/// them).
+const YEAR_CASES: [(&str, Option<i32>, Option<i32>); 84] = [
+    // The forms that Sony sends, and the normalised form with
+    // milliseconds.
+    ("2023-11-14T00:00:00Z", Some(2023), Some(2023)),
+    ("2023-11-14T00:00:00.000Z", Some(2023), Some(2023)),
+    ("2023-12-31T21:00:00Z", Some(2023), Some(2023)),
+    ("2024-01-01T00:00:00.000Z", Some(2024), Some(2024)),
+    ("", None, None),
+    // The UTC year of the instant.
+    ("2024-01-01T00:30:00+01:00", Some(2023), Some(2023)),
+    ("2023-12-31T23:30:00-01:00", Some(2024), Some(2024)),
+    // The ECMAScript date time string format and the V8 leniencies.
+    ("2023", Some(2023), Some(2023)),
+    ("2023-11", Some(2023), Some(2023)),
+    ("2023-11-14", Some(2023), Some(2023)),
+    ("2023Z", Some(2023), Some(2023)),
+    ("2023-11Z", Some(2023), Some(2023)),
+    ("2023-11-14Z", Some(2023), Some(2023)),
+    ("2023-02-30", Some(2023), Some(2023)),
+    ("2024-02-30T00:00:00Z", Some(2024), Some(2024)),
+    ("2023-04-31T00:00:00Z", Some(2023), Some(2023)),
+    ("2023-11-14T24:00:00Z", Some(2023), Some(2023)),
+    ("2023-12-31T24:00:00Z", Some(2024), Some(2024)),
+    ("2023-12-31T24:00Z", Some(2024), Some(2024)),
+    ("2023-11-14T24:00:00.000Z", Some(2023), Some(2023)),
+    ("+002023-11-14T00:00:00Z", Some(2023), Some(2023)),
+    ("-000001-01-01T00:00:00Z", Some(-1), Some(-1)),
+    ("-002023-11-14T00:00:00Z", Some(-2023), Some(-2023)),
+    ("0000-01-01T00:00:00Z", Some(0), Some(0)),
+    ("0099-06-01T00:00:00Z", Some(99), Some(99)),
+    ("2023-11-14T00:00Z", Some(2023), Some(2023)),
+    ("2023-11-14T12:30+01:00", Some(2023), Some(2023)),
+    ("2023-11-14T00:00:00.1Z", Some(2023), Some(2023)),
+    ("2023-12-31T23:59:59.9999Z", Some(2023), Some(2023)),
+    ("2023-11-14t00:00:00z", Some(2023), Some(2023)),
+    ("2023-11-14 00:00:00Z", Some(2023), Some(2023)),
+    ("2023-11-14T00:00:00+0100", Some(2023), Some(2023)),
+    ("2023-12-31T23:00:00-23:59", Some(2024), Some(2024)),
+    ("2023-11-14T00:00:00-00:00", Some(2023), Some(2023)),
+    ("9999-12-30T22:00:00Z", Some(9999), Some(9999)),
+    ("-009999-01-02T01:59:59Z", Some(-9999), Some(-9999)),
+    ("-009999-01-05T00:00:00Z", Some(-9999), Some(-9999)),
+    // Invalid inputs.
+    ("not a date", None, None),
+    ("soon", None, None),
+    ("2023-13-01", None, None),
+    ("2023-00-14T00:00:00Z", None, None),
+    ("2023-11-00T00:00:00Z", None, None),
+    ("2023-11-32T00:00:00Z", None, None),
+    ("2023-11-14T24:00:00.001Z", None, None),
+    ("2023-11-14T24:00:01Z", None, None),
+    ("2023-11-14T25:00:00Z", None, None),
+    ("2023-11-14T23:60:00Z", None, None),
+    ("2023-11-14T23:59:60Z", None, None),
+    ("-000000-01-01T00:00:00Z", None, None),
+    ("+2023-11-14T00:00:00Z", None, None),
+    ("2023-11-14T00:00:00+01", None, None),
+    ("2023-11-14T00:00:00+24:00", None, None),
+    ("2023-11-14T00:00:00+23:60", None, None),
+    ("2023-11-14T00:00:00+01:00:00", None, None),
+    ("2023-11-14T00:00:00+1:00", None, None),
+    ("2023-11-14T00:00:00 Z", None, None),
+    ("2023-11-14T00:00:00GMT", None, None),
+    ("2023-11-14T00:00:00,000Z", None, None),
+    ("2023-11-14T00:00:00.Z", None, None),
+    ("2023-11-14T00Z", None, None),
+    ("2023-11-14TZ", None, None),
+    ("2023-1-14T00:00:00Z", None, None),
+    ("02023-11-14T00:00:00Z", None, None),
+    (" 2023-11-14T00:00:00Z", None, None),
+    ("2023-11-14T00:00:00Z ", None, None),
+    ("１９９９-01-01T00:00:00Z", None, None),
+    ("10000-01-01T00:00:00Z", None, None),
+    // A date and time without an offset. V8 reads local time; the
+    // server reads UTC, the time zone of the production host. Node runs
+    // with `TZ=UTC` here, so the years agree. Before #159,
+    // `release_year_of` gave `None` for these.
+    ("2023-11-14T00:00:00", Some(2023), Some(2023)),
+    ("2023-11-14T00:00", Some(2023), Some(2023)),
+    ("2023-11-14T00:00:00.000", Some(2023), Some(2023)),
+    ("2023-12-31T23:30:00", Some(2023), Some(2023)),
+    // Deliberate difference (owner decision on #159): a date with an
+    // offset but without a time. V8 gives `NaN`.
+    ("2024-01-08+02:00", None, Some(2024)),
+    // Deliberate difference (owner decision on #159): V8 reads a year
+    // from 0 to 99 in its legacy forms as 1950 to 2049.
+    ("0000-12-06Z", Some(2000), Some(0)),
+    ("0099-12-06Z", Some(1999), Some(99)),
+    ("0000-01-01 12:00:00Z", Some(2000), Some(0)),
+    // Not ported: the legacy forms of V8.
+    ("Nov 14 2023", Some(2023), None),
+    ("2023/11/14", Some(2023), None),
+    ("2023-11-1", Some(2023), None),
+    // Not ported: instants outside the jiff range.
+    ("+275760-09-13T00:00:00.000Z", Some(275_760), None),
+    ("+012023-11-14T00:00:00Z", Some(12023), None),
+    ("-010000-01-01T00:00:00Z", Some(-10000), None),
+    ("9999-12-31T23:59:59.999Z", Some(9999), None),
+    ("9999-12-30T22:00:01Z", Some(9999), None),
+    ("-009999-01-01T00:00:00Z", Some(-9999), None),
+];
 
-/// Deliberate differences from `Date.parse`. V8 reads a date and time
-/// without an offset, and its legacy formats, as local time; the server has
-/// no time zone. jiff covers the years -9999 to 9999 only; V8 covers
-/// -271821 to 275760.
+/// The rows of `YEAR_CASES` where the server and Node differ. Each one is
+/// a documented difference.
+const NODE_DIFFERENCES: [&str; 13] = [
+    "2024-01-08+02:00",
+    "0000-12-06Z",
+    "0099-12-06Z",
+    "0000-01-01 12:00:00Z",
+    "Nov 14 2023",
+    "2023/11/14",
+    "2023-11-1",
+    "+275760-09-13T00:00:00.000Z",
+    "+012023-11-14T00:00:00Z",
+    "-010000-01-01T00:00:00Z",
+    "9999-12-31T23:59:59.999Z",
+    "9999-12-30T22:00:01Z",
+    "-009999-01-01T00:00:00Z",
+];
+
+/// Runs both callers of the date parser on `YEAR_CASES` (issue #159).
 #[test]
-fn release_year_refuses_local_times_and_far_years() {
-    for input in [
-        "2023-11-14T00:00:00",
-        "2023-11-14T00:00",
-        "2023-11-14T00:00:00.000",
-        "Nov 14 2023",
-        "2023-11-1",
-        "+275760-09-13T00:00:00.000Z",
-        "+012023-11-14T00:00:00Z",
-        "-010000-01-01T00:00:00Z",
-        "9999-12-31T23:59:59.999Z",
-    ] {
-        assert_eq!(release_year_of(input), None, "input {input:?}");
+fn both_callers_read_one_year_from_each_date() {
+    for (input, node, expected) in YEAR_CASES {
+        let parsed_year = parse_date_ms(input).and_then(utc_full_year);
+        assert_eq!(parsed_year, expected, "parse_date_ms, input {input:?}");
+        assert_eq!(
+            release_year_of(input),
+            expected,
+            "release_year_of, input {input:?}"
+        );
+        assert_eq!(
+            node != expected,
+            NODE_DIFFERENCES.contains(&input),
+            "difference from Node, input {input:?}"
+        );
     }
 }
