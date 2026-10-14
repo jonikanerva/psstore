@@ -1,7 +1,12 @@
 import { validateBackendCompatibility } from '../compat/backend.js'
+import {
+  readProductionRustFile,
+  readProductionRustSources,
+} from '../compat/rustSources.js'
+import { readSonyConstants } from '../contract/sonyConstants.js'
 import { validateManifest } from '../contract/validator.js'
 import type { SonyContractManifest } from '../contract/types.js'
-import { fileExists, readJsonFile, readTextFile } from '../io/files.js'
+import { fileExists, readJsonFile } from '../io/files.js'
 import { paths } from '../io/paths.js'
 
 export const runValidate = async (candidate: boolean): Promise<void> => {
@@ -16,16 +21,16 @@ export const runValidate = async (candidate: boolean): Promise<void> => {
   const manifest = await readJsonFile<SonyContractManifest>(manifestPath)
   validateManifest(manifest)
 
-  const [serverEnvText, sonyClientText, mapperText, serviceText] =
+  const [sonyConstants, sonyClientText, mapperText, serviceText] =
     await Promise.all([
-      readTextFile(paths.envFile),
-      readTextFile(paths.sonyClientFile),
-      readTextFile(paths.mapperFile),
-      readTextFile(paths.serviceFile),
+      readSonyConstants(paths.sonyConstants),
+      readProductionRustSources(paths.sonyClientDir),
+      readProductionRustFile(paths.mapperFile),
+      readProductionRustFile(paths.serviceFile),
     ])
 
   validateBackendCompatibility(manifest, {
-    serverEnvText,
+    sonyConstants,
     sonyClientText,
     mapperText,
     serviceText,

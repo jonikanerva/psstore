@@ -1,0 +1,7 @@
+{
+  "type": "about:blank",
+  "title": "Unauthorized",
+  "status": 401,
+  "detail": "The Sony sign-in is missing or no longer valid.",
+  "code": "session_rejected"
+}

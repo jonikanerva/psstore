@@ -1,0 +1,74 @@
+# The Rust workspace: the pure domain crate and the server crate.
+[workspace]
+members = ["crates/*"]
+resolver = "3"
+
+# crates/server/Cargo.toml repeats these values for Railpack. Keep them equal.
+[workspace.package]
+edition = "2024"
+rust-version = "1.99"
+publish = false
+
+# STACK.md §6 records the reason of each dependency. Enable only the features
+# that the code uses. Each crate inherits its entries with `workspace = true`.
+[workspace.dependencies]
+# The path dependency has a version, so cargo-deny does not see a wildcard.
+psstore-domain = { path = "crates/domain", version = "=0.1.0" }
+axum = { version = "=0.8.9", default-features = false, features = ["http1", "json", "matched-path", "tokio"] }
+form_urlencoded = "=1.2.2"
+futures-util = { version = "=0.3.34", default-features = false, features = ["std"] }
+# NFKD and the Unicode general category for the critic score title match. Both
+# crates are already in the graph through url → idna → idna_adapter, with the
+# same feature.
+icu_normalizer = { version = "=2.3.0", default-features = false, features = ["compiled_data"] }
+icu_properties = { version = "=2.3.0", default-features = false, features = ["compiled_data"] }
+jiff = { version = "=0.2.38", default-features = false, features = ["std"] }
+reqwest = { version = "=0.13.5", default-features = false, features = ["rustls", "gzip", "query", "form"] }
+serde = { version = "=1.0.229", features = ["derive"] }
+serde_json = "=1.0.151"
+# Derives `std::error::Error` and a fixed `Display` text for the expected
+# error enums. Already in the graph through reqwest and rustls.
+thiserror = "=2.0.21"
+tokio = { version = "=1.53.2", features = ["rt", "net", "time", "sync", "macros", "signal", "fs"] }
+tower = { version = "=0.5.3", default-features = false, features = ["util"] }
+tower-http = { version = "=0.6.11", default-features = false, features = ["fs"] }
+tracing = { version = "=0.1.44", default-features = false, features = ["std"] }
+tracing-subscriber = { version = "=0.3.23", default-features = false, features = ["registry", "std"] }
+# The random request id of each request (`v4`). Its random source,
+# `getrandom` 0.4, is already in the graph through reqwest.
+uuid = { version = "=1.26.1", default-features = false, features = ["std", "v4"] }
+# The OpenAPI 3.1 document of the `/api` routes (contract/openapi.json).
+# `macros` derives the schemas and the operations. `preserve_order` keeps the
+# struct field order, so a schema lists its properties in the wire key order.
+utoipa = { version = "=6.0.0", default-features = false, features = ["macros", "preserve_order"] }
+# Registers each documented route through utoipa, so the document lists the
+# routes that the router serves.
+utoipa-axum = "=0.3.0"
+
+# The lints of the default Rust profile (STACK.md). Each crate inherits them
+# with `[lints] workspace = true`. `missing_debug_implementations` is an extra
+# lint of this project.
+[workspace.lints.rust]
+unsafe_code = "forbid"
+unused_must_use = "deny"
+unfulfilled_lint_expectations = "deny"
+missing_debug_implementations = "warn"
+
+[workspace.lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+todo = "deny"
+unimplemented = "deny"
+dbg_macro = "deny"
+print_stdout = "deny"
+print_stderr = "deny"
+allow_attributes = "deny"
+allow_attributes_without_reason = "deny"
+let_underscore_must_use = "deny"
+
+[profile.release]
+codegen-units = 1
+lto = "thin"
+strip = "symbols"

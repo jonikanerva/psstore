@@ -1,0 +1,47 @@
+# cargo-deny policy. `mise run scan:deps` runs `cargo deny --locked check`,
+# which runs the four checks: advisories, bans, licences, and sources.
+
+[graph]
+all-features = false
+
+[advisories]
+# The RustSec advisory database, fetched from GitHub on each run. A
+# vulnerability is always an error. The settings below make the other
+# advisory kinds errors too: an unmaintained or unsound crate anywhere in the
+# graph, and a yanked crate version. An entry in `ignore` needs a RUSTSEC id,
+# a reason, and a STACK.md §13 exception; an unused entry is an error.
+unmaintained = "all"
+unsound = "all"
+yanked = "deny"
+unused-ignored-advisory = "deny"
+ignore = []
+
+[licenses]
+# Permissive licences only. Add a licence only after a review of its terms.
+allow = [
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-3-Clause",
+    "CDLA-Permissive-2.0",
+    "ISC",
+    "MIT",
+    "Unicode-3.0",
+    "Zlib",
+]
+confidence-threshold = 0.93
+
+[licenses.private]
+# This crate is not published.
+ignore = true
+
+[bans]
+# Duplicate versions are reported but allowed: some come from upstream crates.
+multiple-versions = "warn"
+wildcards = "deny"
+allow-wildcard-paths = false
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []

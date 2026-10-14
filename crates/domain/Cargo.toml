@@ -1,0 +1,29 @@
+[package]
+name = "psstore-domain"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+description = "The psstore domain: validated store concepts and pure transformations"
+
+# The domain depends on no HTTP, async runtime, or I/O crate (STACK.md). The
+# server crate depends on this crate, never the reverse.
+[dependencies]
+icu_normalizer = { workspace = true }
+icu_properties = { workspace = true }
+jiff = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+# Only the `openapi` feature uses it.
+utoipa = { workspace = true, optional = true }
+
+# `openapi` derives the OpenAPI schemas of the wire types. The server enables
+# it. Without it, the crate has no OpenAPI code.
+[features]
+openapi = ["dep:utoipa"]
+
+[dev-dependencies]
+serde_json = { workspace = true }
+
+[lints]
+workspace = true

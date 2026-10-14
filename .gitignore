@@ -9,6 +9,8 @@
 # testing
 /coverage
 /.nyc_output
+/e2e/test-results
+/e2e/playwright-report
 
 # builds
 /build
@@ -29,3 +31,6 @@
 # misc
 .DS_Store
 .vscode
+
+# rust
+/target

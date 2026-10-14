@@ -1,0 +1,24 @@
+{
+  "id": "EP2006-PPSA33218_00-BLUEYDELUXEBUNDL",
+  "name": "Bluey's Happy Snaps",
+  "date": "2026-10-14T21:00:00Z",
+  "url": "https://image.api.playstation.com/vulcan/ap/rnd/202603/1308/9f1c36cf60ea5683ea2e3e0bdcf1d36c1b85ae3ad2beb6e4.png",
+  "price": "€54,95",
+  "originalPrice": "",
+  "discountText": "",
+  "discountDate": "",
+  "screenshots": [
+    "https://image.api.playstation.com/vulcan/ap/rnd/202609/0907/3dba1d44ca1a3e66ce91a5bc35f8de0c1a700f161b6a61b7.jpg"
+  ],
+  "videos": [
+    "https://vulcan.dl.playstation.net/img/rnd/202609/0915/4cfebad7f447b0b960fa27395118433c322aaccac7961a49.mp4"
+  ],
+  "genres": ["Adventure", "Fantasy"],
+  "description": "<b><font color=\"orange\">PRE-ORDER – IMMEDIATE PAYMENT REQUIRED</font></b><br><br/><br/>Game Content:<br/>- \"Here Come the Grannies\" bonus digital content<br/>",
+  "studio": "Gameloft SE",
+  "preOrder": false,
+  "plusUpsellText": "Save 25%",
+  "plusOffer": { "kind": "price", "price": "€41,21" },
+  "idKind": "product",
+  "criticScore": 87
+}

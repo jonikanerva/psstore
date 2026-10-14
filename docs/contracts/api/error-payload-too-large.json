@@ -1,0 +1,7 @@
+{
+  "type": "about:blank",
+  "title": "Content Too Large",
+  "status": 413,
+  "detail": "The request body is too large.",
+  "code": "payload_too_large"
+}

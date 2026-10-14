@@ -1,0 +1,75 @@
+{
+  "games": [
+    {
+      "id": "UP1014-PPSA36628_00-HMEOT000000PS5US",
+      "name": "Harvest Moon®: Echoes of Teradea",
+      "date": "2026-10-14T21:00:00Z",
+      "url": "https://image.api.playstation.com/vulcan/ap/rnd/202607/2917/9e9c256f6e3617337ef6e294bac57308cbe9fc3b1d74e17b.png",
+      "price": "€49,95",
+      "originalPrice": "",
+      "discountText": "",
+      "discountDate": "",
+      "screenshots": [
+        "https://image.api.playstation.com/vulcan/ap/rnd/202607/2917/07cddd7c53a70a501f4a95fbea1b7956f581912c747265df.jpg"
+      ],
+      "videos": [
+        "https://vulcan.dl.playstation.net/img/rnd/202608/3118/5fad16b3c860f21a54a759b11115d591a1364849b575345a.mp4"
+      ],
+      "genres": [],
+      "description": "",
+      "studio": "",
+      "preOrder": false,
+      "plusUpsellText": null,
+      "plusOffer": null,
+      "idKind": "product"
+    },
+    {
+      "id": "EP2006-PPSA33218_00-BLUEYDELUXEBUNDL",
+      "name": "Bluey's Happy Snaps",
+      "date": "2026-10-14T21:00:00Z",
+      "url": "https://image.api.playstation.com/vulcan/ap/rnd/202603/1308/9f1c36cf60ea5683ea2e3e0bdcf1d36c1b85ae3ad2beb6e4.png",
+      "price": "€54,95",
+      "originalPrice": "",
+      "discountText": "",
+      "discountDate": "",
+      "screenshots": [
+        "https://image.api.playstation.com/vulcan/ap/rnd/202609/0907/3dba1d44ca1a3e66ce91a5bc35f8de0c1a700f161b6a61b7.jpg"
+      ],
+      "videos": [
+        "https://vulcan.dl.playstation.net/img/rnd/202609/0915/4cfebad7f447b0b960fa27395118433c322aaccac7961a49.mp4"
+      ],
+      "genres": [],
+      "description": "",
+      "studio": "",
+      "preOrder": false,
+      "plusUpsellText": "Save 25%",
+      "plusOffer": null,
+      "idKind": "product"
+    },
+    {
+      "id": "10018611",
+      "name": "Hasbro Games™ Junior Collection",
+      "date": "",
+      "url": "https://image.api.playstation.com/vulcan/ap/rnd/202606/0811/f838af98d46e433ae70645e0a84387cd529c3bf6feccd0ce.png",
+      "price": "",
+      "originalPrice": "",
+      "discountText": "",
+      "discountDate": "",
+      "screenshots": [
+        "https://image.api.playstation.com/vulcan/ap/rnd/202609/2908/88b420a1eac0bbc834314f4b23dba780a41d622c71d4729c.jpg"
+      ],
+      "videos": [
+        "https://vulcan.dl.playstation.net/img/rnd/202610/1308/440e593b4c555a70ec37176de51d64df7d8b993d901deca9.mp4"
+      ],
+      "genres": [],
+      "description": "",
+      "studio": "",
+      "preOrder": false,
+      "plusUpsellText": null,
+      "plusOffer": null,
+      "idKind": "concept"
+    }
+  ],
+  "totalCount": 5,
+  "nextOffset": 3
+}

@@ -7,6 +7,7 @@ import {
   PINNED_OPERATIONS,
   SIGNED_IN_PINNED_OPERATIONS,
 } from '../contract/pinnedOperations.js'
+import type { SonyConstants } from '../contract/sonyConstants.js'
 import type { ContractOperation } from '../contract/types.js'
 import { validateManifest } from '../contract/validator.js'
 
@@ -116,21 +117,22 @@ const wishlist: ContractOperation = {
   observed_status_codes: [],
 }
 
-const envText = [
-  'export const SONY_GRAPHQL_URL =',
-  "  'https://web.np.playstation.com/api/graphql/v1/op'",
-  "export const SONY_OPERATION_NAME = 'categoryGridRetrieve'",
-  "export const SONY_PRODUCT_OPERATION_NAME = 'metGetProductById'",
-  `export const SONY_PRODUCT_BY_ID_HASH =\n  '${PDP_HASH}'`,
-  "export const SONY_PRODUCT_PRICE_OPERATION_NAME = 'productRetrieveForCtasWithPrice'",
-  `export const SONY_PRODUCT_PRICE_HASH =\n  '${PRICE_HASH}'`,
-  "export const SONY_SEARCH_OPERATION_NAME = 'getSearchResults'",
-  `export const SONY_SEARCH_HASH =\n  '${SEARCH_HASH}'`,
-  "export const SONY_PURCHASED_OPERATION_NAME = 'getPurchasedGameList'",
-  `export const SONY_PURCHASED_HASH =\n  '${PURCHASED_HASH}'`,
-  "export const SONY_WISHLIST_OPERATION_NAME = 'storeRetrieveWishlist'",
-  `export const SONY_WISHLIST_HASH =\n  '${WISHLIST_HASH}'`,
-].join('\n')
+const sonyConstants: SonyConstants = new Map(
+  Object.entries({
+    SONY_GRAPHQL_URL: 'https://web.np.playstation.com/api/graphql/v1/op',
+    SONY_OPERATION_NAME: 'categoryGridRetrieve',
+    SONY_PRODUCT_OPERATION_NAME: 'metGetProductById',
+    SONY_PRODUCT_BY_ID_HASH: PDP_HASH,
+    SONY_PRODUCT_PRICE_OPERATION_NAME: 'productRetrieveForCtasWithPrice',
+    SONY_PRODUCT_PRICE_HASH: PRICE_HASH,
+    SONY_SEARCH_OPERATION_NAME: 'getSearchResults',
+    SONY_SEARCH_HASH: SEARCH_HASH,
+    SONY_PURCHASED_OPERATION_NAME: 'getPurchasedGameList',
+    SONY_PURCHASED_HASH: PURCHASED_HASH,
+    SONY_WISHLIST_OPERATION_NAME: 'storeRetrieveWishlist',
+    SONY_WISHLIST_HASH: WISHLIST_HASH,
+  }),
+)
 
 const captured = [
   grid('new'),
@@ -143,12 +145,12 @@ const captured = [
 const canonical = [pdp, purchased, wishlist]
 
 describe('addPinnedOperations', () => {
-  it('adds the pinned operation with the env hash when the probe passes', async () => {
+  it('adds the pinned operation with the constants-file hash when the probe passes', async () => {
     const probe = vi.fn().mockResolvedValue(undefined)
     const result = await addPinnedOperations(
       captured,
       canonical,
-      envText,
+      sonyConstants,
       probe,
     )
 
@@ -170,7 +172,7 @@ describe('addPinnedOperations', () => {
       await addPinnedOperations(
         captured,
         canonical,
-        envText,
+        sonyConstants,
         vi.fn().mockResolvedValue(undefined),
         vi.fn(),
       ),
@@ -188,11 +190,11 @@ describe('addPinnedOperations', () => {
     }).not.toThrow()
     expect(() => {
       validateBackendCompatibility(manifest, {
-        serverEnvText: envText,
+        sonyConstants,
         sonyClientText:
-          "'x-apollo-operation-name': strategy.operationName categoryGridRetrieve productRetrieve universalSearch SONY_PURCHASED_HASH SONY_WISHLIST_HASH",
-        mapperText: 'conceptToGame',
-        serviceText: 'fetchConceptsByFeature',
+          '"x-apollo-operation-name" "categoryGridRetrieve" "productRetrieve" "universalSearch" contract.purchased_hash contract.wishlist_hash',
+        mapperText: 'fn concept_to_game',
+        serviceText: '.concepts_by_feature(',
       })
     }).not.toThrow()
   })
@@ -203,7 +205,7 @@ describe('addPinnedOperations', () => {
       .mockRejectedValue(new Error('PersistedQueryNotFound (hash rotated)'))
 
     await expect(
-      addPinnedOperations(captured, canonical, envText, probe),
+      addPinnedOperations(captured, canonical, sonyConstants, probe),
     ).rejects.toThrow(
       /metGetProductById @ b{64} failed: PersistedQueryNotFound.*sony-graphql-runbook\.md, Failure handling/,
     )
@@ -214,7 +216,7 @@ describe('addPinnedOperations', () => {
     const result = await addPinnedOperations(
       [...captured, pdp],
       canonical,
-      envText,
+      sonyConstants,
       probe,
     )
 
@@ -225,23 +227,45 @@ describe('addPinnedOperations', () => {
   it('fails when the canonical manifest lacks the operation', async () => {
     const probe = vi.fn()
     await expect(
-      addPinnedOperations(captured, [purchased, wishlist], envText, probe),
+      addPinnedOperations(
+        captured,
+        [purchased, wishlist],
+        sonyConstants,
+        probe,
+      ),
     ).rejects.toThrow(/not in the canonical manifest/)
     expect(probe).not.toHaveBeenCalled()
   })
 
-  it('fails when the env constants are unreadable', async () => {
+  it('fails when the constants are missing', async () => {
     await expect(
-      addPinnedOperations(captured, canonical, 'nothing', vi.fn()),
-    ).rejects.toThrow(/SONY_GRAPHQL_URL/)
+      addPinnedOperations(captured, canonical, new Map(), vi.fn()),
+    ).rejects.toThrow(
+      /SONY_GRAPHQL_URL from docs\/contracts\/sony-constants\.json/,
+    )
   })
-  it('carries the signed-in operation over with the env hash and no probe', async () => {
+
+  it('fails when a pinned hash constant is missing', async () => {
+    const withoutHash = new Map(
+      [...sonyConstants].filter(([name]) => name !== 'SONY_PURCHASED_HASH'),
+    )
+    await expect(
+      addPinnedOperations(
+        captured,
+        canonical,
+        withoutHash,
+        vi.fn().mockResolvedValue(undefined),
+        vi.fn(),
+      ),
+    ).rejects.toThrow(/SONY_PURCHASED_HASH/)
+  })
+  it('carries the signed-in operation over with the constants-file hash and no probe', async () => {
     const probe = vi.fn().mockResolvedValue(undefined)
     const notice = vi.fn()
     const result = await addPinnedOperations(
       captured,
       canonical,
-      envText,
+      sonyConstants,
       probe,
       notice,
     )
@@ -264,7 +288,7 @@ describe('addPinnedOperations', () => {
       await addPinnedOperations(
         captured,
         canonical,
-        envText,
+        sonyConstants,
         vi.fn().mockResolvedValue(undefined),
         vi.fn(),
       ),
@@ -278,19 +302,19 @@ describe('addPinnedOperations', () => {
       addPinnedOperations(
         captured,
         [pdp],
-        envText,
+        sonyConstants,
         vi.fn().mockResolvedValue(undefined),
         vi.fn(),
       ),
     ).rejects.toThrow(/getPurchasedGameList is not in the canonical manifest/)
   })
 
-  it('carries the wishlist operation over with the env hash and never pins a write operation', async () => {
+  it('carries the wishlist operation over with the constants-file hash and never pins a write operation', async () => {
     const probe = vi.fn().mockResolvedValue(undefined)
     const result = await addPinnedOperations(
       captured,
       canonical,
-      envText,
+      sonyConstants,
       probe,
       vi.fn(),
     )
@@ -314,7 +338,7 @@ describe('addPinnedOperations', () => {
       addPinnedOperations(
         captured,
         [pdp, purchased],
-        envText,
+        sonyConstants,
         vi.fn().mockResolvedValue(undefined),
         vi.fn(),
       ),

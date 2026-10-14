@@ -1,6 +1,193 @@
-# Source of truth for the toolchain. Update the mirrors in the same commit;
-# see STACK.md → 1. Language & Runtime.
+# Source of truth for the toolchain and the command surface (STACK.md → 1 and
+# 3). Update the mirrors in the same commit. The Rust version comes only from
+# rust-toolchain.toml. The root package.json keeps only thin aliases that call
+# these tasks.
+#
+# A fresh machine: install mise and rustup, then run `mise trust` and
+# `mise run setup` in the repository root.
+[settings]
+idiomatic_version_file_enable_tools = ["rust"]
+
 [tools]
 node = "24.21.0"
 pnpm = "12.8.1"
 gitleaks = "8.30.1"
+# Release binary; mise checks the SHA-256 of the aqua registry.
+cargo-deny = "0.20.2"
+# Release binary; mise checks the SHA-256 of the aqua registry.
+"aqua:nextest-rs/nextest/cargo-nextest" = "0.9.146"
+# Release binary; mise checks the GitHub asset digest and the GitHub artifact
+# attestation. The project publishes no checksum file.
+"github:Boshen/cargo-shear" = "1.14.0"
+
+# Mise runs the steps of a `run` list in order and stops at the first failed
+# step. Arguments after the task name go to the last command of the list.
+
+[tasks.setup]
+description = "Install the pinned tools, the locked dependencies, and the Playwright browser"
+run = [
+  "mise install",
+  "pnpm install --frozen-lockfile",
+  "cargo fetch --locked",
+  # The browser build matches the locked Playwright version (1.63.0) of the
+  # browser journeys and of the Sony contract bot.
+  "pnpm --filter @psstore/e2e exec playwright install chromium",
+]
+
+[tasks.format]
+description = "Format the Rust and the TypeScript sources"
+run = [
+  "cargo fmt --all",
+  "pnpm exec prettier --write '**/*.{ts,tsx,js,jsx,json,md,yaml,yml,css}' --log-level warn",
+]
+
+[tasks.format-check]
+description = "Fail on a formatting difference; change no file"
+run = [
+  "cargo fmt --all -- --check",
+  "pnpm exec prettier --check '**/*.{ts,tsx,js,jsx,json,md,yaml,yml,css}' --log-level warn",
+]
+
+[tasks.lint]
+description = "Clippy, type-aware Oxlint, and the type check of every TypeScript package"
+run = [
+  "cargo clippy --workspace --all-targets --locked -- -D warnings",
+  "pnpm exec oxlint --type-aware --deny-warnings web/src packages/api-client/src packages/api-client/scripts tools/sony-contract-bot/src e2e",
+  # pnpm runs the packages in dependency order, so the API client comes
+  # before the web app.
+  "pnpm --recursive --if-present run typecheck",
+]
+
+[tasks."contract:export"]
+description = "Write contract/openapi.json from the Rust HTTP types"
+run = "cargo run --locked -p psstore-server --bin openapi -- contract/openapi.json"
+
+[tasks."contract:generate"]
+description = "Generate the TypeScript API client from contract/openapi.json"
+run = "pnpm --filter @psstore/api-client run generate"
+
+[tasks."contract:check"]
+description = "Fail when the OpenAPI document or the generated client drifts; change no file"
+run = "pnpm --filter @psstore/api-client run contract-check"
+
+[tasks."scan:secrets"]
+description = "Gitleaks on the history that HEAD reaches"
+run = 'gitleaks git --no-banner --redact --config .gitleaks.toml --log-opts="--full-history HEAD" .'
+
+[tasks."scan:deps"]
+description = "pnpm audit, cargo-deny (advisories, bans, licences, sources), and cargo-shear"
+run = [
+  "pnpm audit --audit-level low",
+  "cargo deny --locked check",
+  "cargo shear --locked --deny-warnings",
+]
+
+[tasks.build]
+description = "OpenAPI export, client generation, web build, and the release server"
+run = [
+  "rm -rf build web/build packages/api-client/build tools/sony-contract-bot/dist",
+  { task = "contract:export" },
+  { task = "contract:generate" },
+  "pnpm --filter @psstore/web run build",
+  "pnpm --filter @psstore/sony-contract-bot run build",
+  "cargo build --release --locked -p psstore-server",
+]
+
+[tasks.test]
+description = "Nextest, the doc tests, Vitest in every TypeScript package, and the browser journeys"
+run = [
+  "cargo nextest run --workspace --locked",
+  "cargo test --doc --workspace --locked",
+  # The e2e package has no `test` script, so this runs Vitest only.
+  "pnpm --recursive --if-present run test",
+  { task = "test:e2e" },
+]
+
+[tasks."test:e2e"]
+description = "Playwright and axe journeys against the deterministic test server (STACK.md → 11)"
+run = [
+  # The journeys test the current client and test server, so both are built
+  # first. The web build takes about a second.
+  "pnpm --filter @psstore/web run build",
+  "cargo build --release --locked -p psstore-server --example e2e_server",
+  "pnpm --filter @psstore/e2e run e2e",
+]
+
+[tasks.verify]
+description = "The full verification (VERIFY_CMD); stops at the first failed step"
+run = [
+  { task = "format-check" },
+  { task = "lint" },
+  { task = "contract:check" },
+  { task = "scan:secrets" },
+  { task = "scan:deps" },
+  { task = "build" },
+  { task = "test" },
+  { task = "sony:validate" },
+  { task = "sony:diff", args = ["--ci"] },
+]
+
+[tasks.dev]
+description = "The server and the Vite dev server; the server log is readable text"
+env = { PSSTORE_LOG_FORMAT = "text" }
+raw = true
+run = 'pnpm exec concurrently "cargo run --locked -p psstore-server" "pnpm --filter @psstore/web run dev"'
+
+[tasks.start]
+description = "Start the release server that `mise run build` made"
+raw = true
+run = "./target/release/psstore-server"
+
+[tasks.test-live]
+description = "The live checks against Sony and IGDB (STACK.md → 14 → Live checks)"
+run = "cargo test --locked -p psstore-server --test live --test live_score -- --ignored --nocapture"
+
+[tasks."test:e2e-live"]
+description = "The live CSP check: the release server against live Sony in the browser (STACK.md → 14 → Live checks)"
+run = [
+  "pnpm --filter @psstore/web run build",
+  "cargo build --release --locked -p psstore-server",
+  "pnpm --filter @psstore/e2e run e2e:live",
+]
+
+# The Sony contract tooling (docs/contracts/sony-graphql-runbook.md).
+
+[tasks."sony:build"]
+description = "Build the Sony contract bot"
+hide = true
+run = "pnpm --filter @psstore/sony-contract-bot run build"
+
+[tasks."sony:capture"]
+description = "Capture the live Sony GraphQL traffic (Playwright)"
+depends = ["sony:build"]
+run = "node tools/sony-contract-bot/dist/cli.js capture"
+
+[tasks."sony:normalize"]
+description = "Normalize the capture into the manifest"
+depends = ["sony:build"]
+run = "node tools/sony-contract-bot/dist/cli.js normalize"
+
+[tasks."sony:validate"]
+description = "Validate the committed Sony contract manifest"
+depends = ["sony:build"]
+run = "node tools/sony-contract-bot/dist/cli.js validate"
+
+[tasks."sony:diff"]
+description = "Compare the capture with the committed manifest"
+depends = ["sony:build"]
+run = "node tools/sony-contract-bot/dist/cli.js diff"
+
+[tasks."sony:refresh"]
+description = "Capture, normalize, validate, and diff the live Sony contract"
+depends = ["sony:build"]
+run = "node tools/sony-contract-bot/dist/cli.js refresh"
+
+[tasks."sony:probe-purchased"]
+description = "Owner-run only: needs SONY_NPSSO"
+depends = ["sony:build"]
+run = "node tools/sony-contract-bot/dist/cli.js probe-purchased"
+
+[tasks."sony:probe-wishlist"]
+description = "Owner-run only: needs SONY_NPSSO"
+depends = ["sony:build"]
+run = "node tools/sony-contract-bot/dist/cli.js probe-wishlist"

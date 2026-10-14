@@ -1,0 +1,43 @@
+# Clippy reads the first clippy.toml from the crate directory upward, so this
+# file replaces the root clippy.toml for this crate. Keep the test allowances
+# and `doc-valid-idents` the same as in the root file.
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true
+allow-panic-in-tests = true
+allow-print-in-tests = true
+doc-valid-idents = ["OpenAPI", ".."]
+
+# The domain receives time, settings, and external values as parameters
+# (STACK.md). These types and calls read ambient state or do I/O, so the
+# domain must not use them. A disallowed type covers all of its methods, for
+# example `SystemTime::elapsed`.
+disallowed-types = [
+    { path = "std::time::SystemTime", reason = "the domain takes the current time as a parameter" },
+    { path = "std::time::Instant", reason = "the domain takes the current time as a parameter" },
+    { path = "std::fs::File", reason = "the domain does not use the filesystem" },
+    { path = "std::fs::OpenOptions", reason = "the domain does not use the filesystem" },
+    { path = "std::process::Command", reason = "the domain starts no process" },
+    { path = "std::net::TcpStream", reason = "the domain does no network I/O" },
+    { path = "std::net::TcpListener", reason = "the domain does no network I/O" },
+    { path = "std::net::UdpSocket", reason = "the domain does no network I/O" },
+]
+disallowed-methods = [
+    { path = "jiff::Timestamp::now", reason = "the domain takes the current time as a parameter" },
+    { path = "jiff::Zoned::now", reason = "the domain takes the current time as a parameter" },
+    { path = "jiff::tz::TimeZone::system", reason = "the domain does not read the host time zone" },
+    { path = "jiff::tz::TimeZone::try_system", reason = "the domain does not read the host time zone" },
+    { path = "std::env::var", reason = "the server reads the settings and passes them in" },
+    { path = "std::env::var_os", reason = "the server reads the settings and passes them in" },
+    { path = "std::env::vars", reason = "the server reads the settings and passes them in" },
+    { path = "std::env::vars_os", reason = "the server reads the settings and passes them in" },
+    { path = "std::env::args", reason = "the domain does not read the process arguments" },
+    { path = "std::env::args_os", reason = "the domain does not read the process arguments" },
+    { path = "std::env::current_dir", reason = "the domain does not read the filesystem" },
+    { path = "std::fs::read", reason = "the domain does not read the filesystem" },
+    { path = "std::fs::read_to_string", reason = "the domain does not read the filesystem" },
+    { path = "std::fs::read_dir", reason = "the domain does not read the filesystem" },
+    { path = "std::fs::metadata", reason = "the domain does not read the filesystem" },
+    { path = "std::fs::write", reason = "the domain does not write the filesystem" },
+    { path = "std::io::stdin", reason = "the domain reads no process input" },
+    { path = "std::collections::hash_map::RandomState::new", reason = "the domain uses no random seed" },
+]

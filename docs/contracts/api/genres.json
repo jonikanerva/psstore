@@ -1,0 +1,9 @@
+{
+  "genres": [
+    { "key": "ACTION", "name": "Action" },
+    { "key": "FOOTBALL", "name": "American Football" },
+    { "key": "RACING", "name": "Driving/Racing" },
+    { "key": "MUSIC/RHYTHM", "name": "Music/Rhythm" },
+    { "key": "ROLE_PLAYING_GAMES", "name": "Role Playing Games" }
+  ]
+}

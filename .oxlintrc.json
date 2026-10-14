@@ -13,9 +13,9 @@
   "ignorePatterns": [
     "node_modules/**",
     "build/**",
-    "client/build/**",
-    "server/dist/**",
-    "shared/dist/**",
+    "web/build/**",
+    "packages/api-client/build/**",
+    "packages/api-client/src/generated/**",
     "tools/sony-contract-bot/dist/**",
     "coverage/**",
     "**/*.config.js",
@@ -198,7 +198,7 @@
       "plugins": ["typescript"]
     },
     {
-      "files": ["client/src/**/*.tsx"],
+      "files": ["web/src/**/*.tsx"],
       "rules": {
         "react/display-name": "error",
         "react/jsx-key": "error",
@@ -222,43 +222,39 @@
       "plugins": ["react"]
     },
     {
-      "files": ["server/src/**/*.ts"],
+      "files": ["web/src/**/*.{ts,tsx}"],
       "rules": {
+        "no-restricted-globals": [
+          "error",
+          {
+            "name": "fetch",
+            "message": "The web app calls the API only through @psstore/api-client."
+          }
+        ],
         "no-restricted-imports": [
           "error",
           {
             "patterns": [
               {
+                "group": ["@psstore/api-client/*", "**/api-client/**"],
+                "message": "Import the facade of @psstore/api-client, not its files."
+              },
+              {
                 "group": [
-                  "effect/http",
-                  "effect/http/*",
-                  "effect/http-api",
-                  "effect/http-api/*",
-                  "@effect/platform-node",
-                  "@effect/platform-node/*"
+                  "**/packages/**",
+                  "**/tools/**",
+                  "**/e2e/**",
+                  "**/crates/**"
                 ],
-                "message": "Import effect/http, effect/http-api, and @effect/platform-node only from api/gamesApi.ts, api/gamesHandlers.ts, or http/server.ts (HttpApi is confined to the interface layer)."
+                "message": "The web app imports other workspace packages only by their package name."
               }
             ]
           }
-        ]
+        ],
+        "react/rules-of-hooks": "error",
+        "react/exhaustive-deps": "error"
       },
-      "plugins": ["typescript"]
-    },
-    {
-      "files": [
-        "server/src/api/gamesApi.ts",
-        "server/src/api/gamesHandlers.ts",
-        "server/src/http/server.ts",
-        "server/src/__tests__/app.test.ts",
-        "server/src/__tests__/browseApi.test.ts",
-        "server/src/__tests__/criticScoreApi.test.ts",
-        "server/src/__tests__/searchApi.test.ts",
-        "server/src/__tests__/staticServer.test.ts"
-      ],
-      "rules": {
-        "no-restricted-imports": "off"
-      }
+      "plugins": ["react"]
     },
     {
       "files": ["**/__tests__/**/*.{ts,tsx}", "**/*.test.{ts,tsx}"],

@@ -1,0 +1,8 @@
+{
+  "type": "about:blank",
+  "title": "Service Unavailable",
+  "status": 503,
+  "detail": "The PlayStation Store limited the request rate. Try again later.",
+  "code": "upstream_rate_limited",
+  "retryAfterSeconds": 30
+}

@@ -1,0 +1,34 @@
+{
+  "$schema": "https://schema.railpack.com",
+  "provider": "rust",
+  "exclude": ["mise.toml"],
+  "packages": {
+    "node": "24.21.0",
+    "pnpm": "12.8.1"
+  },
+  "steps": {
+    "install": {
+      "secrets": [],
+      "deployOutputs": []
+    },
+    "build": {
+      "secrets": [],
+      "commands": [
+        "pnpm install --frozen-lockfile --filter @psstore/web...",
+        "pnpm --filter @psstore/web run build",
+        "mkdir -p bin",
+        "cargo build --release --locked --package psstore-server",
+        "cp target/release/psstore-server bin"
+      ]
+    }
+  },
+  "deploy": {
+    "startCommand": "./bin/psstore-server",
+    "inputs": [
+      {
+        "step": "build",
+        "include": ["bin", "web/build"]
+      }
+    ]
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "games": [
+    {
+      "id": "EP4133-PPSA21224_00-ELTAGAME00000000",
+      "name": "Elta: Defy All Gods",
+      "date": "2027-02-02T16:00:00.000Z",
+      "url": "https://image.api.playstation.com/vulcan/ap/rnd/202608/0313/80e58adfa088392c42c06b1f8d24065fdee9fa47fa391593.png",
+      "price": "€29,95",
+      "originalPrice": "",
+      "discountText": "",
+      "discountDate": "",
+      "screenshots": [
+        "https://image.api.playstation.com/vulcan/ap/rnd/202608/0412/6695bf6843e89eb26cdbe7cbf7202d884878da9abee422ef.jpg"
+      ],
+      "videos": [
+        "https://vulcan.dl.playstation.net/img/rnd/202610/0116/b676b4785cf0e77258eaf5327cf470ec0cfd541a6464d93e.mp4"
+      ],
+      "genres": ["Action"],
+      "description": "",
+      "studio": "",
+      "preOrder": true,
+      "plusUpsellText": null,
+      "plusOffer": null,
+      "idKind": "product"
+    },
+    {
+      "id": "UP1018-PPSA16833_00-LEGOBATMAN000000",
+      "name": "LEGO® Batman™: Legacy of the Dark Knight",
+      "date": "2026-05-21T21:00:00Z",
+      "url": "https://image.api.playstation.com/vulcan/ap/rnd/202508/1316/3302f35b66691aa405aee31624c0c95fe73081be8e0c75bb.png",
+      "price": "€48,96",
+      "originalPrice": "€69,95",
+      "discountText": "-30%",
+      "discountDate": "",
+      "screenshots": [
+        "https://image.api.playstation.com/vulcan/ap/rnd/202508/1316/5fb613721742ce88aa29e8322e62657edc5e28178458c95a.jpg"
+      ],
+      "videos": [
+        "https://vulcan.dl.playstation.net/img/rnd/202605/2214/0d7b4b58dff80865a61d74ecae50dcdcc20725e46ce824bf.mp4"
+      ],
+      "genres": ["Action"],
+      "description": "",
+      "studio": "",
+      "preOrder": false,
+      "plusUpsellText": "Premium",
+      "plusOffer": null,
+      "idKind": "product"
+    }
+  ],
+  "totalCount": 5,
+  "nextOffset": null
+}

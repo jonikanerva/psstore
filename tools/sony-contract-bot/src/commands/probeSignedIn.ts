@@ -1,16 +1,20 @@
-import { Schema } from 'effect'
-import { extractDefault } from '../compat/backend.js'
+import { z } from 'zod'
+import {
+  readSonyConstants,
+  sonyConstant,
+  type SonyConstants,
+} from '../contract/sonyConstants.js'
 import type { SonyContractManifest } from '../contract/types.js'
-import { readJsonFile, readTextFile, writeJsonFile } from '../io/files.js'
+import { readJsonFile, writeJsonFile } from '../io/files.js'
 import { paths } from '../io/paths.js'
 
 const REQUEST_TIMEOUT_MS = 10_000
-// Same cookie-safe set and length bounds as the server sign-in (STACK.md §14).
+// Same cookie-safe set and length bounds as the server sign-in (STACK.md §2.5).
 const NPSSO_PATTERN = /^[A-Za-z0-9._~-]{16,512}$/
 
 export type ProbeTag =
   | 'npsso-invalid'
-  | 'env-unreadable'
+  | 'constants-unreadable'
   | 'manifest-entry-missing'
   | 'authorize-rejected'
   | 'authorize-unexpected'
@@ -48,7 +52,8 @@ export interface ProbeConfig {
 }
 
 // One signed-in operation the owner can probe: which manifest entry it writes,
-// which `env.ts` constants name it, and what a valid answer looks like.
+// which constants in `docs/contracts/sony-constants.json` name it, and what a
+// valid answer looks like.
 export interface SignedInProbe {
   readonly feature: 'purchased' | 'wishlist'
   readonly label: string
@@ -72,13 +77,13 @@ const CONFIG_CONSTANTS = {
 >
 
 export const readProbeConfig = (
-  serverEnvText: string,
+  sonyConstants: SonyConstants,
   probe: SignedInProbe = PURCHASED_PROBE,
 ): ProbeConfig => {
   const read = (constant: string): string => {
-    const value = extractDefault(serverEnvText, constant)
+    const value = sonyConstant(sonyConstants, constant)
     if (value === null) {
-      throw new ProbeFailure('env-unreadable')
+      throw new ProbeFailure('constants-unreadable')
     }
     return value
   }
@@ -134,8 +139,9 @@ const hasAccessToken = (
   typeof body.access_token === 'string' &&
   body.access_token !== ''
 
-// One-shot copy of the NPSSO exchange in server/src/sony/sonyClient.ts, which
-// owns the flow. Keep both in step. Returns the access token only.
+// One-shot copy of the NPSSO exchange of the server's Sony account client
+// (`src/sources/sony/account.rs` in the server crate), which owns the flow.
+// Keep both in step. Returns the access token only.
 export const exchangeNpsso = async (
   npsso: string,
   config: ProbeConfig,
@@ -186,19 +192,24 @@ export const exchangeNpsso = async (
   return body.access_token
 }
 
-const libraryEnvelopeSchema = Schema.Struct({
-  data: Schema.Struct({
-    purchasedTitlesRetrieve: Schema.Struct({
-      games: Schema.Array(Schema.Unknown),
+const libraryEnvelopeSchema = z.object({
+  data: z.object({
+    purchasedTitlesRetrieve: z.object({
+      games: z.array(z.unknown()),
     }),
   }),
 })
 
-const wishlistEnvelopeSchema = Schema.Struct({
-  data: Schema.Struct({
-    storeWishlistSecure: Schema.Array(Schema.Unknown),
+const wishlistEnvelopeSchema = z.object({
+  data: z.object({
+    storeWishlistSecure: z.array(z.unknown()),
   }),
 })
+
+const isValid =
+  (schema: z.ZodType) =>
+  (body: unknown): boolean =>
+    schema.safeParse(body).success
 
 export const PURCHASED_PROBE: SignedInProbe = {
   feature: 'purchased',
@@ -213,7 +224,7 @@ export const PURCHASED_PROBE: SignedInProbe = {
     sortBy: 'ACTIVE_DATE',
     sortDirection: 'desc',
   },
-  isValidBody: Schema.is(libraryEnvelopeSchema),
+  isValidBody: isValid(libraryEnvelopeSchema),
 }
 
 export const WISHLIST_PROBE: SignedInProbe = {
@@ -222,7 +233,7 @@ export const WISHLIST_PROBE: SignedInProbe = {
   operationNameConstant: 'SONY_WISHLIST_OPERATION_NAME',
   hashConstant: 'SONY_WISHLIST_HASH',
   variables: {},
-  isValidBody: Schema.is(wishlistEnvelopeSchema),
+  isValidBody: isValid(wishlistEnvelopeSchema),
 }
 
 // Requests the operation once, read-only. Resolves with the HTTP status (always
@@ -310,7 +321,17 @@ export interface ProbeRunOptions {
   readonly env?: Readonly<Record<string, string | undefined>>
   readonly fetchFn?: typeof fetch
   readonly manifestPath?: string
-  readonly envFilePath?: string
+  readonly constantsPath?: string
+}
+
+// An unreadable or invalid constants file is the same fixed failure as a
+// missing constant.
+const readProbeConstants = async (filePath: string): Promise<SonyConstants> => {
+  try {
+    return await readSonyConstants(filePath)
+  } catch {
+    throw new ProbeFailure('constants-unreadable')
+  }
 }
 
 // Owner-run check. Prints the operation name, the status code and PASS or
@@ -323,11 +344,14 @@ const runProbe = async (
     env = process.env,
     fetchFn = fetch,
     manifestPath = paths.canonicalManifest,
-    envFilePath = paths.envFile,
+    constantsPath = paths.sonyConstants,
   } = options
   try {
     const npsso = parseNpsso(env['SONY_NPSSO'])
-    const config = readProbeConfig(await readTextFile(envFilePath), probe)
+    const config = readProbeConfig(
+      await readProbeConstants(constantsPath),
+      probe,
+    )
     const manifest = await readJsonFile<SonyContractManifest>(manifestPath)
     if (!manifest.operations.some((entry) => entry.feature === probe.feature)) {
       throw new ProbeFailure('manifest-entry-missing')

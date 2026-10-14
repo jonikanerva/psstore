@@ -1,0 +1,17 @@
+{
+  "name": "@psstore/e2e",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "e2e": "playwright test",
+    "e2e:live": "playwright test --config playwright.live.config.ts",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@playwright/test": "1.63.0",
+    "@types/node": "catalog:",
+    "typescript": "catalog:"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "type": "about:blank",
+  "title": "Bad Gateway",
+  "status": 502,
+  "detail": "The PlayStation Store no longer accepts a stored query of this server.",
+  "code": "upstream_query_rotated"
+}

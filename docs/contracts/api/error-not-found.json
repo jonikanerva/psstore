@@ -1,0 +1,7 @@
+{
+  "type": "about:blank",
+  "title": "Not Found",
+  "status": 404,
+  "detail": "No API route has this path and method.",
+  "code": "not_found"
+}

@@ -29,6 +29,13 @@ Pipeline:
 4. validate schema + backend compatibility
 5. generate diff report
 
+The Sony contract values (the endpoint, the operation names, the hashes, the sign-in values,
+and the locale) are in `docs/contracts/sony-constants.json`. The bot and the server read this file.
+The server compiles it in, so a changed value needs a new server build.
+The backend compatibility check compares the manifest with this file. It also checks that the
+production code in `crates/server/src/sources/sony/`, `crates/domain/src/mapper.rs`, and
+`crates/server/src/application/games.rs` still uses each operation. Test files and test modules do not count.
+
 ## Tracked operations
 
 The manifest holds only the operations the server calls:
@@ -58,23 +65,23 @@ The server narrows the results at decode: `platforms` must include `PS5`, and
 `storeDisplayClassification` must be a game class. The sample term must not contain a platform,
 locale, or currency token, because the scope filter matches those tokens inside every variable value.
 
-If Sony rotates the hash, `UpstreamQueryRotated` (HTTP 502) names `getSearchResults`.
-Update `SONY_SEARCH_HASH` in `server/src/config/env.ts` and run `pnpm sony:refresh`.
+If Sony rotates the hash, the server log tag `UpstreamQueryRotated` names `getSearchResults`, and the API answers HTTP 502 with the problem code `upstream_query_rotated`.
+Update `SONY_SEARCH_HASH` in `docs/contracts/sony-constants.json` and run `pnpm sony:refresh`.
 
-The golden fixture is `server/src/__tests__/fixtures/searchResults.golden.json`.
+The golden fixture is `crates/server/tests/fixtures/searchResults.golden.json`.
 
 ## Product page operation
 
 The store product page no longer fires `metGetProductById`, so capture cannot see it.
 The server still calls it. Refresh therefore probes it live: one anonymous GET with
-the `env.ts` operation name and hash, a sample product id from the canonical manifest,
+the operation name and hash from `docs/contracts/sony-constants.json`, a sample product id from the canonical manifest,
 and the same headers the server sends. The probe expects HTTP 200 and `data.productRetrieve`.
 If the capture does not hold the operation and the probe passes, the manifest entry carries
-over with the `env.ts` hash. If the capture holds the operation, no probe runs.
+over with that hash. If the capture holds the operation, no probe runs.
 The compatibility check is unchanged.
 
 If the probe fails, refresh stops and names the operation and the hash. Find the new hash
-in the store, update `SONY_PRODUCT_BY_ID_HASH` in `server/src/config/env.ts`, and run
+in the store, update `SONY_PRODUCT_BY_ID_HASH` in `docs/contracts/sony-constants.json`, and run
 `pnpm sony:refresh` again. See Failure handling below.
 
 ## Signed-in library operation
@@ -86,11 +93,11 @@ Its variables, header list, and response path mirror the server request. All val
 The entry has no `authorization` header. `observed_status_codes` is empty, because nobody observed it live.
 
 Refresh carries the entry over from the canonical manifest. It sets the hash from
-`SONY_PURCHASED_HASH` in `server/src/config/env.ts` and runs no probe.
+`SONY_PURCHASED_HASH` in `docs/contracts/sony-constants.json` and runs no probe.
 Refresh prints `carried over, NOT verified live`.
 
 The compatibility check compares the operation name, the hash, the response path, and the variables
-with `env.ts` and `sonyClient.ts`. It guards repository-internal consistency only.
+with `docs/contracts/sony-constants.json` and the Sony client in `crates/server/src/sources/sony/`. It guards repository-internal consistency only.
 It does NOT detect Sony drift for this operation. Only a live check by the owner can do that.
 The owner runs the live check with their own NPSSO. See the probe below.
 
@@ -104,17 +111,17 @@ SONY_NPSSO=<your NPSSO> pnpm sony:probe-purchased
 - The probe checks the NPSSO format before it sends any request.
 - The probe exchanges the NPSSO for an access token. It requests one library item.
 - A PASS needs HTTP 200, no `PersistedQueryNotFound`, and a `data.purchasedTitlesRetrieve.games` array.
-- On PASS the probe sets the hash from `server/src/config/env.ts` and
+- On PASS the probe sets the hash from `docs/contracts/sony-constants.json` and
   `observed_status_codes` to `[200]` in `docs/contracts/sony-graphql-manifest.json`.
   Commit that change.
 - On FAIL the probe writes nothing.
 - The output is one line: operation name, status code, and PASS or FAIL. A FAIL line adds a fixed error tag.
   The output never holds the NPSSO, a code, a token, a header, or a response body.
-- Never schedule or automate the probe (STACK.md §10).
+- Never schedule or automate the probe (STACK.md §9).
 
 Hash rotation: when `getPurchasedGameList` answers `PersistedQueryNotFound`,
 the owner captures the new hash from a signed-in session of the store, updates
-`SONY_PURCHASED_HASH` in `server/src/config/env.ts`, and runs the probe again.
+`SONY_PURCHASED_HASH` in `docs/contracts/sony-constants.json`, and runs the probe again.
 Commit the hash and the manifest together.
 
 The diff report prints `purchased: unobserved (owner probe pending)` while
@@ -129,7 +136,7 @@ The operation is read-only. The server and the tooling never call or track `remo
 The manifest holds a hand-written entry with feature `wishlist`. `observed_status_codes` is empty.
 Nobody has seen an authorised answer yet. An anonymous request shows that Sony whitelists the hash:
 the answer is HTTP 200 with an "Access denied" error and a `null` list.
-An unknown hash gets HTTP 400 "not whitelisted", which the server reports as `UpstreamQueryRotated`.
+An unknown hash gets HTTP 400 "not whitelisted", which the server reports as `UpstreamQueryRotated` (problem code `upstream_query_rotated`).
 
 Refresh carries the entry over, like the purchased entry. It runs no probe.
 The compatibility check guards the repository-internal name, hash, response path, and the empty variables only.
@@ -155,7 +162,7 @@ The MONTHLY view reads `https://www.playstation.com/bin/imagic/gameslist`, not t
 endpoint. The contract tooling does not capture it. A shape change shows as a
 drift warning in the server log and as a failing MONTHLY step in `pnpm test:live`.
 To refresh the golden fixture, download the feed anonymously and replace
-`server/src/__tests__/fixtures/plusMonthly.golden.json`. Do not store the response headers.
+`crates/server/tests/fixtures/plusMonthly.golden.json`. Do not store the response headers.
 
 ## Apply candidate as canonical manifest
 
@@ -175,7 +182,7 @@ docs/contracts/reports/latest-diff.md
 ```
 
 On drift, follow the **Failure handling** entries below (re-capture, then commit
-the updated `server/src/config/env.ts` hash constants together with the
+the updated hash constants in `docs/contracts/sony-constants.json` together with the
 refreshed `docs/contracts/sony-graphql-manifest.json`).
 
 **Why this is manual and weekly:** the `pnpm test-all` gate runs
@@ -187,15 +194,15 @@ so a green CI run is never misread as "verified against live Sony". The weekly
 manual `sony:refresh` is therefore the **actual live-drift detector**.
 
 Do **not** automate this with a cron job or a GitHub Action — scheduled jobs are
-out of scope (STACK.md §10). The cadence is a deliberate human step.
+out of scope (STACK.md §9). The cadence is a deliberate human step.
 
 ## Mandatory live check for boundary changes
 
 Any change that touches the Sony decode/mapping boundary — specifically:
 
-- `server/src/sony/**` (the client, the boundary Schemas, rotation/429 handling), or
-- `server/src/domain/listing.ts` (the mappers that turn decoded concepts into the
-  renderable game list — #62's symptom was a mapping/filter outcome)
+- `crates/server/src/sources/sony/**` (the client, the boundary decoders, rotation/429 handling), or
+- `crates/domain/src/listing.rs` and `crates/domain/src/mapper.rs` (the mappers that turn
+  decoded concepts into the renderable game list — #62's symptom was a mapping/filter outcome)
 
 **MUST** run the live smoke suite against live Sony (`en-fi` requests) and record the counts in
 the PR:
@@ -210,7 +217,7 @@ concept counts, and the SEARCH counts for two terms plus the PS4-only title `blo
 make the build flaky).
 
 **Why this is mandatory:** `pnpm test-all` **cannot** catch live Sony drift — it
-decodes committed fixtures (`server/src/__tests__/fixtures/*.golden.json`) and
+decodes committed fixtures (`crates/server/tests/fixtures/*.golden.json`) and
 compares the manifest against itself. Only `test:live` decodes a _fresh_ live
 response through the production boundary, so it is the standing guard for the
 #62-class regression (the null-tolerance bug that emptied UPCOMING/DISCOUNTED,
@@ -247,5 +254,5 @@ Drift in CI is a hard failure.
 - Scope filtering removes all records: verify capture really includes `fi-fi` + PS5 + EUR signals.
 - Validation mismatch: update manifest and backend mapping together.
 - Drift detected: inspect `docs/contracts/reports/latest-diff.md` and triage operation changes.
-- **PersistedQueryNotFound / `UpstreamQueryRotated` (HTTP 502):** Sony shipped a new store build and the persisted-query hash rotated (Sony answers HTTP 200 + a top-level GraphQL `errors[]`; the backend classifies it as `UpstreamQueryRotated`). The hash is stale. Re-capture via `pnpm sony:refresh`, then commit the updated `server/src/config/env.ts` hash constants together with the refreshed `docs/contracts/sony-graphql-manifest.json`.
-- **`UpstreamRateLimited` (HTTP 503):** Sony answered HTTP 429 and the single bounded retry did not clear it. Transient; no manifest action. The backend honours a clamped `Retry-After` (capped at the request timeout budget) — no token bucket is added (STACK.md §5 budget is TBD).
+- **PersistedQueryNotFound / `UpstreamQueryRotated` (HTTP 502, problem code `upstream_query_rotated`):** Sony shipped a new store build and the persisted-query hash rotated (Sony answers HTTP 200 + a top-level GraphQL `errors[]`; the backend classifies it as `UpstreamQueryRotated`). The hash is stale. Re-capture via `pnpm sony:refresh`, then commit the updated hash constants in `docs/contracts/sony-constants.json` together with the refreshed `docs/contracts/sony-graphql-manifest.json`.
+- **`UpstreamRateLimited` (HTTP 503, problem code `upstream_rate_limited`):** Sony answered HTTP 429 and the single bounded retry did not clear it. Transient; no manifest action. The backend honours a clamped `Retry-After` (capped at the request timeout budget) — no token bucket is added (STACK.md §4 sets no budget).

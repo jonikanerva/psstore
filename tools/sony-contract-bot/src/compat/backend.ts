@@ -1,23 +1,19 @@
+import {
+  SONY_CONSTANTS_FILE,
+  sonyConstant,
+  type SonyConstants,
+} from '../contract/sonyConstants.js'
 import type { SonyContractManifest } from '../contract/types.js'
 
+// The inputs of the compatibility check. The constants come from
+// `docs/contracts/sony-constants.json`. The three texts are the production
+// code of the server: the Sony client sources, the mapper, and the games
+// service (see `rustSources.ts`).
 export interface CompatibilityContext {
-  serverEnvText: string
+  sonyConstants: SonyConstants
   sonyClientText: string
   mapperText: string
   serviceText: string
-}
-
-// The fixed Sony-contract values are plain code constants. Anchor on the exported
-// constant assignment `NAME = 'literal'` and read the quoted literal. The
-// constants are at module scope with no preceding interface declaration to
-// collide with.
-export const extractDefault = (
-  source: string,
-  constName: string,
-): string | null => {
-  const pattern = new RegExp(`${constName}\\s*=\\s*'([^']+)'`, 'm')
-  const match = source.match(pattern)
-  return match?.[1] ?? null
 }
 
 // The PDP request variable shape the manifest must record. The bot's parser
@@ -26,7 +22,7 @@ export const extractDefault = (
 const PDP_VARIABLES_SCHEMA: Record<string, unknown> = { productId: 'string' }
 
 // Order-insensitive structural equality of two contract variable schemas via a
-// canonically-keyed JSON string. Avoids an `as` cast (STACK.md §8) — both sides
+// canonically-keyed JSON string. Avoids an `as` cast (STACK.md §7) — both sides
 // are already `Record<string, unknown>`, and the schemas are flat key→type maps,
 // so a key-sorted JSON comparison is sound and deterministic.
 const canonicalJson = (value: Record<string, unknown>): string =>
@@ -55,7 +51,8 @@ const SEARCH_VARIABLES_SCHEMA: Record<string, unknown> = {
 }
 
 // The signed-in library request variable shape the manifest must record. It
-// mirrors the variables the server sends (`requestPurchasedPage`).
+// mirrors the variables the server sends (`PurchasedVariables` in the
+// server's Sony account client).
 const PURCHASED_VARIABLES_SCHEMA: Record<string, unknown> = {
   isActive: 'boolean',
   platform: ['string'],
@@ -84,96 +81,96 @@ export const validateBackendCompatibility = (
   }
   /* eslint-enable @typescript-eslint/no-unnecessary-condition */
 
-  const expectedOperationName = extractDefault(
-    context.serverEnvText,
+  const expectedOperationName = sonyConstant(
+    context.sonyConstants,
     'SONY_OPERATION_NAME',
   )
-  const expectedEndpoint = extractDefault(
-    context.serverEnvText,
+  const expectedEndpoint = sonyConstant(
+    context.sonyConstants,
     'SONY_GRAPHQL_URL',
   )
   // The PDP operation feeds both the product-detail page AND the
-  // NEW/DISCOUNTED release-date + classification enrichment (server
-  // `gamesService.ts`). Anchor compatibility on the same two server constants
-  // the backend uses (`server/src/config/env.ts`).
-  const expectedProductOperationName = extractDefault(
-    context.serverEnvText,
+  // NEW/DISCOUNTED release-date + classification enrichment (the games
+  // service). Anchor compatibility on the same two constants that the server
+  // reads from the constants file.
+  const expectedProductOperationName = sonyConstant(
+    context.sonyConstants,
     'SONY_PRODUCT_OPERATION_NAME',
   )
-  const expectedProductHash = extractDefault(
-    context.serverEnvText,
+  const expectedProductHash = sonyConstant(
+    context.sonyConstants,
     'SONY_PRODUCT_BY_ID_HASH',
   )
 
-  const expectedPriceOperationName = extractDefault(
-    context.serverEnvText,
+  const expectedPriceOperationName = sonyConstant(
+    context.sonyConstants,
     'SONY_PRODUCT_PRICE_OPERATION_NAME',
   )
-  const expectedPriceHash = extractDefault(
-    context.serverEnvText,
+  const expectedPriceHash = sonyConstant(
+    context.sonyConstants,
     'SONY_PRODUCT_PRICE_HASH',
   )
 
-  const expectedSearchOperationName = extractDefault(
-    context.serverEnvText,
+  const expectedSearchOperationName = sonyConstant(
+    context.sonyConstants,
     'SONY_SEARCH_OPERATION_NAME',
   )
-  const expectedSearchHash = extractDefault(
-    context.serverEnvText,
+  const expectedSearchHash = sonyConstant(
+    context.sonyConstants,
     'SONY_SEARCH_HASH',
   )
 
-  const expectedPurchasedOperationName = extractDefault(
-    context.serverEnvText,
+  const expectedPurchasedOperationName = sonyConstant(
+    context.sonyConstants,
     'SONY_PURCHASED_OPERATION_NAME',
   )
-  const expectedPurchasedHash = extractDefault(
-    context.serverEnvText,
+  const expectedPurchasedHash = sonyConstant(
+    context.sonyConstants,
     'SONY_PURCHASED_HASH',
   )
 
-  const expectedWishlistOperationName = extractDefault(
-    context.serverEnvText,
+  const expectedWishlistOperationName = sonyConstant(
+    context.sonyConstants,
     'SONY_WISHLIST_OPERATION_NAME',
   )
-  const expectedWishlistHash = extractDefault(
-    context.serverEnvText,
+  const expectedWishlistHash = sonyConstant(
+    context.sonyConstants,
     'SONY_WISHLIST_HASH',
   )
 
   if (!expectedOperationName || !expectedEndpoint) {
     throw new Error(
-      'Unable to read server env defaults for compatibility checks',
+      `Unable to read SONY_OPERATION_NAME / SONY_GRAPHQL_URL from ${SONY_CONSTANTS_FILE} for compatibility checks`,
     )
   }
 
   if (!expectedProductOperationName || !expectedProductHash) {
     throw new Error(
-      'Unable to read server PDP env defaults (SONY_PRODUCT_OPERATION_NAME / SONY_PRODUCT_BY_ID_HASH) for compatibility checks',
+      `Unable to read the PDP constants (SONY_PRODUCT_OPERATION_NAME / SONY_PRODUCT_BY_ID_HASH) from ${SONY_CONSTANTS_FILE} for compatibility checks`,
     )
   }
 
   if (!expectedPriceOperationName || !expectedPriceHash) {
     throw new Error(
-      'Unable to read server price env defaults (SONY_PRODUCT_PRICE_OPERATION_NAME / SONY_PRODUCT_PRICE_HASH) for compatibility checks',
+      `Unable to read the price constants (SONY_PRODUCT_PRICE_OPERATION_NAME / SONY_PRODUCT_PRICE_HASH) from ${SONY_CONSTANTS_FILE} for compatibility checks`,
     )
   }
 
   if (!expectedSearchOperationName || !expectedSearchHash) {
     throw new Error(
-      'Unable to read server search env defaults (SONY_SEARCH_OPERATION_NAME / SONY_SEARCH_HASH) for compatibility checks',
+      `Unable to read the search constants (SONY_SEARCH_OPERATION_NAME / SONY_SEARCH_HASH) from ${SONY_CONSTANTS_FILE} for compatibility checks`,
     )
   }
 
   if (!expectedPurchasedOperationName || !expectedPurchasedHash) {
     throw new Error(
-      'Unable to read server library env defaults (SONY_PURCHASED_OPERATION_NAME / SONY_PURCHASED_HASH) for compatibility checks',
+      `Unable to read the library constants (SONY_PURCHASED_OPERATION_NAME / SONY_PURCHASED_HASH) from ${SONY_CONSTANTS_FILE} for compatibility checks`,
     )
   }
 
   if (!expectedWishlistOperationName || !expectedWishlistHash) {
     throw new Error(
-      'Unable to read server wishlist env defaults (SONY_WISHLIST_OPERATION_NAME / SONY_WISHLIST_HASH) for compatibility checks',
+      `Unable to read the wishlist constants (SONY_WISHLIST_OPERATION_NAME / SONY_WISHLIST_HASH) from ${SONY_CONSTANTS_FILE} for compatibility checks`,
     )
   }
 
@@ -188,7 +185,7 @@ export const validateBackendCompatibility = (
   }
 
   // Require a manifest entry that matches the PDP operation name AND the
-  // server's current persisted-query hash. A rotated PDP hash (server `env.ts`
+  // server's current persisted-query hash. A rotated PDP hash (constants file
   // updated, manifest stale, or vice versa) fails here.
   if (
     !manifest.operations.some(
@@ -287,7 +284,7 @@ export const validateBackendCompatibility = (
 
       // The PDP op is addressed by a single `{ productId }` variable. Assert the
       // request-variable shape so a renamed/added variable fails the gate. Typed
-      // deep-equal via canonical JSON (no `as` cast; STACK.md §8).
+      // deep-equal via canonical JSON (no `as` cast; STACK.md §7).
       if (
         !variablesSchemaEquals(operation.variables_schema, PDP_VARIABLES_SCHEMA)
       ) {
@@ -348,58 +345,56 @@ export const validateBackendCompatibility = (
     }
   }
 
-  if (
-    !context.sonyClientText.includes(
-      "'x-apollo-operation-name': strategy.operationName",
-    ) &&
-    !context.sonyClientText.includes(
-      "'x-apollo-operation-name': env.SONY_OPERATION_NAME",
-    )
-  ) {
+  // Source anchors: the production code of the server must still use each
+  // manifest entry in the way that the checks above assume. The texts hold no
+  // test code, so a test fixture cannot satisfy an anchor.
+  if (!context.sonyClientText.includes('"x-apollo-operation-name"')) {
     throw new Error(
-      'sonyClient does not set expected x-apollo-operation-name header',
+      'The Sony client does not set the expected x-apollo-operation-name header',
     )
   }
 
-  if (!context.sonyClientText.includes('categoryGridRetrieve')) {
+  if (!context.sonyClientText.includes('"categoryGridRetrieve"')) {
     throw new Error(
-      'sonyClient response extraction no longer matches expected path',
+      'The Sony client grid response extraction no longer matches the expected path (categoryGridRetrieve)',
     )
   }
 
-  // Source-side mirror of the grid check: the backend must still read the PDP
-  // response off `productRetrieve` (server `sonyClient.ts`). If that extraction
-  // path is renamed away, the manifest's `data.productRetrieve` would be a lie —
-  // this guard fails it.
-  if (!context.sonyClientText.includes('productRetrieve')) {
+  // Source-side mirror of the grid check: the server must still read the PDP
+  // response off `productRetrieve`. If that extraction path is renamed away,
+  // the manifest's `data.productRetrieve` would be a lie; this guard fails it.
+  if (!context.sonyClientText.includes('"productRetrieve"')) {
     throw new Error(
-      'sonyClient PDP response extraction no longer matches expected path (productRetrieve)',
+      'The Sony client PDP response extraction no longer matches the expected path (productRetrieve)',
     )
   }
 
-  if (!context.sonyClientText.includes('universalSearch')) {
+  if (!context.sonyClientText.includes('"universalSearch"')) {
     throw new Error(
-      'sonyClient search response extraction no longer matches expected path (universalSearch)',
+      'The Sony client search response extraction no longer matches the expected path (universalSearch)',
     )
   }
 
-  if (!context.sonyClientText.includes('SONY_PURCHASED_HASH')) {
+  if (!context.sonyClientText.includes('contract.purchased_hash')) {
     throw new Error(
-      'sonyClient no longer sends the library persisted-query hash (SONY_PURCHASED_HASH)',
+      'The Sony client no longer sends the library persisted-query hash (SONY_PURCHASED_HASH, contract.purchased_hash)',
     )
   }
 
-  if (!context.sonyClientText.includes('SONY_WISHLIST_HASH')) {
+  if (!context.sonyClientText.includes('contract.wishlist_hash')) {
     throw new Error(
-      'sonyClient no longer sends the wishlist persisted-query hash (SONY_WISHLIST_HASH)',
+      'The Sony client no longer sends the wishlist persisted-query hash (SONY_WISHLIST_HASH, contract.wishlist_hash)',
     )
   }
 
-  if (!context.mapperText.includes('conceptToGame')) {
-    throw new Error('mapper text missing conceptToGame mapping')
+  if (!context.mapperText.includes('fn concept_to_game')) {
+    throw new Error('The mapper no longer maps concepts (fn concept_to_game)')
   }
 
-  if (!context.serviceText.includes('fetchConceptsByFeature')) {
-    throw new Error('gamesService no longer fetches feature concepts')
+  // A method call, so the declaration in the port trait does not count.
+  if (!context.serviceText.includes('.concepts_by_feature(')) {
+    throw new Error(
+      'The games service no longer fetches feature concepts (concepts_by_feature)',
+    )
   }
 }

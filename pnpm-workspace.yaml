@@ -1,8 +1,8 @@
 packages:
-  - 'client'
-  - 'server'
-  - 'shared'
+  - 'web'
+  - 'packages/*'
   - 'tools/*'
+  - 'e2e'
 pmOnFail: error
 minimumReleaseAgeStrict: true
 allowBuilds:
@@ -10,18 +10,20 @@ allowBuilds:
   '@swc/core': true
   esbuild: true
   msgpackr-extract: false
-packageExtensions:
-  '@effect/platform-node@4.0.0':
-    peerDependenciesMeta:
-      redis:
-        optional: true
 catalog:
   '@types/node': '^24.19.0'
   '@types/react': '^19.3.0'
   '@types/react-dom': '^19.3.0'
   '@vitejs/plugin-react-swc': '^4.3.3'
-  'effect': '4.0.0'
   'tsx': '^4.23.15'
-  'typescript': '^7.0.2'
+  'typescript': '7.0.2'
   'vite': '^8.3.2'
   'vitest': '^5.0.3'
+  'zod': '4.6.5'
+# The client generator (@hey-api/openapi-ts 0.99.0) depends on
+# @hey-api/json-schema-ref-parser 1.4.4, which pins js-yaml 4.2.0. That
+# version has GHSA-52cp-r559-cp3m, GHSA-5p4m-2wfm-xmqj, and
+# GHSA-2883-xcg3-v3hh; 4.3.2 fixes all three. Remove this override when the
+# generator depends on a fixed js-yaml.
+overrides:
+  '@hey-api/json-schema-ref-parser@1.4.4>js-yaml': '4.3.2'
