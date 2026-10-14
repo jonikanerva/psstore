@@ -17,6 +17,7 @@ import { normalizeSearchTerm } from '../modules/searchTerm'
 import Error from './Error'
 import GameGrid from './GameGrid'
 import Offline from './Offline'
+import RefreshNote from './RefreshNote'
 import SearchAllCard from './SearchAllCard'
 import Spinner from './Spinner'
 
@@ -125,6 +126,7 @@ const BrowseResults = ({ genre, order }: BrowseResultsProps) => {
     data,
     isPending,
     isError,
+    isRefetchError,
     isFetchNextPageError,
     fetchStatus,
     refetch,
@@ -172,6 +174,7 @@ const BrowseResults = ({ genre, order }: BrowseResultsProps) => {
         {genre.name} · {BROWSE_ORDER_LABELS[order]}
       </h1>
       <div role="status" className="search-results--status">
+        <RefreshNote failed={isRefetchError} />
         {failed ? (
           <Error message="Failed to load games" />
         ) : empty ? (
