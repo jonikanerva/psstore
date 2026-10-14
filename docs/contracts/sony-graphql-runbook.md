@@ -113,7 +113,8 @@ SONY_NPSSO=<your NPSSO> pnpm sony:probe-purchased
 - A PASS needs HTTP 200, no `PersistedQueryNotFound`, and a `data.purchasedTitlesRetrieve.games` array.
 - On PASS the probe sets the hash from `docs/contracts/sony-constants.json` and
   `observed_status_codes` to `[200]` in `docs/contracts/sony-graphql-manifest.json`.
-  Commit that change.
+  Commit that change. The probe writes the file in the Prettier format.
+- When the manifest already holds these values, the probe does not write the file.
 - On FAIL the probe writes nothing.
 - The output is one line: operation name, status code, and PASS or FAIL. A FAIL line adds a fixed error tag.
   The output never holds the NPSSO, a code, a token, a header, or a response body.
@@ -170,6 +171,8 @@ To refresh the golden fixture, download the feed anonymously and replace
 pnpm run sony:normalize -- --write-manifest
 pnpm run sony:validate
 ```
+
+`--write-manifest` writes `docs/contracts/sony-graphql-manifest.json` in the Prettier format.
 
 ## Refresh cadence
 
