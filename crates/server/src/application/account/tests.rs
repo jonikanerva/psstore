@@ -5,6 +5,10 @@
 //!
 //! No test does I/O, so the clock is paused: a never-ending lookup meets its
 //! deadline at once.
+//!
+//! `real_games` runs the wishlist enrichment with the real games service.
+
+mod real_games;
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
