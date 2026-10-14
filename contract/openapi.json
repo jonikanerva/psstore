@@ -992,7 +992,7 @@
           },
           "date": {
             "type": "string",
-            "description": "The release date: a UTC instant as an RFC 3339 string with `Z`, the\nempty string when Sony gives no valid date, or Sony's own text. Some\nsources copy Sony's text without a check."
+            "description": "The release date: a UTC instant as an RFC 3339 string in the\n`toISOString` form, with milliseconds and `Z`\n(`2026-10-14T21:00:00.000Z`). The empty string when Sony gives no\nvalid date."
           },
           "url": {
             "type": "string",
@@ -1008,7 +1008,8 @@
             "type": "string"
           },
           "discountDate": {
-            "type": "string"
+            "type": "string",
+            "description": "The release date of a discounted card in the same form as `date`.\nThe empty string when the card is not discounted or Sony gives no\nvalid date."
           },
           "screenshots": {
             "type": "array",

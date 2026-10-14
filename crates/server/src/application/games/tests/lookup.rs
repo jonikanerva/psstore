@@ -249,10 +249,54 @@ async fn a_listed_id_does_not_use_the_fallback() {
         .unwrap();
     assert_eq!(game.name, "Listed");
     assert_eq!(fake.calls().details.len(), 1);
-    // The detail enrichment keeps Sony's date string verbatim.
-    assert_eq!(game.date, "2019-10-01T00:00:00Z");
+    // The detail date goes to the wire in `toISOString` form (issue #163).
+    assert_eq!(game.date, "2019-10-01T00:00:00.000Z");
     assert_eq!(game.studio, "Bungie");
     assert_eq!(game.description, "Long description");
+}
+
+/// Issue #163: the game page of a listed game normalises the detail date. A
+/// detail without a date keeps the date of the list card, which the concept
+/// mapping already normalised.
+#[tokio::test(start_paused = true)]
+async fn the_listed_game_page_normalises_each_detail_date_form() {
+    let cases = [
+        (
+            Some("2019-10-01T02:00:00+02:00"),
+            "2019-10-01T00:00:00.000Z",
+        ),
+        (Some("2019-10-01"), "2019-10-01T00:00:00.000Z"),
+        (Some("soon"), ""),
+        (None, "2024-05-01T00:00:00.000Z"),
+    ];
+    for (sony, wire) in cases {
+        let listed = Concept {
+            products: Some(vec![ConceptProductRef {
+                id: Some(sku(1, "listed")),
+                release_date: Some("2024-05-01T00:00:00Z".into()),
+                ..ConceptProductRef::default()
+            }]),
+            ..priced_concept(1, "listed")
+        };
+        let (svc, _) = service(FakeSony {
+            concepts: Box::new(move |feature| {
+                Ok(if feature == SonyFeature::New {
+                    vec![listed.clone()]
+                } else {
+                    vec![]
+                })
+            }),
+            detail: Box::new(move |_| {
+                Ok(ProductDetail {
+                    release_date: sony.map(str::to_owned),
+                    ..destiny()
+                })
+            }),
+            ..FakeSony::default()
+        });
+        let game = svc.game_by_id(gid(&sku(1, "listed"))).await.unwrap();
+        assert_eq!(game.date, wire, "{sony:?}");
+    }
 }
 
 fn counting_detail(
@@ -565,7 +609,8 @@ async fn a_monthly_only_game_opens_with_detail_and_offer() {
     assert_eq!(game.id, OLD_ID);
     assert_eq!(game.description, "long text");
     assert_eq!(game.plus_offer, Some(PlusOffer::Included));
-    assert_eq!(game.date, PAST_DATE);
+    // PAST_DATE in `toISOString` form (issue #163).
+    assert_eq!(game.date, "2025-01-01T00:00:00.000Z");
 }
 
 #[tokio::test(start_paused = true)]

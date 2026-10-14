@@ -91,10 +91,47 @@ async fn keeps_sony_order_and_enriches_the_date_and_genres() {
         result
             .games
             .iter()
-            .all(|g| g.date == "2024-01-01T00:00:00Z")
+            .all(|g| g.date == "2024-01-01T00:00:00.000Z")
     );
     assert_eq!(result.games[0].genres, ["Action"]);
     assert_eq!(result.next_offset, None);
+}
+
+/// Issue #163: search keeps every game whatever its date, in Sony's order,
+/// and sends each date in `toISOString` form or as the empty string.
+#[tokio::test(start_paused = true)]
+async fn normalises_each_sony_date_form_and_keeps_every_game() {
+    let (svc, _) = service(FakeSony {
+        search: Box::new(|_| search_page(vec![known(1), known(2), known(3), known(4)], true)),
+        detail: Box::new(|id| {
+            let release_date = if id == search_sku(1) {
+                Some("2024-01-01T02:00:00+02:00")
+            } else if id == search_sku(2) {
+                Some("soon")
+            } else if id == search_sku(3) {
+                Some("2024-01-01")
+            } else {
+                None
+            };
+            Ok(ProductDetail {
+                release_date: release_date.map(str::to_owned),
+                ..ps5_detail()
+            })
+        }),
+        ..FakeSony::default()
+    });
+    let result = svc.search_games("game".into(), page(0, 50)).await.unwrap();
+    assert_eq!(names(&result), ["Game 1", "Game 2", "Game 3", "Game 4"]);
+    let dates: Vec<_> = result.games.iter().map(|g| g.date.as_str()).collect();
+    assert_eq!(
+        dates,
+        [
+            "2024-01-01T00:00:00.000Z",
+            "",
+            "2024-01-01T00:00:00.000Z",
+            ""
+        ]
+    );
 }
 
 #[tokio::test(start_paused = true)]
