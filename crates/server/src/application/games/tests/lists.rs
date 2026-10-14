@@ -624,6 +624,73 @@ async fn a_failed_list_is_pinned_for_30_seconds() {
     assert_eq!(attempts.load(Ordering::SeqCst), 2);
 }
 
+/// The error of a drifted grid, as the Sony client returns it (issue #160).
+fn grid_drift() -> UpstreamError {
+    UpstreamError::unavailable("Sony category grid has an unexpected shape")
+}
+
+/// The lists that read a grid. NEW and UPCOMING read both release grids.
+fn lists_of(feature: SonyFeature) -> &'static [&'static str] {
+    match feature {
+        SonyFeature::New | SonyFeature::Upcoming => &["new", "upcoming"],
+        SonyFeature::Discounted => &["discounted"],
+    }
+}
+
+async fn list(svc: &GamesService, name: &str) -> Result<PageResult, UpstreamError> {
+    match name {
+        "new" => svc.new_games(page(0, 60)).await,
+        "upcoming" => svc.upcoming_games(page(0, 60)).await,
+        _ => svc.discounted_games(page(0, 60)).await,
+    }
+}
+
+/// A drift of one grid fails every list that reads it, also when the other
+/// release grid is valid. The failure stays a failure for the list lifetime
+/// and is never cached as an empty list; a valid grid after the lifetime
+/// gives games again.
+#[tokio::test(start_paused = true)]
+async fn a_drifted_grid_fails_its_lists_and_is_never_cached_as_empty() {
+    for drifted in [
+        SonyFeature::New,
+        SonyFeature::Upcoming,
+        SonyFeature::Discounted,
+    ] {
+        let attempts = Arc::new(AtomicUsize::new(0));
+        let seen = Arc::clone(&attempts);
+        let valid = grids(
+            vec![priced_concept(1, "alpha")],
+            vec![priced_concept(3, "future")],
+            vec![priced_concept(4, "deal")],
+        );
+        let (svc, fake) = service(FakeSony {
+            concepts: Box::new(move |feature| {
+                if feature == drifted && seen.fetch_add(1, Ordering::SeqCst) == 0 {
+                    Err(grid_drift())
+                } else {
+                    valid(feature)
+                }
+            }),
+            detail: dates_by_marker(vec![("FUTURE", Some(FUTURE_DATE))], Some(PAST_DATE)),
+            ..FakeSony::default()
+        });
+        for name in lists_of(drifted) {
+            assert_eq!(list(&svc, name).await, Err(grid_drift()), "{name}");
+        }
+        tokio::time::advance(Duration::from_millis(29_999)).await;
+        for name in lists_of(drifted) {
+            assert_eq!(list(&svc, name).await, Err(grid_drift()), "{name}");
+        }
+        assert_eq!(counted(&fake, drifted), 1, "{drifted:?}");
+        tokio::time::advance(Duration::from_millis(1)).await;
+        for name in lists_of(drifted) {
+            let games = list(&svc, name).await.unwrap().games;
+            assert!(!games.is_empty(), "{name}");
+        }
+        assert_eq!(counted(&fake, drifted), 2, "{drifted:?}");
+    }
+}
+
 #[tokio::test(start_paused = true)]
 async fn a_product_detail_is_cached_for_6_hours() {
     let (svc, fake) = service(FakeSony {

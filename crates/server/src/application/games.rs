@@ -32,8 +32,8 @@ use crate::domain::mapper::{concept_product_id, concept_to_game, product_detail_
 /// The anonymous Sony store operations (port of `SonyClientApi`). Each
 /// method decodes and scopes Sony's answer at the boundary.
 pub trait SonyCatalog: Send + Sync {
-    /// One category grid list in Sony's order. A drifted grid is an empty
-    /// list with a warning.
+    /// One category grid list in Sony's order. A drifted grid fails with a
+    /// warning; an empty but valid grid is an empty list.
     fn concepts_by_feature(
         &self,
         feature: SonyFeature,

@@ -181,9 +181,8 @@ impl SonyCatalogClient {
             .await?;
         let operation = self.contract.category_grid_operation.as_str();
         match extract_category_grid(&json) {
-            // A corrupt or absent node: an empty list for the user, and an
-            // honest signal for the operator, so drift never reads as a
-            // legitimately empty grid.
+            // A corrupt or absent node fails, so drift never reads as a
+            // legitimately empty grid (`DOCTRINE.md` P5, issue #160).
             CategoryGridOutcome::Drift => {
                 tracing::warn!(
                     event = "sony.categoryGrid.drift",
@@ -191,7 +190,9 @@ impl SonyCatalogClient {
                     operation,
                     "sony category grid drift"
                 );
-                Ok(vec![])
+                Err(UpstreamError::unavailable(
+                    "Sony category grid has an unexpected shape",
+                ))
             }
             CategoryGridOutcome::Ok { concepts, dropped } => {
                 if dropped > 0 {
