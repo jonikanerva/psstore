@@ -127,17 +127,34 @@ fn log_with(logs: &CapturedLogs, event: &str) -> Option<Value> {
     logs.lines().into_iter().find(|line| line["event"] == event)
 }
 
+/// A drifted grid fails, so it stays distinct from a legitimately empty grid
+/// (`DOCTRINE.md` P5: an invalid envelope stops the operation; issue #160).
 #[tokio::test]
-async fn a_drifted_grid_is_an_empty_list_with_a_warning() {
-    let (client, _) = serve(vec![json_reply(&json!({"data": {}}))]).await;
-    let logs = CapturedLogs::default();
-    let _guard = logs.install();
-    let concepts = client.concepts_by_feature(SonyFeature::New, 10, 0).await;
-    assert_eq!(concepts, Ok(vec![]));
-    let line = log_with(&logs, "sony.categoryGrid.drift").unwrap();
-    assert_eq!(line["level"], "WARN");
-    assert_eq!(line["feature"], "new");
-    assert_eq!(line["operation"], "categoryGridRetrieve");
+async fn a_drifted_grid_fails_with_a_warning() {
+    for (body, feature) in [
+        (json!({"data": {}}), SonyFeature::New),
+        (json!({"data": null}), SonyFeature::Upcoming),
+        (
+            json!({"data": {"categoryGridRetrieve": {"concepts": "not-an-array"}}}),
+            SonyFeature::Discounted,
+        ),
+    ] {
+        let (client, _) = serve(vec![json_reply(&body)]).await;
+        let logs = CapturedLogs::default();
+        let _guard = logs.install();
+        let concepts = client.concepts_by_feature(feature, 10, 0).await;
+        assert_eq!(
+            concepts,
+            Err(UpstreamError::unavailable(
+                "Sony category grid has an unexpected shape"
+            )),
+            "{body}"
+        );
+        let line = log_with(&logs, "sony.categoryGrid.drift").unwrap();
+        assert_eq!(line["level"], "WARN");
+        assert_eq!(line["feature"], feature.as_str());
+        assert_eq!(line["operation"], "categoryGridRetrieve");
+    }
 }
 
 #[tokio::test]
