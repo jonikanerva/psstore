@@ -113,6 +113,24 @@ describe('GameDetailsPage', () => {
     })
   })
 
+  it('renders the description without Sony colour attributes', async () => {
+    const { fetchGame } = await import('@psstore/api-client')
+    vi.mocked(fetchGame).mockResolvedValue({
+      ...baseGame,
+      description:
+        '<b><font color="orange">PRE-ORDER</font></b><table bgcolor="black"><tr><td>Cell</td></tr></table>',
+    })
+
+    await renderWithRouter(<GameDetailsPage gameId={baseGame.id} />)
+
+    const notice = await screen.findByText('PRE-ORDER')
+    expect(notice.localName).toBe('font')
+    expect(notice).not.toHaveAttribute('color')
+    expect(screen.getByText('Cell').closest('table')).not.toHaveAttribute(
+      'bgcolor',
+    )
+  })
+
   it('hides description section when description is empty', async () => {
     const { fetchGame } = await import('@psstore/api-client')
     vi.mocked(fetchGame).mockResolvedValue({ ...baseGame, description: '' })
