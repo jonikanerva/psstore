@@ -53,8 +53,8 @@ export interface ProbeConfig {
 }
 
 // One signed-in operation the owner can probe: which manifest entry it writes,
-// which constants in `docs/contracts/sony-constants.json` name it, and what a
-// valid answer looks like.
+// which constants in `docs/contracts/sony-constants.json` name it, what a
+// valid answer looks like, and where its image URLs are.
 export interface SignedInProbe {
   readonly feature: 'purchased' | 'wishlist'
   readonly label: string
@@ -62,6 +62,23 @@ export interface SignedInProbe {
   readonly hashConstant: string
   readonly variables: Readonly<Record<string, unknown>>
   readonly isValidBody: (body: unknown) => boolean
+  // The raw values of the image URL field of each list element. The server
+  // decodes the same field into the card image (`crates/server/src/sources/
+  // sony/account/`). The signed-in lists have no video field.
+  readonly mediaUrls: (body: unknown) => readonly unknown[]
+}
+
+// The host names of the media URLs of one answer, for the CSP review (#162).
+export interface MediaHosts {
+  // Distinct host names, sorted.
+  readonly hosts: readonly string[]
+  // Values that are not an absolute `https:` URL with a host name.
+  readonly invalid: number
+}
+
+export interface ProbeResult {
+  readonly status: number
+  readonly media: MediaHosts
 }
 
 const CONFIG_CONSTANTS = {
@@ -212,20 +229,74 @@ const isValid =
   (body: unknown): boolean =>
     schema.safeParse(body).success
 
+const jsonObjectSchema = z.record(z.string(), z.unknown())
+
+// The value at `key` of a JSON object, or undefined for any other value.
+const member = (value: unknown, key: string): unknown => {
+  const parsed = jsonObjectSchema.safeParse(value)
+  return parsed.success ? parsed.data[key] : undefined
+}
+
+// The `url` of the object at `imageKey` of each list element. The probe reads
+// every element, also one that the server drops as out of scope: an extra
+// host in the CSP review list breaks no image, but a missed host does.
+const listImageUrls = (list: unknown, imageKey: string): unknown[] =>
+  Array.isArray(list)
+    ? list.map((element) => member(member(element, imageKey), 'url'))
+    : []
+
+const hostOf = (value: string): string | null => {
+  try {
+    const url = new URL(value)
+    // The CSP allows images over `https:` only.
+    return url.protocol === 'https:' && url.hostname !== ''
+      ? url.hostname
+      : null
+  } catch {
+    return null
+  }
+}
+
+// An absent, `null`, or empty value is no image and is skipped. Any other
+// value that gives no host is counted as invalid; its text is never kept.
+export const collectMediaHosts = (values: readonly unknown[]): MediaHosts => {
+  const hosts = new Set<string>()
+  let invalid = 0
+  for (const value of values) {
+    if (value === undefined || value === null || value === '') {
+      continue
+    }
+    const host = typeof value === 'string' ? hostOf(value) : null
+    if (host === null) {
+      invalid += 1
+    } else {
+      hosts.add(host)
+    }
+  }
+  return { hosts: [...hosts].sort(), invalid }
+}
+
 export const PURCHASED_PROBE: SignedInProbe = {
   feature: 'purchased',
   label: 'getPurchasedGameList',
   operationNameConstant: 'SONY_PURCHASED_OPERATION_NAME',
   hashConstant: 'SONY_PURCHASED_HASH',
+  // One page of the server's page size (`PURCHASED_PAGE_SIZE`), so the media
+  // host list covers up to 100 games, not a single one.
   variables: {
     isActive: true,
     platform: ['ps5'],
-    size: 1,
+    size: 100,
     start: 0,
     sortBy: 'ACTIVE_DATE',
     sortDirection: 'desc',
   },
   isValidBody: isValid(libraryEnvelopeSchema),
+  mediaUrls: (body) =>
+    listImageUrls(
+      member(member(member(body, 'data'), 'purchasedTitlesRetrieve'), 'games'),
+      'image',
+    ),
 }
 
 export const WISHLIST_PROBE: SignedInProbe = {
@@ -235,16 +306,22 @@ export const WISHLIST_PROBE: SignedInProbe = {
   hashConstant: 'SONY_WISHLIST_HASH',
   variables: {},
   isValidBody: isValid(wishlistEnvelopeSchema),
+  mediaUrls: (body) =>
+    listImageUrls(
+      member(member(body, 'data'), 'storeWishlistSecure'),
+      'boxArt',
+    ),
 }
 
 // Requests the operation once, read-only. Resolves with the HTTP status (always
-// 200) only when the response holds the valid list array for that operation.
+// 200) and the media host names only when the response holds the valid list
+// array for that operation. The body is not kept after the host names are read.
 export const probeOperation = async (
   probe: SignedInProbe,
   accessToken: string,
   config: ProbeConfig,
   fetchFn: typeof fetch,
-): Promise<number> => {
+): Promise<ProbeResult> => {
   const query = new URLSearchParams({
     operationName: config.operationName,
     variables: JSON.stringify(probe.variables),
@@ -276,21 +353,24 @@ export const probeOperation = async (
       response.status,
     )
   }
-  return response.status
+  return {
+    status: response.status,
+    media: collectMediaHosts(probe.mediaUrls(body)),
+  }
 }
 
 export const probePurchased = (
   accessToken: string,
   config: ProbeConfig,
   fetchFn: typeof fetch,
-): Promise<number> =>
+): Promise<ProbeResult> =>
   probeOperation(PURCHASED_PROBE, accessToken, config, fetchFn)
 
 export const probeWishlist = (
   accessToken: string,
   config: ProbeConfig,
   fetchFn: typeof fetch,
-): Promise<number> =>
+): Promise<ProbeResult> =>
   probeOperation(WISHLIST_PROBE, accessToken, config, fetchFn)
 
 // Sets the hash and the observed status of the entry for `feature`. Leaves the
@@ -335,9 +415,18 @@ const readProbeConstants = async (filePath: string): Promise<SonyConstants> => {
   }
 }
 
+// The lines after PASS: the media host names for the CSP review (#162). Host
+// names only, never a URL, a path, or a query. They go to standard output
+// only and never to a file.
+export const mediaHostLines = (label: string, media: MediaHosts): string[] => [
+  `${label} media hosts ${String(media.hosts.length)}`,
+  ...media.hosts.map((host) => `${label} media host ${host}`),
+  `${label} invalid media urls ${String(media.invalid)}`,
+]
+
 // Owner-run check. Prints the operation name, the status code and PASS or
-// FAIL, nothing else. Writes the manifest on PASS only, and only when its
-// content changes.
+// FAIL; after PASS, the media host lines. Writes the manifest on PASS only,
+// and only when its content changes.
 const runProbe = async (
   probe: SignedInProbe,
   options: ProbeRunOptions,
@@ -360,7 +449,12 @@ const runProbe = async (
     }
 
     const accessToken = await exchangeNpsso(npsso, config, fetchFn)
-    const status = await probeOperation(probe, accessToken, config, fetchFn)
+    const { status, media } = await probeOperation(
+      probe,
+      accessToken,
+      config,
+      fetchFn,
+    )
     const updated = recordObservedStatus(
       manifest,
       config.hash,
@@ -372,6 +466,9 @@ const runProbe = async (
       await writeFormattedJsonFile(manifestPath, updated)
     }
     console.info(`${probe.label} ${String(status)} PASS`)
+    for (const line of mediaHostLines(probe.label, media)) {
+      console.info(line)
+    }
   } catch (error) {
     const tag = error instanceof ProbeFailure ? error.tag : 'unexpected'
     const status = error instanceof ProbeFailure ? error.status : null

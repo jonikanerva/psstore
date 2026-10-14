@@ -109,15 +109,20 @@ SONY_NPSSO=<your NPSSO> pnpm sony:probe-purchased
 - The probe reads the NPSSO only from the `SONY_NPSSO` environment variable.
   It does not read a `.env` file and takes no command-line argument.
 - The probe checks the NPSSO format before it sends any request.
-- The probe exchanges the NPSSO for an access token. It requests one library item.
+- The probe exchanges the NPSSO for an access token. It requests one page of 100 library items, the page size of the server.
 - A PASS needs HTTP 200, no `PersistedQueryNotFound`, and a `data.purchasedTitlesRetrieve.games` array.
 - On PASS the probe sets the hash from `docs/contracts/sony-constants.json` and
   `observed_status_codes` to `[200]` in `docs/contracts/sony-graphql-manifest.json`.
   Commit that change. The probe writes the file in the Prettier format.
 - When the manifest already holds these values, the probe does not write the file.
 - On FAIL the probe writes nothing.
-- The output is one line: operation name, status code, and PASS or FAIL. A FAIL line adds a fixed error tag.
-  The output never holds the NPSSO, a code, a token, a header, or a response body.
+- The first output line holds the operation name, the status code, and PASS or FAIL. A FAIL line adds a fixed error tag.
+- After PASS, the probe prints the media hosts for the CSP review (#162): the count of hosts,
+  one `<operation> media host <host name>` line for each distinct host in sorted order, and the count of invalid media URLs.
+  The probe reads the image URL that the server shows on each card (`games[].image.url`). The answer has no video URL.
+  A media URL is invalid when it is not an absolute `https:` URL with a host name.
+  The probe prints host names only and writes them to no file.
+- The output never holds the NPSSO, a code, a token, a header, a URL, a path, a product name, or a response body.
 - Never schedule or automate the probe (STACK.md §9).
 
 Hash rotation: when `getPurchasedGameList` answers `PersistedQueryNotFound`,
@@ -152,6 +157,7 @@ SONY_NPSSO=<your NPSSO> pnpm sony:probe-wishlist
 - An "Access denied" answer with a `null` list fails with the tag `access-denied`.
 - On PASS the probe records `observed_status_codes: [200]` for `wishlist`. Commit that change.
 - The probe never writes a wishlist.
+- After PASS, the probe prints the media hosts like `sony:probe-purchased`. It reads the box art URL of each entry (`storeWishlistSecure[].boxArt.url`).
 
 The wishlist response has no region field, so the server ignores its prices.
 It fills each product card (date, standard price, PS Plus price) from the anonymous Finnish store,
