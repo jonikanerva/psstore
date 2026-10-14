@@ -7,6 +7,7 @@ import { useSort } from '../modules/sortContext'
 import Error from './Error'
 import GameGrid from './GameGrid'
 import Offline from './Offline'
+import RefreshNote from './RefreshNote'
 import Spinner from './Spinner'
 
 const PAGE_SIZE = 50
@@ -41,6 +42,7 @@ const SearchResults = ({ term }: SearchResultsProps) => {
     data,
     isPending,
     isError,
+    isRefetchError,
     isFetchNextPageError,
     fetchStatus,
     refetch,
@@ -107,6 +109,7 @@ const SearchResults = ({ term }: SearchResultsProps) => {
         </h1>
       )}
       <div role="status" className="search-results--status">
+        <RefreshNote failed={isRefetchError} />
         {status}
       </div>
       {failed && retry(refetch)}
