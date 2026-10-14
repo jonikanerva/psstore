@@ -20,9 +20,10 @@ import {
   ensureDir,
   fileExists,
   readJsonFile,
+  writeFormattedJsonFile,
   writeJsonFile,
 } from '../io/files.js'
-import { paths } from '../io/paths.js'
+import { paths, type pathsFor } from '../io/paths.js'
 
 interface CaptureEntry extends CaptureRecord {
   feature: ContractFeature
@@ -94,10 +95,25 @@ export const runNormalize = async (
     operations,
   )
 
-  await ensureDir(paths.candidateManifest)
-  await writeJsonFile(paths.candidateManifest, manifest)
+  await writeNormalizedManifest(manifest, writeManifest)
+}
 
-  if (writeManifest) {
-    await writeJsonFile(paths.canonicalManifest, manifest)
+// Writes the candidate manifest, and with `writeCanonical` also the committed
+// manifest. The committed manifest gets the Prettier format, so the file
+// passes `mise run format-check` after the write. Git ignores the candidate
+// file, so it keeps the JSON.stringify format.
+export const writeNormalizedManifest = async (
+  manifest: SonyContractManifest,
+  writeCanonical: boolean,
+  target: Pick<
+    ReturnType<typeof pathsFor>,
+    'candidateManifest' | 'canonicalManifest'
+  > = paths,
+): Promise<void> => {
+  await ensureDir(target.candidateManifest)
+  await writeJsonFile(target.candidateManifest, manifest)
+
+  if (writeCanonical) {
+    await writeFormattedJsonFile(target.canonicalManifest, manifest)
   }
 }

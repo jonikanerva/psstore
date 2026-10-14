@@ -176,6 +176,9 @@ catalogs:
     '@vitejs/plugin-react-swc':
       specifier: ^4.3.3
       version: 4.3.3
+    prettier:
+      specifier: ^3.9.9
+      version: 3.9.9
     tsx:
       specifier: ^4.23.15
       version: 4.23.15
@@ -221,7 +224,7 @@ importers:
         specifier: 7.0.2003
         version: 7.0.2003
       prettier:
-        specifier: ^3.9.9
+        specifier: 'catalog:'
         version: 3.9.9
       tsx:
         specifier: 'catalog:'
@@ -275,6 +278,9 @@ importers:
       playwright:
         specifier: 1.63.0
         version: 1.63.0
+      prettier:
+        specifier: 'catalog:'
+        version: 3.9.9
       zod:
         specifier: 'catalog:'
         version: 4.6.5

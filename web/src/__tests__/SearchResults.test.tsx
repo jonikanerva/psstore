@@ -1,5 +1,11 @@
 import { onlineManager } from '@tanstack/react-query'
-import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react'
+import {
+  act,
+  cleanup,
+  fireEvent,
+  screen,
+  waitFor,
+} from '@testing-library/react'
 import { useState } from 'react'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import type { Game, PageResult } from '@psstore/api-client'
@@ -144,6 +150,41 @@ describe('SearchResults', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
 
     expect(await screen.findByText('Alpha')).toBeInTheDocument()
+  })
+
+  // The degraded state (#164). A return to the tab refreshes a stale query.
+  it('keeps the results and shows the note when a refresh fails', async () => {
+    let failing = false
+    stubFetch(() =>
+      failing
+        ? new Response('', { status: 502 })
+        : respond(page([game('EP1-A', 'Alpha'), game('EP1-B', 'Beta')], null)),
+    )
+    await renderWithRouter(<SearchResults term="alp" />)
+    expect(await screen.findByText('Alpha')).toBeInTheDocument()
+
+    failing = true
+    act(() => {
+      window.dispatchEvent(new Event('visibilitychange'))
+    })
+
+    await waitFor(() => {
+      expect(screen.getByRole('status')).toHaveTextContent(
+        "Couldn't refresh. Showing the saved list.2 PS5 games found",
+      )
+    })
+    expect(screen.getByText('Beta')).toBeInTheDocument()
+    expect(screen.queryByText('Search failed')).not.toBeInTheDocument()
+  })
+
+  it('shows the error state and no note when the first search fails', async () => {
+    stubFetch(() => new Response('', { status: 502 }))
+    await renderWithRouter(<SearchResults term="alp" />)
+
+    await waitFor(() => {
+      expect(screen.getByRole('status')).toHaveTextContent('Search failed')
+    })
+    expect(screen.getByRole('status')).not.toHaveTextContent("Couldn't refresh")
   })
 
   it('shows an offline message and does not call the server', async () => {
