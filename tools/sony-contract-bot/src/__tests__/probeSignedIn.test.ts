@@ -1,9 +1,10 @@
 import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
-import { check } from 'prettier'
+import { check, format } from 'prettier'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+  collectMediaHosts,
   exchangeNpsso,
   parseNpsso,
   probePurchased,
@@ -68,6 +69,73 @@ const wishlistConfig: ProbeConfig = {
 }
 const okWishlist = { data: { storeWishlistSecure: [] } }
 const okLibrary = { data: { purchasedTitlesRetrieve: { games: [] } } }
+
+// Synthetic media URLs. The paths and queries carry the synthetic secrets and
+// a product name, so the output checks prove that only host names get out.
+const PRODUCT_NAME = 'Synthetic Game Name'
+const mediaUrl = (host: string, file: string): string =>
+  `https://${host}/${NPSSO}/${encodeURIComponent(PRODUCT_NAME)}/${file}?token=${TOKEN}&code=${CODE}`
+const libraryWithMedia = {
+  data: {
+    purchasedTitlesRetrieve: {
+      games: [
+        {
+          name: PRODUCT_NAME,
+          image: { url: mediaUrl('img-b.example.test', '1.png') },
+        },
+        { name: 'B', image: { url: mediaUrl('img-a.example.test', '2.png') } },
+        { name: 'C', image: { url: mediaUrl('img-b.example.test', '3.png') } },
+        // Out of the server's scope; the probe still reads its host.
+        {
+          name: 'D',
+          platform: 'PS4',
+          image: { url: mediaUrl('img-c.example.test', '4.png') },
+        },
+        { name: 'E', image: null },
+        { name: 'F' },
+        { name: 'G', image: { url: `http://img-d.example.test/${TOKEN}.png` } },
+        { name: 'H', image: { url: `not a url ${NPSSO}` } },
+        { name: 'I', image: { url: 5 } },
+      ],
+    },
+  },
+}
+const libraryMediaLines = [
+  'getPurchasedGameList 200 PASS',
+  'getPurchasedGameList media hosts 3',
+  'getPurchasedGameList media host img-a.example.test',
+  'getPurchasedGameList media host img-b.example.test',
+  'getPurchasedGameList media host img-c.example.test',
+  'getPurchasedGameList invalid media urls 3',
+]
+const wishlistWithMedia = {
+  data: {
+    storeWishlistSecure: [
+      {
+        name: PRODUCT_NAME,
+        boxArt: { url: mediaUrl('box-b.example.test', '1.png') },
+      },
+      { name: 'B', boxArt: { url: mediaUrl('box-a.example.test', '2.png') } },
+      { name: 'C', boxArt: { url: mediaUrl('box-a.example.test', '3.png') } },
+      { name: 'D', boxArt: { url: '' } },
+      { name: 'E', boxArt: { url: `data:image/png;base64,${TOKEN}` } },
+      // A URL in another field is not the image of the card.
+      { name: 'F', image: { url: mediaUrl('other.example.test', '4.png') } },
+    ],
+  },
+}
+const wishlistMediaLines = [
+  'storeRetrieveWishlist 200 PASS',
+  'storeRetrieveWishlist media hosts 2',
+  'storeRetrieveWishlist media host box-a.example.test',
+  'storeRetrieveWishlist media host box-b.example.test',
+  'storeRetrieveWishlist invalid media urls 1',
+]
+const noMediaLines = (label: string): string[] => [
+  `${label} 200 PASS`,
+  `${label} media hosts 0`,
+  `${label} invalid media urls 0`,
+]
 
 // Answers in call order.
 const fetchOf = (...responses: Response[]): typeof fetch => {
@@ -206,10 +274,56 @@ describe('exchangeNpsso', () => {
   })
 })
 
+describe('collectMediaHosts', () => {
+  it('keeps distinct host names in sorted order', () => {
+    expect(
+      collectMediaHosts([
+        'https://b.example.test/x.png',
+        'https://a.example.test/y.png',
+        'https://b.example.test/z.png',
+        'https://A.Example.Test:8443/w.png',
+      ]),
+    ).toEqual({ hosts: ['a.example.test', 'b.example.test'], invalid: 0 })
+  })
+
+  it('returns the host name only, without a path, a query, or a port', () => {
+    const { hosts } = collectMediaHosts([
+      `https://user:pw@img.example.test:8443/path/${NPSSO}?token=${TOKEN}#${CODE}`,
+    ])
+    expect(hosts).toEqual(['img.example.test'])
+  })
+
+  it('skips an absent, null, or empty value', () => {
+    expect(collectMediaHosts([undefined, null, ''])).toEqual({
+      hosts: [],
+      invalid: 0,
+    })
+  })
+
+  it('counts a value that gives no https host as invalid', () => {
+    expect(
+      collectMediaHosts([
+        'not a url',
+        '/relative/path.png',
+        'http://img.example.test/x.png',
+        'data:image/png;base64,AAAA',
+        'file:///x.png',
+        5,
+        {},
+        ['https://img.example.test/x.png'],
+        'https://ok.example.test/x.png',
+      ]),
+    ).toEqual({ hosts: ['ok.example.test'], invalid: 8 })
+  })
+})
+
 describe('probePurchased', () => {
-  it('sends the bearer token, operation name and hash, size 1', async () => {
+  it('sends the bearer token, operation name and hash, size 100', async () => {
     const fetchFn = fetchOf(json(okLibrary))
-    await expect(probePurchased(TOKEN, config, fetchFn)).resolves.toBe(200)
+    await expect(probePurchased(TOKEN, config, fetchFn)).resolves.toEqual({
+      status: 200,
+      media: { hosts: [], invalid: 0 },
+    })
 
     const [url = '', init] = calls(fetchFn)[0] ?? []
     const parsed = new URL(url)
@@ -220,7 +334,7 @@ describe('probePurchased', () => {
     expect(
       JSON.parse(parsed.searchParams.get('variables') ?? ''),
     ).toMatchObject({
-      size: 1,
+      size: 100,
       start: 0,
       platform: ['ps5'],
     })
@@ -229,6 +343,18 @@ describe('probePurchased', () => {
     expect(headers.get('x-apollo-operation-name')).toBe('getPurchasedGameList')
     expect(headers.get('x-psn-store-locale-override')).toBe('en-FI')
     expect(init?.signal).toBeInstanceOf(AbortSignal)
+  })
+
+  it('reads the host of each games[].image.url', async () => {
+    const result = await probePurchased(
+      TOKEN,
+      config,
+      fetchOf(json(libraryWithMedia)),
+    )
+    expect(result.media).toEqual({
+      hosts: ['img-a.example.test', 'img-b.example.test', 'img-c.example.test'],
+      invalid: 3,
+    })
   })
 
   it.each([401, 403, 500])('rejects HTTP %i', async (status) => {
@@ -265,9 +391,9 @@ describe('probePurchased', () => {
 describe('probeWishlist', () => {
   it('sends one read-only GET with empty variables and the bearer token', async () => {
     const fetchFn = fetchOf(json(okWishlist))
-    await expect(probeWishlist(TOKEN, wishlistConfig, fetchFn)).resolves.toBe(
-      200,
-    )
+    await expect(
+      probeWishlist(TOKEN, wishlistConfig, fetchFn),
+    ).resolves.toEqual({ status: 200, media: { hosts: [], invalid: 0 } })
     expect(fetchFn).toHaveBeenCalledTimes(1)
     const [url = '', init] = calls(fetchFn)[0] ?? []
     const parsed = new URL(url)
@@ -281,6 +407,18 @@ describe('probeWishlist', () => {
     const headers = new Headers(init?.headers)
     expect(headers.get('authorization')).toBe(`Bearer ${TOKEN}`)
     expect(headers.get('x-apollo-operation-name')).toBe('storeRetrieveWishlist')
+  })
+
+  it('reads the host of each storeWishlistSecure[].boxArt.url', async () => {
+    const result = await probeWishlist(
+      TOKEN,
+      wishlistConfig,
+      fetchOf(json(wishlistWithMedia)),
+    )
+    expect(result.media).toEqual({
+      hosts: ['box-a.example.test', 'box-b.example.test'],
+      invalid: 1,
+    })
   })
 
   it.each([401, 403, 400, 500])('rejects HTTP %i', async (status) => {
@@ -451,11 +589,16 @@ describe('runProbePurchased', () => {
   const readManifest = async (): Promise<SonyContractManifest> =>
     readJsonFile<SonyContractManifest>(manifestPath)
 
+  // The output and the manifest hold no secret and no product name; the
+  // output holds no URL path or query.
   const secretsAbsent = async (): Promise<void> => {
     const written = await fs.readFile(manifestPath, 'utf8')
-    for (const secret of [NPSSO, CODE, TOKEN]) {
+    for (const secret of [NPSSO, CODE, TOKEN, PRODUCT_NAME]) {
       expect(output.join('\n')).not.toContain(secret)
       expect(written).not.toContain(secret)
+    }
+    for (const fragment of ['/', '?', ':']) {
+      expect(output.join('\n')).not.toContain(fragment)
     }
   }
 
@@ -471,9 +614,47 @@ describe('runProbePurchased', () => {
     expect(written.operations[0]?.observed_status_codes).toEqual([200])
     expect(written.operations[0]?.persisted_query_hash).toBe(HASH)
     expect(written.metadata.captured_at).toBe('2026-10-03T00:00:00.000Z')
-    expect(output).toEqual(['getPurchasedGameList 200 PASS'])
+    expect(output).toEqual(noMediaLines('getPurchasedGameList'))
     expect(process.exitCode).toBeUndefined()
     await secretsAbsent()
+  })
+
+  it('prints the sorted media host names after PASS and nothing else', async () => {
+    await run(
+      fetchOf(
+        redirect(`${REDIRECT}?code=${CODE}`),
+        json({ access_token: TOKEN }),
+        json(libraryWithMedia),
+      ),
+    )
+    expect(output).toEqual(libraryMediaLines)
+    expect(process.exitCode).toBeUndefined()
+    await secretsAbsent()
+  })
+
+  it('writes no media host and no other file', async () => {
+    await run(
+      fetchOf(
+        redirect(`${REDIRECT}?code=${CODE}`),
+        json({ access_token: TOKEN }),
+        json(libraryWithMedia),
+      ),
+    )
+    expect((await fs.readdir(dir)).sort()).toEqual([
+      'manifest.json',
+      'sony-constants.json',
+    ])
+    // The same manifest text as a PASS without media.
+    expect(await fs.readFile(manifestPath, 'utf8')).toBe(
+      await format(
+        JSON.stringify(
+          recordObservedStatus(manifestWith([]), HASH, 200),
+          null,
+          2,
+        ),
+        { filepath: manifestPath },
+      ),
+    )
   })
 
   it('writes the changed manifest in the Prettier format', async () => {
@@ -508,7 +689,7 @@ describe('runProbePurchased', () => {
         json(okLibrary),
       ),
     )
-    expect(output).toEqual(['getPurchasedGameList 200 PASS'])
+    expect(output).toEqual(noMediaLines('getPurchasedGameList'))
     expect(process.exitCode).toBeUndefined()
     expect(await fs.readFile(manifestPath, 'utf8')).toBe(seeded)
   })
@@ -613,12 +794,12 @@ describe('runProbeWishlist', () => {
       constantsPath,
     })
 
-  it('records 200 on the wishlist entry and prints PASS', async () => {
+  it('records 200 on the wishlist entry and prints PASS with the media hosts', async () => {
     await run(
       fetchOf(
         redirect(`${REDIRECT}?code=${CODE}`),
         json({ access_token: TOKEN }),
-        json(okWishlist),
+        json(wishlistWithMedia),
       ),
     )
     const written = await readJsonFile<SonyContractManifest>(manifestPath)
@@ -628,13 +809,21 @@ describe('runProbeWishlist', () => {
       observed_status_codes: [200],
     })
     expect(written.operations[0]?.observed_status_codes).toEqual([])
-    expect(output).toEqual(['storeRetrieveWishlist 200 PASS'])
+    expect(output).toEqual(wishlistMediaLines)
     expect(process.exitCode).toBeUndefined()
     const text = await fs.readFile(manifestPath, 'utf8')
-    for (const secret of [NPSSO, CODE, TOKEN]) {
+    for (const secret of [NPSSO, CODE, TOKEN, PRODUCT_NAME]) {
       expect(output.join('\n')).not.toContain(secret)
       expect(text).not.toContain(secret)
     }
+    for (const fragment of ['/', '?', 'data:', 'other.example.test']) {
+      expect(output.join('\n')).not.toContain(fragment)
+    }
+    expect(text).not.toContain('box-a.example.test')
+    expect((await fs.readdir(dir)).sort()).toEqual([
+      'manifest.json',
+      'sony-constants.json',
+    ])
   })
 
   it('writes nothing and prints a fixed FAIL line when Sony denies access', async () => {
