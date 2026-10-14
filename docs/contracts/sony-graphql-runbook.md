@@ -172,6 +172,8 @@ pnpm run sony:normalize -- --write-manifest
 pnpm run sony:validate
 ```
 
+`--write-manifest` writes `docs/contracts/sony-graphql-manifest.json` in the Prettier format.
+
 ## Refresh cadence
 
 Run a live capture **weekly** and review the result:
