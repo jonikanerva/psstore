@@ -231,6 +231,26 @@
             "message": "The web app calls the API only through @psstore/api-client."
           }
         ],
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["@psstore/api-client/*", "**/api-client/**"],
+                "message": "Import the facade of @psstore/api-client, not its files."
+              },
+              {
+                "group": [
+                  "**/packages/**",
+                  "**/tools/**",
+                  "**/e2e/**",
+                  "**/crates/**"
+                ],
+                "message": "The web app imports other workspace packages only by their package name."
+              }
+            ]
+          }
+        ],
         "react/rules-of-hooks": "error",
         "react/exhaustive-deps": "error"
       },

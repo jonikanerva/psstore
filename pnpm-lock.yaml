@@ -180,7 +180,7 @@ catalogs:
       specifier: ^4.23.15
       version: 4.23.15
     typescript:
-      specifier: ^7.0.2
+      specifier: 7.0.2
       version: 7.0.2
     vite:
       specifier: ^8.3.2
@@ -215,10 +215,10 @@ importers:
         specifier: ^10.0.6
         version: 10.0.6
       oxlint:
-        specifier: ^1.86.0
+        specifier: 1.86.0
         version: 1.86.0(oxlint-tsgolint@7.0.2003)
       oxlint-tsgolint:
-        specifier: ^7.0.2003
+        specifier: 7.0.2003
         version: 7.0.2003
       prettier:
         specifier: ^3.9.9
