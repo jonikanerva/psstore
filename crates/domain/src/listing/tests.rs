@@ -146,6 +146,138 @@ fn the_windows_are_supersets_of_the_local_day_split() {
     );
 }
 
+/// Issue #163: every Sony date is normalised with `to_iso_or_default`. The
+/// list rules read the normalised date as the same instant as Sony's text,
+/// so each list keeps the same games in the same order.
+#[test]
+fn normalising_the_dates_keeps_list_membership_and_order() {
+    use crate::mapper::to_iso_or_default;
+
+    // `now()` is 2026-10-05T12:00:00Z.
+    let forms = [
+        ("sony-z", "2026-10-05T21:00:00Z"),
+        ("millis", "2026-10-05T21:00:00.000Z"),
+        ("offset", "2026-10-05T23:00:00+02:00"),
+        ("date-only", "2026-10-06"),
+        ("compact-offset", "2026-10-04T08:00:00-0500"),
+        ("no-offset", "2026-10-06T10:00:00"),
+        ("old", "2025-01-01T00:00:00Z"),
+        ("future", "2026-12-01T21:00:00+02:00"),
+        ("soon", "soon"),
+        ("legacy", "2026/10/05"),
+        ("empty", ""),
+    ];
+    let raw: Vec<Game> = forms.iter().map(|(id, date)| game(id, date)).collect();
+    let normalised: Vec<Game> = raw
+        .iter()
+        .map(|g| Game {
+            date: to_iso_or_default(Some(&g.date)),
+            ..g.clone()
+        })
+        .collect();
+    assert_eq!(
+        normalised
+            .iter()
+            .map(|g| g.date.as_str())
+            .collect::<Vec<_>>(),
+        [
+            "2026-10-05T21:00:00.000Z",
+            "2026-10-05T21:00:00.000Z",
+            "2026-10-05T21:00:00.000Z",
+            "2026-10-06T00:00:00.000Z",
+            "2026-10-04T13:00:00.000Z",
+            "2026-10-06T10:00:00.000Z",
+            "2025-01-01T00:00:00.000Z",
+            "2026-12-01T19:00:00.000Z",
+            "",
+            "",
+            "",
+        ]
+    );
+
+    let new = |games: Vec<Game>| {
+        let dated = games.into_iter().filter(has_release_date).collect();
+        sort_by_date(in_new_window(dated, now()), SortOrder::DateDesc)
+    };
+    let upcoming =
+        |games: Vec<Game>| sort_by_date(in_upcoming_window(games, now()), SortOrder::DateAsc);
+    let newest_first = |games: Vec<Game>| sort_by_date(games, SortOrder::DateDesc);
+    for (list, rule) in [
+        ("NEW", &new as &dyn Fn(Vec<Game>) -> Vec<Game>),
+        ("UPCOMING", &upcoming),
+        ("newest first", &newest_first),
+    ] {
+        assert_eq!(
+            ids(&rule(raw.clone())),
+            ids(&rule(normalised.clone())),
+            "{list}"
+        );
+    }
+    // The equal instants keep the input order.
+    assert_eq!(
+        ids(&new(normalised.clone())),
+        [
+            "no-offset",
+            "date-only",
+            "sony-z",
+            "millis",
+            "offset",
+            "compact-offset",
+            "old"
+        ]
+    );
+    assert_eq!(
+        ids(&upcoming(normalised)),
+        [
+            "sony-z",
+            "millis",
+            "offset",
+            "date-only",
+            "no-offset",
+            "future",
+            "soon",
+            "legacy",
+            "empty"
+        ]
+    );
+}
+
+/// The normalisation keeps the instant of every form that the parser reads
+/// and is a fixed point: a normalised date normalises to itself.
+#[test]
+fn a_normalised_date_is_the_same_instant_and_a_fixed_point() {
+    use crate::mapper::to_iso_or_default;
+
+    let forms = [
+        "2024-06-15T00:00:00Z",
+        "2024-06-15T00:00:00.1234567Z",
+        "2024-06-15T00:00:00+0200",
+        "2024-06-15t00:00:00z",
+        "2024-06-15 00:00",
+        "2024-06-15T24:00:00Z",
+        "2024-02-30",
+        "2024-06",
+        "2024",
+        "+002024-06-15T00:00:00Z",
+        "-000001-01-01T00:00:00Z",
+        "0050-01-01T00:00:00Z",
+        "2024-01-08+02:00",
+        "June 15, 2024",
+        "2024-13-01",
+        "-000000-01-01T00:00:00Z",
+        " 2024-06-15",
+    ];
+    for form in forms {
+        let wire = to_iso_or_default(Some(form));
+        assert_eq!(parse_date_ms(&wire), parse_date_ms(form), "{form}");
+        assert_eq!(to_iso_or_default(Some(&wire)), wire, "{form}");
+        assert!(
+            wire.is_empty() || wire.ends_with('Z'),
+            "{form} gives {wire}"
+        );
+    }
+}
+
 #[test]
 fn merging_the_grids_keeps_the_first_occurrence() {
     let merged = merge_release_grids(

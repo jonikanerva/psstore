@@ -141,7 +141,7 @@ fn card(id: &str, name: &str) -> Game {
 
 fn harvest_moon() -> Game {
     Game {
-        date: "2026-10-14T21:00:00Z".into(),
+        date: "2026-10-14T21:00:00.000Z".into(),
         url: format!("{IMAGE}/202607/2917/9e9c256f6e3617337ef6e294bac57308cbe9fc3b1d74e17b.png"),
         price: "€49,95".into(),
         screenshots: vec![format!(
@@ -160,7 +160,7 @@ fn harvest_moon() -> Game {
 /// The list card of Bluey's Happy Snaps. The game page adds more fields.
 fn bluey_card() -> Game {
     Game {
-        date: "2026-10-14T21:00:00Z".into(),
+        date: "2026-10-14T21:00:00.000Z".into(),
         url: format!("{IMAGE}/202603/1308/9f1c36cf60ea5683ea2e3e0bdcf1d36c1b85ae3ad2beb6e4.png"),
         price: "€54,95".into(),
         screenshots: vec![format!(
@@ -213,7 +213,7 @@ fn elta_pre_order() -> Game {
 
 fn lego_batman_discounted() -> Game {
     Game {
-        date: "2026-05-21T21:00:00Z".into(),
+        date: "2026-05-21T21:00:00.000Z".into(),
         url: format!("{IMAGE}/202508/1316/3302f35b66691aa405aee31624c0c95fe73081be8e0c75bb.png"),
         price: "€48,96".into(),
         original_price: "€69,95".into(),
@@ -255,7 +255,7 @@ fn bluey_detail() -> GameDetail {
 fn f1_detail() -> GameDetail {
     GameDetail {
         game: Game {
-            date: "2025-05-30T15:00:00Z".into(),
+            date: "2025-05-30T15:00:00.000Z".into(),
             url: format!(
                 "{IMAGE}/202505/1521/44c15449fbe9485987e27e2fa2c86008a7b4a89d9ab7e0a8.png"
             ),

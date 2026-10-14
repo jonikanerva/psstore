@@ -155,11 +155,11 @@ fn strip_edition_suffixes(mut current: String) -> String {
 /// `new Date(Date.parse(date)).getUTCFullYear()`. `None` for an empty or
 /// unparseable value.
 ///
-/// `Game.date` holds the date text of the Sony mapper (STACK.md §10). Sony
-/// sends `YYYY-MM-DDTHH:mm:ssZ`. A normalised date has milliseconds, and a
-/// missing date is the empty string. The year is the calendar year of the
-/// instant in UTC, so `2024-01-01T00:30:00+01:00` is 2023. The parse is
-/// `js::parse_date_ms`, so its documented differences from V8 apply here too.
+/// `Game.date` holds a normalised date in `toISOString` form, or the empty
+/// string for a missing or invalid date (STACK.md §10). The year is the
+/// calendar year of the instant in UTC, so `2024-01-01T00:30:00+01:00` is
+/// 2023. The parse is `js::parse_date_ms`, so its documented differences from
+/// V8 apply here too.
 #[must_use]
 pub fn release_year_of(date: &str) -> Option<i32> {
     parse_date_ms(date).and_then(utc_full_year)

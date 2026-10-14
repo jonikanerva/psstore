@@ -21,15 +21,19 @@ pub struct Game {
     #[cfg_attr(feature = "openapi", schema(value_type = String, min_length = 1))]
     pub id: GameId,
     pub name: String,
-    /// The release date: a UTC instant as an RFC 3339 string with `Z`, the
-    /// empty string when Sony gives no valid date, or Sony's own text. Some
-    /// sources copy Sony's text without a check.
+    /// The release date: a UTC instant as an RFC 3339 string in the
+    /// `toISOString` form, with milliseconds and `Z`
+    /// (`2026-10-14T21:00:00.000Z`). The empty string when Sony gives no
+    /// valid date.
     pub date: String,
     /// The cover image URL.
     pub url: String,
     pub price: String,
     pub original_price: String,
     pub discount_text: String,
+    /// The release date of a discounted card in the same form as `date`.
+    /// The empty string when the card is not discounted or Sony gives no
+    /// valid date.
     pub discount_date: String,
     pub screenshots: Vec<String>,
     pub videos: Vec<String>,
@@ -141,7 +145,7 @@ mod tests {
         Game {
             id: "EP0001-PPSA00001_00-SAMPLEGAME000001".parse().unwrap(),
             name: "Sample".into(),
-            date: "2026-10-14T21:00:00Z".into(),
+            date: "2026-10-14T21:00:00.000Z".into(),
             url: "https://image.example/cover.png".into(),
             price: "€49,95".into(),
             original_price: String::new(),
@@ -164,7 +168,7 @@ mod tests {
         let json = serde_json::to_string(&sample_game()).unwrap();
         assert_eq!(
             json,
-            r#"{"id":"EP0001-PPSA00001_00-SAMPLEGAME000001","name":"Sample","date":"2026-10-14T21:00:00Z","url":"https://image.example/cover.png","price":"€49,95","originalPrice":"","discountText":"","discountDate":"","screenshots":[],"videos":[],"genres":[],"description":"","studio":"","preOrder":false,"plusUpsellText":null,"plusOffer":null,"idKind":"product"}"#
+            r#"{"id":"EP0001-PPSA00001_00-SAMPLEGAME000001","name":"Sample","date":"2026-10-14T21:00:00.000Z","url":"https://image.example/cover.png","price":"€49,95","originalPrice":"","discountText":"","discountDate":"","screenshots":[],"videos":[],"genres":[],"description":"","studio":"","preOrder":false,"plusUpsellText":null,"plusOffer":null,"idKind":"product"}"#
         );
     }
 

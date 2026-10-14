@@ -396,6 +396,34 @@ describe('Browse', () => {
     expect(await screen.findByText('Alpha')).toBeInTheDocument()
   })
 
+  // The degraded state (#164). A return to the tab refreshes a stale query.
+  it('keeps the games and shows the note when a refresh fails', async () => {
+    await renderBrowseAt('/browse?genre=ACTION&order=newest')
+    expect(await screen.findByText('Alpha')).toBeInTheDocument()
+
+    browseHandler = () => json({}, 502)
+    act(() => {
+      window.dispatchEvent(new Event('visibilitychange'))
+    })
+
+    await waitFor(() => {
+      expect(screen.getByRole('status')).toHaveTextContent(
+        "Couldn't refresh. Showing the saved list.",
+      )
+    })
+    expect(screen.getByText('Alpha')).toBeInTheDocument()
+    expect(screen.queryByText('Failed to load games')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull()
+  })
+
+  it('shows no note when the first load of the list fails', async () => {
+    browseHandler = () => json({}, 502)
+    await renderBrowseAt('/browse?genre=ACTION&order=newest')
+
+    expect(await screen.findByText('Failed to load games')).toBeInTheDocument()
+    expect(screen.queryByText(/Couldn't refresh/)).toBeNull()
+  })
+
   it('shows an error with Retry when the genre list fails', async () => {
     genresHandler = () => json({}, 503)
     await renderBrowseAt('/browse?genre=ACTION&order=newest')

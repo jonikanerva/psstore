@@ -27,7 +27,7 @@ Every failure of an `/api` route is an RFC 9457 Problem Details body with the me
 
 ## Data
 
-The game cards come from the public Finnish store, as the TypeScript server returned them on 2026-10-13. The examples keep one screenshot and one video per card and a short part of each description. The critic score `87` is synthetic. The examples contain no personal data and no credential.
+The game cards come from the public Finnish store, as the TypeScript server returned them on 2026-10-13. Each release date is in the normalised form of `STACK.md` §10 (issue #163). The examples keep one screenshot and one video per card and a short part of each description. The critic score `87` is synthetic. The examples contain no personal data and no credential.
 
 ## Tests
 

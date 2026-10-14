@@ -269,6 +269,22 @@ describe('GameCard', () => {
     expect(screen.getByText('16 Jun 2025')).toBeInTheDocument()
   })
 
+  // The server sends every date in `toISOString` form (issue #163). The
+  // milliseconds do not change the rendered day.
+  it('renders a date with milliseconds like the same date without', async () => {
+    Settings.defaultZone = 'Pacific/Auckland'
+    const { unmount } = await renderWithRouter(
+      <GameCard game={{ ...game, date: '2025-06-15T13:00:00Z' }} />,
+    )
+    expect(screen.getByText('16 Jun 2025')).toBeInTheDocument()
+    unmount()
+
+    await renderWithRouter(
+      <GameCard game={{ ...game, date: '2025-06-15T13:00:00.000Z' }} />,
+    )
+    expect(screen.getByText('16 Jun 2025')).toBeInTheDocument()
+  })
+
   it('renders no date text for an empty date', async () => {
     await renderWithRouter(<GameCard game={{ ...game, date: '' }} />)
 

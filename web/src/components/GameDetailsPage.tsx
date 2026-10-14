@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import DOMPurify from 'dompurify'
 import { DateTime } from 'luxon'
 import { findCachedGame } from '../modules/cachedGame'
+import { sanitizeDescription } from '../modules/description'
 import {
   fetchGame,
   ApiError,
@@ -263,10 +263,11 @@ const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
       {hasDescription && (
         <section className="details-page--section" aria-label="Description">
           {/* XSS boundary: Sony's description HTML is untrusted and is sanitised
-          with DOMPurify before injection. Do not remove or reorder (da #5). */}
+          with DOMPurify before injection. Do not remove or reorder (da #5).
+          The sanitiser also drops Sony's colour attributes (#161). */}
           <div
             dangerouslySetInnerHTML={{
-              __html: DOMPurify.sanitize(game.description),
+              __html: sanitizeDescription(game.description),
             }}
           />
         </section>

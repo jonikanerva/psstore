@@ -20,9 +20,10 @@ export type Game = {
     id: string;
     name: string;
     /**
-     * The release date: a UTC instant as an RFC 3339 string with `Z`, the
-     * empty string when Sony gives no valid date, or Sony's own text. Some
-     * sources copy Sony's text without a check.
+     * The release date: a UTC instant as an RFC 3339 string in the
+     * `toISOString` form, with milliseconds and `Z`
+     * (`2026-10-14T21:00:00.000Z`). The empty string when Sony gives no
+     * valid date.
      */
     date: string;
     /**
@@ -32,6 +33,11 @@ export type Game = {
     price: string;
     originalPrice: string;
     discountText: string;
+    /**
+     * The release date of a discounted card in the same form as `date`.
+     * The empty string when the card is not discounted or Sony gives no
+     * valid date.
+     */
     discountDate: string;
     screenshots: Array<string>;
     videos: Array<string>;

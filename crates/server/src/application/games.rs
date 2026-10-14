@@ -27,13 +27,15 @@ use crate::domain::listing::{
     map_monthly_to_games, map_upcoming_concepts_to_games, merge_release_grids, paginate,
     sort_by_date,
 };
-use crate::domain::mapper::{concept_product_id, concept_to_game, product_detail_to_game};
+use crate::domain::mapper::{
+    concept_product_id, concept_to_game, product_detail_to_game, to_iso_or_default,
+};
 
 /// The anonymous Sony store operations (port of `SonyClientApi`). Each
 /// method decodes and scopes Sony's answer at the boundary.
 pub trait SonyCatalog: Send + Sync {
-    /// One category grid list in Sony's order. A drifted grid is an empty
-    /// list with a warning.
+    /// One category grid list in Sony's order. A drifted grid fails with a
+    /// warning; an empty but valid grid is an empty list.
     fn concepts_by_feature(
         &self,
         feature: SonyFeature,
@@ -112,8 +114,13 @@ const BROWSE_RAW_PAGE_BOUND: usize = 3;
 
 /// The fields of a product detail that the lists read.
 struct ProductMeta {
-    /// Sony's release date verbatim, or the empty string.
+    /// The release date in `toISOString` form, or the empty string when Sony
+    /// gives no valid date (STACK.md §10).
     date: String,
+    /// True when Sony gives a non-empty release date, valid or not.
+    /// DISCOUNTED keeps such a game: its list rule reads Sony's text, so the
+    /// normalisation moves no game (issue #163).
+    has_sony_date: bool,
     classification: Option<String>,
     genres: Vec<String>,
     platforms: Vec<String>,
@@ -121,8 +128,10 @@ struct ProductMeta {
 
 impl ProductMeta {
     fn of(detail: &ProductDetail) -> Self {
+        let sony_date = detail.release_date.as_deref();
         Self {
-            date: detail.release_date.clone().unwrap_or_default(),
+            date: to_iso_or_default(sony_date),
+            has_sony_date: sony_date.is_some_and(|text| !text.is_empty()),
             classification: detail.store_display_classification.clone(),
             genres: detail.genres.clone(),
             platforms: detail.platforms.clone(),
@@ -360,12 +369,13 @@ impl Inner {
         .await;
         let games = enriched
             .into_iter()
-            .filter(|(_, meta)| is_game_classification(meta.classification.as_deref()))
+            .filter(|(_, meta)| {
+                meta.has_sony_date && is_game_classification(meta.classification.as_deref())
+            })
             .map(|(game, meta)| Game {
                 date: meta.date,
                 ..game
             })
-            .filter(|game| !game.date.is_empty())
             .collect();
         Ok(paginate(
             sort_by_date(games, SortOrder::DateDesc),
@@ -472,7 +482,12 @@ impl Inner {
         let (detail, plus_offer) =
             join(self.card_detail(&game.id), self.plus_offer_for(&game)).await;
         Game {
-            date: detail.release_date.clone().unwrap_or(game.date),
+            // A detail without a date keeps the list card's date, which the
+            // list mapping already normalised.
+            date: detail
+                .release_date
+                .as_deref()
+                .map_or(game.date, |text| to_iso_or_default(Some(text))),
             genres: if detail.genres.is_empty() {
                 game.genres
             } else {

@@ -64,20 +64,41 @@ async fn every_list_has_games() {
 }
 
 #[tokio::test(start_paused = true)]
-async fn new_takes_the_product_date_verbatim_and_drops_undated_games() {
+async fn new_normalises_the_product_date_and_drops_undated_games() {
     let (svc, _) = service(FakeSony {
         concepts: grids(
-            vec![priced_concept(1, "alpha"), priced_concept(2, "bravo")],
+            vec![
+                priced_concept(1, "alpha"),
+                priced_concept(2, "bravo"),
+                priced_concept(3, "charlie"),
+                priced_concept(4, "delta"),
+            ],
             vec![],
             vec![],
         ),
-        detail: dates_by_marker(vec![("ALPHA", Some("2024-06-15T00:00:00Z"))], None),
+        detail: dates_by_marker(
+            vec![
+                ("ALPHA", Some("2024-06-15T00:00:00Z")),
+                ("CHARLIE", Some("2024-06-15T03:00:00+02:00")),
+                ("DELTA", Some("soon")),
+            ],
+            None,
+        ),
         ..FakeSony::default()
     });
     let result = svc.new_games(page(0, 60)).await.unwrap();
-    assert_eq!(names(&result), ["alpha"]);
-    // The enrichment keeps Sony's string; only concept dates are normalised.
-    assert_eq!(result.games[0].date, "2024-06-15T00:00:00Z");
+    // The list rule reads the same instant as before (issue #163): a missing
+    // or unparseable date stays out of NEW.
+    assert_eq!(names(&result), ["charlie", "alpha"]);
+    // The product date goes to the wire in `toISOString` form (STACK.md §10).
+    assert_eq!(
+        dates(&result),
+        ["2024-06-15T01:00:00.000Z", "2024-06-15T00:00:00.000Z"]
+    );
+}
+
+fn dates(result: &PageResult) -> Vec<&str> {
+    result.games.iter().map(|g| g.date.as_str()).collect()
 }
 
 #[tokio::test(start_paused = true)]
@@ -358,6 +379,102 @@ async fn an_undated_product_of_the_released_grid_is_in_no_list() {
     assert_eq!(split_names(&concept_only).await, (vec![], vec![]));
 }
 
+/// Issue #163: each Sony date form of a product card. The list membership
+/// and the order are the same as before the normalisation, because the list
+/// rules read the same instant (`js::parse_date_ms`). Only the wire text of
+/// the date changes.
+#[tokio::test(start_paused = true)]
+async fn the_release_lists_normalise_every_sony_date_form() {
+    // SPLIT_NOW is 2026-10-05T12:00:00Z: NEW ends at 2026-10-07T01:00:00Z,
+    // UPCOMING starts at 2026-10-05T00:00:00Z.
+    let forms: [(&str, Option<&str>, &str); 8] = [
+        (
+            "sony-z",
+            Some("2026-10-05T21:00:00Z"),
+            "2026-10-05T21:00:00.000Z",
+        ),
+        (
+            "millis",
+            Some("2026-10-05T21:00:00.000Z"),
+            "2026-10-05T21:00:00.000Z",
+        ),
+        (
+            "offset",
+            Some("2026-10-05T23:00:00+02:00"),
+            "2026-10-05T21:00:00.000Z",
+        ),
+        ("date-only", Some("2026-10-06"), "2026-10-06T00:00:00.000Z"),
+        (
+            "past",
+            Some("2026-09-01T21:00:00Z"),
+            "2026-09-01T21:00:00.000Z",
+        ),
+        (
+            "future",
+            Some("2026-11-01T21:00:00+02:00"),
+            "2026-11-01T19:00:00.000Z",
+        ),
+        ("soon", Some("soon"), ""),
+        ("missing", None, ""),
+    ];
+    let concepts: Vec<Concept> = forms
+        .iter()
+        .enumerate()
+        .map(|(n, (name, _, _))| priced_concept(20 + n, name))
+        .collect();
+    let mut release_dates: Vec<(String, String)> = concepts
+        .iter()
+        .zip(forms)
+        .filter_map(|(concept, (_, sony, _))| Some((product_id(concept), sony?.to_owned())))
+        .collect();
+    let released_offset = priced_concept(30, "released-offset");
+    let released_soon = priced_concept(31, "released-soon");
+    release_dates.push((
+        product_id(&released_offset),
+        "2026-10-01T10:00:00+03:00".into(),
+    ));
+    release_dates.push((product_id(&released_soon), "soon".into()));
+    let svc = split(
+        vec![released_offset, released_soon],
+        concepts,
+        release_dates,
+    );
+
+    let new = svc.new_games(page(0, 120)).await.unwrap();
+    let upcoming = svc.upcoming_games(page(0, 120)).await.unwrap();
+    // Equal instants keep the grid order: sony-z, millis, offset.
+    assert_eq!(
+        names(&new),
+        [
+            "date-only",
+            "sony-z",
+            "millis",
+            "offset",
+            "released-offset",
+            "past"
+        ]
+    );
+    assert_eq!(
+        names(&upcoming),
+        [
+            "sony-z",
+            "millis",
+            "offset",
+            "date-only",
+            "future",
+            "soon",
+            "missing"
+        ]
+    );
+    for game in new.games.iter().chain(&upcoming.games) {
+        let expected = forms
+            .iter()
+            .find(|(name, _, _)| *name == game.name)
+            .map_or("2026-10-01T07:00:00.000Z", |(_, _, wire)| *wire);
+        assert_eq!(game.date, expected, "{}", game.name);
+    }
+}
+
 #[tokio::test(start_paused = true)]
 async fn a_product_in_both_grids_shows_once() {
     let twin = priced_concept(11, "twin");
@@ -494,6 +611,7 @@ async fn discounted_keeps_future_deals_newest_first_and_drops_empty_dates() {
                 priced_concept(3, "mid"),
                 priced_concept(4, "no-date"),
                 priced_concept(5, "bad-date"),
+                priced_concept(6, "offset"),
             ],
         ),
         detail: dates_by_marker(
@@ -502,15 +620,29 @@ async fn discounted_keeps_future_deals_newest_first_and_drops_empty_dates() {
                 ("FUTURE", Some(FUTURE_DATE)),
                 ("NODATE", None),
                 ("BADDATE", Some("soon")),
+                ("OFFSET", Some("2024-03-01T01:00:00+02:00")),
             ],
             Some("2024-06-01T00:00:00Z"),
         ),
         ..FakeSony::default()
     });
-    // A non-empty date that does not parse stays and sorts last.
+    let result = svc.discounted_games(page(0, 60)).await.unwrap();
+    // A non-empty date that does not parse stays and sorts last. The list
+    // rule reads Sony's text, so the normalisation moves no game (issue
+    // #163). The card of that game has the empty date.
     assert_eq!(
-        names(&svc.discounted_games(page(0, 60)).await.unwrap()),
-        ["future-deal", "mid", "old", "bad-date"]
+        names(&result),
+        ["future-deal", "mid", "offset", "old", "bad-date"]
+    );
+    assert_eq!(
+        dates(&result),
+        [
+            "2099-01-01T00:00:00.000Z",
+            "2024-06-01T00:00:00.000Z",
+            "2024-02-29T23:00:00.000Z",
+            "2023-01-01T00:00:00.000Z",
+            "",
+        ]
     );
 }
 
@@ -622,6 +754,73 @@ async fn a_failed_list_is_pinned_for_30_seconds() {
     tokio::time::advance(Duration::from_millis(1)).await;
     assert_eq!(svc.new_games(page(0, 60)).await.unwrap().games.len(), 1);
     assert_eq!(attempts.load(Ordering::SeqCst), 2);
+}
+
+/// The error of a drifted grid, as the Sony client returns it (issue #160).
+fn grid_drift() -> UpstreamError {
+    UpstreamError::unavailable("Sony category grid has an unexpected shape")
+}
+
+/// The lists that read a grid. NEW and UPCOMING read both release grids.
+fn lists_of(feature: SonyFeature) -> &'static [&'static str] {
+    match feature {
+        SonyFeature::New | SonyFeature::Upcoming => &["new", "upcoming"],
+        SonyFeature::Discounted => &["discounted"],
+    }
+}
+
+async fn list(svc: &GamesService, name: &str) -> Result<PageResult, UpstreamError> {
+    match name {
+        "new" => svc.new_games(page(0, 60)).await,
+        "upcoming" => svc.upcoming_games(page(0, 60)).await,
+        _ => svc.discounted_games(page(0, 60)).await,
+    }
+}
+
+/// A drift of one grid fails every list that reads it, also when the other
+/// release grid is valid. The failure stays a failure for the list lifetime
+/// and is never cached as an empty list; a valid grid after the lifetime
+/// gives games again.
+#[tokio::test(start_paused = true)]
+async fn a_drifted_grid_fails_its_lists_and_is_never_cached_as_empty() {
+    for drifted in [
+        SonyFeature::New,
+        SonyFeature::Upcoming,
+        SonyFeature::Discounted,
+    ] {
+        let attempts = Arc::new(AtomicUsize::new(0));
+        let seen = Arc::clone(&attempts);
+        let valid = grids(
+            vec![priced_concept(1, "alpha")],
+            vec![priced_concept(3, "future")],
+            vec![priced_concept(4, "deal")],
+        );
+        let (svc, fake) = service(FakeSony {
+            concepts: Box::new(move |feature| {
+                if feature == drifted && seen.fetch_add(1, Ordering::SeqCst) == 0 {
+                    Err(grid_drift())
+                } else {
+                    valid(feature)
+                }
+            }),
+            detail: dates_by_marker(vec![("FUTURE", Some(FUTURE_DATE))], Some(PAST_DATE)),
+            ..FakeSony::default()
+        });
+        for name in lists_of(drifted) {
+            assert_eq!(list(&svc, name).await, Err(grid_drift()), "{name}");
+        }
+        tokio::time::advance(Duration::from_millis(29_999)).await;
+        for name in lists_of(drifted) {
+            assert_eq!(list(&svc, name).await, Err(grid_drift()), "{name}");
+        }
+        assert_eq!(counted(&fake, drifted), 1, "{drifted:?}");
+        tokio::time::advance(Duration::from_millis(1)).await;
+        for name in lists_of(drifted) {
+            let games = list(&svc, name).await.unwrap().games;
+            assert!(!games.is_empty(), "{name}");
+        }
+        assert_eq!(counted(&fake, drifted), 2, "{drifted:?}");
+    }
 }
 
 #[tokio::test(start_paused = true)]
