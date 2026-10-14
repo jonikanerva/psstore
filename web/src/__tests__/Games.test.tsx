@@ -13,6 +13,7 @@ import {
 import type { Game, PageResult } from '@psstore/api-client'
 import Games from '../components/Games'
 import { SearchContext } from '../modules/searchContext'
+import { SortContext } from '../modules/sortContext'
 import { renderWithRouter } from './testRouter'
 
 beforeAll(() => {
@@ -206,7 +207,8 @@ describe('Games loading indicator', () => {
     })
 
     expect(await screen.findByText('Wobbly Life')).toBeInTheDocument()
-    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    // The one status region left is the empty region of the refresh note.
+    expect(screen.getByRole('status')).toBeEmptyDOMElement()
   })
 
   it('shows the indicator while the next page loads and keeps the cards', async () => {
@@ -239,8 +241,146 @@ describe('Games loading indicator', () => {
       )
     })
 
-    expect(await screen.findByRole('status')).toHaveTextContent('Loading')
+    // The grid keeps its empty refresh-note region next to the indicator.
+    await waitFor(() => {
+      expect(
+        screen.getAllByRole('status').map((status) => status.textContent),
+      ).toEqual(['', 'Loading'])
+    })
     expect(screen.getByText('Wobbly Life')).toBeInTheDocument()
+  })
+})
+
+// The degraded state (#164): the cache holds a list and its refresh fails.
+describe('Games refresh failure', () => {
+  const NOTE = "Couldn't refresh. Showing the saved list."
+
+  afterEach(() => {
+    cleanup()
+  })
+
+  // A client whose cache holds `pages` of NEW, saved long ago, so the mount
+  // refreshes them like a list that the persister restored.
+  const cachedClient = (pages: PageResult[]) => {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: 0 } },
+    })
+    client.setQueryData(
+      ['games', 'new'],
+      { pages, pageParams: pages.map((_, index) => index * 60) },
+      { updatedAt: 0 },
+    )
+    return client
+  }
+
+  it('keeps the cached list and shows the note when the refresh fails', async () => {
+    const fetch = vi.fn().mockRejectedValue(new Error('502'))
+    await renderWithRouter(
+      <Games feature="new" fetch={fetch} />,
+      cachedClient([page([game('EP1-PPSA1_00-A', 'Wobbly Life')])]),
+    )
+
+    await waitFor(() => {
+      expect(screen.getByRole('status')).toHaveTextContent(NOTE)
+    })
+    expect(fetch).toHaveBeenCalled()
+    expect(screen.getByText('Wobbly Life')).toBeInTheDocument()
+    expect(screen.queryByText('Failed to load games')).not.toBeInTheDocument()
+  })
+
+  it('removes the note when a later refresh succeeds', async () => {
+    const fetch = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('502'))
+      .mockResolvedValue(page([game('EP1-PPSA2_00-B', 'Fallout 76')]))
+    const client = cachedClient([page([game('EP1-PPSA1_00-A', 'Wobbly Life')])])
+    await renderWithRouter(<Games feature="new" fetch={fetch} />, client)
+    await waitFor(() => {
+      expect(screen.getByRole('status')).toHaveTextContent(NOTE)
+    })
+
+    await act(async () => {
+      await client.refetchQueries({ queryKey: ['games', 'new'] })
+    })
+
+    expect(await screen.findByText('Fallout 76')).toBeInTheDocument()
+    expect(screen.getByRole('status')).toBeEmptyDOMElement()
+  })
+
+  it('shows the error state and no note when no list is cached', async () => {
+    const fetch = vi.fn().mockRejectedValue(new Error('502'))
+    await renderWithRouter(<Games feature="new" fetch={fetch} />)
+
+    expect(await screen.findByText('Failed to load games')).toBeInTheDocument()
+    expect(screen.queryByText(NOTE)).not.toBeInTheDocument()
+  })
+
+  it('shows the note above the empty text of a cached empty list', async () => {
+    const fetch = vi.fn().mockRejectedValue(new Error('502'))
+    await renderWithRouter(
+      <Games feature="new" fetch={fetch} />,
+      cachedClient([page([])]),
+    )
+
+    await waitFor(() => {
+      expect(screen.getByRole('status')).toHaveTextContent(NOTE)
+    })
+    expect(screen.getByText('No games found')).toBeInTheDocument()
+  })
+
+  // Provisional: a failed next page is no refresh, so it keeps the behaviour
+  // that it had before #164.
+  it('keeps the error state when a next page fails', async () => {
+    let intersect: IntersectionObserverCallback = () => undefined
+    vi.stubGlobal(
+      'IntersectionObserver',
+      class {
+        constructor(callback: IntersectionObserverCallback) {
+          intersect = callback
+        }
+        observe = vi.fn()
+        disconnect = vi.fn()
+      },
+    )
+    const fetch = vi
+      .fn<(offset: number, size: number) => Promise<PageResult>>()
+      .mockResolvedValueOnce({
+        games: [game('EP1-PPSA1_00-A', 'Wobbly Life')],
+        totalCount: 2,
+        nextOffset: 60,
+      })
+      .mockRejectedValueOnce(new Error('502'))
+    await renderWithRouter(<Games feature="new" fetch={fetch} />)
+    expect(await screen.findByText('Wobbly Life')).toBeInTheDocument()
+
+    await act(async () => {
+      intersect(
+        [{ isIntersecting: true } as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      )
+    })
+
+    expect(await screen.findByText('Failed to load games')).toBeInTheDocument()
+    expect(screen.queryByText(NOTE)).not.toBeInTheDocument()
+  })
+
+  it('shows the error state, not a half-sorted list, when a sorted list cannot refresh', async () => {
+    const fetch = vi.fn().mockRejectedValue(new Error('502'))
+    await renderWithRouter(
+      <SortContext.Provider value={{ field: 'name', direction: 'asc' }}>
+        <Games feature="new" fetch={fetch} />
+      </SortContext.Provider>,
+      cachedClient([
+        {
+          games: [game('EP1-PPSA1_00-A', 'Wobbly Life')],
+          totalCount: 2,
+          nextOffset: 60,
+        },
+      ]),
+    )
+
+    expect(await screen.findByText('Failed to load games')).toBeInTheDocument()
+    expect(screen.queryByText('Wobbly Life')).not.toBeInTheDocument()
   })
 })
 

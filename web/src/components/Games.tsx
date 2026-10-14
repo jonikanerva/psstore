@@ -14,6 +14,7 @@ import { nextLocalDayStart, splitByReleaseDay } from '../modules/releaseDay'
 import { normalizeSearchTerm } from '../modules/searchTerm'
 import GameGrid from './GameGrid'
 import Offline from './Offline'
+import RefreshNote from './RefreshNote'
 import SearchAllCard from './SearchAllCard'
 import Spinner from './Spinner'
 
@@ -35,13 +36,17 @@ const Games = ({
     data,
     isPending,
     isError,
+    isRefetchError,
     fetchStatus,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery(gamesQueryOptions(feature, fetch))
 
-  if (isError) {
+  // A failed refresh of a list that the cache already holds keeps the list
+  // (#164). Any other failure shows the error state: the first load, a next
+  // page, or a page that a sort still needs.
+  if (isError && (!isRefetchError || (sort !== null && hasNextPage))) {
     return <Error message="Failed to load games" />
   }
 
@@ -65,22 +70,29 @@ const Games = ({
 
   const term = normalizeSearchTerm(query)
 
-  // The release-day split can empty a loaded page; the grid then loads the
-  // next one.
-  if (filtered.length === 0 && term === '' && !hasNextPage) {
-    return <Error message={emptyMessage} />
-  }
-
+  // The status region is on the page with the list, so a screen reader
+  // announces a later failed refresh.
   return (
-    <GameGrid
-      games={ordered}
-      label={feature}
-      showPrice={feature !== 'monthly'}
-      trailing={term === '' ? null : <SearchAllCard term={term} />}
-      hasNextPage={hasNextPage}
-      isFetchingNextPage={isFetchingNextPage}
-      fetchNextPage={fetchNextPage}
-    />
+    <>
+      <div role="status" className="games--status">
+        <RefreshNote failed={isRefetchError} />
+      </div>
+      {/* The release-day split can empty a loaded page; the grid then loads
+          the next one. */}
+      {filtered.length === 0 && term === '' && !hasNextPage ? (
+        <Error message={emptyMessage} />
+      ) : (
+        <GameGrid
+          games={ordered}
+          label={feature}
+          showPrice={feature !== 'monthly'}
+          trailing={term === '' ? null : <SearchAllCard term={term} />}
+          hasNextPage={hasNextPage}
+          isFetchingNextPage={isFetchingNextPage}
+          fetchNextPage={fetchNextPage}
+        />
+      )}
+    </>
   )
 }
 

@@ -25,10 +25,11 @@ pub(super) const PAST_DATE: &str = "2025-01-01T00:00:00Z";
 pub(super) const FUTURE_DATE: &str = "2099-01-01T00:00:00Z";
 
 type Respond<A, T> = Box<dyn Fn(A) -> Result<T, UpstreamError> + Send + Sync>;
+type Delay = Box<dyn Fn(&str) -> Duration + Send + Sync>;
 
 /// The calls that the fake received.
 #[derive(Debug, Default)]
-pub(super) struct Calls {
+pub(crate) struct Calls {
     pub concepts: Vec<(SonyFeature, usize)>,
     pub details: Vec<String>,
     pub prices: Vec<String>,
@@ -39,7 +40,7 @@ pub(super) struct Calls {
 }
 
 /// A fake Sony store driven by closures.
-pub(super) struct FakeSony {
+pub(crate) struct FakeSony {
     pub concepts: Respond<SonyFeature, Vec<Concept>>,
     pub detail: Respond<String, ProductDetail>,
     pub price: Respond<String, ProductPrice>,
@@ -47,8 +48,9 @@ pub(super) struct FakeSony {
     pub monthly: Respond<(), Vec<PlusMonthlyEntry>>,
     pub browse: Respond<BrowseRequest, BrowsePage>,
     pub genres: Respond<(), Vec<Genre>>,
-    /// A delay of each detail lookup, to measure the concurrency.
-    pub detail_delay: Duration,
+    /// The delay of a detail lookup by product id, to measure the
+    /// concurrency and to pass a deadline.
+    pub detail_delay: Delay,
     pub calls: Mutex<Calls>,
     in_flight: AtomicUsize,
     pub peak: AtomicUsize,
@@ -83,7 +85,7 @@ impl Default for FakeSony {
                 })
             }),
             genres: Box::new(|()| Ok(vec![])),
-            detail_delay: Duration::ZERO,
+            detail_delay: Box::new(|_| Duration::ZERO),
             calls: Mutex::default(),
             in_flight: AtomicUsize::new(0),
             peak: AtomicUsize::new(0),
@@ -122,8 +124,9 @@ impl SonyCatalog for FakeSony {
         Box::pin(async move {
             let running = self.in_flight.fetch_add(1, Ordering::SeqCst) + 1;
             self.peak.fetch_max(running, Ordering::SeqCst);
-            if !self.detail_delay.is_zero() {
-                tokio::time::sleep(self.detail_delay).await;
+            let delay = (self.detail_delay)(&product_id);
+            if !delay.is_zero() {
+                tokio::time::sleep(delay).await;
             }
             self.in_flight.fetch_sub(1, Ordering::SeqCst);
             (self.detail)(product_id)
@@ -181,7 +184,7 @@ pub(super) fn service_at(
 }
 
 /// The service with the wall clock at 2026-01-01.
-pub(super) fn service(fake: FakeSony) -> (GamesService, Arc<FakeSony>) {
+pub(crate) fn service(fake: FakeSony) -> (GamesService, Arc<FakeSony>) {
     let (service, fake, _) = service_at(fake, "2026-01-01T00:00:00Z");
     (service, fake)
 }
@@ -194,7 +197,7 @@ pub(super) fn names(result: &PageResult) -> Vec<&str> {
     result.games.iter().map(|g| g.name.as_str()).collect()
 }
 
-pub(super) fn unavailable() -> UpstreamError {
+pub(crate) fn unavailable() -> UpstreamError {
     UpstreamError::unavailable("down")
 }
 
