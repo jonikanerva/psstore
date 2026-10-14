@@ -1,3 +1,4 @@
+import { isDeepStrictEqual } from 'node:util'
 import { z } from 'zod'
 import {
   readSonyConstants,
@@ -5,7 +6,7 @@ import {
   type SonyConstants,
 } from '../contract/sonyConstants.js'
 import type { SonyContractManifest } from '../contract/types.js'
-import { readJsonFile, writeJsonFile } from '../io/files.js'
+import { readJsonFile, writeFormattedJsonFile } from '../io/files.js'
 import { paths } from '../io/paths.js'
 
 const REQUEST_TIMEOUT_MS = 10_000
@@ -335,7 +336,8 @@ const readProbeConstants = async (filePath: string): Promise<SonyConstants> => {
 }
 
 // Owner-run check. Prints the operation name, the status code and PASS or
-// FAIL, nothing else. Writes the manifest on PASS only.
+// FAIL, nothing else. Writes the manifest on PASS only, and only when its
+// content changes.
 const runProbe = async (
   probe: SignedInProbe,
   options: ProbeRunOptions,
@@ -359,10 +361,16 @@ const runProbe = async (
 
     const accessToken = await exchangeNpsso(npsso, config, fetchFn)
     const status = await probeOperation(probe, accessToken, config, fetchFn)
-    await writeJsonFile(
-      manifestPath,
-      recordObservedStatus(manifest, config.hash, status, probe.feature),
+    const updated = recordObservedStatus(
+      manifest,
+      config.hash,
+      status,
+      probe.feature,
     )
+    // A PASS that changes no value leaves the committed text untouched.
+    if (!isDeepStrictEqual(updated, manifest)) {
+      await writeFormattedJsonFile(manifestPath, updated)
+    }
     console.info(`${probe.label} ${String(status)} PASS`)
   } catch (error) {
     const tag = error instanceof ProbeFailure ? error.tag : 'unexpected'
