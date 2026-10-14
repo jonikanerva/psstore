@@ -28,6 +28,11 @@ const COVER_ROLE_PRIORITY: [&str; 6] = [
 
 /// A Sony date as `toISOString()` output, or the empty string for a missing,
 /// empty, or unparseable value. A missing date is never replaced by a guess.
+///
+/// Every path that puts a Sony release date on the wire uses this function
+/// (STACK.md §10). The list rules read the date with `parse_date_ms`, and
+/// `parse_date_ms` of the output is the same instant as `parse_date_ms` of
+/// the input, so the normalisation moves no game between lists.
 pub fn to_iso_or_default(value: Option<&str>) -> String {
     match value {
         None | Some("") => String::new(),

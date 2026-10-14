@@ -186,8 +186,8 @@ async fn fills_a_product_entry_from_its_product_page() {
 }
 
 /// A game on the NEW list keeps the list card and takes the detail fields
-/// from the product page. This path copies Sony's date text without a check
-/// (STACK.md §10), unlike the product page path.
+/// from the product page. This path also normalises Sony's date (STACK.md
+/// §10, issue #163).
 #[tokio::test(start_paused = true)]
 async fn fills_a_product_entry_from_the_new_list() {
     let listed = Concept {
@@ -223,7 +223,7 @@ async fn fills_a_product_entry_from_the_new_list() {
     let expected = Game {
         id: sku(2).parse().unwrap(),
         name: "Grid Game".into(),
-        date: "2025-03-04T00:00:00Z".into(),
+        date: "2025-03-04T00:00:00.000Z".into(),
         url: "https://img.test/grid-cover.png".into(),
         price: "€49,99".into(),
         genres: vec!["Action".into(), "Adventure".into()],
