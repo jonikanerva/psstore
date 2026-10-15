@@ -1,6 +1,6 @@
 import DOMPurify from 'dompurify'
 
-// The colour attributes that DOMPurify 3.4.16 keeps by default (its `html`,
+// The colour attributes that DOMPurify 3.4.17 keeps by default (its `html`,
 // `svg`, and `mathMl` attribute allow-lists). Sony's colours can make the
 // description text unreadable on the page background, for example
 // `<font color="orange">` on white. Without these attributes, the text uses

@@ -25,18 +25,18 @@ icu_properties = { version = "=2.3.0", default-features = false, features = ["co
 jiff = { version = "=0.2.38", default-features = false, features = ["std"] }
 reqwest = { version = "=0.13.5", default-features = false, features = ["rustls", "gzip", "query", "form"] }
 serde = { version = "=1.0.229", features = ["derive"] }
-serde_json = "=1.0.151"
+serde_json = "=1.0.154"
 # Derives `std::error::Error` and a fixed `Display` text for the expected
 # error enums. Already in the graph through reqwest and rustls.
 thiserror = "=2.0.21"
-tokio = { version = "=1.53.2", features = ["rt", "net", "time", "sync", "macros", "signal", "fs"] }
+tokio = { version = "=1.53.3", features = ["rt", "net", "time", "sync", "macros", "signal", "fs"] }
 tower = { version = "=0.5.3", default-features = false, features = ["util"] }
 tower-http = { version = "=0.6.11", default-features = false, features = ["fs"] }
 tracing = { version = "=0.1.44", default-features = false, features = ["std"] }
 tracing-subscriber = { version = "=0.3.23", default-features = false, features = ["registry", "std"] }
 # The random request id of each request (`v4`). Its random source,
 # `getrandom` 0.4, is already in the graph through reqwest.
-uuid = { version = "=1.26.1", default-features = false, features = ["std", "v4"] }
+uuid = { version = "=1.28.0", default-features = false, features = ["std", "v4"] }
 # The OpenAPI 3.1 document of the `/api` routes (contract/openapi.json).
 # `macros` derives the schemas and the operations. `preserve_order` keeps the
 # struct field order, so a schema lists its properties in the wire key order.

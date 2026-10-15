@@ -18,15 +18,15 @@
   "engines": {
     "node": "^24.21.0"
   },
-  "packageManager": "pnpm@12.8.1",
+  "packageManager": "pnpm@12.11.2",
   "devDependencies": {
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react-swc": "catalog:",
     "concurrently": "^10.0.6",
-    "oxlint": "1.86.0",
-    "oxlint-tsgolint": "7.0.2003",
+    "oxlint": "1.88.0",
+    "oxlint-tsgolint": "7.0.2004",
     "prettier": "catalog:",
     "tsx": "catalog:",
     "typescript": "catalog:",
