@@ -4,6 +4,8 @@ packages:
   - 'tools/*'
   - 'e2e'
 pmOnFail: error
+# STACK.md → 15 → Dependencies: refuse a release younger than one day.
+minimumReleaseAge: 1440
 minimumReleaseAgeStrict: true
 allowBuilds:
   '@parcel/watcher': false

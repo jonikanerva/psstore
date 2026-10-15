@@ -84,7 +84,8 @@ Refactor an unsuitable structure before building further work on it. A small
 diff is not a reason to preserve a wrong model. Broader corrections need a
 concrete requirement, failure mode, or maintenance problem and verifiable
 steps. Stay within the agreed product scope. Do not add unrelated cleanup or
-speculative extension points. Temporary mechanisms need an owner, known
+speculative extension points. Dependency updates under P7 are not unrelated
+cleanup; they use their own PR. Temporary mechanisms need an owner, known
 limitations, and a removal condition.
 
 **Evidence:** Clear boundaries and a reason for material structural changes.
@@ -177,6 +178,33 @@ Pin toolchains and resolved dependencies. Document environment setup and
 configuration validation. Make environmental differences visible. Define and
 measure resource limits where they affect fitness for purpose.
 
+Keep toolchains, runtimes, infrastructure, and dependencies on their latest
+stable releases. Infrastructure is every service and platform component that
+the product uses in any environment, for example databases, caches, message
+brokers, search engines, object storage, container base images, and build or
+deployment platforms, including managed services. Record each infrastructure
+component and its version in each environment in `STACK.md`. A pin records a
+verified state; it does not freeze that state. Before each delivery task, or
+once before an authorised batch, run the dependency freshness check in
+`STACK.md` on the current `main`. Deliver due updates first in a dedicated
+`chore/deps-<topic>` PR. That PR follows the full acceptance and release path.
+Merge it before the task branch starts. A dependency update task is itself
+that deps PR; it does not start another one. Apply security fixes first.
+Updates within declared version constraints are lead decisions. A new major
+version gets its own PR with compatibility evidence and the required
+migration. That PR blocks the task only when the task depends on it. Start it
+when the work is bounded. Otherwise report it as a follow-up with a reason and
+a reassessment condition. Keep each infrastructure component on the same major
+version in test and production. Upgrade production infrastructure through the
+release and recovery procedures in `STACK.md`, and prove the upgrade path and
+data restoration before the switch. Ask the owner when an infrastructure
+upgrade needs downtime, added cost, a provider change, or an irreversible data
+step. When an update fails verification and the fix is not bounded, keep the
+current pin, record the reason and a reassessment condition in the deps PR,
+and continue the task. Do not adopt prereleases without a reviewed exception.
+Respect the declared minimum release age except for security fixes. An
+unavailable freshness check is a recorded gap, not a pass.
+
 Define release, monitoring, diagnosis, update, and recovery procedures in
 `STACK.md`. Verify relevant migration and compatibility paths. Keep `main`
 production-ready. Treat a merge that triggers deployment as a release action.
@@ -185,10 +213,12 @@ release success. If release verification is unavailable, report it as pending.
 On failure, use only an already authorised recovery path; escalate otherwise.
 
 Prioritise maintenance by risk, support status, and benefit. Within authorised
-work, remove obsolete code and dependencies. Product feature removal and new
-maintenance tasks remain subject to scope and owner authority.
+work, remove obsolete code and dependencies. A delivery request authorises the
+dependency updates above. Product feature removal and other new maintenance
+tasks remain subject to scope and owner authority.
 
-**Evidence:** Reproducible setup and applicable release and recovery results.
+**Evidence:** Reproducible setup, a current dependency freshness result, and
+applicable release and recovery results.
 
 ## P8. Preserve decisions and learn
 
@@ -281,8 +311,9 @@ Ask before acting on:
 - An unresolved material requirement conflict or risk outside delegated authority.
 
 Compatible, tested data migrations may proceed when recovery is demonstrated.
-Ordinary library changes may proceed after P2 review. Do not change repository
-protections, weaken tool permissions, bypass hooks, or push directly to `main`.
+Ordinary library changes and P7 dependency updates may proceed after P2 review.
+Do not change repository protections, weaken tool permissions, bypass hooks, or
+push directly to `main`.
 
 ## Exceptions
 
