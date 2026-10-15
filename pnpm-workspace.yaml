@@ -11,16 +11,16 @@ allowBuilds:
   esbuild: true
   msgpackr-extract: false
 catalog:
-  '@types/node': '^24.19.0'
+  '@types/node': '^24.19.2'
   '@types/react': '^19.3.0'
   '@types/react-dom': '^19.3.0'
   '@vitejs/plugin-react-swc': '^4.3.3'
-  'prettier': '^3.9.9'
+  'prettier': '^3.9.10'
   'tsx': '^4.23.15'
   'typescript': '7.0.2'
-  'vite': '^8.3.2'
-  'vitest': '^5.0.3'
-  'zod': '4.6.5'
+  'vite': '^8.3.4'
+  'vitest': '^5.0.4'
+  'zod': '4.6.7'
 # The client generator (@hey-api/openapi-ts 0.99.0) depends on
 # @hey-api/json-schema-ref-parser 1.4.4, which pins js-yaml 4.2.0. That
 # version has GHSA-52cp-r559-cp3m, GHSA-5p4m-2wfm-xmqj, and

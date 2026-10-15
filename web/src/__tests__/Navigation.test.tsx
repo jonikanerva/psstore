@@ -1,4 +1,4 @@
-import { act, cleanup, screen } from '@testing-library/react'
+import { act, cleanup, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import Navigation from '../components/Navigation'
 import { renderRoutes } from './testRouter'
@@ -22,6 +22,11 @@ describe('Navigation origin highlight', () => {
     const router = await renderRoutes(routes, ['/discounted'])
     act(() => {
       router.history.push('/g/abc', { pdpOrigin: '/discounted' })
+    })
+    // Wait for the game page match. Until then the departing route keeps its
+    // links on the old location (TanStack Router 1.170.42 and later).
+    await waitFor(() => {
+      expect(router.state.status).toBe('idle')
     })
     const origin = screen.getByRole('link', { name: 'Discounted' })
     expect(origin).toHaveClass('navigation--origin')
