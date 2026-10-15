@@ -44,12 +44,12 @@ Finnish source text from the chat, with the lead's English translation:
 - `pnpm test-all` also runs rustfmt, Clippy, cargo-deny, cargo-audit, the Rust release build, and `cargo test`. (ADR 0004 replaces cargo-audit with the advisories check of cargo-deny and `cargo test` with nextest.)
 - The memory use of the Rust server is not measured before the release, and no budget is set. Railway's memory metric shows it after the release.
 - Railway gives the service variables (the IGDB credentials) to every build command, as it did for the Node build. A Rust build script of a dependency can read them. The NPSSO is never a service variable.
-- The Railway service does not pin the Railpack version. The local plan evidence comes from Railpack 0.40.1. Railpack prints the warning that its config file format is not final. _Amended by #166 (2026-10-14): the Railway service variable `RAILPACK_VERSION=0.40.1` pins the version (STACK.md §15)._
+- The Railway service does not pin the Railpack version. The local plan evidence comes from Railpack 0.40.1. Railpack prints the warning that its config file format is not final. _Amended by #166 (2026-10-14): the Railway service variable `RAILPACK_VERSION=0.40.1` pins the version (STACK.md §15)._ _Amended by #185 (2026-10-15): the owner decided not to pin the Railpack version. Railway uses its default Railpack version (the owner intent is the latest release), and the variable `RAILPACK_VERSION` is removed. The build log of each release names the version (STACK.md §15)._
 - Known differences from the TypeScript server are listed in the pull request of issue #157.
 
 ## Cost of reversal
 
-Medium. A revert of the merge commit restores the TypeScript server and its Railway build, because every build setting is in the repository. The cost grows with each later change to the Rust server. _Amended by #166 (2026-10-14): every build setting except the Railpack version is in the repository. The Railway service variable `RAILPACK_VERSION` holds the version, so a revert does not restore it (STACK.md §15)._
+Medium. A revert of the merge commit restores the TypeScript server and its Railway build, because every build setting is in the repository. The cost grows with each later change to the Rust server. _Amended by #166 (2026-10-14): every build setting except the Railpack version is in the repository. The Railway service variable `RAILPACK_VERSION` holds the version, so a revert does not restore it (STACK.md §15)._ _Amended by #185 (2026-10-15): there is no Railpack pin. A revert restores every build setting in the repository; Railway still builds with its current default Railpack version._
 
 ## Reassessment
 
