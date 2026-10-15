@@ -35,6 +35,11 @@ requests do not start delivery. The primary agent is the lead. It may implement
 with `/implement` or delegate bounded work. Choose specialists for risk,
 uncertainty, or useful parallelism; no fixed roster is required.
 
+Each delivery task starts with the `STACK.md` dependency freshness check under
+`DOCTRINE.md` P7. Due updates go to a dedicated `chore/deps-<topic>` PR that
+merges before the task branch starts. Keep proactive version changes out of
+the task PR.
+
 Use the Agent tool for focused subagents. Available roles are `architect`,
 `ux-guardian`, `devils-advocate`, `lead-dev`, and `qa-enforcer`. Agent Teams are
 optional for work that benefits from teammate coordination. When Teams are
