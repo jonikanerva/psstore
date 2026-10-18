@@ -43,6 +43,7 @@ encode an unsupported product rule.
 ## Evaluate requirements, change, and evidence
 
 Scale depth to impact. Consider:
+
 - Review is required for material changes to behaviour, architecture, security,
   data, agent authority, or acceptance gates, regardless of file type. Low-impact
   changes need no separate review unless requested; required checks still apply.
@@ -119,6 +120,7 @@ the minimum coherent fix, and how to verify it. Cite an official external
 reference only when the claim depends on it.
 
 Complete the required review checks before publishing the verdict:
+
 - PASS: no blocking findings and all required acceptance evidence is satisfied.
 - FAIL: a defect or missing required evidence blocks acceptance. Distinguish
   implementation defects from pending evidence so the lead can route the work.
