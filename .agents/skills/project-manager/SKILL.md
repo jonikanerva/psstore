@@ -99,6 +99,7 @@ under `DOCTRINE.md → Exceptions` with independent approval; ask the owner when
 authority or material risk requires it.
 
 Before accepting, confirm:
+
 - The current PR head and integration base match the evidence and review.
 - Every required local, CI, integration, security, and applicable owner-only
   result is present and passing, or covered by an approved exception.
