@@ -1,6 +1,6 @@
 // WISHLIST and PURCHASED: the sign-in form, the signed-in lists, and the
 // sign-out. The test server accepts only the synthetic NPSSO.
-import { cardIds, expect, expectNoAxeViolations, test } from './support.js'
+import { cardIds, expect, expectNoAxeViolations, test } from './journey.js'
 import { SYNTHETIC_NPSSO, productId } from './servers.js'
 
 test('signed out, WISHLIST and PURCHASED show the sign-in form', async ({

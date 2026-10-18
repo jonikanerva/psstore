@@ -4,6 +4,12 @@
 //! e2e_server --port <port> --web-build <dir> [--scenario healthy|outage]
 //! ```
 //!
+//! With `--port 0`, the operating system chooses a free port, so parallel
+//! test runs on one machine do not collide. After the bind, the server
+//! writes one line with the bound address to standard output:
+//! `e2e_server listening on http://127.0.0.1:<port>`. The Playwright
+//! configuration (`e2e/playwright.config.ts`) reads the port from this line.
+//!
 //! The server mounts the real router, the real middleware, and the built
 //! client (`psstore_server::http::app`) over fake store, critic score, and
 //! account services. The fakes answer from synthetic data. The server calls
@@ -28,6 +34,10 @@
 #![expect(
     clippy::print_stderr,
     reason = "a command-line tool reports a usage error before logging starts"
+)]
+#![expect(
+    clippy::print_stdout,
+    reason = "the test runner reads the bound address from standard output"
 )]
 
 use std::collections::HashSet;
@@ -92,7 +102,7 @@ impl Options {
         while let Some(flag) = rest.next() {
             let value = rest.next()?;
             match flag.as_str() {
-                "--port" => port = value.parse::<u16>().ok().filter(|p| *p != 0),
+                "--port" => port = value.parse::<u16>().ok(),
                 "--web-build" => web_build = Some(PathBuf::from(value)),
                 "--scenario" => {
                     scenario = match value.as_str() {
@@ -162,7 +172,10 @@ async fn serve(options: Options, catalog: Catalog) -> std::io::Result<()> {
     };
     let address = SocketAddr::from((Ipv4Addr::LOCALHOST, options.port));
     let listener = tokio::net::TcpListener::bind(address).await?;
-    tracing::info!(bind = %address, "e2e server started");
+    // The log layer keeps only events of the server crate, so a `tracing`
+    // event of this example never reaches the output. The line goes to
+    // standard output directly; `Stdout` flushes at each line end.
+    println!("e2e_server listening on http://{}", listener.local_addr()?);
     lifecycle::serve(
         listener,
         http::app(state),

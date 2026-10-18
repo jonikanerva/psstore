@@ -1,7 +1,7 @@
 // The main journey with the keyboard alone: the focus order, a visible focus
 // indicator on each stop, and activation with Enter, Space, and Escape.
 import type { Locator, Page } from '@playwright/test'
-import { cardIds, expect, test } from './support.js'
+import { cardIds, expect, test } from './journey.js'
 import { productId } from './servers.js'
 
 // `--focus-color` in `web/src/index.css`.
