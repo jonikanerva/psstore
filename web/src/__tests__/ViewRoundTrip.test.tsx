@@ -366,7 +366,7 @@ describe('focus returns to the opened card', () => {
     games = [game('one'), game('777', 'concept')]
     await renderApp('/new')
     const external = screen.getByRole('link', {
-      name: /Name 777 on PlayStation Store/,
+      name: /^Name 777\b.*\bon PlayStation Store$/,
     })
     expect(external).not.toHaveAttribute('data-game-id')
   })

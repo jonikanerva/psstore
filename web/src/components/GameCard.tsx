@@ -113,9 +113,12 @@ const GameCard = ({
         href={storeHref(game.id)}
         target="_blank"
         rel="noopener noreferrer"
-        aria-label={`${game.name} on PlayStation Store`}
       >
         {body}
+        {/* The link name comes from the visible card text, so it contains the
+            visible label (WCAG 2.5.3). The hidden suffix tells a screen
+            reader user that the link opens Sony's store. */}
+        <span className="sr-only">on PlayStation Store</span>
       </a>
     )
   }

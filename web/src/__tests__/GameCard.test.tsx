@@ -233,8 +233,11 @@ describe('GameCard', () => {
     )
 
     const link = screen.getByRole('link', {
-      name: 'RunNGun on PlayStation Store',
+      name: /^RunNGun\b.*\bon PlayStation Store$/,
     })
+    // WCAG 2.5.3: the link name contains the visible text of the card.
+    expect(link).not.toHaveAttribute('aria-label')
+    expect(link).toHaveAccessibleName(/Unknown/)
     expect(link).toHaveAttribute(
       'href',
       'https://store.playstation.com/en-fi/concept/10018729',
