@@ -6,6 +6,10 @@ discounted, and monthly PS Plus **PS5 games** in the Finnish store, priced in **
 `store.playstation.com`. Open the page, see what's new, click out to Sony to buy. No
 preferences, no tracking.
 
+The BROWSE view lists all PS5 games in one Sony genre. You choose the genre and Sony's
+order. The search field filters the current view by name. It can also search all PS5
+games in the Finnish store. The result opens as a list of game cards.
+
 The PURCHASED view shows your own PS5 library. You sign in with your NPSSO token. The
 server keeps the token in an HttpOnly cookie for 30 days. Sign out clears the cookie.
 `STACK.md` section 2.5 describes the mechanics.
