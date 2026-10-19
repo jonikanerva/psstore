@@ -1,6 +1,7 @@
 # Gitleaks configuration for `mise run scan:secrets` (STACK.md → 14 → Check configuration).
 # The default rules apply. The default rules do not detect the Sony NPSSO, the highest-risk credential
-# of this project (STACK.md → 0 and 2.5), so this file adds one rule for it.
+# of this project (STACK.md → 0 and 2.5), so this file adds three rules for it. STACK.md → 14 → Secret
+# rules lists the known gaps.
 
 [extend]
 useDefault = true
@@ -12,7 +13,29 @@ description = "Sony NPSSO: a 64-character value directly after a name that conta
 # cookie-safe set of STACK.md → 2.5, with a letter or digit as the first and the last character.
 # Only white space and one quote can come between the separator (:, =, (, or ,) and the value.
 # Matches, for example, `npsso=...`, `SONY_NPSSO=...`, `"npsso": "..."`, `const npsso = '...'`,
-# `exchangeNpsso('...')`, and `set('npsso', '...')`. STACK.md → 14 lists the known gaps.
+# `exchangeNpsso('...')`, and `set('npsso', '...')`.
 regex = '''(?i)npsso[\w-]*['"]?\s*[:=(,]\s*['"]?([A-Za-z0-9][A-Za-z0-9._~-]{62}[A-Za-z0-9])(?:[^A-Za-z0-9]|$)'''
 secretGroup = 1
 keywords = ["npsso"]
+
+[[rules]]
+id = "sony-npsso-context"
+description = "Sony NPSSO: a 64-character alphanumeric value after a name that contains npsso, on the same or the next line"
+# The owner checked one real NPSSO on 2026-10-19 (#149): it matched ^[A-Za-z0-9]{64}$. This rule uses that
+# narrower value class, so it can accept any text between the name and the value. Up to 100 characters
+# on the line of the name, then optionally one line break and indentation, then one character that is not
+# a letter or a digit. Matches, for example, `let npsso: &str = "..."`, `npsso = Secret::new("...")`,
+# `config.npsso = "..."`, `exchange_npsso(Secret::new("..."))`, and a value that rustfmt moves to the
+# next line. A SHA-256 hash is also 64 alphanumeric characters, so the rule needs the npsso name.
+regex = '''(?i)npsso[^\r\n]{0,100}?(?:[^A-Za-z0-9\r\n]|\r?\n[ \t]*[^A-Za-z0-9\r\n]?)([A-Za-z0-9]{64})(?:[^A-Za-z0-9]|$)'''
+secretGroup = 1
+keywords = ["npsso"]
+
+[[rules]]
+id = "sony-npsso-secret-literal"
+description = "A 64-character alphanumeric literal in Secret::new, the wrapper of the NPSSO and the Sony access token"
+# The server wraps the NPSSO in `Secret::new` (STACK.md → 2.5). A literal of the NPSSO form there is a
+# credential also when no npsso name is near it. Matches `Secret::new("...")` and `Secret::new(r#"..."#)`.
+regex = '''Secret::new\(\s*r?#*"([A-Za-z0-9]{64})"'''
+secretGroup = 1
+keywords = ["secret::new"]
