@@ -28,7 +28,7 @@ test('UPCOMING shows a product and a concept card', async ({ page }) => {
   // A concept has no product page: its card opens Sony's concept page and
   // shows no price.
   const concept = page.getByRole('link', {
-    name: 'Frostline on PlayStation Store',
+    name: /^Frostline\b.*\bon PlayStation Store$/,
   })
   await expect(concept).toHaveAttribute(
     'href',

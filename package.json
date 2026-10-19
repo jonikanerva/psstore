@@ -16,9 +16,9 @@
     "sony:probe-wishlist": "mise run sony:probe-wishlist"
   },
   "engines": {
-    "node": "^24.21.0"
+    "node": "^24.22.0"
   },
-  "packageManager": "pnpm@12.11.2",
+  "packageManager": "pnpm@12.14.0",
   "devDependencies": {
     "@types/node": "catalog:",
     "@types/react": "catalog:",

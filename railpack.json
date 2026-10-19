@@ -3,8 +3,8 @@
   "provider": "rust",
   "exclude": ["mise.toml"],
   "packages": {
-    "node": "24.21.0",
-    "pnpm": "12.11.2"
+    "node": "24.22.0",
+    "pnpm": "12.14.0"
   },
   "steps": {
     "install": {
