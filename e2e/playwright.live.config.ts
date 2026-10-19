@@ -8,8 +8,8 @@
 //
 // `live/server.ts` starts the server on a free port and prints the address,
 // so two live checks on one machine do not collide (#191). `webServer.wait`
-// stores the port as the environment variable `PSSTORE_LIVE_PORT`; the
-// `baseURL` fixture of `live/csp.live.spec.ts` reads it in the worker.
+// stores the port as the environment variable `PSSTORE_LIVE_PORT`;
+// `live/csp.live.spec.ts` reads it in the worker and uses absolute URLs.
 import { defineConfig, devices } from '@playwright/test'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'

@@ -5,8 +5,13 @@
 // this script asks the operating system for a free port first. It then
 // starts the server with that port, waits until `/healthz` answers, and
 // prints the address. `webServer.wait` of `playwright.live.config.ts` reads
-// the port from that line. Another process can take the port between the
-// check and the bind; the server then fails to start and the run stops.
+// the port from that line.
+//
+// Known limit: another process can take the port on 127.0.0.1 between the
+// check and the start of the server. The server binds 0.0.0.0 and still
+// starts, but a request to 127.0.0.1 then reaches the other process. If that
+// process answers `/healthz` with 200, the check runs against the wrong
+// server without an error; otherwise the start times out after 30 seconds.
 //
 // Usage: node e2e/live/server.ts <server binary>
 import { spawn } from 'node:child_process'
@@ -54,8 +59,11 @@ const server = spawn(binary, [], {
 })
 
 // A stop by the forwarded signal is a clean end; any other signal is not.
+// A server that never answered `/healthz` is a failed start.
+let startFailed = false
 server.once('exit', (code, signal) => {
-  process.exit(code ?? (signal === 'SIGTERM' || signal === 'SIGINT' ? 0 : 1))
+  const stopped = signal === 'SIGTERM' || signal === 'SIGINT'
+  process.exit(startFailed ? 1 : (code ?? (stopped ? 0 : 1)))
 })
 const running = (): boolean =>
   server.exitCode === null && server.signalCode === null
@@ -78,5 +86,6 @@ if (healthy) {
   process.stdout.write(`live server listening on ${origin}\n`)
 } else if (running()) {
   process.stderr.write('the live server did not answer /healthz\n')
+  startFailed = true
   server.kill('SIGTERM')
 }
