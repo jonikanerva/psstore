@@ -5,12 +5,11 @@
 //! that field only; a games element without a string name is dropped; a games
 //! body that is not an array is drift and fails the lookup.
 
-use jiff::Timestamp;
-use jiff::tz::Offset;
 use serde_json::Value;
 
 use crate::domain::critic_match::CriticCandidate;
 use crate::domain::game::CriticScore;
+use crate::domain::js::utc_full_year;
 use crate::domain::secret::Secret;
 
 /// A Twitch app access token. Only the token and its lifetime are read.
@@ -84,8 +83,7 @@ pub(super) fn year_of_unix_seconds(value: &Value) -> Option<i32> {
         reason = "the value is an integral float within ±8.64e15, so it fits in i64 exactly"
     )]
     let millis = millis as i64;
-    let instant = Timestamp::from_millisecond(millis).ok()?;
-    Some(i32::from(Offset::UTC.to_datetime(instant).year()))
+    utc_full_year(millis)
 }
 
 /// A finite score from 0 to 100, rounded like JavaScript `Math.round`.
