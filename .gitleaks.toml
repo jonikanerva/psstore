@@ -26,7 +26,9 @@ description = "Sony NPSSO: a 64-character alphanumeric value after a name that c
 # on the line of the name, then optionally one line break and indentation, then one character that is not
 # a letter or a digit. Matches, for example, `let npsso: &str = "..."`, `npsso = Secret::new("...")`,
 # `config.npsso = "..."`, `exchange_npsso(Secret::new("..."))`, and a value that rustfmt moves to the
-# next line. A SHA-256 hash is also 64 alphanumeric characters, so the rule needs the npsso name.
+# next line. `mise run scan:secrets` scans only the lines that a commit adds, so it finds the two-line form
+# only when the commit adds both lines; a commit that changes only the value line is a gap. A SHA-256 hash
+# is also 64 alphanumeric characters, so the rule needs the npsso name.
 regex = '''(?i)npsso[^\r\n]{0,100}?(?:[^A-Za-z0-9\r\n]|\r?\n[ \t]*[^A-Za-z0-9\r\n]?)([A-Za-z0-9]{64})(?:[^A-Za-z0-9]|$)'''
 secretGroup = 1
 keywords = ["npsso"]
