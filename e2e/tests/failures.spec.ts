@@ -1,6 +1,11 @@
 // The error states, against the test server whose store lookups all fail
 // like an upstream outage.
-import { expect, expectNoAxeViolations, test } from './journey.js'
+import {
+  expect,
+  expectNoAxeViolations,
+  resultsStatus,
+  test,
+} from './journey.js'
 import { SYNTHETIC_NPSSO, productId } from './servers.js'
 
 test.use({ testServer: 'outage' })
@@ -31,7 +36,7 @@ for (const [path, status] of [
 test('a failed search offers a retry', async ({ page }) => {
   await page.goto('/search?q=aurora')
 
-  await expect(page.getByRole('status')).toHaveText('Search failed')
+  await expect(resultsStatus(page)).toHaveText('Search failed')
   await expect(page.getByRole('button', { name: 'Retry' })).toBeVisible()
   await expectNoAxeViolations(page)
 })
@@ -39,7 +44,7 @@ test('a failed search offers a retry', async ({ page }) => {
 test('a failed genre list offers a retry', async ({ page }) => {
   await page.goto('/browse')
 
-  await expect(page.getByRole('status')).toHaveText('Failed to load genres')
+  await expect(resultsStatus(page)).toHaveText('Failed to load genres')
   await expect(page.getByRole('button', { name: 'Retry' })).toBeVisible()
   await expectNoAxeViolations(page)
 })
