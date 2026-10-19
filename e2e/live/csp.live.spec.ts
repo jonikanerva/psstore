@@ -5,6 +5,20 @@
 import type { Page } from '@playwright/test'
 import { expect, test } from '../tests/support.js'
 
+// The origin of the live server. `live/server.ts` prints it, and
+// `webServer.wait` stores its port (#191). The test reads it in the worker,
+// because the runner loads the configuration before the server prints its
+// port.
+const liveServerUrl = (): string => {
+  const port = process.env['PSSTORE_LIVE_PORT']
+  if (port === undefined || !/^[0-9]+$/.test(port)) {
+    throw new Error(
+      'PSSTORE_LIVE_PORT is not set: run the check with playwright.live.config.ts',
+    )
+  }
+  return `http://127.0.0.1:${port}`
+}
+
 test.use({ routeSonyMedia: false })
 
 interface ListedGame {
@@ -61,9 +75,10 @@ const scrollThroughGrid = async (page: Page): Promise<void> => {
 
 test('live pages cause no CSP violation', async ({ page, externalOrigins }) => {
   const counts: Record<string, number | string> = {}
+  const origin = liveServerUrl()
 
   // NEW, with the covers of every loaded card.
-  await page.goto('/new')
+  await page.goto(`${origin}/new`)
   const cards = page.locator('a.game-card')
   await expect(cards.first()).toBeVisible()
   await scrollThroughGrid(page)
@@ -73,7 +88,7 @@ test('live pages cause no CSP violation', async ({ page, externalOrigins }) => {
   // The other anonymous lists. MONTHLY reads the PS Plus feed, a source of
   // its own, so its images can come from another host (#162).
   for (const view of ['upcoming', 'discounted', 'monthly'] as const) {
-    await page.goto(`/${view}`)
+    await page.goto(`${origin}/${view}`)
     await expect(cards.first()).toBeVisible()
     await scrollThroughGrid(page)
     counts[`${view}Cards`] = await cards.count()
@@ -82,7 +97,9 @@ test('live pages cause no CSP violation', async ({ page, externalOrigins }) => {
 
   // A game page with screenshots and a video. The NEW list carries the
   // media of each game.
-  const answer = await page.request.get('/api/games/new?offset=0&size=60')
+  const answer = await page.request.get(
+    `${origin}/api/games/new?offset=0&size=60`,
+  )
   const body: unknown = await answer.json()
   const withMedia = listedGames(body).find(
     (game) => game.videos > 0 && game.screenshots > 0,
@@ -92,7 +109,7 @@ test('live pages cause no CSP violation', async ({ page, externalOrigins }) => {
     return
   }
   counts['gamePage'] = withMedia.id
-  await page.goto(`/g/${encodeURIComponent(withMedia.id)}`)
+  await page.goto(`${origin}/g/${encodeURIComponent(withMedia.id)}`)
   const media = page.getByRole('region', { name: 'Media' })
   await expect(media).toBeVisible()
   const items = media.getByRole('button')
@@ -111,7 +128,7 @@ test('live pages cause no CSP violation', async ({ page, externalOrigins }) => {
   counts['gamePageImagesLoaded'] = await loadedImages(page)
 
   // BROWSE: the first genre in the default Sony order.
-  await page.goto('/browse')
+  await page.goto(`${origin}/browse`)
   const genre = page.getByLabel('Genre')
   await expect(genre.locator('option')).not.toHaveCount(1)
   await genre.selectOption({ index: 1 })

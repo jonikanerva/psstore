@@ -5,13 +5,16 @@
 // variables are set empty, so the critic score is off. The browser loads
 // Sony's real images and videos, and the shared fixture fails the run on any
 // CSP violation. `mise run build` makes the server and the client first.
+//
+// `live/server.ts` starts the server on a free port and prints the address,
+// so two live checks on one machine do not collide (#191). `webServer.wait`
+// stores the port as the environment variable `PSSTORE_LIVE_PORT`;
+// `live/csp.live.spec.ts` reads it in the worker and uses absolute URLs.
 import { defineConfig, devices } from '@playwright/test'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const PORT = 47321
-const URL = `http://127.0.0.1:${String(PORT)}`
 
 export default defineConfig({
   testDir: './live',
@@ -25,7 +28,6 @@ export default defineConfig({
   expect: { timeout: 30_000 },
   use: {
     ...devices['Desktop Chrome'],
-    baseURL: URL,
     locale: 'en-GB',
     timezoneId: 'Europe/Helsinki',
     serviceWorkers: 'block',
@@ -35,11 +37,15 @@ export default defineConfig({
     name: 'live',
     // The server reads the client build from `web/build` under its working
     // directory.
-    command: './target/release/psstore-server',
+    command: `"${process.execPath}" e2e/live/server.ts ./target/release/psstore-server`,
     cwd: ROOT,
-    url: `${URL}/healthz`,
+    // The capture group name in upper case is the environment variable name.
+    // The line end after the digits stops a match on a partly received port.
+    wait: {
+      stdout:
+        /live server listening on http:\/\/127\.0\.0\.1:(?<psstore_live_port>[0-9]+)\r?\n/,
+    },
     env: {
-      PORT: String(PORT),
       IGDB_CLIENT_ID: '',
       IGDB_CLIENT_SECRET: '',
       PSSTORE_LOG_FORMAT: 'text',
