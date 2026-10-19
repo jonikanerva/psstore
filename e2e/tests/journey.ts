@@ -8,7 +8,12 @@
 import { test as base } from './support.js'
 import { serverUrl, type TestServer } from './servers.js'
 
-export { cardIds, expect, expectNoAxeViolations } from './support.js'
+export {
+  cardIds,
+  expect,
+  expectNoAxeViolations,
+  resultsStatus,
+} from './support.js'
 
 export const test = base.extend<{ testServer: TestServer }>({
   testServer: ['healthy', { option: true }],

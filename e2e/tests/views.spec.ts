@@ -1,5 +1,11 @@
 // The list views: NEW, UPCOMING, DISCOUNTED, MONTHLY, and BROWSE.
-import { cardIds, expect, expectNoAxeViolations, test } from './journey.js'
+import {
+  cardIds,
+  expect,
+  expectNoAxeViolations,
+  resultsStatus,
+  test,
+} from './journey.js'
 import { productId } from './servers.js'
 
 test('the site opens on NEW with the newest game first', async ({ page }) => {
@@ -81,6 +87,20 @@ test('BROWSE loads one genre in one order across two pages', async ({
   await expect(cards.first()).toContainText('Action Sample 70')
   await expectNoAxeViolations(page)
 
+  // The empty status region stays in the accessibility tree, so a later
+  // status is announced (#170). It takes no place in the layout: one flex
+  // gap of 8 px separates the heading and the grid.
+  const status = resultsStatus(page)
+  await expect(status).toBeAttached()
+  await expect(status).toBeEmpty()
+  const heading = await page.locator('.search-results--heading').boundingBox()
+  const grid = await page.locator('.games--content').boundingBox()
+  expect(heading).not.toBeNull()
+  expect(grid).not.toBeNull()
+  if (heading !== null && grid !== null) {
+    expect(grid.y - (heading.y + heading.height)).toBeCloseTo(8, 0)
+  }
+
   // The genre has 70 games and a page has 60, so scrolling to the end of
   // the grid loads the second page.
   const secondPage = page.waitForRequest(
@@ -99,8 +119,6 @@ test('BROWSE shows the empty state of a genre without games', async ({
 }) => {
   await page.goto('/browse?genre=PUZZLE&order=best-selling')
 
-  await expect(page.getByRole('status')).toHaveText(
-    'No PS5 games found in Puzzle',
-  )
+  await expect(resultsStatus(page)).toHaveText('No PS5 games found in Puzzle')
   await expectNoAxeViolations(page)
 })

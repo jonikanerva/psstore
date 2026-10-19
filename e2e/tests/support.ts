@@ -13,7 +13,7 @@
 // The named export: the package types describe a CommonJS module, so its
 // default export is not the class under NodeNext.
 import { AxeBuilder } from '@axe-core/playwright'
-import { test as base, expect, type Page } from '@playwright/test'
+import { test as base, expect, type Locator, type Page } from '@playwright/test'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -150,6 +150,12 @@ export const expectNoAxeViolations = async (page: Page): Promise<void> => {
   }))
   expect(violations, `axe violations on ${page.url()}`).toEqual([])
 }
+
+// The status region of search and BROWSE. It stays in the accessibility
+// tree while it is empty (#170), so the spinner can be a second status on the
+// page at the same time.
+export const resultsStatus = (page: Page): Locator =>
+  page.getByRole('status').and(page.locator('.search-results--status'))
 
 // The ids of the game cards in screen order.
 export const cardIds = (page: Page): Promise<string[]> =>
