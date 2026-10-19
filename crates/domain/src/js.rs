@@ -2,9 +2,12 @@
 //! `Date.prototype.toISOString`, `String.prototype.trim`, and
 //! `localeCompare(…, 'en')`.
 //!
-//! The API output must be the same as on the TypeScript server, so these
-//! functions follow the V8 behaviour that was observed with Node 24. Each
-//! function documents the inputs that it does not port.
+//! These functions follow the V8 behaviour that was observed with Node 24.
+//! So the list rules, the sort order, the trim of ids and query values, and
+//! the IGDB match give the results of the TypeScript server. The date text on
+//! the wire differs from the TypeScript server on purpose: every Sony date is
+//! in the `toISOString` form (#177). Each function documents the inputs that
+//! it does not port.
 
 use std::cmp::Ordering;
 
