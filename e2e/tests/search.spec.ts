@@ -1,6 +1,6 @@
 // The search field: the name filter of the open list and the search of all
 // PS5 games.
-import { cardIds, expect, expectNoAxeViolations, test } from './support.js'
+import { cardIds, expect, expectNoAxeViolations, test } from './journey.js'
 import { productId } from './servers.js'
 
 test('the search field filters the open list by name', async ({ page }) => {

@@ -1,5 +1,5 @@
 // The list views: NEW, UPCOMING, DISCOUNTED, MONTHLY, and BROWSE.
-import { cardIds, expect, expectNoAxeViolations, test } from './support.js'
+import { cardIds, expect, expectNoAxeViolations, test } from './journey.js'
 import { productId } from './servers.js'
 
 test('the site opens on NEW with the newest game first', async ({ page }) => {

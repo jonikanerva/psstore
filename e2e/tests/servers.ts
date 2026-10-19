@@ -1,12 +1,35 @@
 // The test servers that `playwright.config.ts` starts. Both run the release
 // build of `crates/server/examples/e2e_server.rs` over synthetic data.
-export const HEALTHY_PORT = 47311
-export const OUTAGE_PORT = 47312
+//
+// Each server binds a free port that the operating system chooses, so
+// parallel runs on one machine do not collide. Playwright reads the port
+// from the output line of the server and puts it in an environment
+// variable of the runner. The workers start after the servers, so they
+// inherit the variables. The runner itself loads this module before the
+// servers start, so call `serverUrl` only in a test or a fixture.
 
-// Every view has data.
-export const HEALTHY_URL = `http://127.0.0.1:${String(HEALTHY_PORT)}`
-// Every store lookup fails like an upstream outage (502 or 503).
-export const OUTAGE_URL = `http://127.0.0.1:${String(OUTAGE_PORT)}`
+// `healthy`: every view has data. `outage`: every store lookup fails like
+// an upstream outage (502 or 503).
+export type TestServer = 'healthy' | 'outage'
+
+// The environment variable of each server port. Playwright stores a named
+// capture group of `webServer.wait` in upper case.
+export const PORT_VARIABLE = {
+  healthy: 'PSSTORE_E2E_HEALTHY_PORT',
+  outage: 'PSSTORE_E2E_OUTAGE_PORT',
+} as const satisfies Record<TestServer, string>
+
+// The origin of a test server. It fails when the port is not known, so a
+// test never navigates to a wrong address.
+export const serverUrl = (server: TestServer): string => {
+  const port = process.env[PORT_VARIABLE[server]]
+  if (port === undefined || !/^[0-9]+$/.test(port)) {
+    throw new Error(
+      `${PORT_VARIABLE[server]} is not set: run the journeys with playwright.config.ts`,
+    )
+  }
+  return `http://127.0.0.1:${port}`
+}
 
 // The only NPSSO that the test server accepts. It is synthetic and has 32
 // characters, so it is no real NPSSO.

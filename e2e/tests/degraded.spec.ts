@@ -1,7 +1,7 @@
 // The degraded state (#164): the browser keeps a saved list, and the refresh
 // of that list fails. The view keeps the list and shows one short note.
-import { cardIds, expect, expectNoAxeViolations, test } from './support.js'
-import { OUTAGE_URL, productId } from './servers.js'
+import { cardIds, expect, expectNoAxeViolations, test } from './journey.js'
+import { productId, serverUrl } from './servers.js'
 
 // The client marks a list stale after 5 minutes (`staleTime` in
 // `web/src/main.tsx`). The fake clock moves past that time, so the reload
@@ -36,7 +36,7 @@ test('NEW keeps the saved list and shows a note when the refresh fails', async (
   await page.route('**/api/games/new**', async (route) => {
     const url = new URL(route.request().url())
     const response = await route.fetch({
-      url: `${OUTAGE_URL}${url.pathname}${url.search}`,
+      url: `${serverUrl('outage')}${url.pathname}${url.search}`,
     })
     failures.push(response.status())
     await route.fulfill({ response })

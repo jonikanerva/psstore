@@ -1,9 +1,9 @@
 // The error states, against the test server whose store lookups all fail
 // like an upstream outage.
-import { expect, expectNoAxeViolations, test } from './support.js'
-import { OUTAGE_URL, SYNTHETIC_NPSSO, productId } from './servers.js'
+import { expect, expectNoAxeViolations, test } from './journey.js'
+import { SYNTHETIC_NPSSO, productId } from './servers.js'
 
-test.use({ baseURL: OUTAGE_URL })
+test.use({ testServer: 'outage' })
 
 // NEW answers 502 (`upstream_unavailable`) and UPCOMING answers 503
 // (`upstream_rate_limited`). The client retries once, then shows the error.

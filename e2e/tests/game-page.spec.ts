@@ -1,7 +1,7 @@
 // The game page: both prices, the critic score, the media, and the
 // not-found state.
 import type { Locator } from '@playwright/test'
-import { expect, expectNoAxeViolations, test } from './support.js'
+import { expect, expectNoAxeViolations, test } from './journey.js'
 import { MISSING_GAME_ID, productId } from './servers.js'
 
 // The computed text colour of the first element of a locator.

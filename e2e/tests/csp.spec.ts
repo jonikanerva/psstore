@@ -3,7 +3,7 @@
 // the policy must block. The shared fixture records the violation and the
 // console error of the browser; the test checks them and then clears them, so
 // any other problem still fails the test.
-import { expect, test } from './support.js'
+import { expect, test } from './journey.js'
 
 interface BlockedCase {
   readonly name: string

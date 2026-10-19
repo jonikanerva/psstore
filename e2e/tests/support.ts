@@ -39,12 +39,12 @@ interface Violation {
   readonly sourceFile: string
 }
 
-interface GuardOptions {
+export interface GuardOptions {
   // True: Sony's image and video hosts answer from local files.
   readonly routeSonyMedia: boolean
 }
 
-interface GuardFixtures {
+export interface GuardFixtures {
   // The problems of the test so far; the fixture fails the test on any.
   readonly problems: string[]
   // Every external origin that the page requested.

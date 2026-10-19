@@ -98,8 +98,10 @@ description = "Nextest, the doc tests, Vitest in every TypeScript package, and t
 run = [
   "cargo nextest run --workspace --locked",
   "cargo test --doc --workspace --locked",
-  # The e2e package has no `test` script, so this runs Vitest only.
-  "pnpm --recursive --if-present run test",
+  # The e2e package has no `test` script, so this runs Vitest only. One
+  # package at a time, so one run does not start the Vitest workers of two
+  # packages on the same cores (#178).
+  "pnpm --recursive --if-present --workspace-concurrency=1 run test",
   { task = "test:e2e" },
 ]
 
