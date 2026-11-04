@@ -88,7 +88,15 @@ const LIST_TTL: Duration = Duration::from_secs(30);
 /// the list for a few seconds only, and one shared lookup per key still
 /// bounds the load on Sony during a long outage.
 const LIST_FAILURE_TTL: Duration = Duration::from_secs(5);
+/// The lenient product detail of a success.
 const DETAIL_TTL: Duration = Duration::from_hours(6);
+/// The lenient product detail of a failure (issue #203). The caller gets an
+/// empty detail in both cases, but a failure lives only as long as the other
+/// detail and price failures, so a short Sony outage does not hide the
+/// genres, the description, and the publisher of a card for 6 hours. One
+/// shared lookup per key still bounds the load on Sony during a long outage
+/// to one lookup per product in each 30 seconds.
+const DETAIL_FAILURE_TTL: Duration = Duration::from_secs(30);
 const PRICE_TTL: Duration = Duration::from_mins(10);
 const PRICE_FAILURE_TTL: Duration = Duration::from_secs(30);
 /// The detail of the product-id fallback and of BROWSE. Sony answers an
@@ -170,8 +178,10 @@ struct Inner {
     clock: Arc<dyn Clock>,
     /// Concepts per grid list.
     concepts: TtlCache<SonyFeature, Arc<Vec<Concept>>, UpstreamError>,
-    /// Product detail for the list enrichment and the game page. A failed
-    /// lookup is an empty detail, so the lists never fail on one product.
+    /// Product detail for the list enrichment and the game page. The cache
+    /// keeps a failure for a short time only; `Inner::detail` gives the
+    /// caller an empty detail for a failure, so the lists never fail on one
+    /// product.
     details: TtlCache<ProductId, Arc<ProductDetail>, UpstreamError>,
     /// The PS Plus offer and the standard price, read by the game page only.
     prices: TtlCache<ProductId, ProductPrice, UpstreamError>,
@@ -200,7 +210,10 @@ impl GamesService {
                     CONCEPTS_CAPACITY,
                     ttl_by_outcome(LIST_TTL, LIST_FAILURE_TTL),
                 ),
-                details: TtlCache::with_fixed_ttl(DETAIL_CAPACITY, DETAIL_TTL),
+                details: TtlCache::new(
+                    DETAIL_CAPACITY,
+                    ttl_by_outcome(DETAIL_TTL, DETAIL_FAILURE_TTL),
+                ),
                 prices: TtlCache::new(PRICE_CAPACITY, ttl_by_outcome(PRICE_TTL, PRICE_FAILURE_TTL)),
                 strict_details: TtlCache::new(
                     STRICT_DETAIL_CAPACITY,
@@ -259,13 +272,15 @@ impl Inner {
         outcome
     }
 
-    /// The lenient product detail: a failed lookup is an empty detail.
+    /// The lenient product detail: a failed lookup is an empty detail for
+    /// the caller. The failure itself stays a failure in the cache, so the
+    /// cache keeps it for `DETAIL_FAILURE_TTL` only.
     async fn detail(&self, product_id: &ProductId) -> Arc<ProductDetail> {
         let sony = Arc::clone(&self.sony);
         let id = product_id.clone();
         self.details
             .get_with(product_id.clone(), move || async move {
-                Ok(Arc::new(sony.product_detail(id).await.unwrap_or_default()))
+                sony.product_detail(id).await.map(Arc::new)
             })
             .await
             .unwrap_or_default()
@@ -368,8 +383,8 @@ impl Inner {
     }
 
     /// DISCOUNTED keeps full-game SKUs only, newest first. A concept with an
-    /// unknown classification is dropped, also when its detail lookup failed
-    /// for the lifetime of the detail cache: a non-game SKU never leaks in.
+    /// unknown classification is dropped, also while the detail cache keeps
+    /// a failed lookup of it: a non-game SKU never leaks in.
     async fn discounted_games(&self, page: Page) -> Result<PageResult, UpstreamError> {
         let concepts = self.feature_concepts(SonyFeature::Discounted).await?;
         let games = map_concepts_to_games(&concepts, self.now_ms());
