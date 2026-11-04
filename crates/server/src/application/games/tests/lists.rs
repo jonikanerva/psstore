@@ -831,11 +831,56 @@ async fn a_product_detail_is_cached_for_6_hours() {
     });
     svc.new_games(page(0, 60)).await.unwrap();
     assert_eq!(fake.calls().details.len(), 1);
-    tokio::time::advance(Duration::from_secs(30)).await;
+    tokio::time::advance(Duration::from_hours(6) - Duration::from_millis(1)).await;
     svc.new_games(page(0, 60)).await.unwrap();
     assert_eq!(fake.calls().details.len(), 1);
-    tokio::time::advance(Duration::from_hours(6)).await;
+    tokio::time::advance(Duration::from_millis(1)).await;
     svc.new_games(page(0, 60)).await.unwrap();
+    assert_eq!(fake.calls().details.len(), 2);
+}
+
+/// Issue #203: a failed detail lookup gives the list an empty detail, but the
+/// cache keeps the failure for 30 seconds only. Before the fix the cache kept
+/// the empty detail for 6 hours, so the card stayed out of DISCOUNTED (no
+/// classification) for 6 hours after a short Sony failure.
+#[tokio::test(start_paused = true)]
+async fn a_failed_product_detail_is_cached_for_30_seconds() {
+    let failing = Arc::new(std::sync::atomic::AtomicBool::new(true));
+    let flag = Arc::clone(&failing);
+    let (svc, fake) = service(FakeSony {
+        concepts: grids(vec![], vec![], vec![priced_concept(1, "deal")]),
+        detail: Box::new(move |_| {
+            if flag.load(Ordering::SeqCst) {
+                Err(unavailable())
+            } else {
+                Ok(ProductDetail {
+                    genres: vec!["Action".into()],
+                    ..detail_at(Some(PAST_DATE))
+                })
+            }
+        }),
+        ..FakeSony::default()
+    });
+    // The list stays a success: the failed product is only left out.
+    let deals = svc.discounted_games(page(0, 60)).await.unwrap();
+    assert_eq!(names(&deals), Vec::<&str>::new());
+    assert_eq!(fake.calls().details.len(), 1);
+    failing.store(false, Ordering::SeqCst);
+    tokio::time::advance(Duration::from_millis(29_999)).await;
+    let deals = svc.discounted_games(page(0, 60)).await.unwrap();
+    assert_eq!(names(&deals), Vec::<&str>::new());
+    assert_eq!(fake.calls().details.len(), 1);
+    // The list cache of DISCOUNTED also lives 30 seconds, so the concepts
+    // and the detail are read again together.
+    tokio::time::advance(Duration::from_millis(1)).await;
+    assert_eq!(
+        names(&svc.discounted_games(page(0, 60)).await.unwrap()),
+        ["deal"]
+    );
+    assert_eq!(fake.calls().details.len(), 2);
+    // The success then stays for 6 hours.
+    tokio::time::advance(Duration::from_hours(6) - Duration::from_millis(1)).await;
+    svc.discounted_games(page(0, 60)).await.unwrap();
     assert_eq!(fake.calls().details.len(), 2);
 }
 
