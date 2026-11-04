@@ -731,7 +731,7 @@ async fn the_list_is_cached_for_30_seconds() {
 }
 
 #[tokio::test(start_paused = true)]
-async fn a_failed_list_is_pinned_for_30_seconds() {
+async fn a_failed_list_is_pinned_for_5_seconds() {
     let attempts = Arc::new(AtomicUsize::new(0));
     let seen = Arc::clone(&attempts);
     let (svc, _) = service(FakeSony {
@@ -748,7 +748,7 @@ async fn a_failed_list_is_pinned_for_30_seconds() {
         ..FakeSony::default()
     });
     assert!(svc.new_games(page(0, 60)).await.is_err());
-    tokio::time::advance(Duration::from_millis(29_999)).await;
+    tokio::time::advance(Duration::from_millis(4_999)).await;
     assert!(svc.new_games(page(0, 60)).await.is_err());
     assert_eq!(attempts.load(Ordering::SeqCst), 1);
     tokio::time::advance(Duration::from_millis(1)).await;
@@ -778,9 +778,9 @@ async fn list(svc: &GamesService, name: &str) -> Result<PageResult, UpstreamErro
 }
 
 /// A drift of one grid fails every list that reads it, also when the other
-/// release grid is valid. The failure stays a failure for the list lifetime
-/// and is never cached as an empty list; a valid grid after the lifetime
-/// gives games again.
+/// release grid is valid. The failure stays a failure for the failure
+/// lifetime of 5 seconds and is never cached as an empty list; a valid grid
+/// after the lifetime gives games again.
 #[tokio::test(start_paused = true)]
 async fn a_drifted_grid_fails_its_lists_and_is_never_cached_as_empty() {
     for drifted in [
@@ -809,7 +809,7 @@ async fn a_drifted_grid_fails_its_lists_and_is_never_cached_as_empty() {
         for name in lists_of(drifted) {
             assert_eq!(list(&svc, name).await, Err(grid_drift()), "{name}");
         }
-        tokio::time::advance(Duration::from_millis(29_999)).await;
+        tokio::time::advance(Duration::from_millis(4_999)).await;
         for name in lists_of(drifted) {
             assert_eq!(list(&svc, name).await, Err(grid_drift()), "{name}");
         }
