@@ -527,3 +527,95 @@ async fn the_browse_and_genre_requests_carry_their_variables() {
             .contains(r#""pageArgs":{"size":0,"offset":0},"sortBy":null"#)
     );
 }
+
+/// Sony's answer when its backend fails (observed 2026-11-04, shortened):
+/// HTTP 200, a `statusCode` 500 error, and a `null` node.
+fn sony_server_error(node: &str) -> Value {
+    json!({
+        "errors": [{
+            "message": "",
+            "path": [node],
+            "extensions": {
+                "type": "NimbusNormalizedError",
+                "error": {"reason": "internal_error", "source": "api"},
+                "statusCode": 500
+            },
+            "type": "NimbusNormalizedError",
+            "statusCode": 500
+        }],
+        "data": {node: null}
+    })
+}
+
+/// A server error inside HTTP 200 is retried like an HTTP 5xx, so one
+/// failed Sony answer does not fail the list.
+#[tokio::test]
+async fn a_graphql_server_error_is_retried_once() {
+    let valid = json!({"data": {"categoryGridRetrieve": {"concepts": []}}});
+    let (client, upstream) = serve(vec![
+        json_reply(&sony_server_error("categoryGridRetrieve")),
+        json_reply(&valid),
+    ])
+    .await;
+    let logs = CapturedLogs::default();
+    let _guard = logs.install();
+    let concepts = client.concepts_by_feature(SonyFeature::New, 10, 0).await;
+    assert_eq!(concepts, Ok(vec![]));
+    assert_eq!(upstream.seen().len(), 2);
+    assert!(logs.lines().is_empty(), "{}", logs.text());
+}
+
+/// A server error that remains after the retry is an outage with its own
+/// log event. It is not logged as drift, because the contract did not
+/// change.
+#[tokio::test]
+async fn a_lasting_graphql_server_error_is_unavailable_and_not_drift() {
+    let expected = Err(UpstreamError::unavailable(
+        "Sony upstream reported a server error",
+    ));
+    let (client, upstream) =
+        serve(vec![json_reply(&sony_server_error("categoryGridRetrieve"))]).await;
+    let logs = CapturedLogs::default();
+    let _guard = logs.install();
+    assert_eq!(
+        client
+            .concepts_by_feature(SonyFeature::New, 10, 0)
+            .await
+            .map(|_| ()),
+        expected
+    );
+    assert_eq!(upstream.seen().len(), 2, "one retry");
+    let line = log_with(&logs, "sony.graphql.serverError").unwrap();
+    assert_eq!(line["level"], "WARN");
+    assert_eq!(line["operation"], "categoryGridRetrieve");
+    assert!(log_with(&logs, "sony.categoryGrid.drift").is_none());
+
+    let (client, upstream) = serve(vec![json_reply(&sony_server_error("productRetrieve"))]).await;
+    assert_eq!(
+        client
+            .product_detail(SKU.parse().unwrap())
+            .await
+            .map(|_| ()),
+        expected
+    );
+    assert_eq!(upstream.seen().len(), 2);
+}
+
+/// Sony answers an unknown product with `statusCode` 404 inside HTTP 200
+/// (observed 2026-11-04). That answer is not retried and keeps its
+/// previous outcome.
+#[tokio::test]
+async fn a_graphql_not_found_is_not_retried() {
+    let not_found = json!({
+        "errors": [{
+            "message": "Product not available",
+            "path": ["productRetrieve"],
+            "extensions": {"statusCode": 404},
+            "statusCode": 404
+        }],
+        "data": {"productRetrieve": null}
+    });
+    let (client, upstream) = serve(vec![json_reply(&not_found)]).await;
+    assert!(client.product_detail(SKU.parse().unwrap()).await.is_ok());
+    assert_eq!(upstream.seen().len(), 1);
+}

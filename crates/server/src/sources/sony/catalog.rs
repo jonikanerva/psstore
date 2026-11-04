@@ -42,7 +42,7 @@ use crate::domain::game::Genre;
 use crate::domain::id::ProductId;
 use crate::domain::listing::narrow_search_entries;
 use crate::sources::sony::contract::SonyContract;
-use crate::sources::sony::graphql_errors::is_persisted_query_rotation;
+use crate::sources::sony::graphql_errors::{is_graphql_server_error, is_persisted_query_rotation};
 use crate::sources::transport::{self, Attempts, Redirects, TransportError};
 
 /// The deadline of one Sony request attempt.
@@ -119,7 +119,7 @@ impl SonyCatalogClient {
         let query = request::graphql_query(operation, hash, &variables)?;
         let url = format!("{}?{query}", self.graphql_url);
         let locale = locale_override(&self.contract.locale);
-        let answer = transport::send(
+        let answer = transport::send_retrying(
             || {
                 self.http
                     .get(url.as_str())
@@ -129,6 +129,7 @@ impl SonyCatalogClient {
             },
             self.attempts,
             Redirects::Follow,
+            |answer| reports_server_error(&answer.body),
         )
         .await
         .map_err(upstream_error)?;
@@ -145,6 +146,18 @@ impl SonyCatalogClient {
         let json = self.graphql(operation, hash, variables).await?;
         if is_persisted_query_rotation(&json) {
             return Err(rotated(operation));
+        }
+        // A server error after the retry is an outage, not drift: the
+        // contract did not change (2026-11-04).
+        if is_graphql_server_error(&json) {
+            tracing::warn!(
+                event = "sony.graphql.serverError",
+                operation,
+                "sony graphql server error"
+            );
+            return Err(UpstreamError::unavailable(
+                "Sony upstream reported a server error",
+            ));
         }
         Ok(json)
     }
@@ -467,6 +480,16 @@ fn upstream_error(error: TransportError) -> UpstreamError {
         TransportError::Failed => UpstreamError::unavailable("Sony upstream unavailable"),
     }
 }
+
+/// True when an HTTP 2xx body reports a Sony server error. Only a body
+/// with an `errors` key is parsed, so a normal answer is not parsed twice.
+fn reports_server_error(body: &[u8]) -> bool {
+    body.windows(ERRORS_KEY.len())
+        .any(|window| window == ERRORS_KEY)
+        && serde_json::from_slice::<Value>(body).is_ok_and(|json| is_graphql_server_error(&json))
+}
+
+const ERRORS_KEY: &[u8] = b"\"errors\"";
 
 /// The body as JSON. A body that is not JSON is an outage.
 fn json_body(body: &[u8]) -> Result<Value, UpstreamError> {

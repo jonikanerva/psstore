@@ -1,9 +1,10 @@
-//! The persisted-query rotation in a Sony GraphQL answer.
+//! The errors that Sony reports inside a GraphQL answer with HTTP 200.
 //!
 //! Sony answers HTTP 200 also when it no longer knows a persisted-query hash.
 //! The body then has an Apollo-style top-level `errors` array with the code
 //! `PERSISTED_QUERY_NOT_FOUND`. The adapters inspect each decoded body for it.
-//! Port of `server/src/sony/graphqlErrors.ts`.
+//! Port of `server/src/sony/graphqlErrors.ts`. Sony also answers HTTP 200
+//! when its backend fails ([`is_graphql_server_error`]).
 
 use serde_json::{Map, Value};
 
@@ -42,6 +43,46 @@ pub fn is_persisted_query_rotation(body: &Value) -> bool {
                 .flatten()
                 .any(|text| text.to_lowercase().contains("persistedquerynotfound"))
     })
+}
+
+/// True when Sony reports a server error inside an HTTP 200 answer.
+///
+/// Sony wraps an internal failure of its backend in a GraphQL answer with
+/// HTTP 200: an `errors` element has `statusCode` 500 to 599 (at the top of
+/// the element or in its `extensions`), and the requested node is `null`
+/// (observed 2026-11-04, `categoryGridRetrieve`). Such an answer is an
+/// outage, not a contract change, so the client retries it like an HTTP 5xx.
+///
+/// The rule needs both parts. A server error next to a non-null node is a
+/// partial answer, and the decoder keeps it. An unknown product has
+/// `statusCode` 404, so a missing game stays a missing game.
+#[must_use]
+pub fn is_graphql_server_error(body: &Value) -> bool {
+    let Some(root) = body.as_object() else {
+        return false;
+    };
+    let Some(Value::Array(errors)) = root.get("errors") else {
+        return false;
+    };
+    let no_data = match root.get("data") {
+        None | Some(Value::Null) => true,
+        Some(Value::Object(fields)) => fields.values().all(Value::is_null),
+        Some(_) => false,
+    };
+    no_data && errors.iter().any(has_server_status)
+}
+
+/// True when one error element has a 5xx `statusCode`.
+fn has_server_status(error: &Value) -> bool {
+    let Some(error) = error.as_object() else {
+        return false;
+    };
+    let extensions = error.get("extensions").and_then(Value::as_object);
+    [Some(error), extensions]
+        .into_iter()
+        .flatten()
+        .filter_map(|object| object.get("statusCode").and_then(Value::as_u64))
+        .any(|status| (500..600).contains(&status))
 }
 
 /// The message and the code of one error, or `None` for a wrong shape.
@@ -119,6 +160,78 @@ mod tests {
             json!([{"message": "PersistedQueryNotFound"}]),
         ] {
             assert!(!is_persisted_query_rotation(&body), "{body}");
+        }
+    }
+
+    /// The shape of Sony's answer of 2026-11-04, shortened: HTTP 200, a
+    /// `statusCode` 500 in the element and in its `extensions`, and a `null`
+    /// grid node.
+    fn sony_internal_error(data: &Value) -> Value {
+        json!({
+            "errors": [{
+                "message": "",
+                "path": ["categoryGridRetrieve"],
+                "extensions": {
+                    "type": "NimbusNormalizedError",
+                    "error": {"code": 3_165_954, "reason": "internal_error", "source": "api"},
+                    "statusCode": 500,
+                    "apiName": "getCategory"
+                },
+                "type": "NimbusNormalizedError",
+                "statusCode": 500
+            }],
+            "data": data
+        })
+    }
+
+    #[test]
+    fn a_5xx_error_without_data_is_a_server_error() {
+        for data in [
+            json!({"categoryGridRetrieve": null}),
+            json!(null),
+            json!({}),
+        ] {
+            assert!(
+                is_graphql_server_error(&sony_internal_error(&data)),
+                "{data}"
+            );
+        }
+        assert!(is_graphql_server_error(
+            &json!({"errors": [{"extensions": {"statusCode": 503}}]})
+        ));
+        assert!(is_graphql_server_error(
+            &json!({"errors": [{"statusCode": 599}], "data": {"a": null, "b": null}})
+        ));
+    }
+
+    #[test]
+    fn a_partial_answer_is_no_server_error() {
+        let body = sony_internal_error(&json!({"categoryGridRetrieve": {"concepts": []}}));
+        assert!(!is_graphql_server_error(&body));
+        let body = json!({"errors": [{"statusCode": 500}], "data": {"a": null, "b": {}}});
+        assert!(!is_graphql_server_error(&body));
+    }
+
+    /// Sony answers an unknown product id with `statusCode` 404 (observed
+    /// 2026-11-04), so a missing game must not read as an outage.
+    #[test]
+    fn other_statuses_and_shapes_are_no_server_error() {
+        for body in [
+            json!({"errors": [{"statusCode": 404, "extensions": {"statusCode": 404}}],
+                   "data": {"productRetrieve": null}}),
+            json!({"errors": [{"statusCode": 499}, {"statusCode": 600}]}),
+            json!({"errors": [{"statusCode": "500"}]}),
+            json!({"errors": [{"statusCode": -500}]}),
+            json!({"errors": [{"message": "Internal"}]}),
+            json!({"errors": []}),
+            json!({"errors": [null, "x", 5]}),
+            json!({"errors": {"statusCode": 500}}),
+            json!({"errors": [{"statusCode": 500}], "data": []}),
+            json!({"data": {"categoryGridRetrieve": null}}),
+            json!(null),
+            json!([{"statusCode": 500}]),
+        ] {
+            assert!(!is_graphql_server_error(&body), "{body}");
         }
     }
 

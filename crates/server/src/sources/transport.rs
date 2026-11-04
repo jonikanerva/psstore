@@ -106,6 +106,23 @@ pub async fn send(
     attempts: Attempts,
     redirects: Redirects,
 ) -> Result<Answer, TransportError> {
+    send_retrying(build, attempts, redirects, |_| false).await
+}
+
+/// [`send`] that also retries a successful answer for which `is_failure`
+/// is true, within the same budget. Some services report a server error
+/// inside an HTTP 200 answer. After the last attempt such an answer is
+/// returned, so the caller classifies it.
+///
+/// # Errors
+///
+/// The [`TransportError`] of the last attempt.
+pub async fn send_retrying(
+    build: impl Fn() -> reqwest::RequestBuilder,
+    attempts: Attempts,
+    redirects: Redirects,
+    is_failure: impl Fn(&Answer) -> bool,
+) -> Result<Answer, TransportError> {
     let mut attempt = 0;
     let mut last = TransportError::Failed;
     while attempt <= attempts.retries {
@@ -128,6 +145,10 @@ pub async fn send(
         }
         let manual_redirect = redirects == Redirects::Manual && (300..400).contains(&answer.status);
         if (200..300).contains(&answer.status) || manual_redirect {
+            if attempt < attempts.retries && is_failure(&answer) {
+                attempt += 1;
+                continue;
+            }
             return Ok(answer);
         }
         if (400..500).contains(&answer.status) {
