@@ -17,12 +17,14 @@
 //! page). They never drive the NEW enrichment, which fans out to hundreds of
 //! product lookups.
 //!
-//! Upstream flakiness (#204): Sony sometimes fails a request at the transport
-//! level, and Sony sometimes answers a search with no results at all. Each
-//! lookup therefore gets at most [`ATTEMPTS`] attempts (see [`live`]). Only a
-//! transport failure and an empty search answer start a new attempt. A drift,
-//! a rotated query, a rate limit, or an error status fails at once. Each new
-//! attempt prints a `[test:live] RETRY` line, so the run output shows it. In
+//! Upstream flakiness (#204, #208): Sony sometimes fails a request at the
+//! transport level, Sony sometimes reports a GraphQL server error inside
+//! HTTP 200, and Sony sometimes answers a search with no results at all. Each
+//! lookup therefore gets at most [`ATTEMPTS`] attempts (see [`live`]). Only an
+//! outage (a transport failure or a GraphQL server error) and an empty search
+//! answer start a new attempt. A drift, a rotated query, a rate limit, or an
+//! HTTP error status fails at once. Each new attempt prints a
+//! `[test:live] RETRY` line with its reason, so the run output shows it. In
 //! the worst case, the load is [`ATTEMPTS`] times the fence above.
 
 #![expect(
@@ -67,16 +69,33 @@ const PAUSE: Duration = Duration::from_secs(2);
 /// changes, no lookup gets a new attempt, so a failure stays visible.
 const TRANSPORT_FAILURE: &str = "Sony upstream unavailable";
 
-/// True only for a transport failure. Every other failure is a possible
-/// contract drift and must fail the check at once.
-fn is_transport_failure(error: &UpstreamError) -> bool {
-    matches!(error, UpstreamError::Unavailable { message } if message == TRANSPORT_FAILURE)
+/// The fixed message of a GraphQL server error that remains after the
+/// retries of the transport: Sony answers HTTP 200 with an `errors` element
+/// of `statusCode` 500 to 599 (#200). `graphql_checked` in
+/// `crates/server/src/sources/sony/catalog.rs` sets this text, and
+/// `a_lasting_graphql_server_error_is_unavailable_and_not_drift` pins it
+/// there. STACK.md §2.3 classifies this answer as an outage, not drift
+/// (#208). If that text changes, no lookup gets a new attempt for it, so a
+/// failure stays visible.
+const SERVER_ERROR: &str = "Sony upstream reported a server error";
+
+/// The reason of a new attempt for an outage, or `None`. Only the exact
+/// fixed texts of an outage match. Every other failure is a possible
+/// contract drift, a rotated query, or a rate limit, and must fail the check
+/// at once.
+fn outage_reason(error: &UpstreamError) -> Option<&'static str> {
+    match error {
+        UpstreamError::Unavailable { message } if message == TRANSPORT_FAILURE => Some("transport"),
+        UpstreamError::Unavailable { message } if message == SERVER_ERROR => Some("server"),
+        _ => None,
+    }
 }
 
 /// Runs one live lookup with at most [`ATTEMPTS`] attempts. A new attempt
-/// starts only after a transport failure, or after a value that `is_empty`
-/// accepts. After the last attempt, an empty value goes back to the caller,
-/// so the assertion of the check fails. Any other failure panics at once.
+/// starts only after an outage (see [`outage_reason`]), or after a value
+/// that `is_empty` accepts. After the last attempt, an empty value goes back
+/// to the caller, so the assertion of the check fails. Any other failure
+/// panics at once.
 #[expect(
     clippy::print_stdout,
     reason = "the RETRY line is part of the evidence of the live run"
@@ -91,8 +110,10 @@ async fn live<T>(
         let reason = match lookup().await {
             Ok(value) if attempt < ATTEMPTS && is_empty(&value) => "empty",
             Ok(value) => return value,
-            Err(error) if attempt < ATTEMPTS && is_transport_failure(&error) => "transport",
-            Err(error) => panic!("{label}: {error:?} (attempt {attempt}/{ATTEMPTS})"),
+            Err(error) => match outage_reason(&error) {
+                Some(reason) if attempt < ATTEMPTS => reason,
+                _ => panic!("{label}: {error:?} (attempt {attempt}/{ATTEMPTS})"),
+            },
         };
         println!(
             "[test:live] RETRY label={label} failedAttempt={attempt}/{ATTEMPTS} reason={reason}"
@@ -102,7 +123,7 @@ async fn live<T>(
     }
 }
 
-/// A live lookup that only a transport failure repeats.
+/// A live lookup that only an outage repeats.
 async fn live_once<T>(label: &str, lookup: impl AsyncFn() -> Result<T, UpstreamError>) -> T {
     live(label, lookup, |_| false).await
 }
@@ -111,7 +132,7 @@ async fn live_once<T>(label: &str, lookup: impl AsyncFn() -> Result<T, UpstreamE
 /// new attempt: Sony sometimes answers a known term with nothing (#204).
 /// `raw_count` counts the dropped elements too, so an element drift is never
 /// empty here and fails the check at once. An envelope drift is an error
-/// that is not a transport failure, so it also fails at once.
+/// that is not an outage, so it also fails at once.
 async fn search(term: &str) -> SearchPage {
     live(
         &format!("search:{term}"),
@@ -382,31 +403,53 @@ async fn the_service_serves_genres_monthly_and_a_game_page() {
 // The tests below check the attempt rule without network access, so
 // `mise run test` runs them.
 
+// The issue #208 named this test `only_a_transport_failure_gets_a_new_attempt`.
+// Since #208, a GraphQL server error is also an outage, so the name changed.
 #[test]
-fn only_a_transport_failure_gets_a_new_attempt() {
-    assert!(is_transport_failure(&UpstreamError::unavailable(
-        TRANSPORT_FAILURE
-    )));
+fn only_an_outage_gets_a_new_attempt() {
+    // The literal texts, not the constants, so a changed constant fails here.
+    assert_eq!(
+        outage_reason(&UpstreamError::unavailable("Sony upstream unavailable")),
+        Some("transport")
+    );
+    assert_eq!(
+        outage_reason(&UpstreamError::unavailable(
+            "Sony upstream reported a server error"
+        )),
+        Some("server")
+    );
     for drift in [
         "Sony search response has an unexpected shape",
         "Sony upstream returned a body that is not JSON",
         "Sony upstream returned 500",
         "Sony upstream returned 404",
         "Upstream unavailable",
+        "Sony upstream reported a server error.",
+        "sony upstream reported a server error",
+        "Upstream reported a server error",
     ] {
-        assert!(
-            !is_transport_failure(&UpstreamError::unavailable(drift)),
+        assert_eq!(
+            outage_reason(&UpstreamError::unavailable(drift)),
+            None,
             "{drift}"
         );
     }
-    assert!(!is_transport_failure(&UpstreamError::QueryRotated {
-        message: TRANSPORT_FAILURE.to_owned(),
-        operation_name: "getSearchResults".to_owned(),
-    }));
-    assert!(!is_transport_failure(&UpstreamError::RateLimited {
-        message: TRANSPORT_FAILURE.to_owned(),
-        retry_after_seconds: None,
-    }));
+    for message in [TRANSPORT_FAILURE, SERVER_ERROR] {
+        assert_eq!(
+            outage_reason(&UpstreamError::QueryRotated {
+                message: message.to_owned(),
+                operation_name: "getSearchResults".to_owned(),
+            }),
+            None
+        );
+        assert_eq!(
+            outage_reason(&UpstreamError::RateLimited {
+                message: message.to_owned(),
+                retry_after_seconds: None,
+            }),
+            None
+        );
+    }
 }
 
 #[tokio::test(start_paused = true)]
@@ -448,6 +491,29 @@ async fn an_empty_value_returns_after_the_last_attempt() {
 async fn a_transport_failure_fails_after_the_last_attempt() {
     let _: u32 = live_once("unit", async || {
         Err(UpstreamError::unavailable(TRANSPORT_FAILURE))
+    })
+    .await;
+}
+
+#[tokio::test(start_paused = true)]
+async fn a_graphql_server_error_gets_a_new_attempt() {
+    let calls = Cell::new(0_u32);
+    let value = live_once("unit", async || {
+        calls.set(calls.get() + 1);
+        match calls.get() {
+            1 => Err(UpstreamError::unavailable(SERVER_ERROR)),
+            _ => Ok(7_u32),
+        }
+    })
+    .await;
+    assert_eq!((value, calls.get()), (7, 2));
+}
+
+#[tokio::test(start_paused = true)]
+#[should_panic(expected = "attempt 3/3")]
+async fn a_graphql_server_error_fails_after_the_last_attempt() {
+    let _: u32 = live_once("unit", async || {
+        Err(UpstreamError::unavailable(SERVER_ERROR))
     })
     .await;
 }
