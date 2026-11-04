@@ -211,3 +211,59 @@ fn parses_only_delta_seconds_and_clamps_large_values() {
         assert_eq!(parse_retry_after_value(invalid, max), None, "{invalid}");
     }
 }
+
+/// A 2xx answer that the caller marks as a failure. The body length marks
+/// it here: a body of 3 bytes is a failure.
+async fn call_marking(addr: SocketAddr, retries: u32) -> Result<Answer, TransportError> {
+    let client = build_client(Redirects::Follow, false).unwrap();
+    let url = format!("http://{addr}/op");
+    send_retrying(
+        || client.get(&url),
+        Attempts {
+            timeout: Duration::from_millis(500),
+            retries,
+            retry_after_max: MAX,
+        },
+        Redirects::Follow,
+        |answer| answer.body.len() == 3,
+    )
+    .await
+}
+
+fn marked() -> Scripted {
+    Scripted {
+        body_bytes: 3,
+        ..answer(200)
+    }
+}
+
+#[tokio::test]
+async fn retries_a_marked_2xx_answer_within_the_budget() {
+    let (addr, script) = serve(vec![marked(), answer(200)]).await;
+    let outcome = call_marking(addr, 1).await.unwrap();
+    assert_eq!((outcome.status, outcome.body.len()), (200, 2));
+    assert_eq!(script.calls(), 2);
+}
+
+/// After the last attempt the marked answer goes back to the caller, which
+/// classifies it. The budget is shared with the 5xx retries.
+#[tokio::test]
+async fn returns_the_last_marked_answer_after_the_budget() {
+    let (addr, script) = serve(vec![marked(), marked(), answer(200)]).await;
+    let outcome = call_marking(addr, 1).await.unwrap();
+    assert_eq!(outcome.body.len(), 3);
+    assert_eq!(script.calls(), 2);
+
+    let (addr, script) = serve(vec![answer(500), marked(), answer(200)]).await;
+    let outcome = call_marking(addr, 1).await.unwrap();
+    assert_eq!(outcome.body.len(), 3);
+    assert_eq!(script.calls(), 2);
+}
+
+#[tokio::test]
+async fn send_never_retries_a_2xx_answer() {
+    let (addr, script) = serve(vec![marked(), answer(200)]).await;
+    let outcome = call(addr, 1, Redirects::Follow).await.unwrap();
+    assert_eq!(outcome.body.len(), 3);
+    assert_eq!(script.calls(), 1);
+}

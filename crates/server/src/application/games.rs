@@ -81,8 +81,12 @@ impl std::fmt::Debug for dyn SonyCatalog {
 /// in one request.
 const NEW_LIST_PAGE_SIZE: usize = 300;
 const LIST_PAGE_SIZE: usize = 120;
-/// The list cache lifetime, for a success and a failure alike.
+/// The list cache lifetime of a success.
 const LIST_TTL: Duration = Duration::from_secs(30);
+/// The list cache lifetime of a failure. A short failure of Sony then hides
+/// the list for a few seconds only, and one shared lookup per key still
+/// bounds the load on Sony during a long outage.
+const LIST_FAILURE_TTL: Duration = Duration::from_secs(5);
 const DETAIL_TTL: Duration = Duration::from_hours(6);
 const PRICE_TTL: Duration = Duration::from_mins(10);
 const PRICE_FAILURE_TTL: Duration = Duration::from_secs(30);
@@ -191,7 +195,10 @@ impl GamesService {
             inner: Arc::new(Inner {
                 sony,
                 clock,
-                concepts: TtlCache::with_fixed_ttl(CONCEPTS_CAPACITY, LIST_TTL),
+                concepts: TtlCache::new(
+                    CONCEPTS_CAPACITY,
+                    ttl_by_outcome(LIST_TTL, LIST_FAILURE_TTL),
+                ),
                 details: TtlCache::with_fixed_ttl(DETAIL_CAPACITY, DETAIL_TTL),
                 prices: TtlCache::new(PRICE_CAPACITY, ttl_by_outcome(PRICE_TTL, PRICE_FAILURE_TTL)),
                 strict_details: TtlCache::new(
@@ -204,7 +211,10 @@ impl GamesService {
                 ),
                 monthly: TtlCache::new(1, ttl_by_outcome(MONTHLY_TTL, MONTHLY_FAILURE_TTL)),
                 genres: TtlCache::new(1, ttl_by_outcome(GENRES_TTL, GENRES_FAILURE_TTL)),
-                browse_pages: TtlCache::with_fixed_ttl(BROWSE_PAGE_CAPACITY, LIST_TTL),
+                browse_pages: TtlCache::new(
+                    BROWSE_PAGE_CAPACITY,
+                    ttl_by_outcome(LIST_TTL, LIST_FAILURE_TTL),
+                ),
             }),
         }
     }

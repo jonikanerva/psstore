@@ -326,6 +326,31 @@ async fn a_browse_page_is_cached_for_30_seconds() {
 }
 
 #[tokio::test(start_paused = true)]
+async fn a_browse_failure_is_cached_for_5_seconds() {
+    let failing = Arc::new(std::sync::atomic::AtomicBool::new(true));
+    let flag = Arc::clone(&failing);
+    let (svc, fake) = service(browsing(
+        Box::new(move |_| {
+            if flag.load(std::sync::atomic::Ordering::SeqCst) {
+                Err(UpstreamError::unavailable("down"))
+            } else {
+                browse_page(vec![concept(1, &[ps5(1)])], true)
+            }
+        }),
+        Box::new(|_| Ok(game_detail())),
+    ));
+    let browse = || svc.browse_games(genre("ACTION"), BrowseOrder::Newest, page(0, 60));
+    assert!(browse().await.is_err());
+    failing.store(false, std::sync::atomic::Ordering::SeqCst);
+    tokio::time::advance(Duration::from_millis(4_999)).await;
+    assert!(browse().await.is_err());
+    assert_eq!(fake.calls().browse.len(), 1);
+    tokio::time::advance(Duration::from_millis(1)).await;
+    assert_eq!(browse().await.unwrap().games.len(), 1);
+    assert_eq!(fake.calls().browse.len(), 2);
+}
+
+#[tokio::test(start_paused = true)]
 async fn the_genre_list_is_cached() {
     let (svc, fake) = service(browsing(
         Box::new(|_| browse_page(vec![], true)),
