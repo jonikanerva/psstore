@@ -19,7 +19,7 @@ use crate::domain::catalog::{
     SearchCandidate, SearchPage, SonyFeature,
 };
 use crate::domain::errors::{GameLookupError, UpstreamError};
-use crate::domain::game::{Game, Genre, GenreList, IdKind, PageResult, PlusOffer};
+use crate::domain::game::{Game, Genre, GenreList, IdKind, PageResult};
 use crate::domain::id::{GameId, ProductId};
 use crate::domain::listing::{
     SortOrder, browse_candidate_ids, browse_concept_to_game, has_release_date, in_new_window,
@@ -28,7 +28,8 @@ use crate::domain::listing::{
     sort_by_date,
 };
 use crate::domain::mapper::{
-    concept_product_id, concept_to_game, product_detail_to_game, to_iso_or_default,
+    concept_product_id, concept_to_game, fill_card_from_detail, product_detail_to_game,
+    to_iso_or_default,
 };
 
 /// The anonymous Sony store operations (port of `SonyClientApi`). Each
@@ -473,24 +474,40 @@ impl Inner {
         }
     }
 
-    async fn plus_offer_for(&self, game: &Game) -> Option<PlusOffer> {
+    /// The PS Plus offer and the standard price of a product card. A failed
+    /// lookup leaves the page without both instead of failing the page.
+    async fn card_price(&self, game: &Game) -> ProductPrice {
         if game.id_kind != IdKind::Product {
-            return None;
+            return ProductPrice::default();
         }
         // A product card always has a product id.
-        let product_id = game.id.product_id()?;
+        let Some(product_id) = game.id.product_id() else {
+            return ProductPrice::default();
+        };
         match self.price(&product_id).await {
-            Ok(price) => price.plus_offer,
+            Ok(price) => price,
             Err(error) => {
                 tracing::warn!(reason = error.tag(), "plus offer lookup failed");
-                None
+                ProductPrice::default()
             }
         }
     }
 
     async fn enrich_with_detail(&self, game: Game) -> Game {
-        let (detail, plus_offer) =
-            join(self.card_detail(&game.id), self.plus_offer_for(&game)).await;
+        let (detail, price) = join(self.card_detail(&game.id), self.card_price(&game)).await;
+        let game = match game.id.product_id() {
+            Some(product_id) if game.id_kind == IdKind::Product => fill_card_from_detail(
+                game,
+                product_detail_to_game(
+                    &product_id,
+                    &detail,
+                    price.standard.as_ref(),
+                    self.now_ms(),
+                ),
+            ),
+            _ => game,
+        };
+        let plus_offer = price.plus_offer;
         Game {
             // A detail without a date keeps the list card's date, which the
             // list mapping already normalised.

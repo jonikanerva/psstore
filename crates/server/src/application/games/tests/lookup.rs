@@ -614,6 +614,72 @@ async fn a_monthly_only_game_opens_with_detail_and_offer() {
 }
 
 #[tokio::test(start_paused = true)]
+async fn a_monthly_game_page_shows_the_detail_media_and_the_standard_price() {
+    let (svc, _) = service(FakeSony {
+        monthly: Box::new(|()| Ok(vec![monthly_entry(OLD_ID, "2024-01-01T00:00:00Z")])),
+        detail: Box::new(|_| Ok(destiny())),
+        price: Box::new(|_| {
+            let mut price = standard("€24,95", "€24,95", "");
+            price.plus_offer = Some(PlusOffer::Included);
+            Ok(price)
+        }),
+        ..FakeSony::default()
+    });
+    let game = svc.game_by_id(OLD_ID.parse().unwrap()).await.unwrap();
+    assert_eq!(game.screenshots, ["https://img/shot1", "https://img/shot2"]);
+    assert_eq!(game.videos, ["https://vid/preview.mp4"]);
+    assert_eq!(game.price, "€24,95");
+    assert_eq!(
+        (game.original_price.as_str(), game.discount_text.as_str()),
+        ("", "")
+    );
+    assert_eq!(game.plus_offer, Some(PlusOffer::Included));
+    // The MONTHLY list itself stays without prices and media.
+    let list = svc.monthly_games(page(0, 60)).await.unwrap();
+    assert!(list.games.iter().all(|game| game.price.is_empty()
+        && game.screenshots.is_empty()
+        && game.videos.is_empty()));
+}
+
+#[tokio::test(start_paused = true)]
+async fn a_failed_price_keeps_the_monthly_detail_media_without_a_price() {
+    let (svc, _) = service(FakeSony {
+        monthly: Box::new(|()| Ok(vec![monthly_entry(OLD_ID, "2024-01-01T00:00:00Z")])),
+        detail: Box::new(|_| Ok(destiny())),
+        price: Box::new(|_| Err(unavailable())),
+        ..FakeSony::default()
+    });
+    let game = svc.game_by_id(OLD_ID.parse().unwrap()).await.unwrap();
+    assert_eq!(game.screenshots, ["https://img/shot1", "https://img/shot2"]);
+    assert_eq!(game.videos, ["https://vid/preview.mp4"]);
+    assert_eq!((game.price.as_str(), game.plus_offer), ("", None));
+}
+
+#[tokio::test(start_paused = true)]
+async fn a_new_card_without_grid_media_shows_the_detail_media_and_keeps_its_price() {
+    // The grid card has a cover image and a price, but no screenshot and no
+    // video.
+    let listed = priced_concept(1, "listed");
+    let (svc, _) = service(FakeSony {
+        concepts: Box::new(move |feature| {
+            Ok(if feature == SonyFeature::New {
+                vec![listed.clone()]
+            } else {
+                vec![]
+            })
+        }),
+        detail: Box::new(|_| Ok(destiny())),
+        price: Box::new(|_| Ok(standard("€1,00", "€1,00", ""))),
+        ..FakeSony::default()
+    });
+    let game = svc.game_by_id(gid(&sku(1, "listed"))).await.unwrap();
+    assert_eq!(game.screenshots, ["https://img/shot1", "https://img/shot2"]);
+    assert_eq!(game.videos, ["https://vid/preview.mp4"]);
+    assert_eq!(game.url, "https://img/listed");
+    assert_eq!(game.price, "€29.95");
+}
+
+#[tokio::test(start_paused = true)]
 async fn a_monthly_game_page_survives_a_failed_price_and_an_unknown_id_is_not_found() {
     let (svc, _) = service(FakeSony {
         monthly: Box::new(|()| Ok(vec![monthly_entry(OLD_ID, "2024-01-01T00:00:00Z")])),
