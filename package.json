@@ -16,17 +16,17 @@
     "sony:probe-wishlist": "mise run sony:probe-wishlist"
   },
   "engines": {
-    "node": "^24.22.0"
+    "node": "^24.22.2"
   },
-  "packageManager": "pnpm@12.14.0",
+  "packageManager": "pnpm@12.16.1",
   "devDependencies": {
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react-swc": "catalog:",
     "concurrently": "^10.0.6",
-    "oxlint": "1.88.0",
-    "oxlint-tsgolint": "7.0.2004",
+    "oxlint": "1.91.0",
+    "oxlint-tsgolint": "7.0.2005",
     "prettier": "catalog:",
     "tsx": "catalog:",
     "typescript": "catalog:",
