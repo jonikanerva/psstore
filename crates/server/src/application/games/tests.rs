@@ -20,6 +20,7 @@ use jiff::Timestamp;
 use super::*;
 use crate::application::FixedClock;
 use crate::domain::catalog::{ConceptPrice, ConceptProductRef, Media};
+use crate::domain::game::PlusOffer;
 
 pub(super) const PAST_DATE: &str = "2025-01-01T00:00:00Z";
 pub(super) const FUTURE_DATE: &str = "2099-01-01T00:00:00Z";
