@@ -186,8 +186,9 @@ async fn fills_a_product_entry_from_its_product_page() {
 }
 
 /// A game on the NEW list keeps the list card and takes the detail fields
-/// from the product page. This path also normalises Sony's date (STACK.md
-/// §10, issue #163).
+/// from the product page. The grid card has no screenshot and no video, so
+/// the product page media fills them; the grid cover and price stay. This
+/// path also normalises Sony's date (STACK.md §10, issue #163).
 #[tokio::test(start_paused = true)]
 async fn fills_a_product_entry_from_the_new_list() {
     let listed = Concept {
@@ -226,6 +227,8 @@ async fn fills_a_product_entry_from_the_new_list() {
         date: "2025-03-04T00:00:00.000Z".into(),
         url: "https://img.test/grid-cover.png".into(),
         price: "€49,99".into(),
+        screenshots: vec!["https://img.test/store-shot.png".into()],
+        videos: vec!["https://vid.test/store.mp4".into()],
         genres: vec!["Action".into(), "Adventure".into()],
         description: "Store description".into(),
         studio: "Synthetic Studio".into(),

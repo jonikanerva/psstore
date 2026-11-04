@@ -257,6 +257,43 @@ pub fn product_detail_to_game(
     concept_to_game(&concept, id.clone().into(), now_ms)
 }
 
+/// The game page of a list card. `from_detail` is the game that
+/// [`product_detail_to_game`] builds from the same product's detail and
+/// standard price. Each list card value that is not empty stays. Empty
+/// screenshots and empty videos take the detail's media. An empty price takes
+/// the standard price with its discount fields, so a card price that Sony
+/// gave the list never changes. A MONTHLY card has no media and no price, and
+/// some grid cards have no media.
+#[must_use]
+pub fn fill_card_from_detail(card: Game, from_detail: Game) -> Game {
+    let price_source = if card.price.is_empty() {
+        &from_detail
+    } else {
+        &card
+    };
+    let price = price_source.price.clone();
+    let original_price = price_source.original_price.clone();
+    let discount_text = price_source.discount_text.clone();
+    let discount_date = price_source.discount_date.clone();
+    Game {
+        screenshots: if card.screenshots.is_empty() {
+            from_detail.screenshots
+        } else {
+            card.screenshots
+        },
+        videos: if card.videos.is_empty() {
+            from_detail.videos
+        } else {
+            card.videos
+        },
+        price,
+        original_price,
+        discount_text,
+        discount_date,
+        ..card
+    }
+}
+
 /// The card of a PS Plus monthly game: no price and no pre-order state.
 #[must_use]
 pub fn monthly_entry_to_game(entry: &PlusMonthlyEntry) -> Game {
@@ -601,5 +638,78 @@ mod tests {
         assert_eq!(game.price, "");
         assert!(!game.pre_order);
         assert_eq!(game.genres, ["Action"]);
+    }
+
+    fn detail_game(price: Option<&StandardPrice>) -> Game {
+        product_detail_to_game(&ID.parse().unwrap(), &destiny(), price, NOW)
+    }
+
+    fn discounted_standard() -> StandardPrice {
+        StandardPrice {
+            base_price: "€39,99".into(),
+            discounted_price: "€19,99".into(),
+            discount_text: "-50%".into(),
+        }
+    }
+
+    #[test]
+    fn fills_an_empty_card_with_the_detail_media_and_the_standard_price() {
+        let card = monthly_entry_to_game(&PlusMonthlyEntry {
+            product_id: ID.parse().unwrap(),
+            name: "Destiny".into(),
+            image_url: "https://img/monthly".into(),
+            release_date: "2025-01-01T00:00:00Z".into(),
+            genres: strings(&["Shooter"]),
+        });
+        let game = fill_card_from_detail(card, detail_game(Some(&discounted_standard())));
+        assert_eq!(game.screenshots, ["https://img/shot"]);
+        assert_eq!(game.videos, ["https://vid/preview.mp4"]);
+        assert_eq!(game.price, "€19,99");
+        assert_eq!(game.original_price, "€39,99");
+        assert_eq!(game.discount_text, "-50%");
+        assert_eq!(game.discount_date, "2019-09-30T22:00:00.000Z");
+        // Every other value is the card's.
+        assert_eq!(game.name, "Destiny");
+        assert_eq!(game.url, "https://img/monthly");
+        assert_eq!(game.date, "2025-01-01T00:00:00.000Z");
+        assert_eq!(game.genres, ["Shooter"]);
+        assert_eq!(game.studio, "");
+    }
+
+    #[test]
+    fn keeps_the_card_media_and_the_card_price() {
+        let mut concept = Concept {
+            id: Some(ID.into()),
+            media: Some(vec![image("SCREENSHOT", "https://img/grid-shot")]),
+            price: Some(price("€9,99", "€4,99")),
+            products: Some(vec![product_ref(ID)]),
+            ..Concept::default()
+        };
+        concept.price.as_mut().unwrap().discount_text = Some("-50%".into());
+        let card = card(&concept, NOW);
+        let game = fill_card_from_detail(card.clone(), detail_game(Some(&discounted_standard())));
+        assert_eq!(game.screenshots, ["https://img/grid-shot"]);
+        // The card has no video, so the detail's video fills it.
+        assert_eq!(game.videos, ["https://vid/preview.mp4"]);
+        assert_eq!(
+            (game.price.as_str(), game.original_price.as_str()),
+            ("€4,99", "€9,99")
+        );
+        assert_eq!(game.discount_text, "-50%");
+        assert_eq!(game.discount_date, card.discount_date);
+    }
+
+    #[test]
+    fn an_empty_detail_and_no_standard_price_change_nothing() {
+        let card = monthly_entry_to_game(&PlusMonthlyEntry {
+            product_id: ID.parse().unwrap(),
+            name: "Destiny".into(),
+            image_url: "https://img/monthly".into(),
+            release_date: "2025-01-01T00:00:00Z".into(),
+            genres: vec![],
+        });
+        let empty =
+            product_detail_to_game(&ID.parse().unwrap(), &ProductDetail::default(), None, NOW);
+        assert_eq!(fill_card_from_detail(card.clone(), empty), card);
     }
 }
