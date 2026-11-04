@@ -8,7 +8,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use futures_util::future::{join, join_all, try_join};
+use futures_util::future::{join, try_join};
 use futures_util::stream::{self, StreamExt};
 
 use super::cache::TtlCache;
@@ -124,6 +124,15 @@ const SEARCH_DETAIL_CONCURRENCY: usize = 10;
 const BROWSE_DETAIL_CONCURRENCY: usize = 10;
 /// Raw BROWSE pages read for one request when the pages narrow to zero games.
 const BROWSE_RAW_PAGE_BOUND: usize = 3;
+/// Concurrent product detail lookups for one NEW, UPCOMING, or DISCOUNTED
+/// list (issue #212). A cold NEW list reads up to 420 products (300 released
+/// and 120 upcoming concepts). Without a bound, every product lookup starts
+/// at once, and each opens its own HTTP/1.1 connection to Sony. On live
+/// Sony a cold list with 20 was as fast as with no bound, and 10 was slower
+/// (the PR of issue #212 records the measurement). The bound is per
+/// request; the detail cache still shares one lookup per product between
+/// requests.
+const LIST_DETAIL_CONCURRENCY: usize = 20;
 
 /// The fields of a product detail that the lists read.
 struct ProductMeta {
@@ -191,6 +200,36 @@ struct Inner {
     monthly: TtlCache<(), Arc<Vec<Game>>, UpstreamError>,
     genres: TtlCache<(), GenreList, UpstreamError>,
     browse_pages: TtlCache<BrowseRequest, PageResult, UpstreamError>,
+}
+
+/// Runs `lookup` on each item with at most `limit` lookups at once, and
+/// gives the outputs in the order of the items.
+///
+/// `buffered` also keeps the order, but it counts a finished output that
+/// waits behind a slower earlier lookup as one of its `limit` slots
+/// (futures-util 0.3.34, `Buffered::poll_next` and `FuturesOrdered::len`).
+/// One lookup that waits for Sony's deadline then stops all new lookups of
+/// a list of hundreds. Here a finished lookup frees its slot at once, and
+/// the index of each item restores the order.
+async fn in_order_bounded<T, F, Fut>(
+    items: impl IntoIterator<Item = T>,
+    limit: usize,
+    lookup: F,
+) -> Vec<Fut::Output>
+where
+    F: Fn(T) -> Fut,
+    Fut: Future,
+{
+    let mut outputs: Vec<(usize, Fut::Output)> = stream::iter(items.into_iter().enumerate())
+        .map(|(index, item)| {
+            let pending = lookup(item);
+            async move { (index, pending.await) }
+        })
+        .buffer_unordered(limit)
+        .collect()
+        .await;
+    outputs.sort_by_key(|(index, _)| *index);
+    outputs.into_iter().map(|(_, output)| output).collect()
 }
 
 fn ttl_by_outcome<V>(
@@ -352,17 +391,28 @@ impl Inner {
         let now_ms = self.now_ms();
         let released = map_concepts_to_games(&released, now_ms);
         let upcoming = map_upcoming_concepts_to_games(&upcoming, now_ms);
-        let (released, upcoming) = join(
-            join_all(released.into_iter().map(|game| self.enrich_date(game))),
-            join_all(upcoming.into_iter().map(|game| async move {
-                match game.id_kind {
-                    IdKind::Product => self.enrich_date(game).await,
-                    IdKind::Concept => game,
+        // One bound covers both grids, so one request never has more than
+        // `LIST_DETAIL_CONCURRENCY` lookups. Every released card gets the
+        // product date; an upcoming concept card keeps its grid data.
+        let released_count = released.len();
+        let cards = released
+            .into_iter()
+            .map(|game| (true, game))
+            .chain(upcoming.into_iter().map(|game| (false, game)));
+        let mut enriched = in_order_bounded(
+            cards,
+            LIST_DETAIL_CONCURRENCY,
+            |(is_released, game)| async move {
+                if is_released || game.id_kind == IdKind::Product {
+                    self.enrich_date(game).await
+                } else {
+                    game
                 }
-            })),
+            },
         )
         .await;
-        let released = released.into_iter().filter(has_release_date).collect();
+        let upcoming = enriched.split_off(released_count);
+        let released = enriched.into_iter().filter(has_release_date).collect();
         Ok(merge_release_grids(released, upcoming))
     }
 
@@ -388,10 +438,10 @@ impl Inner {
     async fn discounted_games(&self, page: Page) -> Result<PageResult, UpstreamError> {
         let concepts = self.feature_concepts(SonyFeature::Discounted).await?;
         let games = map_concepts_to_games(&concepts, self.now_ms());
-        let enriched = join_all(games.into_iter().map(|game| async move {
+        let enriched = in_order_bounded(games, LIST_DETAIL_CONCURRENCY, |game| async move {
             let meta = self.card_meta(&game.id).await;
             (game, meta)
-        }))
+        })
         .await;
         let games = enriched
             .into_iter()

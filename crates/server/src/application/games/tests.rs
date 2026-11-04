@@ -6,6 +6,7 @@
 //! Cache expiry runs on the paused Tokio clock; the wall clock of the lists
 //! is a `FixedClock`.
 
+mod bound;
 mod browse;
 mod lists;
 mod lookup;
