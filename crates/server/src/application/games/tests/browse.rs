@@ -406,3 +406,107 @@ async fn a_browse_card_reads_the_pre_order_flag_from_the_clock() {
         .unwrap();
     assert!(!result.games[0].pre_order);
 }
+
+/// The number in a product id of `ps5` or `ps4`.
+fn browse_number(id: &str) -> usize {
+    id["EP0001-PPSA".len().."EP0001-PPSA".len() + 5]
+        .parse()
+        .unwrap()
+}
+
+/// More concepts than the bound.
+const FULL_PAGE: usize = 60;
+
+/// Issue #216: the resolutions finish in the reverse order of the page, and
+/// the page keeps Sony's order and every outcome. Each fourth concept names
+/// a PS4 product before its PS5 product, so it resolves in two lookups in
+/// sequence. The lookups of each seventh concept fail, so the page drops it.
+/// The last concept repeats the product of concept 12; the first card stays.
+#[tokio::test(start_paused = true)]
+async fn keeps_sony_order_and_every_outcome_when_resolutions_finish_in_reverse_order() {
+    let two_step = |n: usize| n % 4 == 1;
+    let failed = |n: usize| n % 7 == 3;
+    let (svc, fake) = service(FakeSony {
+        detail_delay: Box::new(|id| {
+            Duration::from_millis(500 - u64::try_from(browse_number(id)).unwrap())
+        }),
+        ..browsing(
+            Box::new(move |_| {
+                let mut concepts: Vec<Concept> = (0..FULL_PAGE - 1)
+                    .map(|n| {
+                        if two_step(n) {
+                            concept(n, &[ps4(n), ps5(n)])
+                        } else {
+                            concept(n, &[ps5(n)])
+                        }
+                    })
+                    .collect();
+                concepts.push(Concept {
+                    name: Some("Repeat of 12".into()),
+                    ..concept(FULL_PAGE - 1, &[ps5(12)])
+                });
+                browse_page(concepts, true)
+            }),
+            Box::new(move |id| {
+                if failed(browse_number(&id)) {
+                    Err(unavailable())
+                } else if id.contains("CUSA") {
+                    Ok(ProductDetail {
+                        platforms: vec!["PS4".into()],
+                        ..game_detail()
+                    })
+                } else {
+                    Ok(game_detail())
+                }
+            }),
+        )
+    });
+    let result = svc
+        .browse_games(genre("ACTION"), BrowseOrder::NameAsc, page(0, 60))
+        .await
+        .unwrap();
+    let expected: Vec<String> = (0..FULL_PAGE - 1)
+        .filter(|n| !failed(*n))
+        .map(ps5)
+        .collect();
+    assert_eq!(ids(&result), expected);
+    let repeated = result.games.iter().find(|g| g.id.as_str() == ps5(12));
+    assert_eq!(repeated.unwrap().name, "Game 12");
+    assert_eq!(fake.peak.load(Ordering::SeqCst), BROWSE_DETAIL_CONCURRENCY);
+}
+
+/// Issue #216: one slow resolution does not stop the next resolutions of
+/// the page.
+#[tokio::test(start_paused = true)]
+async fn a_slow_lookup_does_not_stop_the_next_lookups() {
+    // The first concept waits 10 s; every other one answers in 10 ms.
+    let (svc, fake) = service(FakeSony {
+        detail_delay: Box::new(|id| {
+            if browse_number(id) == 0 {
+                Duration::from_secs(10)
+            } else {
+                Duration::from_millis(10)
+            }
+        }),
+        ..browsing(
+            Box::new(|_| {
+                browse_page(
+                    (0..FULL_PAGE).map(|n| concept(n, &[ps5(n)])).collect(),
+                    true,
+                )
+            }),
+            Box::new(|_| Ok(game_detail())),
+        )
+    });
+    let pending = tokio::spawn(async move {
+        svc.browse_games(genre("ACTION"), BrowseOrder::NameAsc, page(0, 60))
+            .await
+    });
+    tokio::time::sleep(Duration::from_secs(5)).await;
+    // While the first lookup waits, all the other lookups start and end.
+    assert_eq!(fake.calls().details.len(), FULL_PAGE);
+    assert_eq!(fake.in_flight.load(Ordering::SeqCst), 1);
+    let result = pending.await.unwrap().unwrap();
+    assert_eq!(result.games.len(), FULL_PAGE);
+    assert_eq!(result.games[0].id.as_str(), ps5(0));
+}
