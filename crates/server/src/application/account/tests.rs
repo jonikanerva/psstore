@@ -859,6 +859,158 @@ async fn runs_a_bounded_number_of_lookups_at_once() {
     assert_eq!(h.games.lookups.lock().unwrap().len(), 20);
 }
 
+/// The fake store of the no-stall tests: a lookup of an id in `slow` never
+/// ends, and every other lookup ends after `fast`. The store records the
+/// start time of each lookup and the peak number of lookups at once.
+struct TimedStore {
+    games: FakeGames,
+    starts: Arc<Mutex<Vec<(GameId, tokio::time::Instant)>>>,
+    peak: Arc<AtomicUsize>,
+}
+
+fn timed_store(slow: Vec<String>, fast: std::time::Duration) -> TimedStore {
+    let starts: Arc<Mutex<Vec<(GameId, tokio::time::Instant)>>> = Arc::default();
+    let active = Arc::new(AtomicUsize::new(0));
+    let peak = Arc::new(AtomicUsize::new(0));
+    let games = FakeGames::new({
+        let (starts, active, peak) = (Arc::clone(&starts), Arc::clone(&active), Arc::clone(&peak));
+        move |id| {
+            starts
+                .lock()
+                .unwrap()
+                .push((id.clone(), tokio::time::Instant::now()));
+            let now = active.fetch_add(1, Ordering::SeqCst) + 1;
+            peak.fetch_max(now, Ordering::SeqCst);
+            // The guard also counts a lookup that its deadline drops.
+            let guard = ActiveGuard(Arc::clone(&active));
+            let is_slow = slow.iter().any(|sku| sku == id.as_str());
+            async move {
+                let _guard = guard;
+                if is_slow {
+                    std::future::pending::<()>().await;
+                }
+                tokio::time::sleep(fast).await;
+                Ok(store_game(id.as_str()))
+            }
+            .boxed()
+        }
+    });
+    TimedStore {
+        games,
+        starts,
+        peak,
+    }
+}
+
+struct ActiveGuard(Arc<AtomicUsize>);
+
+impl Drop for ActiveGuard {
+    fn drop(&mut self) {
+        self.0.fetch_sub(1, Ordering::SeqCst);
+    }
+}
+
+/// Issue #219: with `buffered`, the five lookups that end after 100 ms wait
+/// behind the slow first entry and keep their slots, so entries 7 and 8 start
+/// only at the 5 s deadline of the first entry.
+#[tokio::test(start_paused = true)]
+async fn a_slow_lookup_does_not_stop_new_lookups() {
+    let store = timed_store(vec![sku(1)], std::time::Duration::from_millis(100));
+    let (starts, peak) = (Arc::clone(&store.starts), Arc::clone(&store.peak));
+    let entries: Vec<_> = (1..=8).map(product_entry).collect();
+    let h = wishlist_harness(entries, store.games);
+    let started = tokio::time::Instant::now();
+    let page = h.service.wishlist_games(npsso()).await.unwrap();
+
+    let starts = starts.lock().unwrap();
+    assert_eq!(starts.len(), 8);
+    for (id, at) in starts.iter() {
+        let waited = at.duration_since(started);
+        assert!(
+            waited < std::time::Duration::from_secs(1),
+            "{id:?} started after {waited:?}"
+        );
+    }
+    assert_eq!(peak.load(Ordering::SeqCst), WISHLIST_ENRICH_CONCURRENCY);
+    let prices: Vec<_> = page.games.iter().map(|g| g.price.as_str()).collect();
+    assert_eq!(
+        prices,
+        [
+            "", "€39,99", "€39,99", "€39,99", "€39,99", "€39,99", "€39,99", "€39,99"
+        ]
+    );
+    let names: Vec<_> = page.games.iter().map(|g| g.name.clone()).collect();
+    let expected: Vec<_> = (1..=8)
+        .map(|index| {
+            if index == 1 {
+                "Wish 1".to_owned()
+            } else {
+                format!("Store {}", sku(index))
+            }
+        })
+        .collect();
+    assert_eq!(names, expected);
+    within_a_second_after(started, WISHLIST_ENRICH_ENTRY_TIMEOUT);
+}
+
+/// Issue #219: three slow entries among 30 do not push the whole list past
+/// its 12 s deadline, so every other entry keeps its store data. With
+/// `buffered`, each slow entry at the head of the buffer stops new lookups
+/// for up to 5 s, the list runs past 12 s, and every card is minimal.
+#[tokio::test(start_paused = true)]
+async fn slow_lookups_do_not_push_the_list_past_its_deadline() {
+    let slow_indexes = [1, 8, 15];
+    let store = timed_store(
+        slow_indexes.iter().map(|index| sku(*index)).collect(),
+        std::time::Duration::from_millis(500),
+    );
+    let peak = Arc::clone(&store.peak);
+    let entries: Vec<_> = (1..=30).map(product_entry).collect();
+    let h = wishlist_harness(entries, store.games);
+    let started = tokio::time::Instant::now();
+    let page = h.service.wishlist_games(npsso()).await.unwrap();
+
+    assert!(
+        started.elapsed() < WISHLIST_ENRICH_TOTAL_TIMEOUT,
+        "{:?}",
+        started.elapsed()
+    );
+    assert!(peak.load(Ordering::SeqCst) <= WISHLIST_ENRICH_CONCURRENCY);
+    assert_eq!(page.games.len(), 30);
+    for (position, card) in page.games.iter().enumerate() {
+        let index = position + 1;
+        assert_eq!(card.id, sku(index));
+        if slow_indexes.contains(&index) {
+            assert_eq!(card.name, format!("Wish {index}"));
+            assert_eq!(card.url, format!("https://img.test/wish{index}.png"));
+            assert_eq!(card.price, "");
+        } else {
+            assert_eq!(card.price, "€39,99", "entry {index}");
+        }
+    }
+}
+
+/// The cards keep Sony's order also when the later lookups end first.
+#[tokio::test(start_paused = true)]
+async fn keeps_the_order_of_the_entries_when_later_lookups_end_first() {
+    let games = FakeGames::new(|id| {
+        async move {
+            // The first entry is the slowest: 1.2 s, 1.1 s, … 0.1 s.
+            let index: u64 = id.as_str()[11..16].parse().unwrap();
+            tokio::time::sleep(std::time::Duration::from_millis((13 - index) * 100)).await;
+            Ok(store_game(id.as_str()))
+        }
+        .boxed()
+    });
+    let entries: Vec<_> = (1..=12).map(product_entry).collect();
+    let h = wishlist_harness(entries, games);
+    let page = h.service.wishlist_games(npsso()).await.unwrap();
+    let ids: Vec<_> = page.games.iter().map(|g| g.id.clone()).collect();
+    let expected: Vec<_> = (1..=12).map(sku).collect();
+    assert_eq!(ids, expected);
+    assert!(page.games.iter().all(|g| g.price == "€39,99"));
+}
+
 #[tokio::test(start_paused = true)]
 async fn caches_neither_the_wishlist_nor_the_exchange_between_calls() {
     let h = wishlist_harness(vec![product_entry(1)], FakeGames::found());

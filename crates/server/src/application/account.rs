@@ -14,9 +14,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use futures_util::StreamExt;
-use futures_util::stream;
-
+use super::bounded::in_order_bounded;
 use super::cache::LookupPanicked;
 use super::in_flight::InFlight;
 use super::{AccountApi, GamesApi, ServiceFuture};
@@ -121,16 +119,15 @@ impl AccountService {
     /// of the other views. When the whole list runs past its deadline, every
     /// card is the minimal card, like on the TypeScript server.
     async fn enrich_wishlist(&self, entries: &[WishlistEntry]) -> Vec<Game> {
-        // The futures are built first: a closure that borrows each entry
-        // inside the stream does not prove `Send` for every lifetime. A
-        // future does no work until the stream polls it.
-        let pending: Vec<_> = entries
-            .iter()
-            .map(|entry| self.enrich_entry(entry))
-            .collect();
-        let lookups = stream::iter(pending)
-            .buffered(WISHLIST_ENRICH_CONCURRENCY)
-            .collect::<Vec<_>>();
+        // `in_order_bounded` keeps Sony's order, and one slow lookup does not
+        // hold the slots of lookups that already ended (issue #219). Each
+        // lookup owns a copy of its entry: a closure that borrows each entry
+        // inside the stream does not prove `Send` for every lifetime.
+        let lookups = in_order_bounded(
+            entries.iter().cloned(),
+            WISHLIST_ENRICH_CONCURRENCY,
+            |entry| self.enrich_entry(entry),
+        );
         let cards = tokio::time::timeout(WISHLIST_ENRICH_TOTAL_TIMEOUT, lookups)
             .await
             .unwrap_or_else(|_| wishlist_cards(entries));
@@ -141,7 +138,7 @@ impl AccountService {
 
     /// A concept entry, a missing game, or a slow or failed lookup keeps the
     /// minimal card.
-    async fn enrich_entry(&self, entry: &WishlistEntry) -> Game {
+    async fn enrich_entry(&self, entry: WishlistEntry) -> Game {
         let found = match &entry.id {
             WishlistId::Product(product_id) => {
                 let lookup = self.games.game_by_id(product_id.clone().into());
@@ -152,7 +149,7 @@ impl AccountService {
             }
             WishlistId::Concept(_) => None,
         };
-        merge_wishlist_entry(entry, found)
+        merge_wishlist_entry(&entry, found)
     }
 }
 
