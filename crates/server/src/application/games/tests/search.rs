@@ -286,3 +286,77 @@ async fn bounds_the_concurrent_detail_lookups_of_one_page() {
     assert!(peak <= 10, "{peak}");
     assert!(peak > 1, "{peak}");
 }
+
+/// The number in a product id of `search_sku`.
+fn search_number(id: &str) -> usize {
+    id["EP0001-PPSA".len().."EP0001-PPSA".len() + 5]
+        .parse()
+        .unwrap()
+}
+
+/// A full search page: more candidates than the bound.
+const FULL_PAGE: usize = 50;
+
+/// Issue #216: the lookups finish in the reverse order of the page, and the
+/// page keeps Sony's order. Each fifth candidate is unverified and its detail
+/// is not a PS5 game, so the page drops it in place.
+#[tokio::test(start_paused = true)]
+async fn keeps_sony_order_when_the_lookups_finish_in_reverse_order() {
+    let rejected = |n: usize| n.is_multiple_of(5);
+    let (svc, fake) = service(FakeSony {
+        search: Box::new(move |_| {
+            let candidates = (0..FULL_PAGE)
+                .map(|n| if rejected(n) { unverified(n) } else { known(n) })
+                .collect();
+            search_page(candidates, true)
+        }),
+        detail: Box::new(move |id| {
+            Ok(if rejected(search_number(&id)) {
+                ProductDetail {
+                    platforms: vec!["PS4".into()],
+                    ..ps5_detail()
+                }
+            } else {
+                ps5_detail()
+            })
+        }),
+        detail_delay: Box::new(|id| {
+            Duration::from_millis(500 - u64::try_from(search_number(id)).unwrap())
+        }),
+        ..FakeSony::default()
+    });
+    let result = svc.search_games("x".into(), page(0, 50)).await.unwrap();
+    let expected: Vec<String> = (0..FULL_PAGE)
+        .filter(|n| !rejected(*n))
+        .map(|n| format!("Game {n}"))
+        .collect();
+    assert_eq!(names(&result), expected);
+    assert_eq!(fake.peak.load(Ordering::SeqCst), SEARCH_DETAIL_CONCURRENCY);
+    assert_eq!(fake.calls().details.len(), FULL_PAGE);
+}
+
+/// Issue #216: one slow lookup does not stop the next lookups of the page.
+#[tokio::test(start_paused = true)]
+async fn a_slow_lookup_does_not_stop_the_next_lookups() {
+    // The first candidate waits 10 s; every other one answers in 10 ms.
+    let (svc, fake) = service(FakeSony {
+        search: Box::new(|_| search_page((0..FULL_PAGE).map(known).collect(), true)),
+        detail: Box::new(|_| Ok(ps5_detail())),
+        detail_delay: Box::new(|id| {
+            if search_number(id) == 0 {
+                Duration::from_secs(10)
+            } else {
+                Duration::from_millis(10)
+            }
+        }),
+        ..FakeSony::default()
+    });
+    let pending = tokio::spawn(async move { svc.search_games("x".into(), page(0, 50)).await });
+    tokio::time::sleep(Duration::from_secs(5)).await;
+    // While the first lookup waits, all the other lookups start and end.
+    assert_eq!(fake.calls().details.len(), FULL_PAGE);
+    assert_eq!(fake.in_flight.load(Ordering::SeqCst), 1);
+    let result = pending.await.unwrap().unwrap();
+    assert_eq!(result.games.len(), FULL_PAGE);
+    assert_eq!(result.games[0].name, "Game 0");
+}

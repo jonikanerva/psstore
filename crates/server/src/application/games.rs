@@ -118,9 +118,13 @@ const BROWSE_PAGE_CAPACITY: usize = 64;
 /// Raw search pages read for one request when the pages narrow to zero
 /// games.
 const SEARCH_RAW_PAGE_BOUND: usize = 3;
-/// Concurrent product detail lookups for one search page.
+/// Concurrent product detail lookups for one search page. A search page has
+/// at most 50 candidates. `in_order_bounded` applies the bound (issue #216).
 const SEARCH_DETAIL_CONCURRENCY: usize = 10;
-/// Concurrent concept resolutions for one BROWSE page.
+/// Concurrent concept resolutions for one BROWSE page. A BROWSE page has at
+/// most 120 concepts. `in_order_bounded` applies the bound (issue #216). One
+/// resolution reads its candidate products in sequence and keeps its slot
+/// until it ends.
 const BROWSE_DETAIL_CONCURRENCY: usize = 10;
 /// Raw BROWSE pages read for one request when the pages narrow to zero games.
 const BROWSE_RAW_PAGE_BOUND: usize = 3;
@@ -209,8 +213,10 @@ struct Inner {
 /// waits behind a slower earlier lookup as one of its `limit` slots
 /// (futures-util 0.3.34, `Buffered::poll_next` and `FuturesOrdered::len`).
 /// One lookup that waits for Sony's deadline then stops all new lookups of
-/// a list of hundreds. Here a finished lookup frees its slot at once, and
-/// the index of each item restores the order.
+/// the list, the search page, or the BROWSE page. Here a finished lookup
+/// frees its slot at once, and the index of each item restores the order.
+/// The order is visible: the lists, search, and BROWSE keep Sony's order,
+/// and BROWSE keeps the first card of a repeated game.
 async fn in_order_bounded<T, F, Fut>(
     items: impl IntoIterator<Item = T>,
     limit: usize,
@@ -517,12 +523,14 @@ impl Inner {
                 })?;
             let next_offset = (!found.is_last).then(|| raw_offset.saturating_add(page.size));
             let now_ms = self.now_ms();
-            let games: Vec<Game> = stream::iter(found.candidates)
-                .map(|candidate| self.resolve_search_candidate(candidate, now_ms))
-                .buffered(SEARCH_DETAIL_CONCURRENCY)
-                .filter_map(|game| async move { game })
-                .collect()
-                .await;
+            let games: Vec<Game> =
+                in_order_bounded(found.candidates, SEARCH_DETAIL_CONCURRENCY, |candidate| {
+                    self.resolve_search_candidate(candidate, now_ms)
+                })
+                .await
+                .into_iter()
+                .flatten()
+                .collect();
             match next_offset {
                 Some(next) if games.is_empty() && pages_left > 1 => {
                     raw_offset = next;
@@ -726,10 +734,10 @@ impl Inner {
         loop {
             let page = self.sony.browse_page(request.clone()).await?;
             let now_ms = self.now_ms();
-            let resolved: Vec<BrowseResolution> = stream::iter(page.concepts)
-                .map(|concept| self.resolve_browse_concept(concept, now_ms))
-                .buffered(BROWSE_DETAIL_CONCURRENCY)
-                .collect()
+            let resolved: Vec<BrowseResolution> =
+                in_order_bounded(page.concepts, BROWSE_DETAIL_CONCURRENCY, |concept| {
+                    self.resolve_browse_concept(concept, now_ms)
+                })
                 .await;
             let failed = resolved
                 .iter()
