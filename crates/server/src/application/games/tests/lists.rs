@@ -541,6 +541,54 @@ async fn upcoming_keeps_concept_announcements_and_enriches_only_skus() {
     assert_eq!(fake.calls().details, [sku_id]);
 }
 
+/// Issue #215: a concept-only UPCOMING card keeps the date of the first
+/// product of its concept. Only a product card gets the product detail date.
+/// A concept id has no product detail, so an enriched concept card would
+/// lose its date.
+#[tokio::test(start_paused = true)]
+async fn a_dated_upcoming_concept_card_keeps_its_own_date() {
+    let concept_date = at(3.0 * 24.0);
+    let grid_date = at(10.0 * 24.0);
+    let detail_date = at(5.0 * 24.0);
+    let dated_concept = Concept {
+        products: Some(vec![ConceptProductRef {
+            id: None,
+            release_date: Some(concept_date.clone()),
+            ..ConceptProductRef::default()
+        }]),
+        ..announcement("10010003", "dated-concept")
+    };
+    let mut sku = priced_concept(1, "sku-title");
+    if let Some(products) = sku.products.as_mut() {
+        products[0].release_date = Some(grid_date.clone());
+    }
+    let sku_id = product_id(&sku);
+    let answer = detail_date.clone();
+    let (svc, fake, _) = service_at(
+        FakeSony {
+            concepts: grids(vec![], vec![dated_concept, sku], vec![]),
+            detail: Box::new(move |_| Ok(detail_at(Some(&answer)))),
+            ..FakeSony::default()
+        },
+        SPLIT_NOW,
+    );
+    let result = svc.upcoming_games(page(0, 60)).await.unwrap();
+    let cards: Vec<(&str, IdKind, &str)> = result
+        .games
+        .iter()
+        .map(|g| (g.name.as_str(), g.id_kind, g.date.as_str()))
+        .collect();
+    assert_eq!(
+        cards,
+        [
+            ("dated-concept", IdKind::Concept, concept_date.as_str()),
+            ("sku-title", IdKind::Product, detail_date.as_str()),
+        ]
+    );
+    // The product card is the only detail lookup of the request.
+    assert_eq!(fake.calls().details, [sku_id]);
+}
+
 #[tokio::test(start_paused = true)]
 async fn the_upcoming_window_reads_the_wall_clock() {
     let just_passed = priced_concept(1, "just-passed");
