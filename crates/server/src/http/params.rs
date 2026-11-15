@@ -39,10 +39,7 @@ impl Query {
     /// percent escapes decode.
     #[must_use]
     pub fn parse(raw: Option<&str>) -> Self {
-        Self(
-            raw.map(|q| form_urlencoded::parse(q.as_bytes()).into_owned().collect())
-                .unwrap_or_default(),
-        )
+        Self(raw.map_or_default(|q| form_urlencoded::parse(q.as_bytes()).into_owned().collect()))
     }
 
     /// The value of `key`. A repeated key is invalid.

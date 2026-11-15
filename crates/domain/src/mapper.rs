@@ -83,8 +83,7 @@ fn concept_cover(concept: &Concept) -> String {
         .iter()
         .find_map(|role| images.iter().find(|image| image.role == *role))
         .or_else(|| images.first())
-        .map(|image| image.url.to_owned())
-        .unwrap_or_default()
+        .map_or_default(|image| image.url.to_owned())
 }
 
 fn concept_videos(concept: &Concept) -> Vec<String> {

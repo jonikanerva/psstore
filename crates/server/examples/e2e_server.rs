@@ -404,8 +404,7 @@ impl Catalog {
             .genres
             .iter()
             .find(|(item, _)| item.key == genre.as_str())
-            .map(|(_, games)| games.clone())
-            .unwrap_or_default();
+            .map_or_default(|(_, games)| games.clone());
         match order {
             BrowseOrder::BestSelling | BrowseOrder::MostDownloaded => {}
             BrowseOrder::Newest => games.sort_by(|a, b| b.date.cmp(&a.date)),
