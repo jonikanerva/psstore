@@ -7,11 +7,6 @@ pmOnFail: error
 # STACK.md → 15 → Dependencies: refuse a release younger than one day.
 minimumReleaseAge: 1440
 minimumReleaseAgeStrict: true
-# Security fix: DOMPurify 3.4.18 fixes GHSA-qm7q-q8h9-jg8q and was younger
-# than one day at the freshness check of 2026-11-15. Remove this entry in the
-# next deps PR (STACK.md → 15 → Dependencies).
-minimumReleaseAgeExclude:
-  - 'dompurify@3.4.18'
 allowBuilds:
   '@parcel/watcher': false
   '@swc/core': true
