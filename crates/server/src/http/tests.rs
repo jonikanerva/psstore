@@ -10,7 +10,9 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
 use axum::body::Body;
-use axum::http::header::{ACCEPT, CACHE_CONTROL, CONTENT_TYPE, COOKIE, SET_COOKIE};
+use axum::http::header::{
+    ACCEPT, CACHE_CONTROL, CONTENT_TYPE, COOKIE, ETAG, IF_NONE_MATCH, RANGE, SET_COOKIE,
+};
 use axum::http::{Method, Request, StatusCode};
 use axum::response::Response;
 use tower::ServiceExt;
@@ -1049,6 +1051,110 @@ async fn rejects_path_traversal() {
         let response = h.get_with(uri, ACCEPT.as_str(), BROWSER_ACCEPT).await;
         assert_eq!(response.status(), StatusCode::NOT_FOUND, "{uri}");
         assert!(!body(response).await.contains("secret"), "{uri}");
+    }
+}
+
+// tower-http 0.7 adds a strong `ETag` to `ServeDir` and `ServeFile` and
+// answers a matching `If-None-Match` with 304 (tower-http #691).
+#[tokio::test]
+async fn a_matching_etag_gives_304_for_a_bundle_the_index_and_a_deep_link() {
+    let dir = BuildDir::new();
+    let h = dir.harness();
+    for (uri, accept) in [
+        ("/assets/a-1.js", "*/*"),
+        ("/", BROWSER_ACCEPT),
+        ("/favicon.png", "*/*"),
+        ("/g/123", BROWSER_ACCEPT),
+    ] {
+        let first = h.get_with(uri, ACCEPT.as_str(), accept).await;
+        assert_eq!(first.status(), StatusCode::OK, "{uri}");
+        let etag = first
+            .headers()
+            .get(ETAG)
+            .unwrap_or_else(|| panic!("{uri}: no ETag"))
+            .to_str()
+            .unwrap()
+            .to_owned();
+        assert!(
+            etag.starts_with('"'),
+            "{uri}: a weak or malformed ETag {etag}"
+        );
+        let cache_control = first.headers().get(CACHE_CONTROL).cloned();
+        let again = h
+            .send(
+                Request::get(uri)
+                    .header(ACCEPT, accept)
+                    .header(IF_NONE_MATCH, &etag)
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await;
+        assert_eq!(again.status(), StatusCode::NOT_MODIFIED, "{uri}");
+        assert_eq!(again.headers()[ETAG], etag.as_str(), "{uri}");
+        // The 304 keeps the cache policy of the 200 answer.
+        assert_eq!(
+            again.headers().get(CACHE_CONTROL),
+            cache_control.as_ref(),
+            "{uri}"
+        );
+        assert!(body(again).await.is_empty(), "{uri}");
+        // A stale validator gets the full answer.
+        let stale = h
+            .send(
+                Request::get(uri)
+                    .header(ACCEPT, accept)
+                    .header(IF_NONE_MATCH, "\"stale\"")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await;
+        assert_eq!(stale.status(), StatusCode::OK, "{uri}");
+    }
+}
+
+// tower-http 0.7 answers 404 for a file path with a trailing slash
+// (tower-http #678). The service trims a trailing slash before the router
+// (`trim_trailing_slash`), so `ServeDir` never sees one, and a bundle or a
+// favicon path with a trailing slash still serves the file.
+#[tokio::test]
+async fn a_trailing_slash_after_a_file_name_still_serves_the_file() {
+    let dir = BuildDir::new();
+    let h = dir.harness();
+    for accept in ["*/*", BROWSER_ACCEPT] {
+        let bundle = h.get_with("/assets/a-1.js/", ACCEPT.as_str(), accept).await;
+        assert_eq!(bundle.status(), StatusCode::OK, "{accept}");
+        assert_eq!(body(bundle).await, "console.log(1)", "{accept}");
+        let icon = h.get_with("/favicon.png/", ACCEPT.as_str(), accept).await;
+        assert_eq!(icon.status(), StatusCode::OK, "{accept}");
+        assert_eq!(icon.headers()[CONTENT_TYPE], "image/png", "{accept}");
+    }
+}
+
+// tower-http 0.7.1 rejects a multipart range request with 416 and a fixed
+// body, and a range error carries no `Content-Type` (tower-http #661, #727).
+// A single range still gets 206.
+#[tokio::test]
+async fn range_requests_get_206_and_a_multipart_range_gets_416() {
+    let dir = BuildDir::new();
+    let h = dir.harness();
+    let partial = h
+        .get_with("/assets/a-1.js", RANGE.as_str(), "bytes=0-6")
+        .await;
+    assert_eq!(partial.status(), StatusCode::PARTIAL_CONTENT);
+    assert_eq!(body(partial).await, "console");
+    for uri in ["/assets/a-1.js", "/favicon.png"] {
+        let response = h.get_with(uri, RANGE.as_str(), "bytes=0-1,3-4").await;
+        assert_eq!(
+            response.status(),
+            StatusCode::RANGE_NOT_SATISFIABLE,
+            "{uri}"
+        );
+        assert!(response.headers().get(CONTENT_TYPE).is_none(), "{uri}");
+        assert_eq!(
+            body(response).await,
+            "Cannot serve multipart range requests",
+            "{uri}"
+        );
     }
 }
 

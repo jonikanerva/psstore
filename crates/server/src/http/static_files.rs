@@ -14,8 +14,10 @@
 //! - An `/api` path never reaches the client build. A path that no API route
 //!   matches answers a Problem Details 404, whatever the `Accept` header.
 //!
-//! `ServeDir` rejects path traversal. It sends `Last-Modified` and answers
-//! `If-Modified-Since` and range requests; it sends no `ETag`.
+//! `ServeDir` rejects path traversal. It sends a strong `ETag` (from the file
+//! size and modification time) and `Last-Modified`, and answers
+//! `If-None-Match`, `If-Modified-Since`, and single range requests. A 304 keeps
+//! the `Cache-Control` of the path. A multipart range request is a 416.
 
 use std::path::{Path, PathBuf};
 
