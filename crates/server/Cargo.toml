@@ -8,7 +8,7 @@
 name = "psstore-server"
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.99"
+rust-version = "1.100"
 publish = false
 # `cargo run -p psstore-server` starts the server. The crate also has the
 # `openapi` export binary (src/bin/openapi.rs).

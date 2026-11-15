@@ -7,6 +7,11 @@ pmOnFail: error
 # STACK.md → 15 → Dependencies: refuse a release younger than one day.
 minimumReleaseAge: 1440
 minimumReleaseAgeStrict: true
+# Security fix: DOMPurify 3.4.18 fixes GHSA-qm7q-q8h9-jg8q and was younger
+# than one day at the freshness check of 2026-11-15. Remove this entry in the
+# next deps PR (STACK.md → 15 → Dependencies).
+minimumReleaseAgeExclude:
+  - 'dompurify@3.4.18'
 allowBuilds:
   '@parcel/watcher': false
   '@swc/core': true
@@ -17,10 +22,10 @@ catalog:
   '@types/react': '^19.3.0'
   '@types/react-dom': '^19.3.0'
   '@vitejs/plugin-react-swc': '^4.3.3'
-  'prettier': '^3.9.10'
+  'prettier': '^3.10.1'
   'tsx': '^4.23.15'
   'typescript': '7.0.2'
-  'vite': '^8.3.5'
+  'vite': '^8.3.8'
   'vitest': '^5.1.0'
   'zod': '4.6.7'
 # The client generator (@hey-api/openapi-ts 0.99.0) depends on
