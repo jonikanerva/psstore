@@ -11,7 +11,7 @@ use std::sync::{Arc, Mutex};
 
 use axum::body::Body;
 use axum::http::header::{
-    ACCEPT, CACHE_CONTROL, CONTENT_TYPE, COOKIE, ETAG, IF_NONE_MATCH, RANGE, SET_COOKIE,
+    ACCEPT, CACHE_CONTROL, CONTENT_TYPE, COOKIE, ETAG, IF_MATCH, IF_NONE_MATCH, RANGE, SET_COOKIE,
 };
 use axum::http::{Method, Request, StatusCode};
 use axum::response::Response;
@@ -1109,6 +1109,48 @@ async fn a_matching_etag_gives_304_for_a_bundle_the_index_and_a_deep_link() {
             )
             .await;
         assert_eq!(stale.status(), StatusCode::OK, "{uri}");
+    }
+}
+
+// tower-http 0.7 also checks `If-Match` (tower-http #691): a stale validator
+// gets 412, a matching one gets the file. 0.6.11 ignored `If-Match`.
+#[tokio::test]
+async fn a_stale_if_match_gives_412_and_a_matching_one_gives_200() {
+    let dir = BuildDir::new();
+    let h = dir.harness();
+    for (uri, accept) in [
+        ("/assets/a-1.js", "*/*"),
+        ("/", BROWSER_ACCEPT),
+        ("/g/123", BROWSER_ACCEPT),
+    ] {
+        let stale = h
+            .send(
+                Request::get(uri)
+                    .header(ACCEPT, accept)
+                    .header(IF_MATCH, "\"stale\"")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await;
+        assert_eq!(stale.status(), StatusCode::PRECONDITION_FAILED, "{uri}");
+        let etag = h
+            .get_with(uri, ACCEPT.as_str(), accept)
+            .await
+            .headers()
+            .get(ETAG)
+            .unwrap_or_else(|| panic!("{uri}: no ETag"))
+            .clone();
+        let matching = h
+            .send(
+                Request::get(uri)
+                    .header(ACCEPT, accept)
+                    .header(IF_MATCH, etag)
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await;
+        assert_eq!(matching.status(), StatusCode::OK, "{uri}");
+        assert!(!body(matching).await.is_empty(), "{uri}");
     }
 }
 
